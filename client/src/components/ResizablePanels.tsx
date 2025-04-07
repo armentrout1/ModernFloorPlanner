@@ -98,7 +98,7 @@ export function ResizablePanels({
   };
 
   return (
-    <div className={cn("flex flex-col h-full", className)}>
+    <div className={cn("flex flex-col h-full relative", className)}>
       <PanelGroup direction="horizontal" className="h-full">
         <Panel
           ref={leftPanelRef}
@@ -111,44 +111,9 @@ export function ResizablePanels({
         >
           {!leftCollapsed && (
             <div className="flex flex-col h-full border-r border-gray-200">
-              {/* Left panel header with controls */}
-              <div className="flex items-center justify-between border-b border-gray-200 bg-gray-50">
-                <div className="flex-grow px-3 py-2">
-                  <div className="font-medium text-sm text-gray-700">{leftPanelTitle}</div>
-                </div>
-                <div className="flex">
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <button
-                          onClick={expandLeftPanelFull}
-                          className="w-8 h-8 bg-white rounded-bl flex items-center justify-center hover:bg-gray-100 transition-colors border-l border-b border-gray-200"
-                        >
-                          <ChevronsLeft className={cn("h-4 w-4", leftPanelExpanded ? "rotate-180" : "")} />
-                        </button>
-                      </TooltipTrigger>
-                      <TooltipContent side="bottom">
-                        <p>{leftPanelExpanded ? "Reset Panel Size" : "Expand Full"}</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                  
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <button
-                          onClick={toggleLeftPanel}
-                          className="w-8 h-8 bg-white border-l border-b border-gray-200 flex items-center justify-center hover:bg-gray-100 transition-colors"
-                        >
-                          <ChevronLeft className="h-4 w-4" />
-                        </button>
-                      </TooltipTrigger>
-                      <TooltipContent side="bottom">
-                        <p>Collapse Panel</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                </div>
+              {/* Left panel header with title */}
+              <div className="border-b border-gray-200 bg-gray-50 px-3 py-2">
+                <div className="font-medium text-sm text-gray-700">{leftPanelTitle}</div>
               </div>
               
               <div className="flex-grow overflow-auto p-2">
@@ -219,44 +184,9 @@ export function ResizablePanels({
         >
           {!rightCollapsed && (
             <div className="flex flex-col h-full border-l border-gray-200">
-              {/* Right panel header with controls */}
-              <div className="flex items-center justify-between border-b border-gray-200 bg-gray-50">
-                <div className="flex">
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <button
-                          onClick={toggleRightPanel}
-                          className="w-8 h-8 bg-white border-r border-b border-gray-200 flex items-center justify-center hover:bg-gray-100 transition-colors"
-                        >
-                          <ChevronRight className="h-4 w-4" />
-                        </button>
-                      </TooltipTrigger>
-                      <TooltipContent side="bottom">
-                        <p>Collapse Panel</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                  
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <button
-                          onClick={expandRightPanelFull}
-                          className="w-8 h-8 bg-white rounded-br border-r border-b border-gray-200 flex items-center justify-center hover:bg-gray-100 transition-colors"
-                        >
-                          <ChevronsRight className={cn("h-4 w-4", rightPanelExpanded ? "rotate-180" : "")} />
-                        </button>
-                      </TooltipTrigger>
-                      <TooltipContent side="bottom">
-                        <p>{rightPanelExpanded ? "Reset Panel Size" : "Expand Full"}</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                </div>
-                <div className="flex-grow px-3 py-2">
-                  <div className="font-medium text-sm text-gray-700 text-right">{rightPanelTitle}</div>
-                </div>
+              {/* Right panel header with title */}
+              <div className="border-b border-gray-200 bg-gray-50 px-3 py-2">
+                <div className="font-medium text-sm text-gray-700">{rightPanelTitle}</div>
               </div>
               
               <div className="flex-grow overflow-auto p-2">
@@ -266,6 +196,80 @@ export function ResizablePanels({
           )}
         </Panel>
       </PanelGroup>
+      
+      {/* Left panel controls - fixed position in the top corner */}
+      {!leftCollapsed && (
+        <div className="absolute top-0 left-0 z-20 flex">
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={expandLeftPanelFull}
+                  className="w-8 h-8 bg-white flex items-center justify-center hover:bg-gray-100 transition-colors border-r border-b border-gray-200"
+                >
+                  <ChevronsLeft className={cn("h-4 w-4", leftPanelExpanded ? "rotate-180" : "")} />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom">
+                <p>{leftPanelExpanded ? "Reset Panel Size" : "Expand Full"}</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+          
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={toggleLeftPanel}
+                  className="w-8 h-8 bg-white flex items-center justify-center hover:bg-gray-100 transition-colors border-r border-b border-gray-200"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom">
+                <p>Collapse Panel</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
+      )}
+      
+      {/* Right panel controls - fixed position in the top corner */}
+      {!rightCollapsed && (
+        <div className="absolute top-0 right-0 z-20 flex">
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={toggleRightPanel}
+                  className="w-8 h-8 bg-white flex items-center justify-center hover:bg-gray-100 transition-colors border-l border-b border-gray-200"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom">
+                <p>Collapse Panel</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+          
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={expandRightPanelFull}
+                  className="w-8 h-8 bg-white flex items-center justify-center hover:bg-gray-100 transition-colors border-l border-b border-gray-200"
+                >
+                  <ChevronsRight className={cn("h-4 w-4", rightPanelExpanded ? "rotate-180" : "")} />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom">
+                <p>{rightPanelExpanded ? "Reset Panel Size" : "Expand Full"}</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
+      )}
 
       {leftCollapsed && (
         <div className="absolute top-1/2 left-2 -translate-y-1/2 z-10">
