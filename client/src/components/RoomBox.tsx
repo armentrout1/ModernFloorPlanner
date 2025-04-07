@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { Room, ResizeHandle } from '@/utils/types';
-import { formatDimensions, calculateRoomArea, formatArea } from '@/utils/canvas';
+import { Room, Position, ResizeHandle, WallSide, ObjectType } from '@/utils/types';
+import { formatDimensions, getResizeHandlePosition, detectWallClick } from '@/utils/canvas';
 import RoomLabel from './RoomLabel';
+import RoomObject from './RoomObject';
 
 interface RoomBoxProps {
   room: Room;
@@ -10,6 +11,11 @@ interface RoomBoxProps {
   onResizeStart: (roomId: string, handle: ResizeHandle) => void;
   onMoveStart: (roomId: string, clientX: number, clientY: number) => void;
   onUpdateRoom: (roomId: string, updates: Partial<Room>) => void;
+  onWallClick?: (roomId: string, position: Position) => void;
+  onObjectSelect?: (objectId: string) => void;
+  onObjectDragStart?: (objectId: string, clientX: number, clientY: number) => void;
+  selectedObjectId?: string | null;
+  placingObjectType?: ObjectType | null;
   scale: number;
 }
 
@@ -20,117 +26,134 @@ const RoomBox: React.FC<RoomBoxProps> = ({
   onResizeStart,
   onMoveStart,
   onUpdateRoom,
-  scale,
+  onWallClick,
+  onObjectSelect,
+  onObjectDragStart,
+  selectedObjectId,
+  placingObjectType,
+  scale
 }) => {
-  const { id, x, y, width, height, name = 'Room', color = '#93c5fd' } = room;
   const [isEditingName, setIsEditingName] = useState(false);
-  const roomArea = calculateRoomArea(room);
-
+  
+  const handleClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    
+    // If we're in object placement mode, check for wall clicks
+    if (placingObjectType && onWallClick) {
+      // Convert click to room-relative position
+      const roomRelativePosition: Position = {
+        x: e.nativeEvent.offsetX,
+        y: e.nativeEvent.offsetY
+      };
+      
+      // Pass to parent for wall detection
+      onWallClick(room.id, roomRelativePosition);
+      return;
+    }
+    
+    onSelect(room.id);
+  };
+  
   const handleMouseDown = (e: React.MouseEvent) => {
     e.stopPropagation();
     
-    // If clicking with the main button (usually left click)
-    if (e.button === 0) {
-      // Select the room first
-      onSelect(id);
-      
-      // Then immediately start moving the room (if not clicking on other controls)
-      if (!isEditingName && 
-          !(e.target as HTMLElement).closest('.resize-handle') && 
-          !(e.target as HTMLElement).closest('.room-label')) {
-        onMoveStart(id, e.clientX, e.clientY);
-      }
-    }
+    // Ignore if in object placement mode
+    if (placingObjectType) return;
+    
+    // Only handle left clicks for dragging
+    if (e.button !== 0) return;
+    
+    onSelect(room.id);
+    onMoveStart(room.id, e.clientX, e.clientY);
   };
-
+  
   const handleResizeStart = (e: React.MouseEvent, handle: ResizeHandle) => {
     e.stopPropagation();
-    onSelect(id);
-    onResizeStart(id, handle);
+    onResizeStart(room.id, handle);
   };
-
+  
   const handleStartEditName = () => {
     setIsEditingName(true);
   };
-
+  
   const handleSaveName = (newName: string) => {
     setIsEditingName(false);
-    if (newName.trim() !== name) {
-      onUpdateRoom(id, { name: newName.trim() || 'Room' });
+    if (newName.trim() !== room.name) {
+      onUpdateRoom(room.id, { name: newName.trim() });
     }
   };
-
+  
   const roomStyle: React.CSSProperties = {
-    left: `${x}px`,
-    top: `${y}px`,
-    width: `${width}px`,
-    height: `${height}px`,
-    backgroundColor: `${color}33`, // Add transparency
-    borderColor: isSelected ? 'hsl(var(--accent))' : 'hsl(var(--primary))',
+    position: 'absolute',
+    left: `${room.x}px`,
+    top: `${room.y}px`,
+    width: `${room.width}px`,
+    height: `${room.height}px`,
+    backgroundColor: room.color || '#93c5fd',
+    borderRadius: '2px',
+    boxShadow: isSelected 
+      ? '0 0 0 2px rgba(59, 130, 246, 0.8)' 
+      : '0 1px 3px rgba(0, 0, 0, 0.1)',
+    cursor: placingObjectType ? 'crosshair' : 'move',
+    userSelect: 'none',
     zIndex: isSelected ? 10 : 1,
-    transition: 'box-shadow 0.15s ease, border-color 0.15s ease',
-    boxShadow: isSelected ? '0 4px 8px rgba(0, 0, 0, 0.1)' : 'none',
-    touchAction: 'none', // Prevent default touch actions for better touch device handling
   };
-
-  const roomClasses = `absolute border-2 cursor-move select-none ${isSelected ? 'bg-accent/20 border-accent' : 'bg-primary/20 border-primary hover:border-primary/70'}`;
-
+  
+  const resizeHandles: ResizeHandle[] = ['nw', 'ne', 'sw', 'se'];
+  
   return (
-    <div
-      className={roomClasses}
+    <div 
+      className="room-box" 
       style={roomStyle}
+      onClick={handleClick}
       onMouseDown={handleMouseDown}
     >
-      <div className="p-2" onClick={(e) => e.stopPropagation()}>
-        <div className="flex justify-between items-center mb-1">
-          <div className="room-label">
-            <RoomLabel 
-              name={name}
-              isEditing={isEditingName}
-              onStartEdit={handleStartEditName}
-              onSave={handleSaveName}
-            />
-          </div>
-          <span className="text-xs text-slate-500">{formatArea(roomArea)}</span>
-        </div>
-        <div 
-          className="text-sm text-slate-600 font-medium bg-white/70 px-1.5 py-0.5 rounded-sm inline-block"
-        >
-          {formatDimensions(width, height)}
-        </div>
+      {/* Room dimensions display */}
+      <div className="absolute inset-0 flex items-center justify-center text-xs font-medium text-blue-800 pointer-events-none">
+        {formatDimensions(room.width, room.height)}
       </div>
-
-      {/* Width dimension on top */}
-      <div className="absolute top-0 left-0 w-full flex justify-center -translate-y-5 pointer-events-none">
-        <div className="text-xs px-1 py-0.5 bg-white/80 rounded shadow-sm">
-          {formatDimensions(width, 0).split('×')[0].trim()}
-        </div>
+      
+      {/* Room name */}
+      <div className="absolute top-1 left-1 right-1 flex justify-center">
+        <RoomLabel
+          name={room.name || 'Room'}
+          isEditing={isEditingName}
+          onStartEdit={handleStartEditName}
+          onSave={handleSaveName}
+        />
       </div>
-
-      {/* Height dimension on right */}
-      <div className="absolute top-0 right-0 h-full flex items-center translate-x-5 pointer-events-none">
-        <div className="text-xs px-1 py-0.5 bg-white/80 rounded shadow-sm -rotate-90 origin-left">
-          {formatDimensions(0, height).split('×')[1].trim()}
-        </div>
-      </div>
-
-      {/* Resize handles */}
-      <div
-        className="resize-handle absolute w-3.5 h-3.5 bg-white border-2 border-primary rounded-full -top-2 -left-2 cursor-nwse-resize z-20 hover:scale-110 transition-transform"
-        onMouseDown={(e) => handleResizeStart(e, 'nw')}
-      />
-      <div
-        className="resize-handle absolute w-3.5 h-3.5 bg-white border-2 border-primary rounded-full -top-2 -right-2 cursor-nesw-resize z-20 hover:scale-110 transition-transform"
-        onMouseDown={(e) => handleResizeStart(e, 'ne')}
-      />
-      <div
-        className="resize-handle absolute w-3.5 h-3.5 bg-white border-2 border-primary rounded-full -bottom-2 -left-2 cursor-nesw-resize z-20 hover:scale-110 transition-transform"
-        onMouseDown={(e) => handleResizeStart(e, 'sw')}
-      />
-      <div
-        className="resize-handle absolute w-3.5 h-3.5 bg-white border-2 border-primary rounded-full -bottom-2 -right-2 cursor-nwse-resize z-20 hover:scale-110 transition-transform"
-        onMouseDown={(e) => handleResizeStart(e, 'se')}
-      />
+      
+      {/* Resize handles - shown only when selected */}
+      {isSelected && !placingObjectType && resizeHandles.map(handle => {
+        const position = getResizeHandlePosition(room, handle);
+        return (
+          <div
+            key={handle}
+            className="absolute w-3 h-3 bg-white border border-blue-500 rounded-sm cursor-nwse-resize z-20"
+            style={{
+              left: handle.includes('w') ? -4 : undefined,
+              right: handle.includes('e') ? -4 : undefined,
+              top: handle.includes('n') ? -4 : undefined,
+              bottom: handle.includes('s') ? -4 : undefined,
+              cursor: `${handle}-resize`,
+            }}
+            onMouseDown={(e) => handleResizeStart(e, handle as ResizeHandle)}
+          />
+        );
+      })}
+      
+      {/* Room objects (doors and windows) */}
+      {room.objects && room.objects.map(object => (
+        <RoomObject 
+          key={object.id}
+          room={room}
+          object={object}
+          scale={scale}
+          isSelected={selectedObjectId === object.id}
+          onSelect={onObjectSelect || (() => {})}
+          onDragStart={onObjectDragStart}
+        />
+      ))}
     </div>
   );
 };

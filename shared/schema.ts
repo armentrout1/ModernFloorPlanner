@@ -34,6 +34,21 @@ export const insertUserSchema = createInsertSchema(users).pick({
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 
+export const wallSideSchema = z.enum(['top', 'right', 'bottom', 'left']);
+export type WallSide = z.infer<typeof wallSideSchema>;
+
+export const objectTypeSchema = z.enum(['door', 'window']);
+export type ObjectType = z.infer<typeof objectTypeSchema>;
+
+export const roomObjectSchema = z.object({
+  id: z.string(),
+  type: objectTypeSchema,
+  wallSide: wallSideSchema,
+  position: z.number(), // Percentage along the wall (0-100)
+  size: z.number(), // Size in pixels
+});
+export type RoomObject = z.infer<typeof roomObjectSchema>;
+
 export const roomSchema = z.object({
   id: z.string(),
   x: z.number(),
@@ -42,6 +57,7 @@ export const roomSchema = z.object({
   height: z.number(),
   name: z.string().optional(),
   color: z.string().optional(),
+  objects: z.array(roomObjectSchema).optional(),
 });
 
 export type Room = z.infer<typeof roomSchema>;

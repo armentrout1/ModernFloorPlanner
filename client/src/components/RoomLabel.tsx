@@ -1,5 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { Input } from '@/components/ui/input';
+import React, { useState, useEffect, useRef } from 'react';
 
 interface RoomLabelProps {
   name: string;
@@ -14,56 +13,66 @@ const RoomLabel: React.FC<RoomLabelProps> = ({
   onStartEdit,
   onSave,
 }) => {
-  const [inputValue, setInputValue] = useState(name);
+  const [value, setValue] = useState(name);
   const inputRef = useRef<HTMLInputElement>(null);
-
+  
+  // Focus input when editing starts
   useEffect(() => {
     if (isEditing && inputRef.current) {
       inputRef.current.focus();
       inputRef.current.select();
     }
   }, [isEditing]);
-
+  
+  // Update local value when name prop changes
+  useEffect(() => {
+    setValue(name);
+  }, [name]);
+  
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setInputValue(e.target.value);
+    setValue(e.target.value);
   };
-
+  
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
-      e.preventDefault();
-      onSave(inputValue);
+      onSave(value);
     } else if (e.key === 'Escape') {
-      setInputValue(name);
+      setValue(name); // Reset to original value
       onSave(name);
     }
   };
-
+  
   const handleBlur = () => {
-    onSave(inputValue);
+    onSave(value);
   };
-
-  if (isEditing) {
-    return (
-      <Input
-        ref={inputRef}
-        type="text"
-        value={inputValue}
-        onChange={handleChange}
-        onKeyDown={handleKeyDown}
-        onBlur={handleBlur}
-        className="py-0 h-6 text-sm w-full max-w-[120px]"
-      />
-    );
-  }
-
+  
+  const handleClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!isEditing) {
+      onStartEdit();
+    }
+  };
+  
   return (
-    <span
-      className="font-medium text-sm truncate cursor-pointer hover:text-primary transition-colors"
-      onClick={onStartEdit}
-      title="Click to edit room name"
+    <div
+      className="bg-white bg-opacity-80 px-2 py-0.5 rounded text-sm font-medium"
+      onClick={handleClick}
     >
-      {name || 'Unnamed Room'}
-    </span>
+      {isEditing ? (
+        <input
+          ref={inputRef}
+          type="text"
+          value={value}
+          onChange={handleChange}
+          onKeyDown={handleKeyDown}
+          onBlur={handleBlur}
+          className="w-full text-center bg-transparent outline-none border-b border-blue-400"
+          onClick={(e) => e.stopPropagation()}
+        />
+      ) : (
+        <span>{name || 'Room'}</span>
+      )}
+    </div>
   );
 };
 

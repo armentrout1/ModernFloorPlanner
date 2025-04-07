@@ -1,261 +1,187 @@
 import React from 'react';
-import { Room } from '@/utils/types';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { Room, RoomObject as RoomObjectType } from '@/utils/types';
 import { Button } from '@/components/ui/button';
-import { Separator } from '@/components/ui/separator';
-import { pixelsToFeet, feetToPixels, calculateRoomArea, formatArea } from '@/utils/canvas';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { DoorOpenIcon, Square as WindowIcon, Trash2 } from 'lucide-react';
+import { 
+  calculateRoomArea, 
+  pixelsToFeet, 
+  feetToFeetAndInches, 
+  formatArea 
+} from '@/utils/canvas';
 
 interface PropertyPanelProps {
   selectedRoom: Room | null;
+  selectedObject: RoomObjectType | null;
   onUpdateRoom: (roomId: string, updates: Partial<Room>) => void;
 }
 
 const PropertyPanel: React.FC<PropertyPanelProps> = ({
   selectedRoom,
-  onUpdateRoom,
+  selectedObject,
+  onUpdateRoom
 }) => {
+  const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (selectedRoom) {
+      onUpdateRoom(selectedRoom.id, { name: e.target.value });
+    }
+  };
+  
+  const handleColorChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (selectedRoom) {
+      onUpdateRoom(selectedRoom.id, { color: e.target.value });
+    }
+  };
+  
+  const handleDeleteObject = () => {
+    if (selectedRoom && selectedObject && selectedRoom.objects) {
+      // Filter out the selected object
+      const updatedObjects = selectedRoom.objects.filter(obj => obj.id !== selectedObject.id);
+      
+      // Update the room
+      onUpdateRoom(selectedRoom.id, { objects: updatedObjects });
+    }
+  };
+  
+  // If no room is selected, show an empty panel with a message
   if (!selectedRoom) {
     return (
-      <aside className="w-72 border-l border-slate-200 bg-white p-4 hidden lg:block">
-        <h2 className="font-semibold text-slate-700 mb-4">Room Properties</h2>
-        <p className="text-slate-500 text-sm">Select a room to edit its properties</p>
-      </aside>
+      <div className="w-64 bg-slate-50 border-l border-slate-200 flex flex-col overflow-y-auto">
+        <div className="p-4 border-b border-slate-200">
+          <h2 className="text-lg font-medium">Properties</h2>
+        </div>
+        <div className="p-4 text-center text-slate-500">
+          Select a room to edit its properties
+        </div>
+      </div>
     );
   }
-
-  const roomArea = calculateRoomArea(selectedRoom);
-
-  const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    onUpdateRoom(selectedRoom.id, { name: e.target.value });
-  };
-
-  const handleWidthChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const widthInFeet = parseFloat(e.target.value);
-    if (!isNaN(widthInFeet) && widthInFeet > 0) {
-      const widthInPixels = feetToPixels(widthInFeet);
-      onUpdateRoom(selectedRoom.id, { width: widthInPixels });
-    }
-  };
-
-  const handleHeightChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const heightInFeet = parseFloat(e.target.value);
-    if (!isNaN(heightInFeet) && heightInFeet > 0) {
-      const heightInPixels = feetToPixels(heightInFeet);
-      onUpdateRoom(selectedRoom.id, { height: heightInPixels });
-    }
-  };
-
-  // Handle direct feet and inches input
-  const handleWidthFeetInchesChange = (e: React.ChangeEvent<HTMLInputElement>, unit: 'feet' | 'inches') => {
-    const value = parseInt(e.target.value);
-    if (isNaN(value)) return;
-
-    const currentWidthInFeet = pixelsToFeet(selectedRoom.width);
-    const wholeFeet = Math.floor(currentWidthInFeet);
-    const inches = Math.round((currentWidthInFeet - wholeFeet) * 12);
-    
-    let newWidthInFeet: number;
-    
-    if (unit === 'feet') {
-      newWidthInFeet = value + (inches / 12);
-    } else {
-      newWidthInFeet = wholeFeet + (value / 12);
-    }
-    
-    if (newWidthInFeet > 0) {
-      const widthInPixels = feetToPixels(newWidthInFeet);
-      onUpdateRoom(selectedRoom.id, { width: widthInPixels });
-    }
-  };
-
-  const handleHeightFeetInchesChange = (e: React.ChangeEvent<HTMLInputElement>, unit: 'feet' | 'inches') => {
-    const value = parseInt(e.target.value);
-    if (isNaN(value)) return;
-
-    const currentHeightInFeet = pixelsToFeet(selectedRoom.height);
-    const wholeFeet = Math.floor(currentHeightInFeet);
-    const inches = Math.round((currentHeightInFeet - wholeFeet) * 12);
-    
-    let newHeightInFeet: number;
-    
-    if (unit === 'feet') {
-      newHeightInFeet = value + (inches / 12);
-    } else {
-      newHeightInFeet = wholeFeet + (value / 12);
-    }
-    
-    if (newHeightInFeet > 0) {
-      const heightInPixels = feetToPixels(newHeightInFeet);
-      onUpdateRoom(selectedRoom.id, { height: heightInPixels });
-    }
-  };
-
-  const handleXChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const xInFeet = parseFloat(e.target.value);
-    if (!isNaN(xInFeet)) {
-      const xInPixels = feetToPixels(xInFeet);
-      onUpdateRoom(selectedRoom.id, { x: xInPixels });
-    }
-  };
-
-  const handleYChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const yInFeet = parseFloat(e.target.value);
-    if (!isNaN(yInFeet)) {
-      const yInPixels = feetToPixels(yInFeet);
-      onUpdateRoom(selectedRoom.id, { y: yInPixels });
-    }
-  };
-
-  const handleColorChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    onUpdateRoom(selectedRoom.id, { color: e.target.value });
-  };
-
-  // Calculate feet and inches for width and height
-  const widthInFeet = pixelsToFeet(selectedRoom.width);
-  const widthFeet = Math.floor(widthInFeet);
-  const widthInches = Math.round((widthInFeet - widthFeet) * 12);
   
-  const heightInFeet = pixelsToFeet(selectedRoom.height);
-  const heightFeet = Math.floor(heightInFeet);
-  const heightInches = Math.round((heightInFeet - heightFeet) * 12);
-
+  // Calculate room dimensions in feet
+  const widthFeet = pixelsToFeet(selectedRoom.width);
+  const heightFeet = pixelsToFeet(selectedRoom.height);
+  const area = calculateRoomArea(selectedRoom);
+  
   return (
-    <aside className="w-72 border-l border-slate-200 bg-white p-4 hidden lg:block">
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="font-semibold text-slate-700">Room Properties</h2>
-        <span className="text-sm font-medium text-primary">{formatArea(roomArea)}</span>
+    <div className="w-64 bg-slate-50 border-l border-slate-200 flex flex-col overflow-y-auto">
+      <div className="p-4 border-b border-slate-200">
+        <h2 className="text-lg font-medium">Properties</h2>
       </div>
       
-      <div className="mb-4">
-        <Label className="block text-sm font-medium text-slate-700 mb-1">Name</Label>
-        <Input 
-          type="text" 
-          value={selectedRoom.name || ''} 
-          onChange={handleNameChange}
-          className="w-full"
-        />
-      </div>
-      
-      <Separator className="my-4" />
-      
-      <div className="mb-4">
-        <Label className="block text-sm font-medium text-slate-700 mb-1">Width</Label>
-        
-        <div className="flex items-center gap-2 mb-2">
-          <div className="flex-1">
-            <span className="block text-xs text-slate-500">Feet</span>
-            <Input 
-              type="number" 
-              value={widthFeet} 
-              onChange={(e) => handleWidthFeetInchesChange(e, 'feet')}
-              min="1"
-              className="w-full"
-            />
+      {selectedObject ? (
+        // Object properties section
+        <div className="p-4 space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              {selectedObject.type === 'door' ? (
+                <DoorOpenIcon className="h-5 w-5 text-orange-500" />
+              ) : (
+                <WindowIcon className="h-5 w-5 text-blue-500" />
+              )}
+              <span className="font-medium capitalize">{selectedObject.type}</span>
+            </div>
+            <Button 
+              variant="outline" 
+              size="icon" 
+              className="h-7 w-7" 
+              onClick={handleDeleteObject}
+            >
+              <Trash2 className="h-4 w-4 text-red-500" />
+            </Button>
           </div>
-          <div className="flex-1">
-            <span className="block text-xs text-slate-500">Inches</span>
-            <Input 
-              type="number" 
-              value={widthInches}
-              onChange={(e) => handleWidthFeetInchesChange(e, 'inches')}
-              min="0"
-              max="11"
-              className="w-full"
-            />
+          
+          <div className="space-y-2">
+            <Label>Wall</Label>
+            <div className="text-sm p-2 bg-slate-100 rounded">
+              {selectedObject.wallSide.charAt(0).toUpperCase() + selectedObject.wallSide.slice(1)} wall
+            </div>
           </div>
-        </div>
-        
-        <span className="block text-xs text-slate-500">Decimal (ft)</span>
-        <Input 
-          type="number" 
-          value={pixelsToFeet(selectedRoom.width).toFixed(1)} 
-          onChange={handleWidthChange}
-          step="0.1"
-          min="1"
-          className="w-full"
-        />
-      </div>
-      
-      <div className="mb-4">
-        <Label className="block text-sm font-medium text-slate-700 mb-1">Height</Label>
-        
-        <div className="flex items-center gap-2 mb-2">
-          <div className="flex-1">
-            <span className="block text-xs text-slate-500">Feet</span>
-            <Input 
-              type="number" 
-              value={heightFeet}
-              onChange={(e) => handleHeightFeetInchesChange(e, 'feet')}
-              min="1"
-              className="w-full"
-            />
+          
+          <div className="space-y-2">
+            <Label>Position</Label>
+            <div className="text-sm p-2 bg-slate-100 rounded">
+              {Math.round(selectedObject.position)}% along wall
+            </div>
           </div>
-          <div className="flex-1">
-            <span className="block text-xs text-slate-500">Inches</span>
-            <Input 
-              type="number" 
-              value={heightInches}
-              onChange={(e) => handleHeightFeetInchesChange(e, 'inches')}
-              min="0"
-              max="11"
-              className="w-full"
-            />
+          
+          <div className="text-xs text-slate-500 mt-4">
+            Note: To adjust the position, drag the {selectedObject.type} along the wall.
           </div>
         </div>
-        
-        <span className="block text-xs text-slate-500">Decimal (ft)</span>
-        <Input 
-          type="number" 
-          value={pixelsToFeet(selectedRoom.height).toFixed(1)} 
-          onChange={handleHeightChange}
-          step="0.1"
-          min="1"
-          className="w-full"
-        />
-      </div>
-      
-      <Separator className="my-4" />
-      
-      <div className="mb-4">
-        <Label className="block text-sm font-medium text-slate-700 mb-1">Position</Label>
-        <div className="grid grid-cols-2 gap-2">
-          <div>
-            <span className="block text-xs text-slate-500">X (ft)</span>
+      ) : (
+        // Room properties section
+        <div className="p-4 space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="roomName">Name</Label>
             <Input 
-              type="number" 
-              value={pixelsToFeet(selectedRoom.x).toFixed(1)} 
-              onChange={handleXChange}
-              step="0.1"
-              className="w-full"
+              id="roomName" 
+              value={selectedRoom.name || ''} 
+              onChange={handleNameChange} 
+              placeholder="Room name"
             />
           </div>
-          <div>
-            <span className="block text-xs text-slate-500">Y (ft)</span>
-            <Input 
-              type="number" 
-              value={pixelsToFeet(selectedRoom.y).toFixed(1)} 
-              onChange={handleYChange}
-              step="0.1"
-              className="w-full"
-            />
+          
+          <div className="space-y-2">
+            <Label htmlFor="roomColor">Color</Label>
+            <div className="flex items-center space-x-2">
+              <div 
+                className="w-6 h-6 rounded-full border border-slate-300"
+                style={{ backgroundColor: selectedRoom.color }}
+              />
+              <Input 
+                id="roomColor" 
+                type="color" 
+                value={selectedRoom.color || '#93c5fd'} 
+                onChange={handleColorChange}
+                className="w-full h-8" 
+              />
+            </div>
+          </div>
+          
+          <div className="space-y-2">
+            <Label>Dimensions</Label>
+            <div className="grid grid-cols-2 gap-2">
+              <div className="text-sm p-2 bg-slate-100 rounded">
+                Width: {feetToFeetAndInches(widthFeet)}
+              </div>
+              <div className="text-sm p-2 bg-slate-100 rounded">
+                Length: {feetToFeetAndInches(heightFeet)}
+              </div>
+            </div>
+          </div>
+          
+          <div className="space-y-2">
+            <Label>Area</Label>
+            <div className="text-sm p-2 bg-slate-100 rounded">
+              {formatArea(area)}
+            </div>
+          </div>
+          
+          <div className="space-y-2">
+            <Label>Room Objects</Label>
+            <div className="flex flex-wrap gap-2">
+              {selectedRoom.objects?.length ? (
+                <div className="w-full grid grid-cols-2 gap-2">
+                  <div className="text-sm p-2 bg-slate-100 rounded flex items-center">
+                    <DoorOpenIcon className="h-4 w-4 mr-1 text-orange-500" />
+                    <span>{selectedRoom.objects.filter(obj => obj.type === 'door').length || 0} Doors</span>
+                  </div>
+                  <div className="text-sm p-2 bg-slate-100 rounded flex items-center">
+                    <WindowIcon className="h-4 w-4 mr-1 text-blue-500" />
+                    <span>{selectedRoom.objects.filter(obj => obj.type === 'window').length || 0} Windows</span>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-sm p-2 bg-slate-100 rounded w-full">
+                  No objects added
+                </div>
+              )}
+            </div>
           </div>
         </div>
-      </div>
-      
-      <div className="mb-4">
-        <Label className="block text-sm font-medium text-slate-700 mb-1">Color</Label>
-        <div className="flex items-center space-x-2">
-          <Input 
-            type="color" 
-            value={selectedRoom.color || '#93c5fd'} 
-            onChange={handleColorChange}
-            className="w-8 h-8 rounded border border-slate-300 p-0"
-          />
-          <span className="text-sm text-slate-600">{selectedRoom.color || '#93c5fd'}</span>
-        </div>
-      </div>
-    </aside>
+      )}
+    </div>
   );
 };
 

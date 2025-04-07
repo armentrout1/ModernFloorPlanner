@@ -1,31 +1,40 @@
 import React, { useRef, useEffect, useState } from 'react';
-import { Room, Position, ResizeHandle, CanvasState } from '@/utils/types';
+import { Room, Position, ResizeHandle, CanvasState, ObjectType, WallSide } from '@/utils/types';
 import CanvasControls from './CanvasControls';
 import RoomBox from './RoomBox';
+import RoomObject from './RoomObject';
 import TotalAreaDisplay from './TotalAreaDisplay';
 import { 
   GRID_SIZE, 
   SCALE_FACTOR, 
   snapToGrid, 
   createRoom, 
-  getResizedRoom 
+  getResizedRoom,
+  detectWallClick,
+  createRoomObject
 } from '@/utils/canvas';
 
 interface CanvasContainerProps {
   activeTool: string;
+  placingObjectType: ObjectType | null;
   rooms: Room[];
   selectedRoomId: string | null;
+  selectedObjectId: string | null;
   onRoomsChange: (rooms: Room[]) => void;
   onSelectRoom: (roomId: string | null) => void;
+  onSelectObject: (objectId: string | null) => void;
   onUpdateRoom: (roomId: string, updates: Partial<Room>) => void;
 }
 
 const CanvasContainer: React.FC<CanvasContainerProps> = ({
   activeTool,
+  placingObjectType,
   rooms,
   selectedRoomId,
+  selectedObjectId,
   onRoomsChange,
   onSelectRoom,
+  onSelectObject,
   onUpdateRoom,
 }) => {
   const canvasRef = useRef<HTMLDivElement>(null);
@@ -34,6 +43,9 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
   const [state, setState] = useState<CanvasState>({
     rooms: [],
     selectedRoomId: null,
+    selectedObjectId: null,
+    activeTool: activeTool,
+    placingObjectType: placingObjectType,
     scale: 1,
     offset: { x: 0, y: 0 },
     isDragging: false,
@@ -51,8 +63,11 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
       ...prev,
       rooms,
       selectedRoomId,
+      selectedObjectId,
+      activeTool,
+      placingObjectType,
     }));
-  }, [rooms, selectedRoomId]);
+  }, [rooms, selectedRoomId, selectedObjectId, activeTool, placingObjectType]);
   
   // Check for rooms that are close to each other for snapping
   const checkRoomProximity = (testRoom: Room): Room => {
@@ -153,6 +168,53 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
   };
   
   // Canvas event handlers
+  // Handle object placement when clicking on a wall
+  const handleWallClick = (roomId: string, position: Position) => {
+    if (!placingObjectType) return;
+    
+    const room = rooms.find(r => r.id === roomId);
+    if (!room) return;
+    
+    // Detect which wall was clicked and at what position
+    const wallDetection = detectWallClick(room, position, 10); // 10px detection threshold
+    
+    if (wallDetection) {
+      const { wallSide, percentage } = wallDetection;
+      
+      // Create a new room object (door or window)
+      const newObject = createRoomObject(placingObjectType, wallSide, percentage);
+      
+      // Update the room with the new object
+      const currentObjects = room.objects || [];
+      const updatedRoom = {
+        ...room,
+        objects: [...currentObjects, newObject]
+      };
+      
+      // Update rooms
+      onRoomsChange(
+        rooms.map(r => (r.id === roomId ? updatedRoom : r))
+      );
+      
+      // Select the newly created object
+      onSelectObject(newObject.id);
+    }
+  };
+  
+  // Handler for selecting room objects
+  const handleObjectSelect = (objectId: string) => {
+    onSelectObject(objectId);
+  };
+  
+  // Handler for starting object drag
+  const handleObjectDragStart = (objectId: string, clientX: number, clientY: number) => {
+    setState(prev => ({
+      ...prev,
+      isDragging: true,
+      lastMouse: { x: clientX, y: clientY },
+    }));
+  };
+  
   const handleCanvasMouseDown = (e: React.MouseEvent) => {
     if (e.target !== canvasRef.current) return;
     
@@ -172,6 +234,7 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
     } else {
       // Deselect when clicking on empty canvas
       onSelectRoom(null);
+      onSelectObject(null);
     }
   };
   
@@ -348,6 +411,11 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
               onMoveStart={handleRoomMoveStart}
               onResizeStart={handleRoomResizeStart}
               onUpdateRoom={onUpdateRoom}
+              onWallClick={handleWallClick}
+              onObjectSelect={handleObjectSelect}
+              onObjectDragStart={handleObjectDragStart}
+              selectedObjectId={selectedObjectId}
+              placingObjectType={placingObjectType}
               scale={state.scale}
             />
           ))}
