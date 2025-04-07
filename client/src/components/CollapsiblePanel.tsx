@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { ChevronLeft, ChevronRight, GripVertical } from 'lucide-react';
+import { ChevronLeft, ChevronRight, GripVertical, Maximize, Minimize } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
@@ -27,6 +27,7 @@ const CollapsiblePanel: React.FC<CollapsiblePanelProps> = ({
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
   const [panelWidth, setPanelWidth] = useState(width);
   const [isResizing, setIsResizing] = useState(false);
+  const [resizeMode, setResizeMode] = useState(false);
   const resizeHandleRef = useRef<HTMLDivElement>(null);
   const startXRef = useRef(0);
   const startWidthRef = useRef(0);
@@ -37,6 +38,21 @@ const CollapsiblePanel: React.FC<CollapsiblePanelProps> = ({
   // Toggle panel expanded/collapsed state
   const togglePanel = () => {
     setIsExpanded(!isExpanded);
+  };
+  
+  // Toggle resize mode
+  const toggleResizeMode = () => {
+    // If turning off resize mode while actually resizing, cancel the resize
+    if (resizeMode && isResizing) {
+      setPanelWidth(startWidthRef.current);
+      setIsResizing(false);
+      document.documentElement.style.cursor = '';
+      document.body.style.cursor = '';
+      window.removeEventListener('mousemove', handleResizeMove);
+      window.removeEventListener('mouseup', handleResizeEnd);
+      window.removeEventListener('keydown', handleKeyDown);
+    }
+    setResizeMode(!resizeMode);
   };
   
   // Handle resize start event
@@ -58,6 +74,9 @@ const CollapsiblePanel: React.FC<CollapsiblePanelProps> = ({
       // Cancel the resize operation
       setPanelWidth(startWidthRef.current);
       setIsResizing(false);
+      
+      // Auto-exit resize mode after finishing resize
+      setResizeMode(false);
       
       // Reset cursor
       document.documentElement.style.cursor = '';
@@ -94,14 +113,27 @@ const CollapsiblePanel: React.FC<CollapsiblePanelProps> = ({
   // Handle resize end event
   const handleResizeEnd = () => {
     setIsResizing(false);
+    
+    // Auto-exit resize mode after finishing resize
+    setResizeMode(false);
+    
     // Restore cursor - important to prevent cursor from getting stuck
     document.documentElement.style.cursor = '';
     document.body.style.cursor = '';
+    
     // Remove all event listeners
     window.removeEventListener('mousemove', handleResizeMove);
     window.removeEventListener('mouseup', handleResizeEnd);
     window.removeEventListener('keydown', handleKeyDown);
   };
+  
+  // Reset cursor function
+  const resetCursor = useCallback(() => {
+    document.documentElement.style.cursor = '';
+    document.body.style.cursor = '';
+    // Force a style recalculation
+    document.documentElement.clientHeight;
+  }, []);
   
   // Clean up event listeners when component unmounts
   useEffect(() => {
@@ -112,10 +144,14 @@ const CollapsiblePanel: React.FC<CollapsiblePanelProps> = ({
       window.removeEventListener('keydown', handleKeyDown);
       
       // Always restore cursor on unmount to prevent "stuck" cursor
-      document.documentElement.style.cursor = '';
-      document.body.style.cursor = '';
+      resetCursor();
     };
-  }, [handleKeyDown]);
+  }, [handleKeyDown, resetCursor]);
+  
+  // Initial cleanup on mount to fix any stuck cursors
+  useEffect(() => {
+    resetCursor();
+  }, [resetCursor]);
   
   // Calculate panel style based on expanded state and current width
   const panelStyle: React.CSSProperties = {
@@ -135,7 +171,7 @@ const CollapsiblePanel: React.FC<CollapsiblePanelProps> = ({
       )}
       style={panelStyle}
     >
-      {/* Toggle button */}
+      {/* Toggle expand/collapse button */}
       <Button
         variant="outline"
         size="icon"
@@ -154,8 +190,29 @@ const CollapsiblePanel: React.FC<CollapsiblePanelProps> = ({
         )}
       </Button>
       
-      {/* Resize handle */}
+      {/* Resize mode toggle button - only show when panel is expanded */}
       {isExpanded && (
+        <Button
+          variant="outline"
+          size="icon"
+          className={cn(
+            'absolute top-14 h-9 w-9 rounded-full bg-background shadow-md z-10 border-2',
+            resizeMode ? 'border-primary/80 hover:border-primary' : 'border-primary/30 hover:border-primary/60',
+            position === 'left' ? 'right-0 translate-x-1/2' : 'left-0 -translate-x-1/2'
+          )}
+          onClick={toggleResizeMode}
+          title={resizeMode ? "Exit resize mode" : "Enter resize mode"}
+        >
+          {resizeMode ? (
+            <Minimize className="h-5 w-5 text-primary" />
+          ) : (
+            <Maximize className="h-5 w-5 text-primary/70" />
+          )}
+        </Button>
+      )}
+      
+      {/* Resize handle - only show when resize mode is active */}
+      {isExpanded && resizeMode && (
         <div
           ref={resizeHandleRef}
           className={cn(
@@ -166,7 +223,10 @@ const CollapsiblePanel: React.FC<CollapsiblePanelProps> = ({
           onMouseDown={handleResizeStart}
           title="Drag to resize panel"
         >
-          <div className="h-32 w-3 rounded-full bg-primary/30 hover:bg-primary/70 transition-colors flex items-center justify-center shadow-md">
+          <div className={cn(
+            "h-32 w-4 rounded-full transition-colors flex items-center justify-center shadow-md",
+            isResizing ? "bg-primary/70" : "bg-primary/30 hover:bg-primary/50"
+          )}>
             <div className="h-24 flex flex-col gap-2 justify-center items-center">
               <div className="w-5 h-1.5 bg-primary/80 rounded-full shadow-sm"></div>
               <div className="w-5 h-1.5 bg-primary/80 rounded-full shadow-sm"></div>
