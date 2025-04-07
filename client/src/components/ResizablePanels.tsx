@@ -81,80 +81,6 @@ export function ResizablePanels({
 
   return (
     <div className={cn("flex flex-col h-full", className)}>
-      {/* Left panel controls - always visible */}
-      <div className="absolute top-4 left-4 z-20 flex gap-2">
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <button
-                onClick={toggleLeftPanel}
-                className="w-8 h-8 bg-white shadow-md rounded-full flex items-center justify-center hover:bg-gray-50 transition-colors"
-              >
-                <ChevronLeft className={cn("h-4 w-4 transition-transform", leftCollapsed ? "rotate-180" : "")} />
-              </button>
-            </TooltipTrigger>
-            <TooltipContent side="right">
-              <p>{leftCollapsed ? "Expand Tools Panel" : "Collapse Tools Panel"}</p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
-        
-        {!leftCollapsed && (
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button
-                  onClick={expandLeftPanelFull}
-                  className="w-8 h-8 bg-white shadow-md rounded-full flex items-center justify-center hover:bg-gray-50 transition-colors"
-                >
-                  <ChevronsLeft className="h-4 w-4" />
-                </button>
-              </TooltipTrigger>
-              <TooltipContent side="right">
-                <p>Expand Tools Panel Full</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        )}
-      </div>
-      
-      {/* Right panel controls - always visible */}
-      <div className="absolute top-4 right-4 z-20 flex gap-2">
-        {!rightCollapsed && (
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button
-                  onClick={expandRightPanelFull}
-                  className="w-8 h-8 bg-white shadow-md rounded-full flex items-center justify-center hover:bg-gray-50 transition-colors"
-                >
-                  <ChevronsRight className="h-4 w-4" />
-                </button>
-              </TooltipTrigger>
-              <TooltipContent side="left">
-                <p>Expand Properties Panel Full</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        )}
-        
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <button
-                onClick={toggleRightPanel}
-                className="w-8 h-8 bg-white shadow-md rounded-full flex items-center justify-center hover:bg-gray-50 transition-colors"
-              >
-                <ChevronRight className={cn("h-4 w-4 transition-transform", rightCollapsed ? "rotate-180" : "")} />
-              </button>
-            </TooltipTrigger>
-            <TooltipContent side="left">
-              <p>{rightCollapsed ? "Expand Properties Panel" : "Collapse Properties Panel"}</p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
-      </div>
-      
       <PanelGroup direction="horizontal" className="h-full">
         <Panel
           ref={leftPanelRef}
@@ -165,15 +91,74 @@ export function ResizablePanels({
           onExpand={() => setLeftCollapsed(false)}
           className="bg-white"
         >
-          <div className="flex flex-col h-full border-r border-gray-200">
-            <div className="flex-grow overflow-auto p-2 pt-12"> {/* Added padding-top for controls */}
-              {leftPanel}
+          {!leftCollapsed && (
+            <div className="flex flex-col h-full border-r border-gray-200">
+              {/* Left panel header with controls */}
+              <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200 bg-gray-50">
+                <div className="font-medium text-sm text-gray-700">{leftPanelTitle}</div>
+                <div className="flex gap-1">
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          onClick={expandLeftPanelFull}
+                          className="w-7 h-7 bg-white rounded flex items-center justify-center hover:bg-gray-100 transition-colors border border-gray-200"
+                        >
+                          <ChevronsLeft className="h-4 w-4" />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent side="bottom">
+                        <p>Expand Full</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                  
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          onClick={toggleLeftPanel}
+                          className="w-7 h-7 bg-white rounded flex items-center justify-center hover:bg-gray-100 transition-colors border border-gray-200"
+                        >
+                          <ChevronLeft className="h-4 w-4" />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent side="bottom">
+                        <p>Collapse Panel</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
+              </div>
+              
+              <div className="flex-grow overflow-auto p-2">
+                {leftPanel}
+              </div>
             </div>
-          </div>
+          )}
         </Panel>
 
         <PanelResizeHandle className="cursor-col-resize">
           <div className="h-full"></div>
+          {leftCollapsed && (
+            <div className="absolute top-4 left-4 z-20">
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      onClick={toggleLeftPanel}
+                      className="w-8 h-8 bg-white shadow-md rounded-full flex items-center justify-center hover:bg-gray-50 transition-colors"
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="right">
+                    <p>Expand {leftPanelTitle}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
+          )}
         </PanelResizeHandle>
 
         <Panel className="h-full">
@@ -182,6 +167,25 @@ export function ResizablePanels({
 
         <PanelResizeHandle className="cursor-col-resize">
           <div className="h-full"></div>
+          {rightCollapsed && (
+            <div className="absolute top-4 right-4 z-20">
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      onClick={toggleRightPanel}
+                      className="w-8 h-8 bg-white shadow-md rounded-full flex items-center justify-center hover:bg-gray-50 transition-colors"
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="left">
+                    <p>Expand {rightPanelTitle}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
+          )}
         </PanelResizeHandle>
 
         <Panel
@@ -193,11 +197,51 @@ export function ResizablePanels({
           onExpand={() => setRightCollapsed(false)}
           className="bg-white"
         >
-          <div className="flex flex-col h-full border-l border-gray-200">
-            <div className="flex-grow overflow-auto p-2 pt-12"> {/* Added padding-top for controls */}
-              {rightPanel}
+          {!rightCollapsed && (
+            <div className="flex flex-col h-full border-l border-gray-200">
+              {/* Right panel header with controls */}
+              <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200 bg-gray-50">
+                <div className="font-medium text-sm text-gray-700">{rightPanelTitle}</div>
+                <div className="flex gap-1">
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          onClick={toggleRightPanel}
+                          className="w-7 h-7 bg-white rounded flex items-center justify-center hover:bg-gray-100 transition-colors border border-gray-200"
+                        >
+                          <ChevronRight className="h-4 w-4" />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent side="bottom">
+                        <p>Collapse Panel</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                  
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          onClick={expandRightPanelFull}
+                          className="w-7 h-7 bg-white rounded flex items-center justify-center hover:bg-gray-100 transition-colors border border-gray-200"
+                        >
+                          <ChevronsRight className="h-4 w-4" />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent side="bottom">
+                        <p>Expand Full</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
+              </div>
+              
+              <div className="flex-grow overflow-auto p-2">
+                {rightPanel}
+              </div>
             </div>
-          </div>
+          )}
         </Panel>
       </PanelGroup>
 
