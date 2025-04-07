@@ -52,10 +52,19 @@ export function ResizablePanels({
     }
   };
 
+  const [leftPanelExpanded, setLeftPanelExpanded] = React.useState(false);
   const expandLeftPanelFull = () => {
     const panel = leftPanelRef.current;
     if (panel) {
-      panel.resize(70); // Expand to take most of the screen
+      if (leftPanelExpanded) {
+        // Return to default width
+        panel.resize(leftPanelWidth);
+        setLeftPanelExpanded(false);
+      } else {
+        // Expand to take most of the screen
+        panel.resize(70);
+        setLeftPanelExpanded(true);
+      }
     }
   };
 
@@ -72,10 +81,19 @@ export function ResizablePanels({
     }
   };
   
+  const [rightPanelExpanded, setRightPanelExpanded] = React.useState(false);
   const expandRightPanelFull = () => {
     const panel = rightPanelRef.current;
     if (panel) {
-      panel.resize(70); // Expand to take most of the screen
+      if (rightPanelExpanded) {
+        // Return to default width
+        panel.resize(rightPanelWidth);
+        setRightPanelExpanded(false);
+      } else {
+        // Expand to take most of the screen
+        panel.resize(70);
+        setRightPanelExpanded(true);
+      }
     }
   };
 
@@ -94,21 +112,23 @@ export function ResizablePanels({
           {!leftCollapsed && (
             <div className="flex flex-col h-full border-r border-gray-200">
               {/* Left panel header with controls */}
-              <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200 bg-gray-50">
-                <div className="font-medium text-sm text-gray-700">{leftPanelTitle}</div>
-                <div className="flex gap-1">
+              <div className="flex items-center justify-between border-b border-gray-200 bg-gray-50">
+                <div className="flex-grow px-3 py-2">
+                  <div className="font-medium text-sm text-gray-700">{leftPanelTitle}</div>
+                </div>
+                <div className="flex">
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <button
                           onClick={expandLeftPanelFull}
-                          className="w-7 h-7 bg-white rounded flex items-center justify-center hover:bg-gray-100 transition-colors border border-gray-200"
+                          className="w-8 h-8 bg-white rounded-bl flex items-center justify-center hover:bg-gray-100 transition-colors border-l border-b border-gray-200"
                         >
-                          <ChevronsLeft className="h-4 w-4" />
+                          <ChevronsLeft className={cn("h-4 w-4", leftPanelExpanded ? "rotate-180" : "")} />
                         </button>
                       </TooltipTrigger>
                       <TooltipContent side="bottom">
-                        <p>Expand Full</p>
+                        <p>{leftPanelExpanded ? "Reset Panel Size" : "Expand Full"}</p>
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
@@ -118,7 +138,7 @@ export function ResizablePanels({
                       <TooltipTrigger asChild>
                         <button
                           onClick={toggleLeftPanel}
-                          className="w-7 h-7 bg-white rounded flex items-center justify-center hover:bg-gray-100 transition-colors border border-gray-200"
+                          className="w-8 h-8 bg-white border-l border-b border-gray-200 flex items-center justify-center hover:bg-gray-100 transition-colors"
                         >
                           <ChevronLeft className="h-4 w-4" />
                         </button>
@@ -200,15 +220,14 @@ export function ResizablePanels({
           {!rightCollapsed && (
             <div className="flex flex-col h-full border-l border-gray-200">
               {/* Right panel header with controls */}
-              <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200 bg-gray-50">
-                <div className="font-medium text-sm text-gray-700">{rightPanelTitle}</div>
-                <div className="flex gap-1">
+              <div className="flex items-center justify-between border-b border-gray-200 bg-gray-50">
+                <div className="flex">
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <button
                           onClick={toggleRightPanel}
-                          className="w-7 h-7 bg-white rounded flex items-center justify-center hover:bg-gray-100 transition-colors border border-gray-200"
+                          className="w-8 h-8 bg-white border-r border-b border-gray-200 flex items-center justify-center hover:bg-gray-100 transition-colors"
                         >
                           <ChevronRight className="h-4 w-4" />
                         </button>
@@ -224,16 +243,19 @@ export function ResizablePanels({
                       <TooltipTrigger asChild>
                         <button
                           onClick={expandRightPanelFull}
-                          className="w-7 h-7 bg-white rounded flex items-center justify-center hover:bg-gray-100 transition-colors border border-gray-200"
+                          className="w-8 h-8 bg-white rounded-br border-r border-b border-gray-200 flex items-center justify-center hover:bg-gray-100 transition-colors"
                         >
-                          <ChevronsRight className="h-4 w-4" />
+                          <ChevronsRight className={cn("h-4 w-4", rightPanelExpanded ? "rotate-180" : "")} />
                         </button>
                       </TooltipTrigger>
                       <TooltipContent side="bottom">
-                        <p>Expand Full</p>
+                        <p>{rightPanelExpanded ? "Reset Panel Size" : "Expand Full"}</p>
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
+                </div>
+                <div className="flex-grow px-3 py-2">
+                  <div className="font-medium text-sm text-gray-700 text-right">{rightPanelTitle}</div>
                 </div>
               </div>
               
