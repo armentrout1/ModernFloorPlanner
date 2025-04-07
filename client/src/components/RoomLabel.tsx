@@ -1,6 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
-import { ChevronsUpDown } from 'lucide-react';
+import { CheckIcon, ChevronsUpDown } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { 
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger
+} from "@/components/ui/dropdown-menu";
 
 // Common room names that people might want to use
 const commonRoomNames = [
@@ -105,54 +112,43 @@ const RoomLabel: React.FC<RoomLabelProps> = ({
             onClick={(e) => e.stopPropagation()}
           />
           
-          <div className="relative">
-            <Button
-              className="h-6 w-6 p-0 bg-white/70 hover:bg-white border border-gray-300 rounded"
-              onClick={(e: React.MouseEvent) => {
-                e.stopPropagation();
-                // Show dropdown menu with room names
-                const menu = document.getElementById(`room-name-dropdown-${name}`);
-                if (menu) {
-                  menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
-                }
-              }}
-            >
-              <ChevronsUpDown className="h-3 w-3" />
-            </Button>
-            
-            <div 
-              id={`room-name-dropdown-${name}`} 
-              className="absolute mt-1 max-h-60 w-[200px] right-0 overflow-auto rounded-md bg-white py-1 text-base shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none text-sm z-50"
-              style={{ display: 'none' }}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-6 w-6 p-0 bg-white/70 hover:bg-white border border-gray-200 rounded-sm"
+              >
+                <ChevronsUpDown className="h-3 w-3" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent 
+              align="end" 
+              className="max-h-52 overflow-y-auto w-40"
+              onClick={(e) => e.stopPropagation()}
             >
               {commonRoomNames.map((room) => (
-                <div
+                <DropdownMenuItem
                   key={room.value}
-                  className="relative cursor-pointer select-none py-2 pl-10 pr-4 hover:bg-blue-100 hover:text-blue-900 text-gray-900"
-                  onClick={(e: React.MouseEvent) => {
+                  className={cn(
+                    "flex items-center gap-2 cursor-pointer",
+                    value === room.value && "bg-primary/10 font-medium"
+                  )}
+                  onClick={(e) => {
                     e.stopPropagation();
                     handleSelectRoomName(room.value);
-                    // Hide dropdown after selection
-                    const menu = document.getElementById(`room-name-dropdown-${name}`);
-                    if (menu) {
-                      menu.style.display = 'none';
-                    }
                   }}
                 >
-                  <span className={`block truncate ${room.value === value ? 'font-medium' : 'font-normal'}`}>
-                    {room.label}
-                  </span>
-                  {room.value === value && (
-                    <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-blue-600">
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                      </svg>
-                    </span>
+                  {value === room.value ? (
+                    <CheckIcon className="h-3.5 w-3.5 text-primary" />
+                  ) : (
+                    <span className="w-3.5" />
                   )}
-                </div>
+                  {room.label}
+                </DropdownMenuItem>
               ))}
-            </div>
-          </div>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       ) : (
         <span>{name || 'Room'}</span>

@@ -130,6 +130,7 @@ const CollapsiblePanel: React.FC<CollapsiblePanelProps> = ({
     
     // Update cursor to give visual feedback
     document.documentElement.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none'; // Prevent text selection during resize
     
     // Use requestAnimationFrame for smoother updates
     requestAnimationFrame(() => {
@@ -144,6 +145,7 @@ const CollapsiblePanel: React.FC<CollapsiblePanelProps> = ({
     // Restore cursor - important to prevent cursor from getting stuck
     document.documentElement.style.cursor = '';
     document.body.style.cursor = '';
+    document.body.style.userSelect = ''; // Restore text selection capability
     
     // Remove all event listeners - both mouse and touch
     window.removeEventListener('mousemove', handleResizeMove);
@@ -234,7 +236,7 @@ const CollapsiblePanel: React.FC<CollapsiblePanelProps> = ({
         <div
           ref={resizeHandleRef}
           className={cn(
-            'absolute top-0 h-full w-10 cursor-col-resize z-10 flex items-center justify-center resize-handle',
+            'absolute top-0 h-full w-12 cursor-col-resize z-10 flex items-center justify-center resize-handle',
             position === 'left' ? 'right-0 -mr-5' : 'left-0 -ml-5',
             isResizing ? 'opacity-100' : 'opacity-40 hover:opacity-100'
           )}
