@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { ChevronLeft, ChevronRight, GripVertical } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -46,11 +46,30 @@ const CollapsiblePanel: React.FC<CollapsiblePanelProps> = ({
     startXRef.current = e.clientX;
     startWidthRef.current = panelWidth;
     
-    // Add event listeners to window for mouse move and up
+    // Add event listeners to window for mouse move, up, and key events
     window.addEventListener('mousemove', handleResizeMove);
     window.addEventListener('mouseup', handleResizeEnd);
+    window.addEventListener('keydown', handleKeyDown);
   };
   
+  // Handle keydown for Escape to cancel resize
+  const handleKeyDown = useCallback((e: KeyboardEvent) => {
+    if (e.key === 'Escape' && isResizing) {
+      // Cancel the resize operation
+      setPanelWidth(startWidthRef.current);
+      setIsResizing(false);
+      
+      // Reset cursor
+      document.documentElement.style.cursor = '';
+      document.body.style.cursor = '';
+      
+      // Remove all event listeners
+      window.removeEventListener('mousemove', handleResizeMove);
+      window.removeEventListener('mouseup', handleResizeEnd);
+      window.removeEventListener('keydown', handleKeyDown);
+    }
+  }, [isResizing]);
+
   // Handle resize move event
   const handleResizeMove = (e: MouseEvent) => {
     if (!isResizing) return;
@@ -75,19 +94,28 @@ const CollapsiblePanel: React.FC<CollapsiblePanelProps> = ({
   // Handle resize end event
   const handleResizeEnd = () => {
     setIsResizing(false);
-    // Restore cursor
+    // Restore cursor - important to prevent cursor from getting stuck
     document.documentElement.style.cursor = '';
+    document.body.style.cursor = '';
+    // Remove all event listeners
     window.removeEventListener('mousemove', handleResizeMove);
     window.removeEventListener('mouseup', handleResizeEnd);
+    window.removeEventListener('keydown', handleKeyDown);
   };
   
   // Clean up event listeners when component unmounts
   useEffect(() => {
     return () => {
+      // Safety cleanup - ensure we remove listeners and reset cursor
       window.removeEventListener('mousemove', handleResizeMove);
       window.removeEventListener('mouseup', handleResizeEnd);
+      window.removeEventListener('keydown', handleKeyDown);
+      
+      // Always restore cursor on unmount to prevent "stuck" cursor
+      document.documentElement.style.cursor = '';
+      document.body.style.cursor = '';
     };
-  }, []);
+  }, [handleKeyDown]);
   
   // Calculate panel style based on expanded state and current width
   const panelStyle: React.CSSProperties = {
