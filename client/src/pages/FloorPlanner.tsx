@@ -6,14 +6,14 @@ import PropertyPanel from '@/components/PropertyPanel';
 import SaveSketchModal from '@/components/SaveSketchModal';
 import LoadSketchDialog from '@/components/LoadSketchDialog';
 import { Room } from '@/utils/types';
-import { SavedSketch } from '@/utils/sketchStorage';
+import { SavedSketch } from '@/utils/api';
 import { useToast } from '@/hooks/use-toast';
 
 const FloorPlanner: React.FC = () => {
   const [rooms, setRooms] = useState<Room[]>([]);
   const [selectedRoomId, setSelectedRoomId] = useState<string | null>(null);
   const [activeTool, setActiveTool] = useState<string>('room');
-  const [currentSketchId, setCurrentSketchId] = useState<string | undefined>(undefined);
+  const [currentSketchId, setCurrentSketchId] = useState<number | undefined>(undefined);
   const [currentSketchName, setCurrentSketchName] = useState<string>('');
   const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
   const [isLoadDialogOpen, setIsLoadDialogOpen] = useState(false);
@@ -58,12 +58,10 @@ const FloorPlanner: React.FC = () => {
     setIsLoadDialogOpen(true);
   };
 
-  const handleSaveComplete = (savedSketch?: SavedSketch) => {
-    if (savedSketch) {
-      // Update the current sketch information
-      setCurrentSketchId(savedSketch.id);
-      setCurrentSketchName(savedSketch.name);
-    }
+  const handleSaveComplete = (savedSketch: SavedSketch) => {
+    // Update the current sketch information
+    setCurrentSketchId(savedSketch.id);
+    setCurrentSketchName(savedSketch.name);
   };
 
   const handleLoadSketch = (sketch: SavedSketch) => {

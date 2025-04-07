@@ -16,7 +16,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { MoreHorizontal as DotsHorizontalIcon } from 'lucide-react';
-import { SavedSketch, getSavedSketches, deleteSketch, renameSketch } from '@/utils/sketchStorage';
+import { SavedSketch, fetchSavedSketches, deleteSketch, renameSketch } from '@/utils/api';
 import { useToast } from '@/hooks/use-toast';
 import SketchPreview from './SketchPreview';
 
@@ -33,29 +33,34 @@ const LoadSketchDialog: React.FC<LoadSketchDialogProps> = ({
 }) => {
   const { toast } = useToast();
   const [sketches, setSketches] = useState<SavedSketch[]>([]);
-  const [selectedSketchId, setSelectedSketchId] = useState<string | null>(null);
-  const [editingId, setEditingId] = useState<string | null>(null);
+  const [selectedSketchId, setSelectedSketchId] = useState<number | null>(null);
+  const [editingId, setEditingId] = useState<number | null>(null);
   const [newName, setNewName] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
   // Load sketches when dialog opens
   useEffect(() => {
     if (open) {
-      const loadedSketches = getSavedSketches();
-      setSketches(loadedSketches);
-      setSelectedSketchId(null);
+      setIsLoading(true);
+      fetchSavedSketches()
+        .then(loadedSketches => {
+          setSketches(loadedSketches);
+          setSelectedSketchId(null);
+        })
+        .finally(() => setIsLoading(false));
     }
   }, [open]);
 
   const selectedSketch = sketches.find(sketch => sketch.id === selectedSketchId);
 
-  const handleRename = (id: string, name: string) => {
+  const handleRename = (id: number, name: string) => {
     setEditingId(id);
     setNewName(name);
   };
 
-  const saveNewName = (id: string) => {
+  const saveNewName = async (id: number) => {
     if (newName.trim()) {
-      const updatedSketch = renameSketch(id, newName);
+      const updatedSketch = await renameSketch(id, newName);
       if (updatedSketch) {
         setSketches(sketches.map(sketch => 
           sketch.id === id ? updatedSketch : sketch
@@ -69,10 +74,10 @@ const LoadSketchDialog: React.FC<LoadSketchDialogProps> = ({
     setEditingId(null);
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: number) => {
     if (window.confirm('Are you sure you want to delete this sketch? This action cannot be undone.')) {
-      const deleted = deleteSketch(id);
-      if (deleted) {
+      const success = await deleteSketch(id);
+      if (success) {
         setSketches(sketches.filter(sketch => sketch.id !== id));
         if (selectedSketchId === id) {
           setSelectedSketchId(null);

@@ -1,5 +1,5 @@
 import React from 'react';
-import { SavedSketch } from '@/utils/sketchStorage';
+import { SavedSketch } from '@/utils/api';
 import { formatDimensions } from '@/utils/canvas';
 
 interface SketchPreviewProps {

@@ -11,16 +11,16 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Room } from '@/utils/types';
-import { saveSketch, SavedSketch } from '@/utils/sketchStorage';
+import { saveSketch, SavedSketch } from '@/utils/api';
 import { useToast } from '@/hooks/use-toast';
 
 interface SaveSketchModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   rooms: Room[];
-  currentSketchId?: string;
+  currentSketchId?: number;
   currentSketchName?: string;
-  onSave: (savedSketch?: SavedSketch) => void;
+  onSave: (savedSketch: SavedSketch) => void;
 }
 
 const SaveSketchModal: React.FC<SaveSketchModalProps> = ({
@@ -34,7 +34,9 @@ const SaveSketchModal: React.FC<SaveSketchModalProps> = ({
   const { toast } = useToast();
   const [sketchName, setSketchName] = useState(currentSketchName);
 
-  const handleSave = () => {
+  const [isSaving, setIsSaving] = useState(false);
+
+  const handleSave = async () => {
     if (!sketchName.trim()) {
       toast({
         title: 'Sketch name required',
@@ -45,8 +47,9 @@ const SaveSketchModal: React.FC<SaveSketchModalProps> = ({
     }
 
     // Save the sketch
+    setIsSaving(true);
     try {
-      const savedSketch = saveSketch(sketchName, rooms, currentSketchId);
+      const savedSketch = await saveSketch(sketchName, rooms, currentSketchId);
       toast({
         title: 'Sketch saved!',
         description: `"${sketchName}" has been saved successfully.`,
@@ -56,11 +59,14 @@ const SaveSketchModal: React.FC<SaveSketchModalProps> = ({
       onSave(savedSketch);
       onOpenChange(false);
     } catch (error) {
+      console.error('Error saving sketch:', error);
       toast({
         title: 'Error saving sketch',
         description: 'An error occurred while saving your sketch.',
         variant: 'destructive',
       });
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -99,7 +105,12 @@ const SaveSketchModal: React.FC<SaveSketchModalProps> = ({
           <DialogClose asChild>
             <Button variant="outline">Cancel</Button>
           </DialogClose>
-          <Button onClick={handleSave}>Save Sketch</Button>
+          <Button 
+            onClick={handleSave} 
+            disabled={isSaving}
+          >
+            {isSaving ? 'Saving...' : 'Save Sketch'}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
