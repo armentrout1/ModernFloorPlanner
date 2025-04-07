@@ -50,7 +50,9 @@ const CollapsiblePanel: React.FC<CollapsiblePanelProps> = ({
       document.documentElement.style.cursor = '';
       document.body.style.cursor = '';
       window.removeEventListener('mousemove', handleResizeMove);
+      window.removeEventListener('touchmove', handleTouchMove);
       window.removeEventListener('mouseup', handleResizeEnd);
+      window.removeEventListener('touchend', handleResizeEnd);
       window.removeEventListener('keydown', handleKeyDown);
     }
     setResizeMode(!resizeMode);
@@ -91,12 +93,19 @@ const CollapsiblePanel: React.FC<CollapsiblePanelProps> = ({
     const deltaX = clientX - startXRef.current;
     
     // Apply the delta based on panel position (left or right)
+    // Use a more sensitive multiplier for touch (2.5 instead of 1.5)
     let newWidth = position === 'left' 
-      ? startWidthRef.current + (deltaX * 1.5)
-      : startWidthRef.current - (deltaX * 1.5);
+      ? startWidthRef.current + (deltaX * 2.5)
+      : startWidthRef.current - (deltaX * 2.5);
     
     // Clamp width to min/max values
     newWidth = Math.max(minWidth, Math.min(maxWidth, newWidth));
+    
+    // Prevent jumpy behavior by updating the start reference occasionally
+    if (Math.abs(deltaX) > 40) {
+      startXRef.current = clientX;
+      startWidthRef.current = newWidth;
+    }
     
     // Update immediately to give responsive feeling
     setPanelWidth(newWidth);
@@ -118,7 +127,9 @@ const CollapsiblePanel: React.FC<CollapsiblePanelProps> = ({
       
       // Remove all event listeners
       window.removeEventListener('mousemove', handleResizeMove);
+      window.removeEventListener('touchmove', handleTouchMove);
       window.removeEventListener('mouseup', handleResizeEnd);
+      window.removeEventListener('touchend', handleResizeEnd);
       window.removeEventListener('keydown', handleKeyDown);
     }
   }, [isResizing]);
@@ -128,7 +139,8 @@ const CollapsiblePanel: React.FC<CollapsiblePanelProps> = ({
     if (!isResizing) return;
     
     // Calculate delta based on starting point
-    const deltaX = e.clientX - startXRef.current;
+    const clientX = e.clientX;
+    const deltaX = clientX - startXRef.current;
     
     // Apply the delta based on panel position (left or right)
     // Multiply by 1.5 for faster response to small movements
@@ -138,6 +150,12 @@ const CollapsiblePanel: React.FC<CollapsiblePanelProps> = ({
     
     // Clamp width to min/max values
     newWidth = Math.max(minWidth, Math.min(maxWidth, newWidth));
+    
+    // Prevent jumpy behavior by updating the start reference occasionally
+    if (Math.abs(deltaX) > 80) {
+      startXRef.current = clientX;
+      startWidthRef.current = newWidth;
+    }
     
     // Update immediately to give responsive feeling
     document.documentElement.style.cursor = 'col-resize';
@@ -210,92 +228,80 @@ const CollapsiblePanel: React.FC<CollapsiblePanelProps> = ({
       )}
       style={panelStyle}
     >
-      {/* Controls container - positioned at the bottom of the screen */}
+      {/* Controls container - positioned at the top corner of the panel */}
       <div className={cn(
-        'fixed flex flex-col items-center z-20 space-y-2 p-2 bg-slate-100/80 rounded-lg border border-slate-200 shadow-md',
+        'absolute flex items-center z-20 gap-1 p-1 bg-slate-100/80 rounded border border-slate-200 shadow-sm',
         position === 'left' 
-          ? 'left-0 bottom-4 ml-2 rounded-l-none' 
-          : 'right-0 bottom-4 mr-2 rounded-r-none'
+          ? 'top-1 right-1' 
+          : 'top-1 left-1'
       )}>
         {/* Toggle expand/collapse button */}
         <Button
-          variant="outline"
+          variant="ghost"
           size="icon"
           className={cn(
-            'h-10 w-10 rounded-full bg-background border-2',
-            isExpanded ? 'border-primary/60 hover:border-primary/80' : 'border-primary/30 hover:border-primary/60',
+            'h-6 w-6 rounded-full bg-background/50',
+            isExpanded ? 'hover:bg-background' : 'hover:bg-background',
           )}
           onClick={togglePanel}
           title={isExpanded ? "Collapse panel" : "Expand panel"}
         >
           {position === 'left' ? (
-            isExpanded ? <ChevronLeft className="h-5 w-5 text-primary" /> : <ChevronRight className="h-5 w-5 text-primary" />
+            isExpanded ? <ChevronLeft className="h-3 w-3 text-primary" /> : <ChevronRight className="h-3 w-3 text-primary" />
           ) : (
-            isExpanded ? <ChevronRight className="h-5 w-5 text-primary" /> : <ChevronLeft className="h-5 w-5 text-primary" />
+            isExpanded ? <ChevronRight className="h-3 w-3 text-primary" /> : <ChevronLeft className="h-3 w-3 text-primary" />
           )}
         </Button>
         
         {/* Resize mode toggle button - only show when panel is expanded */}
         {isExpanded && (
           <Button
-            variant="outline"
+            variant="ghost"
             size="icon"
             className={cn(
-              'h-10 w-10 rounded-full bg-background border-2',
-              resizeMode ? 'border-primary/80 hover:border-primary' : 'border-primary/30 hover:border-primary/60',
+              'h-6 w-6 rounded-full bg-background/50',
+              resizeMode ? 'bg-background/80' : 'hover:bg-background',
             )}
             onClick={toggleResizeMode}
             title={resizeMode ? "Exit resize mode" : "Enter resize mode"}
           >
             {resizeMode ? (
-              <Minimize className="h-5 w-5 text-primary" />
+              <Minimize className="h-3 w-3 text-primary" />
             ) : (
-              <Maximize className="h-5 w-5 text-primary/70" />
+              <Maximize className="h-3 w-3 text-primary/70" />
             )}
           </Button>
         )}
       </div>
       
-      {/* Resize handle - only show when resize mode is active, spans full height for easy grab  */}
+      {/* Resize handle - only show when resize mode is active */}
       {isExpanded && resizeMode && (
         <div
           ref={resizeHandleRef}
           className={cn(
-            'absolute top-0 h-full w-10 cursor-col-resize z-10 flex items-center justify-center resize-handle',
-            position === 'left' ? 'right-0 translate-x-1/2' : 'left-0 -translate-x-1/2',
-            isResizing ? 'opacity-100' : 'opacity-70 hover:opacity-100'
+            'absolute top-0 h-full w-4 cursor-col-resize z-10 flex items-center justify-center resize-handle',
+            position === 'left' ? 'right-0' : 'left-0',
+            isResizing ? 'opacity-100' : 'opacity-50 hover:opacity-90'
           )}
           onMouseDown={handleResizeStart}
           onTouchStart={handleResizeStart}
           title="Drag to resize panel"
         >
-          <div className={cn(
-            "h-4/5 w-5 rounded-full transition-colors flex items-center justify-center shadow-md",
-            isResizing ? "bg-primary/70" : "bg-primary/30 hover:bg-primary/50"
-          )}>
-            <div className="h-full py-6 flex flex-col gap-3 justify-center items-center">
-              <div className="w-5 h-1.5 bg-primary/80 rounded-full shadow-sm"></div>
-              <div className="w-5 h-1.5 bg-primary/80 rounded-full shadow-sm"></div>
-              <div className="w-5 h-1.5 bg-primary/80 rounded-full shadow-sm"></div>
-              <div className="w-5 h-1.5 bg-primary/80 rounded-full shadow-sm"></div>
-              <div className="w-5 h-1.5 bg-primary/80 rounded-full shadow-sm"></div>
-              <div className="w-5 h-1.5 bg-primary/80 rounded-full shadow-sm"></div>
-              <div className="w-5 h-1.5 bg-primary/80 rounded-full shadow-sm"></div>
-              <div className="w-5 h-1.5 bg-primary/80 rounded-full shadow-sm"></div>
-            </div>
-          </div>
+          {/* Vertical line */}
+          <div 
+            className={cn(
+              "h-full w-0.5", 
+              isResizing ? "bg-primary" : "bg-slate-300"
+            )}
+          />
           
-          {/* Visual indicator when in resize mode */}
-          <div className={cn(
-            "absolute pointer-events-none",
-            position === 'left' ? "right-1" : "left-1",
-            "top-1/2 -translate-y-1/2 text-primary/50 animate-pulse"
-          )}>
-            {position === 'left' ? 
-              <ChevronRight className="h-6 w-6" /> : 
-              <ChevronLeft className="h-6 w-6" />
-            }
-          </div>
+          {/* Touch-friendly area to ensure easy grabbing */}
+          <div 
+            className={cn(
+              'absolute inset-0 w-6',
+              position === 'left' ? '-right-3' : '-left-3'
+            )}
+          />
         </div>
       )}
       
