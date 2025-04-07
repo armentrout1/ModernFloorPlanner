@@ -20,7 +20,7 @@ const CollapsiblePanel: React.FC<CollapsiblePanelProps> = ({
   defaultExpanded = true,
   position,
   width = 250,
-  minWidth = 50,
+  minWidth = 200, // Increased minimum width for better usability
   maxWidth = 400,
   title,
 }) => {
@@ -29,6 +29,7 @@ const CollapsiblePanel: React.FC<CollapsiblePanelProps> = ({
   const [isResizing, setIsResizing] = useState(false);
   const [resizeMode, setResizeMode] = useState(false);
   const resizeHandleRef = useRef<HTMLDivElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
   const startXRef = useRef(0);
   const startWidthRef = useRef(0);
   
@@ -55,17 +56,50 @@ const CollapsiblePanel: React.FC<CollapsiblePanelProps> = ({
     setResizeMode(!resizeMode);
   };
   
-  // Handle resize start event
-  const handleResizeStart = (e: React.MouseEvent) => {
+  // Handle resize start event for both mouse and touch
+  const handleResizeStart = (e: React.MouseEvent | React.TouchEvent) => {
     e.preventDefault();
     setIsResizing(true);
-    startXRef.current = e.clientX;
+    
+    // Handle both mouse and touch events
+    if ('clientX' in e) {
+      // Mouse event
+      startXRef.current = e.clientX;
+    } else {
+      // Touch event
+      startXRef.current = e.touches[0].clientX;
+    }
+    
     startWidthRef.current = panelWidth;
     
-    // Add event listeners to window for mouse move, up, and key events
+    // Add event listeners to window for mouse/touch move, up/end, and key events
     window.addEventListener('mousemove', handleResizeMove);
+    window.addEventListener('touchmove', handleTouchMove, { passive: false });
     window.addEventListener('mouseup', handleResizeEnd);
+    window.addEventListener('touchend', handleResizeEnd);
     window.addEventListener('keydown', handleKeyDown);
+  };
+  
+  // Handle touch move event (separate from mouse move for better performance)
+  const handleTouchMove = (e: TouchEvent) => {
+    e.preventDefault(); // Prevent scrolling during resize
+    
+    if (!isResizing) return;
+    
+    // Calculate delta based on starting point
+    const clientX = e.touches[0].clientX;
+    const deltaX = clientX - startXRef.current;
+    
+    // Apply the delta based on panel position (left or right)
+    let newWidth = position === 'left' 
+      ? startWidthRef.current + (deltaX * 1.5)
+      : startWidthRef.current - (deltaX * 1.5);
+    
+    // Clamp width to min/max values
+    newWidth = Math.max(minWidth, Math.min(maxWidth, newWidth));
+    
+    // Update immediately to give responsive feeling
+    setPanelWidth(newWidth);
   };
   
   // Handle keydown for Escape to cancel resize
@@ -121,9 +155,11 @@ const CollapsiblePanel: React.FC<CollapsiblePanelProps> = ({
     document.documentElement.style.cursor = '';
     document.body.style.cursor = '';
     
-    // Remove all event listeners
+    // Remove all event listeners - both mouse and touch
     window.removeEventListener('mousemove', handleResizeMove);
+    window.removeEventListener('touchmove', handleTouchMove);
     window.removeEventListener('mouseup', handleResizeEnd);
+    window.removeEventListener('touchend', handleResizeEnd);
     window.removeEventListener('keydown', handleKeyDown);
   };
   
@@ -140,13 +176,15 @@ const CollapsiblePanel: React.FC<CollapsiblePanelProps> = ({
     return () => {
       // Safety cleanup - ensure we remove listeners and reset cursor
       window.removeEventListener('mousemove', handleResizeMove);
+      window.removeEventListener('touchmove', handleTouchMove);
       window.removeEventListener('mouseup', handleResizeEnd);
+      window.removeEventListener('touchend', handleResizeEnd);
       window.removeEventListener('keydown', handleKeyDown);
       
       // Always restore cursor on unmount to prevent "stuck" cursor
       resetCursor();
     };
-  }, [handleKeyDown, resetCursor]);
+  }, [handleKeyDown, resetCursor, handleTouchMove]);
   
   // Initial cleanup on mount to fix any stuck cursors
   useEffect(() => {
@@ -164,6 +202,7 @@ const CollapsiblePanel: React.FC<CollapsiblePanelProps> = ({
   
   return (
     <div 
+      ref={panelRef}
       className={cn(
         'bg-slate-50 border-slate-200 flex flex-col h-full relative', 
         position === 'left' ? 'border-r' : 'border-l', 
@@ -171,63 +210,73 @@ const CollapsiblePanel: React.FC<CollapsiblePanelProps> = ({
       )}
       style={panelStyle}
     >
-      {/* Toggle expand/collapse button */}
-      <Button
-        variant="outline"
-        size="icon"
-        className={cn(
-          'absolute top-2 h-9 w-9 rounded-full bg-background shadow-md z-10 border-2',
-          isExpanded ? 'border-primary/60 hover:border-primary/80' : 'border-primary/30 hover:border-primary/60',
-          position === 'left' ? 'right-0 translate-x-1/2' : 'left-0 -translate-x-1/2'
-        )}
-        onClick={togglePanel}
-        title={isExpanded ? "Collapse panel" : "Expand panel"}
-      >
-        {position === 'left' ? (
-          isExpanded ? <ChevronLeft className="h-5 w-5 text-primary" /> : <ChevronRight className="h-5 w-5 text-primary" />
-        ) : (
-          isExpanded ? <ChevronRight className="h-5 w-5 text-primary" /> : <ChevronLeft className="h-5 w-5 text-primary" />
-        )}
-      </Button>
-      
-      {/* Resize mode toggle button - only show when panel is expanded */}
-      {isExpanded && (
+      {/* Controls container - positioned at the bottom of the screen */}
+      <div className={cn(
+        'fixed flex flex-col items-center z-20 space-y-2 p-2 bg-slate-100/80 rounded-lg border border-slate-200 shadow-md',
+        position === 'left' 
+          ? 'left-0 bottom-4 ml-2 rounded-l-none' 
+          : 'right-0 bottom-4 mr-2 rounded-r-none'
+      )}>
+        {/* Toggle expand/collapse button */}
         <Button
           variant="outline"
           size="icon"
           className={cn(
-            'absolute top-14 h-9 w-9 rounded-full bg-background shadow-md z-10 border-2',
-            resizeMode ? 'border-primary/80 hover:border-primary' : 'border-primary/30 hover:border-primary/60',
-            position === 'left' ? 'right-0 translate-x-1/2' : 'left-0 -translate-x-1/2'
+            'h-10 w-10 rounded-full bg-background border-2',
+            isExpanded ? 'border-primary/60 hover:border-primary/80' : 'border-primary/30 hover:border-primary/60',
           )}
-          onClick={toggleResizeMode}
-          title={resizeMode ? "Exit resize mode" : "Enter resize mode"}
+          onClick={togglePanel}
+          title={isExpanded ? "Collapse panel" : "Expand panel"}
         >
-          {resizeMode ? (
-            <Minimize className="h-5 w-5 text-primary" />
+          {position === 'left' ? (
+            isExpanded ? <ChevronLeft className="h-5 w-5 text-primary" /> : <ChevronRight className="h-5 w-5 text-primary" />
           ) : (
-            <Maximize className="h-5 w-5 text-primary/70" />
+            isExpanded ? <ChevronRight className="h-5 w-5 text-primary" /> : <ChevronLeft className="h-5 w-5 text-primary" />
           )}
         </Button>
-      )}
+        
+        {/* Resize mode toggle button - only show when panel is expanded */}
+        {isExpanded && (
+          <Button
+            variant="outline"
+            size="icon"
+            className={cn(
+              'h-10 w-10 rounded-full bg-background border-2',
+              resizeMode ? 'border-primary/80 hover:border-primary' : 'border-primary/30 hover:border-primary/60',
+            )}
+            onClick={toggleResizeMode}
+            title={resizeMode ? "Exit resize mode" : "Enter resize mode"}
+          >
+            {resizeMode ? (
+              <Minimize className="h-5 w-5 text-primary" />
+            ) : (
+              <Maximize className="h-5 w-5 text-primary/70" />
+            )}
+          </Button>
+        )}
+      </div>
       
-      {/* Resize handle - only show when resize mode is active */}
+      {/* Resize handle - only show when resize mode is active, spans full height for easy grab  */}
       {isExpanded && resizeMode && (
         <div
           ref={resizeHandleRef}
           className={cn(
-            'absolute top-0 h-full w-12 cursor-col-resize z-10 flex items-center justify-center',
+            'absolute top-0 h-full w-10 cursor-col-resize z-10 flex items-center justify-center resize-handle',
             position === 'left' ? 'right-0 translate-x-1/2' : 'left-0 -translate-x-1/2',
-            isResizing ? 'opacity-100' : 'opacity-80 hover:opacity-100'
+            isResizing ? 'opacity-100' : 'opacity-70 hover:opacity-100'
           )}
           onMouseDown={handleResizeStart}
+          onTouchStart={handleResizeStart}
           title="Drag to resize panel"
         >
           <div className={cn(
-            "h-32 w-4 rounded-full transition-colors flex items-center justify-center shadow-md",
+            "h-4/5 w-5 rounded-full transition-colors flex items-center justify-center shadow-md",
             isResizing ? "bg-primary/70" : "bg-primary/30 hover:bg-primary/50"
           )}>
-            <div className="h-24 flex flex-col gap-2 justify-center items-center">
+            <div className="h-full py-6 flex flex-col gap-3 justify-center items-center">
+              <div className="w-5 h-1.5 bg-primary/80 rounded-full shadow-sm"></div>
+              <div className="w-5 h-1.5 bg-primary/80 rounded-full shadow-sm"></div>
+              <div className="w-5 h-1.5 bg-primary/80 rounded-full shadow-sm"></div>
               <div className="w-5 h-1.5 bg-primary/80 rounded-full shadow-sm"></div>
               <div className="w-5 h-1.5 bg-primary/80 rounded-full shadow-sm"></div>
               <div className="w-5 h-1.5 bg-primary/80 rounded-full shadow-sm"></div>
@@ -235,12 +284,24 @@ const CollapsiblePanel: React.FC<CollapsiblePanelProps> = ({
               <div className="w-5 h-1.5 bg-primary/80 rounded-full shadow-sm"></div>
             </div>
           </div>
+          
+          {/* Visual indicator when in resize mode */}
+          <div className={cn(
+            "absolute pointer-events-none",
+            position === 'left' ? "right-1" : "left-1",
+            "top-1/2 -translate-y-1/2 text-primary/50 animate-pulse"
+          )}>
+            {position === 'left' ? 
+              <ChevronRight className="h-6 w-6" /> : 
+              <ChevronLeft className="h-6 w-6" />
+            }
+          </div>
         </div>
       )}
       
       {/* Panel content - visible only when expanded */}
       <div className={cn(
-        'flex-grow overflow-auto',
+        'flex-grow overflow-auto panel-content overflow-fix',
         !isExpanded && 'invisible'
       )}>
         {children}

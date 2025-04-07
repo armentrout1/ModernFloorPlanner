@@ -34,3 +34,37 @@
 .canvas-container {
   cursor: crosshair;
 }
+
+/* Panel specific styles */
+.panel-content {
+  width: 100%;
+  box-sizing: border-box;
+  max-height: 100%;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+/* Resize handle touch support */
+.resize-handle {
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* Responsive adjustments for mobile */
+@media (max-width: 768px) {
+  .panel-controls {
+    padding: 4px;
+  }
+  
+  .panel-btn {
+    height: 36px;
+    width: 36px;
+  }
+}
+
+/* Fix for Safari bug with overflow content */
+.overflow-fix {
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
+}

@@ -297,16 +297,27 @@ const FloorPlanner: React.FC = () => {
         canSave={rooms.length > 0}
       />
       
-      <div className="flex flex-grow overflow-hidden">
-        <CollapsiblePanel position="left" width={250}>
-          <Sidebar 
-            activeTool={activeTool} 
-            onSelectTool={handleSelectTool} 
-            onApplyAction={handleApplyAction}
-          />
+      <div className="flex flex-grow overflow-hidden relative">
+        {/* Left Panel */}
+        <CollapsiblePanel 
+          position="left" 
+          width={250}
+          minWidth={200}
+          maxWidth={350}
+          title="Tools & Actions"
+          className="z-10"
+        >
+          <div className="p-2">
+            <Sidebar 
+              activeTool={activeTool} 
+              onSelectTool={handleSelectTool} 
+              onApplyAction={handleApplyAction}
+            />
+          </div>
         </CollapsiblePanel>
         
-        <div className="flex-grow relative overflow-hidden">
+        {/* Main Canvas Container - Positioned to fill available space */}
+        <div className="flex-grow overflow-hidden relative">
           <CanvasContainer
             activeTool={activeTool}
             placingObjectType={placingObjectType}
@@ -320,19 +331,29 @@ const FloorPlanner: React.FC = () => {
           />
         </div>
         
-        <CollapsiblePanel position="right" width={280}>
-          {showMaterialPanel ? (
-            <MaterialCalculationPanel
-              rooms={rooms}
-            />
-          ) : (
-            <PropertyPanel
-              selectedRoom={selectedRoom}
-              selectedObject={selectedObject}
-              onUpdateRoom={handleUpdateRoom}
-              onDeleteRoom={handleDeleteSelectedRoom}
-            />
-          )}
+        {/* Right Panel */}
+        <CollapsiblePanel 
+          position="right" 
+          width={280}
+          minWidth={240}
+          maxWidth={400}
+          title={showMaterialPanel ? "Materials" : "Properties"}
+          className="z-10"
+        >
+          <div className="p-2">
+            {showMaterialPanel ? (
+              <MaterialCalculationPanel
+                rooms={rooms}
+              />
+            ) : (
+              <PropertyPanel
+                selectedRoom={selectedRoom}
+                selectedObject={selectedObject}
+                onUpdateRoom={handleUpdateRoom}
+                onDeleteRoom={handleDeleteSelectedRoom}
+              />
+            )}
+          </div>
         </CollapsiblePanel>
       </div>
 
