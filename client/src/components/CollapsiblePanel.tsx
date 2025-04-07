@@ -77,22 +77,18 @@ const CollapsiblePanel: React.FC<CollapsiblePanelProps> = ({
     const deltaX = clientX - startXRef.current;
     
     // Apply the delta based on panel position (left or right)
-    // Use a more sensitive multiplier for touch (2.5 instead of 1.5)
+    // Use a slightly higher multiplier for touch (1.2 instead of 1.0) for better responsiveness
     let newWidth = position === 'left' 
-      ? startWidthRef.current + (deltaX * 2.5)
-      : startWidthRef.current - (deltaX * 2.5);
+      ? startWidthRef.current + (deltaX * 1.2)
+      : startWidthRef.current - (deltaX * 1.2);
     
     // Clamp width to min/max values
     newWidth = Math.max(minWidth, Math.min(maxWidth, newWidth));
     
-    // Prevent jumpy behavior by updating the start reference occasionally
-    if (Math.abs(deltaX) > 40) {
-      startXRef.current = clientX;
-      startWidthRef.current = newWidth;
-    }
-    
-    // Update immediately to give responsive feeling
-    setPanelWidth(newWidth);
+    // Use requestAnimationFrame for smoother updates
+    requestAnimationFrame(() => {
+      setPanelWidth(newWidth);
+    });
   };
   
   // Handle keydown for Escape to cancel resize
@@ -124,23 +120,21 @@ const CollapsiblePanel: React.FC<CollapsiblePanelProps> = ({
     const deltaX = clientX - startXRef.current;
     
     // Apply the delta based on panel position (left or right)
-    // Multiply by 1.5 for faster response to small movements
+    // Using a 1:1 ratio for more natural feeling
     let newWidth = position === 'left' 
-      ? startWidthRef.current + (deltaX * 1.5)
-      : startWidthRef.current - (deltaX * 1.5);
+      ? startWidthRef.current + deltaX
+      : startWidthRef.current - deltaX;
     
     // Clamp width to min/max values
     newWidth = Math.max(minWidth, Math.min(maxWidth, newWidth));
     
-    // Prevent jumpy behavior by updating the start reference occasionally
-    if (Math.abs(deltaX) > 80) {
-      startXRef.current = clientX;
-      startWidthRef.current = newWidth;
-    }
-    
-    // Update immediately to give responsive feeling
+    // Update cursor to give visual feedback
     document.documentElement.style.cursor = 'col-resize';
-    setPanelWidth(newWidth);
+    
+    // Use requestAnimationFrame for smoother updates
+    requestAnimationFrame(() => {
+      setPanelWidth(newWidth);
+    });
   };
   
   // Handle resize end event
@@ -192,8 +186,9 @@ const CollapsiblePanel: React.FC<CollapsiblePanelProps> = ({
     width: isExpanded ? panelWidth : 48,
     minWidth: isExpanded ? minWidth : 48,
     maxWidth: isExpanded ? maxWidth : 48,
-    transition: isResizing ? 'none' : 'width 0.3s ease-in-out, background-color 0.3s ease',
+    transition: isResizing ? 'none' : 'width 0.2s cubic-bezier(0.25, 1, 0.5, 1), background-color 0.2s ease',
     backgroundColor: isExpanded ? undefined : 'rgba(var(--primary-rgb), 0.06)',
+    willChange: isResizing ? 'width' : 'auto',
   };
   
   return (
@@ -239,9 +234,9 @@ const CollapsiblePanel: React.FC<CollapsiblePanelProps> = ({
         <div
           ref={resizeHandleRef}
           className={cn(
-            'absolute top-0 h-full w-8 cursor-col-resize z-10 flex items-center justify-center resize-handle',
-            position === 'left' ? 'right-0 -mr-4' : 'left-0 -ml-4',
-            isResizing ? 'opacity-100' : 'opacity-0 hover:opacity-70'
+            'absolute top-0 h-full w-10 cursor-col-resize z-10 flex items-center justify-center resize-handle',
+            position === 'left' ? 'right-0 -mr-5' : 'left-0 -ml-5',
+            isResizing ? 'opacity-100' : 'opacity-40 hover:opacity-100'
           )}
           onMouseDown={handleResizeStart}
           onTouchStart={handleResizeStart}
@@ -249,26 +244,26 @@ const CollapsiblePanel: React.FC<CollapsiblePanelProps> = ({
         >
           {/* Background for handle - makes it easier to grab */}
           <div className={cn(
-            'absolute h-full w-full opacity-0 hover:opacity-10 bg-primary/10 transition-opacity'
+            'absolute h-full w-full bg-background/20 hover:bg-background/30 transition-colors'
           )} />
           
           {/* Vertical line */}
           <div 
             className={cn(
-              "h-full w-1", 
-              isResizing ? "bg-primary" : "bg-primary/40"
+              "h-full w-1.5", 
+              isResizing ? "bg-primary shadow-[0_0_8px_rgba(var(--primary-rgb),0.5)]" : "bg-primary/60"
             )}
           />
           
           {/* Visual indicator for drag direction */}
           <div className={cn(
             "absolute pointer-events-none left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2",
-            isResizing ? "opacity-100" : "opacity-60"
+            isResizing ? "opacity-100" : "opacity-80"
           )}>
             <div className="flex items-center justify-center">
-              <div className="flex gap-1">
-                <ChevronLeft className="h-3 w-3 text-primary" />
-                <ChevronRight className="h-3 w-3 text-primary" />
+              <div className="flex gap-1.5">
+                <ChevronLeft className="h-4 w-4 text-primary drop-shadow-sm" />
+                <ChevronRight className="h-4 w-4 text-primary drop-shadow-sm" />
               </div>
             </div>
           </div>
