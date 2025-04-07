@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { ChevronLeft, ChevronRight, GripVertical, Maximize, Minimize } from 'lucide-react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
@@ -27,7 +27,6 @@ const CollapsiblePanel: React.FC<CollapsiblePanelProps> = ({
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
   const [panelWidth, setPanelWidth] = useState(width);
   const [isResizing, setIsResizing] = useState(false);
-  const [resizeMode, setResizeMode] = useState(false);
   const resizeHandleRef = useRef<HTMLDivElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const startXRef = useRef(0);
@@ -41,22 +40,7 @@ const CollapsiblePanel: React.FC<CollapsiblePanelProps> = ({
     setIsExpanded(!isExpanded);
   };
   
-  // Toggle resize mode
-  const toggleResizeMode = () => {
-    // If turning off resize mode while actually resizing, cancel the resize
-    if (resizeMode && isResizing) {
-      setPanelWidth(startWidthRef.current);
-      setIsResizing(false);
-      document.documentElement.style.cursor = '';
-      document.body.style.cursor = '';
-      window.removeEventListener('mousemove', handleResizeMove);
-      window.removeEventListener('touchmove', handleTouchMove);
-      window.removeEventListener('mouseup', handleResizeEnd);
-      window.removeEventListener('touchend', handleResizeEnd);
-      window.removeEventListener('keydown', handleKeyDown);
-    }
-    setResizeMode(!resizeMode);
-  };
+  // Resize functionality is now always available through the resize handle
   
   // Handle resize start event for both mouse and touch
   const handleResizeStart = (e: React.MouseEvent | React.TouchEvent) => {
@@ -118,9 +102,6 @@ const CollapsiblePanel: React.FC<CollapsiblePanelProps> = ({
       setPanelWidth(startWidthRef.current);
       setIsResizing(false);
       
-      // Auto-exit resize mode after finishing resize
-      setResizeMode(false);
-      
       // Reset cursor
       document.documentElement.style.cursor = '';
       document.body.style.cursor = '';
@@ -165,9 +146,6 @@ const CollapsiblePanel: React.FC<CollapsiblePanelProps> = ({
   // Handle resize end event
   const handleResizeEnd = () => {
     setIsResizing(false);
-    
-    // Auto-exit resize mode after finishing resize
-    setResizeMode(false);
     
     // Restore cursor - important to prevent cursor from getting stuck
     document.documentElement.style.cursor = '';

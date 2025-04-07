@@ -108,7 +108,7 @@ const RoomLabel: React.FC<RoomLabelProps> = ({
           <div className="relative">
             <Button
               className="h-6 w-6 p-0 bg-white/70 hover:bg-white border border-gray-300 rounded"
-              onClick={(e) => {
+              onClick={(e: React.MouseEvent) => {
                 e.stopPropagation();
                 // Show dropdown menu with room names
                 const menu = document.getElementById(`room-name-dropdown-${name}`);
@@ -129,7 +129,7 @@ const RoomLabel: React.FC<RoomLabelProps> = ({
                 <div
                   key={room.value}
                   className="relative cursor-pointer select-none py-2 pl-10 pr-4 hover:bg-blue-100 hover:text-blue-900 text-gray-900"
-                  onClick={(e) => {
+                  onClick={(e: React.MouseEvent) => {
                     e.stopPropagation();
                     handleSelectRoomName(room.value);
                     // Hide dropdown after selection
