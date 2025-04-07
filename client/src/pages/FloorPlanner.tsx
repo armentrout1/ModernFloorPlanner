@@ -3,6 +3,7 @@ import AppHeader from '@/components/AppHeader';
 import Sidebar from '@/components/Sidebar';
 import CanvasContainer from '@/components/CanvasContainer';
 import PropertyPanel from '@/components/PropertyPanel';
+import MaterialCalculationPanel from '@/components/MaterialCalculationPanel';
 import SaveSketchModal from '@/components/SaveSketchModal';
 import LoadSketchDialog from '@/components/LoadSketchDialog';
 import { Room, ObjectType } from '@/utils/types';
@@ -25,6 +26,7 @@ const FloorPlanner: React.FC = () => {
   const [currentSketchName, setCurrentSketchName] = useState<string>('');
   const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
   const [isLoadDialogOpen, setIsLoadDialogOpen] = useState(false);
+  const [showMaterialPanel, setShowMaterialPanel] = useState(false);
   const { toast } = useToast();
 
   const handleNewSketch = () => {
@@ -198,6 +200,10 @@ const FloorPlanner: React.FC = () => {
   const handleLoadClick = () => {
     setIsLoadDialogOpen(true);
   };
+  
+  const toggleMaterialPanel = () => {
+    setShowMaterialPanel(prev => !prev);
+  };
 
   const handleSaveComplete = (savedSketch: SavedSketch) => {
     // Update the current sketch information
@@ -236,6 +242,8 @@ const FloorPlanner: React.FC = () => {
         onNewSketch={handleNewSketch} 
         onSaveSketch={handleSaveClick}
         onLoadSketch={handleLoadClick}
+        onToggleMaterialPanel={toggleMaterialPanel}
+        showMaterialPanel={showMaterialPanel}
         canSave={rooms.length > 0}
       />
       
@@ -258,11 +266,17 @@ const FloorPlanner: React.FC = () => {
           onUpdateRoom={handleUpdateRoom}
         />
         
-        <PropertyPanel
-          selectedRoom={selectedRoom}
-          selectedObject={selectedObject}
-          onUpdateRoom={handleUpdateRoom}
-        />
+        {showMaterialPanel ? (
+          <MaterialCalculationPanel
+            rooms={rooms}
+          />
+        ) : (
+          <PropertyPanel
+            selectedRoom={selectedRoom}
+            selectedObject={selectedObject}
+            onUpdateRoom={handleUpdateRoom}
+          />
+        )}
       </div>
 
       {/* Save Sketch Modal */}

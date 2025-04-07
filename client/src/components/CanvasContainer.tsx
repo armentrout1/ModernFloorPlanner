@@ -4,6 +4,8 @@ import CanvasControls from './CanvasControls';
 import RoomBox from './RoomBox';
 import RoomObject from './RoomObject';
 import TotalAreaDisplay from './TotalAreaDisplay';
+import { MoveHorizontal, MoveVertical, RotateCcw } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { 
   GRID_SIZE, 
   SCALE_FACTOR, 
@@ -11,7 +13,8 @@ import {
   createRoom, 
   getResizedRoom,
   detectWallClick,
-  createRoomObject
+  createRoomObject,
+  centerRoomInViewport
 } from '@/utils/canvas';
 
 interface CanvasContainerProps {
@@ -51,6 +54,7 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
     isDragging: false,
     isResizing: false,
     isDrawing: false,
+    isPanning: false,
     drawStart: null,
     drawEnd: null,
     lastMouse: { x: 0, y: 0 },
@@ -215,6 +219,79 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
     }));
   };
   
+  // Center the view on a particular room
+  const handleCenterView = () => {
+    if (!selectedRoomId || !wrapperRef.current) return;
+    
+    const selectedRoom = rooms.find(room => room.id === selectedRoomId);
+    if (!selectedRoom) return;
+    
+    // Calculate the center position of the room
+    const roomCenterX = selectedRoom.x + selectedRoom.width / 2;
+    const roomCenterY = selectedRoom.y + selectedRoom.height / 2;
+    
+    // Calculate the center of the viewport
+    const viewportWidth = wrapperRef.current.clientWidth;
+    const viewportHeight = wrapperRef.current.clientHeight;
+    
+    // Set scroll position to center the room
+    wrapperRef.current.scrollLeft = roomCenterX * state.scale - viewportWidth / 2;
+    wrapperRef.current.scrollTop = roomCenterY * state.scale - viewportHeight / 2;
+  };
+  
+  // Reset the view to fit all rooms
+  const handleResetView = () => {
+    if (!wrapperRef.current || rooms.length === 0) return;
+    
+    // Find the bounds of all rooms
+    let minX = Infinity;
+    let minY = Infinity;
+    let maxX = -Infinity;
+    let maxY = -Infinity;
+    
+    rooms.forEach(room => {
+      minX = Math.min(minX, room.x);
+      minY = Math.min(minY, room.y);
+      maxX = Math.max(maxX, room.x + room.width);
+      maxY = Math.max(maxY, room.y + room.height);
+    });
+    
+    // Add padding
+    const padding = 100;
+    minX -= padding;
+    minY -= padding;
+    maxX += padding;
+    maxY += padding;
+    
+    // Get viewport dimensions
+    const viewportWidth = wrapperRef.current.clientWidth;
+    const viewportHeight = wrapperRef.current.clientHeight;
+    
+    // Calculate required scale to fit all rooms
+    const scaleX = viewportWidth / (maxX - minX);
+    const scaleY = viewportHeight / (maxY - minY);
+    const newScale = Math.min(scaleX, scaleY, 1); // Don't zoom in more than 1x
+    
+    // Set new scale
+    setState(prev => ({
+      ...prev,
+      scale: newScale,
+    }));
+    
+    // Center the view
+    const centerX = (minX + maxX) / 2;
+    const centerY = (minY + maxY) / 2;
+    
+    // Set scroll position after a short delay to allow scale change to apply
+    setTimeout(() => {
+      if (wrapperRef.current) {
+        wrapperRef.current.scrollLeft = centerX * newScale - viewportWidth / 2;
+        wrapperRef.current.scrollTop = centerY * newScale - viewportHeight / 2;
+      }
+    }, 10);
+  };
+
+  // Handle spacebar + click for panning
   const handleCanvasMouseDown = (e: React.MouseEvent) => {
     if (e.target !== canvasRef.current) return;
     
@@ -224,7 +301,19 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
     const x = (e.clientX - rect.left) / state.scale;
     const y = (e.clientY - rect.top) / state.scale;
     
-    if (activeTool === 'room') {
+    // Middle mouse button or Spacebar + left click enables panning
+    if (e.button === 1 || (e.button === 0 && activeTool === 'move')) {
+      setState(prev => ({
+        ...prev,
+        isPanning: true,
+        lastMouse: { x: e.clientX, y: e.clientY },
+      }));
+      
+      // Change cursor to grabbing
+      if (canvasRef.current) {
+        canvasRef.current.style.cursor = 'grabbing';
+      }
+    } else if (activeTool === 'room') {
       setState(prev => ({
         ...prev,
         isDrawing: true,
@@ -245,7 +334,21 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
     const x = (e.clientX - rect.left) / state.scale;
     const y = (e.clientY - rect.top) / state.scale;
     
-    if (state.isDrawing && state.drawStart) {
+    if (state.isPanning && wrapperRef.current) {
+      // Calculate the delta change since last mouse position for panning
+      const dx = e.clientX - state.lastMouse.x;
+      const dy = e.clientY - state.lastMouse.y;
+      
+      // Pan by updating scroll position
+      wrapperRef.current.scrollLeft -= dx;
+      wrapperRef.current.scrollTop -= dy;
+      
+      // Update last mouse position
+      setState(prev => ({
+        ...prev,
+        lastMouse: { x: e.clientX, y: e.clientY },
+      }));
+    } else if (state.isDrawing && state.drawStart) {
       setState(prev => ({
         ...prev,
         drawEnd: { x, y },
@@ -333,11 +436,17 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
       }
     }
     
+    // Reset cursor if panning
+    if (state.isPanning && canvasRef.current) {
+      canvasRef.current.style.cursor = 'crosshair';
+    }
+    
     setState(prev => ({
       ...prev,
       isDrawing: false,
       isDragging: false,
       isResizing: false,
+      isPanning: false,
       drawStart: null,
       drawEnd: null,
       activeResizeHandle: null,
@@ -388,6 +497,35 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
       />
       
       <TotalAreaDisplay rooms={rooms} />
+      
+      {/* Canvas Navigation Controls */}
+      <div className="absolute left-1/2 bottom-4 -translate-x-1/2 flex items-center gap-2 z-10 bg-white/90 rounded-full shadow-md px-4 py-2 border border-slate-200">
+        <Button
+          variant="outline"
+          size="icon"
+          className="h-8 w-8 rounded-full"
+          onClick={handleResetView}
+          title="Fit All Rooms"
+        >
+          <RotateCcw className="h-4 w-4" />
+        </Button>
+        
+        {selectedRoomId && (
+          <Button
+            variant="outline"
+            size="icon"
+            className="h-8 w-8 rounded-full"
+            onClick={handleCenterView}
+            title="Center Selected Room"
+          >
+            <MoveHorizontal className="h-4 w-4" />
+          </Button>
+        )}
+        
+        <div className="text-xs bg-slate-100 px-2 py-1 rounded">
+          {Math.round(state.scale * 100)}%
+        </div>
+      </div>
       
       <div 
         ref={wrapperRef} 

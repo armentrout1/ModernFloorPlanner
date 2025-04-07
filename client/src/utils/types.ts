@@ -40,6 +40,7 @@ export interface CanvasState {
   isDragging: boolean;
   isResizing: boolean;
   isDrawing: boolean;
+  isPanning: boolean;
   drawStart: Position | null;
   drawEnd: Position | null;
   lastMouse: Position;

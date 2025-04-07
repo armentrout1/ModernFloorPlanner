@@ -1,11 +1,13 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { FileIcon, SaveIcon, FolderOpenIcon } from 'lucide-react';
+import { FileIcon, SaveIcon, FolderOpenIcon, CalculatorIcon } from 'lucide-react';
 
 interface AppHeaderProps {
   onNewSketch: () => void;
   onSaveSketch: () => void;
   onLoadSketch: () => void;
+  onToggleMaterialPanel: () => void;
+  showMaterialPanel: boolean;
   canSave: boolean;
 }
 
@@ -13,6 +15,8 @@ const AppHeader: React.FC<AppHeaderProps> = ({
   onNewSketch, 
   onSaveSketch, 
   onLoadSketch,
+  onToggleMaterialPanel,
+  showMaterialPanel,
   canSave 
 }) => {
   return (
@@ -21,6 +25,15 @@ const AppHeader: React.FC<AppHeaderProps> = ({
         <h1 className="text-xl font-bold text-primary">Modern Floor Planner</h1>
       </div>
       <div className="flex items-center space-x-3">
+        <Button 
+          onClick={onToggleMaterialPanel}
+          variant={showMaterialPanel ? "default" : "outline"}
+          className="flex items-center"
+        >
+          <CalculatorIcon className="mr-2 h-4 w-4" />
+          Materials
+        </Button>
+      
         <Button 
           onClick={onLoadSketch}
           variant="outline"
