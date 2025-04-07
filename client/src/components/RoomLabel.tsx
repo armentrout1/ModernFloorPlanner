@@ -1,19 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Check, ChevronsUpDown } from 'lucide-react';
-import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-} from '@/components/ui/command';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
+import { ChevronsUpDown } from 'lucide-react';
 
 // Common room names that people might want to use
 const commonRoomNames = [
@@ -53,7 +40,6 @@ const RoomLabel: React.FC<RoomLabelProps> = ({
   onSave,
 }) => {
   const [value, setValue] = useState(name);
-  const [open, setOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   
   // Focus input when editing starts
@@ -83,9 +69,10 @@ const RoomLabel: React.FC<RoomLabelProps> = ({
   };
   
   const handleBlur = () => {
-    if (!open) {
+    // Short delay to allow selection from dropdown
+    setTimeout(() => {
       onSave(value);
-    }
+    }, 100);
   };
   
   const handleClick = (e: React.MouseEvent) => {
@@ -97,7 +84,6 @@ const RoomLabel: React.FC<RoomLabelProps> = ({
 
   const handleSelectRoomName = (selectedValue: string) => {
     setValue(selectedValue);
-    setOpen(false);
     onSave(selectedValue);
   };
   
@@ -118,46 +104,55 @@ const RoomLabel: React.FC<RoomLabelProps> = ({
             className="w-full text-center bg-transparent outline-none border-b border-blue-400 mr-1"
             onClick={(e) => e.stopPropagation()}
           />
-          <Popover open={open} onOpenChange={setOpen}>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                role="combobox"
-                aria-expanded={open}
-                aria-label="Select room type"
-                className="h-6 w-6 p-0 bg-white/70 hover:bg-white"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setOpen(!open);
-                }}
-              >
-                <ChevronsUpDown className="h-3 w-3" />
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-[200px] p-0">
-              <Command>
-                <CommandInput placeholder="Search room types..." className="h-8" />
-                <CommandEmpty>No room type found.</CommandEmpty>
-                <CommandGroup className="max-h-[200px] overflow-auto">
-                  {commonRoomNames.map((room) => (
-                    <CommandItem
-                      key={room.value}
-                      value={room.value}
-                      onSelect={() => handleSelectRoomName(room.value)}
-                    >
-                      <Check
-                        className={cn(
-                          "mr-2 h-4 w-4",
-                          value === room.value ? "opacity-100" : "opacity-0"
-                        )}
-                      />
-                      {room.label}
-                    </CommandItem>
-                  ))}
-                </CommandGroup>
-              </Command>
-            </PopoverContent>
-          </Popover>
+          
+          <div className="relative">
+            <Button
+              className="h-6 w-6 p-0 bg-white/70 hover:bg-white border border-gray-300 rounded"
+              onClick={(e) => {
+                e.stopPropagation();
+                // Show dropdown menu with room names
+                const menu = document.getElementById(`room-name-dropdown-${name}`);
+                if (menu) {
+                  menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+                }
+              }}
+            >
+              <ChevronsUpDown className="h-3 w-3" />
+            </Button>
+            
+            <div 
+              id={`room-name-dropdown-${name}`} 
+              className="absolute mt-1 max-h-60 w-[200px] right-0 overflow-auto rounded-md bg-white py-1 text-base shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none text-sm z-50"
+              style={{ display: 'none' }}
+            >
+              {commonRoomNames.map((room) => (
+                <div
+                  key={room.value}
+                  className="relative cursor-pointer select-none py-2 pl-10 pr-4 hover:bg-blue-100 hover:text-blue-900 text-gray-900"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleSelectRoomName(room.value);
+                    // Hide dropdown after selection
+                    const menu = document.getElementById(`room-name-dropdown-${name}`);
+                    if (menu) {
+                      menu.style.display = 'none';
+                    }
+                  }}
+                >
+                  <span className={`block truncate ${room.value === value ? 'font-medium' : 'font-normal'}`}>
+                    {room.label}
+                  </span>
+                  {room.value === value && (
+                    <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-blue-600">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                      </svg>
+                    </span>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       ) : (
         <span>{name || 'Room'}</span>

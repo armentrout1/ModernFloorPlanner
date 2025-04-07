@@ -253,35 +253,17 @@ const CollapsiblePanel: React.FC<CollapsiblePanelProps> = ({
           )}
         </Button>
         
-        {/* Resize mode toggle button - only show when panel is expanded */}
-        {isExpanded && (
-          <Button
-            variant="ghost"
-            size="icon"
-            className={cn(
-              'h-6 w-6 rounded-full bg-background/50',
-              resizeMode ? 'bg-background/80' : 'hover:bg-background',
-            )}
-            onClick={toggleResizeMode}
-            title={resizeMode ? "Exit resize mode" : "Enter resize mode"}
-          >
-            {resizeMode ? (
-              <Minimize className="h-3 w-3 text-primary" />
-            ) : (
-              <Maximize className="h-3 w-3 text-primary/70" />
-            )}
-          </Button>
-        )}
+        {/* No longer needed since resize handle is always available */}
       </div>
       
-      {/* Resize handle - only show when resize mode is active */}
-      {isExpanded && resizeMode && (
+      {/* Resize handle - always show when panel is expanded */}
+      {isExpanded && (
         <div
           ref={resizeHandleRef}
           className={cn(
             'absolute top-0 h-full w-8 cursor-col-resize z-10 flex items-center justify-center resize-handle',
             position === 'left' ? 'right-0 -mr-4' : 'left-0 -ml-4',
-            isResizing ? 'opacity-100' : 'opacity-70 hover:opacity-100'
+            isResizing ? 'opacity-100' : 'opacity-0 hover:opacity-70'
           )}
           onMouseDown={handleResizeStart}
           onTouchStart={handleResizeStart}
@@ -306,17 +288,10 @@ const CollapsiblePanel: React.FC<CollapsiblePanelProps> = ({
             isResizing ? "opacity-100" : "opacity-60"
           )}>
             <div className="flex items-center justify-center">
-              {position === 'left' ? (
-                <div className="flex gap-1">
-                  <ChevronLeft className="h-3 w-3 text-primary" />
-                  <ChevronRight className="h-3 w-3 text-primary" />
-                </div>
-              ) : (
-                <div className="flex gap-1">
-                  <ChevronLeft className="h-3 w-3 text-primary" />
-                  <ChevronRight className="h-3 w-3 text-primary" />
-                </div>
-              )}
+              <div className="flex gap-1">
+                <ChevronLeft className="h-3 w-3 text-primary" />
+                <ChevronRight className="h-3 w-3 text-primary" />
+              </div>
             </div>
           </div>
         </div>
