@@ -41,12 +41,12 @@ const Sidebar: React.FC<SidebarProps> = ({
 }) => {
   return (
     <TooltipProvider>
-      <div className="w-64 bg-slate-50 border-r border-slate-200 flex flex-col overflow-y-auto">
+      <div className="flex flex-col overflow-y-auto h-full">
         <div className="p-4 border-b border-slate-200">
           <h2 className="text-lg font-medium">Tools</h2>
         </div>
         
-        <div className="p-3">
+        <div className="p-3 pb-4 flex-grow">
           <Accordion type="multiple" defaultValue={['drawing', 'objects', 'align']}>
             <AccordionItem value="drawing">
               <AccordionTrigger className="px-2 py-2 text-sm">Drawing Tools</AccordionTrigger>

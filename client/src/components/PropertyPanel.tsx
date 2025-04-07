@@ -58,33 +58,26 @@ const PropertyPanel: React.FC<PropertyPanelProps> = ({
     }
   };
   
-  // If no room is selected, show an empty panel with a message
-  if (!selectedRoom) {
-    return (
-      <div className="w-64 bg-slate-50 border-l border-slate-200 flex flex-col overflow-y-auto">
-        <div className="p-4 border-b border-slate-200">
-          <h2 className="text-lg font-medium">Properties</h2>
-        </div>
-        <div className="p-4 text-center text-slate-500">
-          Select a room to edit its properties
-        </div>
-      </div>
-    );
-  }
-  
-  // Calculate room dimensions in feet
-  const widthFeet = pixelsToFeet(selectedRoom.width);
-  const heightFeet = pixelsToFeet(selectedRoom.height);
-  const area = calculateRoomArea(selectedRoom);
-  const perimeter = calculateRoomPerimeter(selectedRoom);
+  // Calculate room dimensions in feet if a room is selected
+  const widthFeet = selectedRoom ? pixelsToFeet(selectedRoom.width) : 0;
+  const heightFeet = selectedRoom ? pixelsToFeet(selectedRoom.height) : 0;
+  const area = selectedRoom ? calculateRoomArea(selectedRoom) : 0;
+  const perimeter = selectedRoom ? calculateRoomPerimeter(selectedRoom) : 0;
   
   return (
-    <div className="w-64 bg-slate-50 border-l border-slate-200 flex flex-col overflow-y-auto">
+    <div className="flex flex-col overflow-y-auto h-full">
       <div className="p-4 border-b border-slate-200">
         <h2 className="text-lg font-medium">Properties</h2>
       </div>
       
-      {selectedObject ? (
+      {!selectedRoom ? (
+        // No room selected
+        <div className="p-4 flex-grow flex items-center justify-center">
+          <div className="text-center text-slate-500 p-4">
+            <p>Select a room to edit its properties</p>
+          </div>
+        </div>
+      ) : selectedObject ? (
         // Object properties section
         <div className="p-4 space-y-4">
           <div className="flex items-center justify-between">

@@ -279,38 +279,57 @@ const CollapsiblePanel: React.FC<CollapsiblePanelProps> = ({
         <div
           ref={resizeHandleRef}
           className={cn(
-            'absolute top-0 h-full w-4 cursor-col-resize z-10 flex items-center justify-center resize-handle',
-            position === 'left' ? 'right-0' : 'left-0',
-            isResizing ? 'opacity-100' : 'opacity-50 hover:opacity-90'
+            'absolute top-0 h-full w-8 cursor-col-resize z-10 flex items-center justify-center resize-handle',
+            position === 'left' ? 'right-0 -mr-4' : 'left-0 -ml-4',
+            isResizing ? 'opacity-100' : 'opacity-70 hover:opacity-100'
           )}
           onMouseDown={handleResizeStart}
           onTouchStart={handleResizeStart}
           title="Drag to resize panel"
         >
+          {/* Background for handle - makes it easier to grab */}
+          <div className={cn(
+            'absolute h-full w-full opacity-0 hover:opacity-10 bg-primary/10 transition-opacity'
+          )} />
+          
           {/* Vertical line */}
           <div 
             className={cn(
-              "h-full w-0.5", 
-              isResizing ? "bg-primary" : "bg-slate-300"
+              "h-full w-1", 
+              isResizing ? "bg-primary" : "bg-primary/40"
             )}
           />
           
-          {/* Touch-friendly area to ensure easy grabbing */}
-          <div 
-            className={cn(
-              'absolute inset-0 w-6',
-              position === 'left' ? '-right-3' : '-left-3'
-            )}
-          />
+          {/* Visual indicator for drag direction */}
+          <div className={cn(
+            "absolute pointer-events-none left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2",
+            isResizing ? "opacity-100" : "opacity-60"
+          )}>
+            <div className="flex items-center justify-center">
+              {position === 'left' ? (
+                <div className="flex gap-1">
+                  <ChevronLeft className="h-3 w-3 text-primary" />
+                  <ChevronRight className="h-3 w-3 text-primary" />
+                </div>
+              ) : (
+                <div className="flex gap-1">
+                  <ChevronLeft className="h-3 w-3 text-primary" />
+                  <ChevronRight className="h-3 w-3 text-primary" />
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       )}
       
       {/* Panel content - visible only when expanded */}
       <div className={cn(
-        'flex-grow overflow-auto panel-content overflow-fix',
+        'flex-grow overflow-auto panel-content overflow-fix p-3',
         !isExpanded && 'invisible'
       )}>
-        {children}
+        <div className="w-full h-full space-y-3">
+          {children}
+        </div>
       </div>
       
       {/* Collapsed panel label */}
