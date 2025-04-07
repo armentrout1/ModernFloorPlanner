@@ -57,7 +57,7 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
   
   // Check for rooms that are close to each other for snapping
   const checkRoomProximity = (testRoom: Room): Room => {
-    const snapThreshold = GRID_SIZE; // 1 foot in pixels
+    const snapThreshold = GRID_SIZE * 0.75; // Slightly less than 1 foot in pixels for better feel
     let snappedRoom = { ...testRoom };
     
     // Don't check proximity if this is the only room
@@ -66,28 +66,67 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
     // Skip the room we're currently checking
     const otherRooms = rooms.filter(r => r.id !== testRoom.id);
     
+    // Store the original position to check which edge had the closest snap
+    const originalX = snappedRoom.x;
+    const originalY = snappedRoom.y;
+    let minDistanceX = Infinity;
+    let minDistanceY = Infinity;
+    
     for (const otherRoom of otherRooms) {
       // Check right edge of testRoom to left edge of otherRoom
-      if (Math.abs((testRoom.x + testRoom.width) - otherRoom.x) <= snapThreshold) {
+      const rightToLeftDist = Math.abs((testRoom.x + testRoom.width) - otherRoom.x);
+      if (rightToLeftDist <= snapThreshold && rightToLeftDist < minDistanceX) {
+        minDistanceX = rightToLeftDist;
         snappedRoom.x = otherRoom.x - testRoom.width;
       }
       
       // Check left edge of testRoom to right edge of otherRoom
-      if (Math.abs(testRoom.x - (otherRoom.x + otherRoom.width)) <= snapThreshold) {
+      const leftToRightDist = Math.abs(testRoom.x - (otherRoom.x + otherRoom.width));
+      if (leftToRightDist <= snapThreshold && leftToRightDist < minDistanceX) {
+        minDistanceX = leftToRightDist;
         snappedRoom.x = otherRoom.x + otherRoom.width;
       }
       
       // Check bottom edge of testRoom to top edge of otherRoom
-      if (Math.abs((testRoom.y + testRoom.height) - otherRoom.y) <= snapThreshold) {
+      const bottomToTopDist = Math.abs((testRoom.y + testRoom.height) - otherRoom.y);
+      if (bottomToTopDist <= snapThreshold && bottomToTopDist < minDistanceY) {
+        minDistanceY = bottomToTopDist;
         snappedRoom.y = otherRoom.y - testRoom.height;
       }
       
       // Check top edge of testRoom to bottom edge of otherRoom
-      if (Math.abs(testRoom.y - (otherRoom.y + otherRoom.height)) <= snapThreshold) {
+      const topToBottomDist = Math.abs(testRoom.y - (otherRoom.y + otherRoom.height));
+      if (topToBottomDist <= snapThreshold && topToBottomDist < minDistanceY) {
+        minDistanceY = topToBottomDist;
         snappedRoom.y = otherRoom.y + otherRoom.height;
+      }
+      
+      // Check aligned edges (vertical alignment)
+      if (Math.abs(testRoom.x - otherRoom.x) <= snapThreshold && Math.abs(testRoom.x - otherRoom.x) < minDistanceX) {
+        minDistanceX = Math.abs(testRoom.x - otherRoom.x);
+        snappedRoom.x = otherRoom.x;
+      }
+      
+      if (Math.abs((testRoom.x + testRoom.width) - (otherRoom.x + otherRoom.width)) <= snapThreshold && 
+          Math.abs((testRoom.x + testRoom.width) - (otherRoom.x + otherRoom.width)) < minDistanceX) {
+        minDistanceX = Math.abs((testRoom.x + testRoom.width) - (otherRoom.x + otherRoom.width));
+        snappedRoom.x = otherRoom.x + otherRoom.width - testRoom.width;
+      }
+      
+      // Check aligned edges (horizontal alignment)
+      if (Math.abs(testRoom.y - otherRoom.y) <= snapThreshold && Math.abs(testRoom.y - otherRoom.y) < minDistanceY) {
+        minDistanceY = Math.abs(testRoom.y - otherRoom.y);
+        snappedRoom.y = otherRoom.y;
+      }
+      
+      if (Math.abs((testRoom.y + testRoom.height) - (otherRoom.y + otherRoom.height)) <= snapThreshold && 
+          Math.abs((testRoom.y + testRoom.height) - (otherRoom.y + otherRoom.height)) < minDistanceY) {
+        minDistanceY = Math.abs((testRoom.y + testRoom.height) - (otherRoom.y + otherRoom.height));
+        snappedRoom.y = otherRoom.y + otherRoom.height - testRoom.height;
       }
     }
     
+    // Return the new position
     return snappedRoom;
   };
   
@@ -154,23 +193,41 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
         drawEnd: { x, y },
       }));
     } else if (state.isDragging && selectedRoomId) {
+      // Calculate the delta change since last mouse position
       const dx = (e.clientX - state.lastMouse.x) / state.scale;
       const dy = (e.clientY - state.lastMouse.y) / state.scale;
       
-      const updatedRooms = rooms.map(room => {
-        if (room.id === selectedRoomId) {
-          const updatedRoom = {
-            ...room,
-            x: snapToGrid(room.x + dx),
-            y: snapToGrid(room.y + dy),
-          };
-          return checkRoomProximity(updatedRoom);
-        }
-        return room;
-      });
+      // Only update if there's actual movement (prevents micro-jitters)
+      if (Math.abs(dx) > 0.1 || Math.abs(dy) > 0.1) {
+        const selectedRoom = rooms.find(room => room.id === selectedRoomId);
+        if (!selectedRoom) return;
+        
+        // Create a smooth dragging experience by updating position before snapping
+        let updatedRoom = {
+          ...selectedRoom,
+          x: selectedRoom.x + dx,
+          y: selectedRoom.y + dy
+        };
+        
+        // Then snap to grid and check for proximity
+        updatedRoom = {
+          ...updatedRoom,
+          x: snapToGrid(updatedRoom.x),
+          y: snapToGrid(updatedRoom.y)
+        };
+        
+        // Check for proximity with other rooms for snapping
+        updatedRoom = checkRoomProximity(updatedRoom);
+        
+        // Update all rooms, replacing the one being moved
+        const updatedRooms = rooms.map(room => 
+          room.id === selectedRoomId ? updatedRoom : room
+        );
+        
+        onRoomsChange(updatedRooms);
+      }
       
-      onRoomsChange(updatedRooms);
-      
+      // Always update the last mouse position
       setState(prev => ({
         ...prev,
         lastMouse: { x: e.clientX, y: e.clientY },
@@ -179,14 +236,13 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
       const selectedRoom = rooms.find(room => room.id === selectedRoomId);
       if (!selectedRoom) return;
       
+      // Get the resized room with constraints applied
       const newRoom = getResizedRoom(selectedRoom, state.activeResizeHandle, { x, y });
       
-      const updatedRooms = rooms.map(room => {
-        if (room.id === selectedRoomId) {
-          return newRoom;
-        }
-        return room;
-      });
+      // Update all rooms, replacing the one being resized
+      const updatedRooms = rooms.map(room => 
+        room.id === selectedRoomId ? newRoom : room
+      );
       
       onRoomsChange(updatedRooms);
     }

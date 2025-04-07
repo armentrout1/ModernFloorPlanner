@@ -28,16 +28,24 @@ const RoomBox: React.FC<RoomBoxProps> = ({
 
   const handleMouseDown = (e: React.MouseEvent) => {
     e.stopPropagation();
-    onSelect(id);
-  };
-
-  const handleMoveStart = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    onMoveStart(id, e.clientX, e.clientY);
+    
+    // If clicking with the main button (usually left click)
+    if (e.button === 0) {
+      // Select the room first
+      onSelect(id);
+      
+      // Then immediately start moving the room (if not clicking on other controls)
+      if (!isEditingName && 
+          !(e.target as HTMLElement).closest('.resize-handle') && 
+          !(e.target as HTMLElement).closest('.room-label')) {
+        onMoveStart(id, e.clientX, e.clientY);
+      }
+    }
   };
 
   const handleResizeStart = (e: React.MouseEvent, handle: ResizeHandle) => {
     e.stopPropagation();
+    onSelect(id);
     onResizeStart(id, handle);
   };
 
@@ -60,30 +68,33 @@ const RoomBox: React.FC<RoomBoxProps> = ({
     backgroundColor: `${color}33`, // Add transparency
     borderColor: isSelected ? 'hsl(var(--accent))' : 'hsl(var(--primary))',
     zIndex: isSelected ? 10 : 1,
+    transition: 'box-shadow 0.15s ease, border-color 0.15s ease',
+    boxShadow: isSelected ? '0 4px 8px rgba(0, 0, 0, 0.1)' : 'none',
+    touchAction: 'none', // Prevent default touch actions for better touch device handling
   };
 
-  const roomClasses = `absolute border-2 cursor-move ${isSelected ? 'bg-accent/20 border-accent' : 'bg-primary/20 border-primary'}`;
+  const roomClasses = `absolute border-2 cursor-move select-none ${isSelected ? 'bg-accent/20 border-accent' : 'bg-primary/20 border-primary hover:border-primary/70'}`;
 
   return (
     <div
       className={roomClasses}
       style={roomStyle}
       onMouseDown={handleMouseDown}
-      onDoubleClick={handleMoveStart}
     >
-      <div className="p-2" onMouseDown={(e) => e.stopPropagation()}>
+      <div className="p-2" onClick={(e) => e.stopPropagation()}>
         <div className="flex justify-between items-center mb-1">
-          <RoomLabel 
-            name={name}
-            isEditing={isEditingName}
-            onStartEdit={handleStartEditName}
-            onSave={handleSaveName}
-          />
+          <div className="room-label">
+            <RoomLabel 
+              name={name}
+              isEditing={isEditingName}
+              onStartEdit={handleStartEditName}
+              onSave={handleSaveName}
+            />
+          </div>
           <span className="text-xs text-slate-500">{formatArea(roomArea)}</span>
         </div>
         <div 
           className="text-sm text-slate-600 font-medium bg-white/70 px-1.5 py-0.5 rounded-sm inline-block"
-          onMouseDown={handleMoveStart}
         >
           {formatDimensions(width, height)}
         </div>
@@ -105,19 +116,19 @@ const RoomBox: React.FC<RoomBoxProps> = ({
 
       {/* Resize handles */}
       <div
-        className="absolute w-2.5 h-2.5 bg-white border-2 border-primary rounded-full -top-1.5 -left-1.5 cursor-nwse-resize"
+        className="resize-handle absolute w-3.5 h-3.5 bg-white border-2 border-primary rounded-full -top-2 -left-2 cursor-nwse-resize z-20 hover:scale-110 transition-transform"
         onMouseDown={(e) => handleResizeStart(e, 'nw')}
       />
       <div
-        className="absolute w-2.5 h-2.5 bg-white border-2 border-primary rounded-full -top-1.5 -right-1.5 cursor-nesw-resize"
+        className="resize-handle absolute w-3.5 h-3.5 bg-white border-2 border-primary rounded-full -top-2 -right-2 cursor-nesw-resize z-20 hover:scale-110 transition-transform"
         onMouseDown={(e) => handleResizeStart(e, 'ne')}
       />
       <div
-        className="absolute w-2.5 h-2.5 bg-white border-2 border-primary rounded-full -bottom-1.5 -left-1.5 cursor-nesw-resize"
+        className="resize-handle absolute w-3.5 h-3.5 bg-white border-2 border-primary rounded-full -bottom-2 -left-2 cursor-nesw-resize z-20 hover:scale-110 transition-transform"
         onMouseDown={(e) => handleResizeStart(e, 'sw')}
       />
       <div
-        className="absolute w-2.5 h-2.5 bg-white border-2 border-primary rounded-full -bottom-1.5 -right-1.5 cursor-nwse-resize"
+        className="resize-handle absolute w-3.5 h-3.5 bg-white border-2 border-primary rounded-full -bottom-2 -right-2 cursor-nwse-resize z-20 hover:scale-110 transition-transform"
         onMouseDown={(e) => handleResizeStart(e, 'se')}
       />
     </div>
