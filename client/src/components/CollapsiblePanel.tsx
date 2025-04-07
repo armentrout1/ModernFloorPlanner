@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { ChevronLeft, ChevronRight, Grid } from 'lucide-react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
@@ -12,8 +12,6 @@ interface CollapsiblePanelProps {
   minWidth?: number;
   maxWidth?: number;
   title?: string; // Optional title to show when collapsed
-  gridSize?: number; // Size of grid to snap to (in pixels)
-  snapToGrid?: boolean; // Whether to enable snap-to-grid
 }
 
 const CollapsiblePanel: React.FC<CollapsiblePanelProps> = ({
@@ -25,23 +23,14 @@ const CollapsiblePanel: React.FC<CollapsiblePanelProps> = ({
   minWidth = 200, // Increased minimum width for better usability
   maxWidth = 400,
   title,
-  gridSize = 20, // Default grid size (20px)
-  snapToGrid = true, // Enable snap-to-grid by default
 }) => {
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
   const [panelWidth, setPanelWidth] = useState(width);
   const [isResizing, setIsResizing] = useState(false);
-  const [isGridEnabled, setIsGridEnabled] = useState(snapToGrid);
   const resizeHandleRef = useRef<HTMLDivElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const startXRef = useRef(0);
   const startWidthRef = useRef(0);
-  
-  // Function to snap a value to the nearest grid increment
-  const snapToGridSize = useCallback((value: number): number => {
-    if (!isGridEnabled) return value;
-    return Math.round(value / gridSize) * gridSize;
-  }, [gridSize, isGridEnabled]);
   
   // Determine panel title from position if not provided
   const displayTitle = title || (position === 'left' ? 'Tools' : 'Properties');
@@ -96,11 +85,6 @@ const CollapsiblePanel: React.FC<CollapsiblePanelProps> = ({
     // Clamp width to min/max values
     newWidth = Math.max(minWidth, Math.min(maxWidth, newWidth));
     
-    // If grid snapping is enabled, snap to the nearest grid increment
-    if (isGridEnabled) {
-      newWidth = snapToGridSize(newWidth);
-    }
-    
     // Use requestAnimationFrame for smoother updates
     requestAnimationFrame(() => {
       setPanelWidth(newWidth);
@@ -144,11 +128,6 @@ const CollapsiblePanel: React.FC<CollapsiblePanelProps> = ({
     // Clamp width to min/max values
     newWidth = Math.max(minWidth, Math.min(maxWidth, newWidth));
     
-    // If grid snapping is enabled, snap to the nearest grid increment
-    if (isGridEnabled) {
-      newWidth = snapToGridSize(newWidth);
-    }
-    
     // Update cursor to give visual feedback
     document.documentElement.style.cursor = 'col-resize';
     
@@ -166,31 +145,12 @@ const CollapsiblePanel: React.FC<CollapsiblePanelProps> = ({
     document.documentElement.style.cursor = '';
     document.body.style.cursor = '';
     
-    // Add one final grid snap for cleaner finish, even if continuous
-    // snapping was disabled during the resize operation
-    if (snapToGrid) {
-      const snappedWidth = snapToGridSize(panelWidth);
-      if (snappedWidth !== panelWidth) {
-        setPanelWidth(snappedWidth);
-      }
-    }
-    
     // Remove all event listeners - both mouse and touch
     window.removeEventListener('mousemove', handleResizeMove);
     window.removeEventListener('touchmove', handleTouchMove);
     window.removeEventListener('mouseup', handleResizeEnd);
     window.removeEventListener('touchend', handleResizeEnd);
     window.removeEventListener('keydown', handleKeyDown);
-    
-    // Provide visual feedback of the snap with a small highlight pulse effect
-    if (resizeHandleRef.current) {
-      resizeHandleRef.current.classList.add('grid-snap-pulse');
-      setTimeout(() => {
-        if (resizeHandleRef.current) {
-          resizeHandleRef.current.classList.remove('grid-snap-pulse');
-        }
-      }, 300);
-    }
   };
   
   // Reset cursor function
@@ -236,8 +196,7 @@ const CollapsiblePanel: React.FC<CollapsiblePanelProps> = ({
       ref={panelRef}
       className={cn(
         'bg-slate-50 border-slate-200 flex flex-col h-full relative', 
-        position === 'left' ? 'border-r' : 'border-l',
-        isExpanded && isGridEnabled ? 'grid-pattern' : '',
+        position === 'left' ? 'border-r' : 'border-l', 
         className
       )}
       style={panelStyle}
@@ -267,24 +226,7 @@ const CollapsiblePanel: React.FC<CollapsiblePanelProps> = ({
           )}
         </Button>
         
-        {/* Only show grid toggle when panel is expanded */}
-        {isExpanded && (
-          <Button
-            variant="ghost"
-            size="icon"
-            className={cn(
-              'h-6 w-6 rounded-full',
-              isGridEnabled ? 'bg-primary/20 hover:bg-primary/30' : 'bg-background/50 hover:bg-background',
-            )}
-            onClick={() => setIsGridEnabled(prev => !prev)}
-            title={isGridEnabled ? "Disable snap-to-grid" : "Enable snap-to-grid"}
-          >
-            <Grid className={cn(
-              "h-3 w-3", 
-              isGridEnabled ? "text-primary" : "text-muted-foreground"
-            )} />
-          </Button>
-        )}
+        {/* No longer needed since resize handle is always available */}
       </div>
       
       {/* Resize handle - always show when panel is expanded */}
