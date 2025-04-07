@@ -4,23 +4,37 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { DoorOpenIcon, Square as WindowIcon, Trash2 } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { 
   calculateRoomArea, 
   pixelsToFeet, 
   feetToFeetAndInches, 
   formatArea 
 } from '@/utils/canvas';
+import { calculateRoomPerimeter } from '@/utils/materialCalculator';
 
 interface PropertyPanelProps {
   selectedRoom: Room | null;
   selectedObject: RoomObjectType | null;
   onUpdateRoom: (roomId: string, updates: Partial<Room>) => void;
+  onDeleteRoom?: () => void;
 }
 
 const PropertyPanel: React.FC<PropertyPanelProps> = ({
   selectedRoom,
   selectedObject,
-  onUpdateRoom
+  onUpdateRoom,
+  onDeleteRoom
 }) => {
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (selectedRoom) {
@@ -62,6 +76,7 @@ const PropertyPanel: React.FC<PropertyPanelProps> = ({
   const widthFeet = pixelsToFeet(selectedRoom.width);
   const heightFeet = pixelsToFeet(selectedRoom.height);
   const area = calculateRoomArea(selectedRoom);
+  const perimeter = calculateRoomPerimeter(selectedRoom);
   
   return (
     <div className="w-64 bg-slate-50 border-l border-slate-200 flex flex-col overflow-y-auto">
@@ -112,6 +127,35 @@ const PropertyPanel: React.FC<PropertyPanelProps> = ({
       ) : (
         // Room properties section
         <div className="p-4 space-y-4">
+          <div className="flex items-center justify-between mb-2">
+            <Label htmlFor="roomName" className="text-lg font-medium">{selectedRoom.name || 'Unnamed Room'}</Label>
+            {onDeleteRoom && (
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="outline" size="sm" className="text-red-500 border-red-200 hover:bg-red-50">
+                    <Trash2 className="h-4 w-4 mr-1" />
+                    Delete
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This will permanently delete this room and all objects inside it.
+                      You can also press the Delete key to remove the selected room.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={onDeleteRoom} className="bg-red-500 hover:bg-red-600">
+                      Delete Room
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            )}
+          </div>
+          
           <div className="space-y-2">
             <Label htmlFor="roomName">Name</Label>
             <Input 
@@ -152,9 +196,14 @@ const PropertyPanel: React.FC<PropertyPanelProps> = ({
           </div>
           
           <div className="space-y-2">
-            <Label>Area</Label>
-            <div className="text-sm p-2 bg-slate-100 rounded">
-              {formatArea(area)}
+            <Label>Area & Perimeter</Label>
+            <div className="grid grid-cols-2 gap-2">
+              <div className="text-sm p-2 bg-slate-100 rounded">
+                Area: {formatArea(area)}
+              </div>
+              <div className="text-sm p-2 bg-slate-100 rounded">
+                Length: {perimeter.toFixed(1)} ft
+              </div>
             </div>
           </div>
           

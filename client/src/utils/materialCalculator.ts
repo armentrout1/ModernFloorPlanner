@@ -11,7 +11,7 @@ interface MaterialCalculations {
   totalArea: number;
 }
 
-const calculateRoomPerimeter = (room: Room): number => {
+export const calculateRoomPerimeter = (room: Room): number => {
   // Calculate perimeter in feet (2 * width + 2 * height)
   return 2 * pixelsToFeet(room.width) + 2 * pixelsToFeet(room.height);
 };

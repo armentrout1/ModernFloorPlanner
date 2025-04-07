@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import AppHeader from '@/components/AppHeader';
 import Sidebar from '@/components/Sidebar';
 import CanvasContainer from '@/components/CanvasContainer';
@@ -226,6 +226,55 @@ const FloorPlanner: React.FC = () => {
       description: `"${sketch.name}" has been loaded successfully.`,
     });
   };
+  
+  const handleDeleteSelectedRoom = () => {
+    if (selectedRoomId) {
+      // Delete the selected room from the rooms array
+      setRooms(currentRooms => currentRooms.filter(room => room.id !== selectedRoomId));
+      setSelectedRoomId(null);
+      setSelectedObjectId(null);
+      
+      toast({
+        title: 'Room deleted',
+        description: 'The selected room has been deleted.',
+      });
+    } else if (selectedObjectId && selectedRoom) {
+      // If an object is selected but not a room, delete the object
+      const updatedObjects = selectedRoom.objects?.filter(obj => obj.id !== selectedObjectId) || [];
+      handleUpdateRoom(selectedRoom.id, { objects: updatedObjects });
+      setSelectedObjectId(null);
+      
+      toast({
+        title: 'Object deleted',
+        description: 'The selected object has been deleted.',
+      });
+    }
+  };
+  
+  // Set up keyboard event listeners
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Delete key (Delete or Backspace)
+      if ((e.key === 'Delete' || e.key === 'Backspace') && 
+          (selectedRoomId || selectedObjectId) && 
+          !isSaveModalOpen && 
+          !isLoadDialogOpen) {
+        // Prevent default behavior if in an input field
+        if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+          return;
+        }
+        handleDeleteSelectedRoom();
+      }
+    };
+    
+    // Add event listener
+    window.addEventListener('keydown', handleKeyDown);
+    
+    // Cleanup
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [selectedRoomId, selectedObjectId, isSaveModalOpen, isLoadDialogOpen]);
 
   const selectedRoom = selectedRoomId 
     ? rooms.find(room => room.id === selectedRoomId) || null 
@@ -275,6 +324,7 @@ const FloorPlanner: React.FC = () => {
             selectedRoom={selectedRoom}
             selectedObject={selectedObject}
             onUpdateRoom={handleUpdateRoom}
+            onDeleteRoom={handleDeleteSelectedRoom}
           />
         )}
       </div>
