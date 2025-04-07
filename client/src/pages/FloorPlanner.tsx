@@ -6,7 +6,7 @@ import PropertyPanel from '@/components/PropertyPanel';
 import MaterialCalculationPanel from '@/components/MaterialCalculationPanel';
 import SaveSketchModal from '@/components/SaveSketchModal';
 import LoadSketchDialog from '@/components/LoadSketchDialog';
-import CollapsiblePanel from '@/components/CollapsiblePanel';
+import { ResizablePanels } from '@/components/ResizablePanels';
 import { Room, ObjectType } from '@/utils/types';
 import { SavedSketch } from '@/utils/api';
 import { useToast } from '@/hooks/use-toast';
@@ -297,64 +297,53 @@ const FloorPlanner: React.FC = () => {
         canSave={rooms.length > 0}
       />
       
-      <div className="flex flex-grow overflow-hidden relative">
-        {/* Left Panel */}
-        <CollapsiblePanel 
-          position="left" 
-          width={250}
-          minWidth={200}
-          maxWidth={350}
-          title="Tools & Actions"
-          className="z-10"
-        >
-          <div className="p-2">
-            <Sidebar 
-              activeTool={activeTool} 
-              onSelectTool={handleSelectTool} 
-              onApplyAction={handleApplyAction}
+      <div className="flex-grow overflow-hidden">
+        <ResizablePanels
+          leftPanelWidth={20}
+          rightPanelWidth={25}
+          leftPanelTitle="Tools & Actions"
+          rightPanelTitle={showMaterialPanel ? "Materials" : "Properties"}
+          leftPanelMinSize={15}
+          rightPanelMinSize={15}
+          leftPanel={
+            <div className="h-full">
+              <Sidebar 
+                activeTool={activeTool} 
+                onSelectTool={handleSelectTool} 
+                onApplyAction={handleApplyAction}
+              />
+            </div>
+          }
+          centerPanel={
+            <CanvasContainer
+              activeTool={activeTool}
+              placingObjectType={placingObjectType}
+              rooms={rooms}
+              selectedRoomId={selectedRoomId}
+              selectedObjectId={selectedObjectId}
+              onRoomsChange={handleRoomsChange}
+              onSelectRoom={handleSelectRoom}
+              onSelectObject={handleSelectObject}
+              onUpdateRoom={handleUpdateRoom}
             />
-          </div>
-        </CollapsiblePanel>
-        
-        {/* Main Canvas Container - Positioned to fill available space */}
-        <div className="flex-grow overflow-hidden relative">
-          <CanvasContainer
-            activeTool={activeTool}
-            placingObjectType={placingObjectType}
-            rooms={rooms}
-            selectedRoomId={selectedRoomId}
-            selectedObjectId={selectedObjectId}
-            onRoomsChange={handleRoomsChange}
-            onSelectRoom={handleSelectRoom}
-            onSelectObject={handleSelectObject}
-            onUpdateRoom={handleUpdateRoom}
-          />
-        </div>
-        
-        {/* Right Panel */}
-        <CollapsiblePanel 
-          position="right" 
-          width={280}
-          minWidth={240}
-          maxWidth={400}
-          title={showMaterialPanel ? "Materials" : "Properties"}
-          className="z-10"
-        >
-          <div className="p-2">
-            {showMaterialPanel ? (
-              <MaterialCalculationPanel
-                rooms={rooms}
-              />
-            ) : (
-              <PropertyPanel
-                selectedRoom={selectedRoom}
-                selectedObject={selectedObject}
-                onUpdateRoom={handleUpdateRoom}
-                onDeleteRoom={handleDeleteSelectedRoom}
-              />
-            )}
-          </div>
-        </CollapsiblePanel>
+          }
+          rightPanel={
+            <div className="h-full">
+              {showMaterialPanel ? (
+                <MaterialCalculationPanel
+                  rooms={rooms}
+                />
+              ) : (
+                <PropertyPanel
+                  selectedRoom={selectedRoom}
+                  selectedObject={selectedObject}
+                  onUpdateRoom={handleUpdateRoom}
+                  onDeleteRoom={handleDeleteSelectedRoom}
+                />
+              )}
+            </div>
+          }
+        />
       </div>
 
       {/* Save Sketch Modal */}

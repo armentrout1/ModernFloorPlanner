@@ -68,3 +68,20 @@
   -webkit-transform: translateZ(0);
   transform: translateZ(0);
 }
+
+/* Resizable panel styles */
+[data-panel-group-direction="horizontal"] > [data-panel-resizer] {
+  width: 8px;
+  margin: 0 -4px;
+  z-index: 20;
+  position: relative;
+  transition: background-color 0.2s;
+}
+
+[data-panel-group-direction="horizontal"] > [data-panel-resizer]:hover {
+  background-color: rgba(var(--primary-rgb), 0.1);
+}
+
+[data-panel-group-direction="horizontal"] > [data-panel-resizer]:active {
+  background-color: rgba(var(--primary-rgb), 0.2);
+}
