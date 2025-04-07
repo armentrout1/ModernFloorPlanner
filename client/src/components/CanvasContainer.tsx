@@ -8,8 +8,7 @@ import {
   SCALE_FACTOR, 
   snapToGrid, 
   createRoom, 
-  getResizedRoom, 
-  getResizeHandlePosition 
+  getResizedRoom 
 } from '@/utils/canvas';
 
 interface CanvasContainerProps {
@@ -66,9 +65,6 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
     // Skip the room we're currently checking
     const otherRooms = rooms.filter(r => r.id !== testRoom.id);
     
-    // Store the original position to check which edge had the closest snap
-    const originalX = snappedRoom.x;
-    const originalY = snappedRoom.y;
     let minDistanceX = Infinity;
     let minDistanceY = Infinity;
     
@@ -126,7 +122,6 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
       }
     }
     
-    // Return the new position
     return snappedRoom;
   };
   
@@ -197,35 +192,23 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
       const dx = (e.clientX - state.lastMouse.x) / state.scale;
       const dy = (e.clientY - state.lastMouse.y) / state.scale;
       
-      // Only update if there's actual movement (prevents micro-jitters)
-      if (Math.abs(dx) > 0.1 || Math.abs(dy) > 0.1) {
-        const selectedRoom = rooms.find(room => room.id === selectedRoomId);
-        if (!selectedRoom) return;
-        
-        // Create a smooth dragging experience by updating position before snapping
-        let updatedRoom = {
-          ...selectedRoom,
-          x: selectedRoom.x + dx,
-          y: selectedRoom.y + dy
-        };
-        
-        // Then snap to grid and check for proximity
-        updatedRoom = {
-          ...updatedRoom,
-          x: snapToGrid(updatedRoom.x),
-          y: snapToGrid(updatedRoom.y)
-        };
-        
-        // Check for proximity with other rooms for snapping
-        updatedRoom = checkRoomProximity(updatedRoom);
-        
-        // Update all rooms, replacing the one being moved
-        const updatedRooms = rooms.map(room => 
-          room.id === selectedRoomId ? updatedRoom : room
-        );
-        
-        onRoomsChange(updatedRooms);
-      }
+      const selectedRoom = rooms.find(room => room.id === selectedRoomId);
+      if (!selectedRoom) return;
+      
+      // Move room directly with mouse movement - much smoother feel
+      // Don't snap to grid during the drag for better experience
+      let updatedRoom = {
+        ...selectedRoom,
+        x: selectedRoom.x + dx,
+        y: selectedRoom.y + dy
+      };
+      
+      // Update all rooms, replacing the one being moved
+      const updatedRooms = rooms.map(room => 
+        room.id === selectedRoomId ? updatedRoom : room
+      );
+      
+      onRoomsChange(updatedRooms);
       
       // Always update the last mouse position
       setState(prev => ({
@@ -249,6 +232,28 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
   };
   
   const handleCanvasMouseUp = () => {
+    if (state.isDragging && selectedRoomId) {
+      // Apply grid snapping and proximity checks on mouse up
+      const selectedRoom = rooms.find(room => room.id === selectedRoomId);
+      if (selectedRoom) {
+        let snappedRoom = {
+          ...selectedRoom, 
+          x: snapToGrid(selectedRoom.x),
+          y: snapToGrid(selectedRoom.y)
+        };
+        
+        // Apply room proximity snapping
+        snappedRoom = checkRoomProximity(snappedRoom);
+        
+        // Update the room with snapped position
+        const updatedRooms = rooms.map(room => 
+          room.id === selectedRoomId ? snappedRoom : room
+        );
+        
+        onRoomsChange(updatedRooms);
+      }
+    }
+    
     if (state.isDrawing && state.drawStart && state.drawEnd) {
       const { x: x1, y: y1 } = state.drawStart;
       const { x: x2, y: y2 } = state.drawEnd;
