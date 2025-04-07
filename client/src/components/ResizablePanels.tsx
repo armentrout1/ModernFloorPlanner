@@ -5,7 +5,7 @@ import {
   PanelResizeHandle,
   ImperativePanelHandle
 } from "react-resizable-panels";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
@@ -52,6 +52,13 @@ export function ResizablePanels({
     }
   };
 
+  const expandLeftPanelFull = () => {
+    const panel = leftPanelRef.current;
+    if (panel) {
+      panel.resize(70); // Expand to take most of the screen
+    }
+  };
+
   const toggleRightPanel = () => {
     const panel = rightPanelRef.current;
     if (panel) {
@@ -62,6 +69,13 @@ export function ResizablePanels({
         panel.resize(0);
         setRightCollapsed(true);
       }
+    }
+  };
+  
+  const expandRightPanelFull = () => {
+    const panel = rightPanelRef.current;
+    if (panel) {
+      panel.resize(70); // Expand to take most of the screen
     }
   };
 
@@ -85,7 +99,7 @@ export function ResizablePanels({
         </Panel>
 
         <PanelResizeHandle className="cursor-col-resize">
-          <div className="flex items-center justify-center h-full group">
+          <div className="flex flex-col items-center justify-center h-full gap-2 py-4">
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -101,6 +115,24 @@ export function ResizablePanels({
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
+            
+            {!leftCollapsed && (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      onClick={expandLeftPanelFull}
+                      className="w-8 h-8 -mr-4 bg-white shadow-md rounded-r-full flex items-center justify-center z-10 hover:bg-gray-50 transition-colors mt-2"
+                    >
+                      <ChevronsLeft className="h-4 w-4" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="right">
+                    <p>Expand Tools Panel Full</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
           </div>
         </PanelResizeHandle>
 
@@ -109,7 +141,7 @@ export function ResizablePanels({
         </Panel>
 
         <PanelResizeHandle className="cursor-col-resize">
-          <div className="flex items-center justify-center h-full">
+          <div className="flex flex-col items-center justify-center h-full gap-2 py-4">
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -125,6 +157,24 @@ export function ResizablePanels({
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
+            
+            {!rightCollapsed && (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      onClick={expandRightPanelFull}
+                      className="w-8 h-8 -ml-4 bg-white shadow-md rounded-l-full flex items-center justify-center z-10 hover:bg-gray-50 transition-colors mt-2"
+                    >
+                      <ChevronsRight className="h-4 w-4" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="left">
+                    <p>Expand Properties Panel Full</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
           </div>
         </PanelResizeHandle>
 
