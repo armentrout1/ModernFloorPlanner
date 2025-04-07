@@ -33,7 +33,8 @@ export interface RoomObject {
 
 export interface CanvasState {
   rooms: Room[];
-  selectedRoomId: string | null;
+  selectedRoomIds: string[]; // Changed from selectedRoomId for multi-select support
+  selectedRoomId: string | null; // Kept for backward compatibility
   selectedObjectId: string | null;
   scale: number;
   offset: Position;
@@ -41,12 +42,16 @@ export interface CanvasState {
   isResizing: boolean;
   isDrawing: boolean;
   isPanning: boolean;
+  isSelecting: boolean; // For drag-select rectangle
+  selectStart: Position | null; // Starting position of selection rectangle
+  selectEnd: Position | null; // Ending position of selection rectangle
   drawStart: Position | null;
   drawEnd: Position | null;
   lastMouse: Position;
   activeResizeHandle: string | null;
   activeTool: string;
   placingObjectType: ObjectType | null;
+  isPreviewMode: boolean; // For quick preview visualization
 }
 
 export type ResizeHandle = 'nw' | 'ne' | 'sw' | 'se';

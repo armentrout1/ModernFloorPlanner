@@ -1,9 +1,10 @@
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { Room, Position, ResizeHandle, CanvasState, ObjectType, WallSide } from '@/utils/types';
 import CanvasControls from './CanvasControls';
 import RoomBox from './RoomBox';
 import RoomObject from './RoomObject';
 import TotalAreaDisplay from './TotalAreaDisplay';
+import PreviewMode from './PreviewMode';
 import { MoveHorizontal, MoveVertical, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { 
@@ -27,6 +28,8 @@ interface CanvasContainerProps {
   onSelectRoom: (roomId: string | null) => void;
   onSelectObject: (objectId: string | null) => void;
   onUpdateRoom: (roomId: string, updates: Partial<Room>) => void;
+  selectedRoomIds?: string[]; // New prop for multi-select
+  onMultiSelectRooms?: (roomIds: string[]) => void; // New callback for multi-select
 }
 
 const CanvasContainer: React.FC<CanvasContainerProps> = ({
@@ -45,6 +48,7 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
   
   const [state, setState] = useState<CanvasState>({
     rooms: [],
+    selectedRoomIds: [], // New array for multi-selection
     selectedRoomId: null,
     selectedObjectId: null,
     activeTool: activeTool,
@@ -55,11 +59,42 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
     isResizing: false,
     isDrawing: false,
     isPanning: false,
+    isSelecting: false, // For drag selection box
+    selectStart: null,
+    selectEnd: null,
     drawStart: null,
     drawEnd: null,
     lastMouse: { x: 0, y: 0 },
     activeResizeHandle: null,
+    isPreviewMode: false, // For quick preview
   });
+  
+  // Zoom functions
+  const handleZoomIn = useCallback(() => {
+    setState(prev => ({
+      ...prev,
+      scale: prev.scale * SCALE_FACTOR,
+    }));
+  }, []);
+  
+  const handleZoomOut = useCallback(() => {
+    setState(prev => ({
+      ...prev,
+      scale: prev.scale / SCALE_FACTOR,
+    }));
+  }, []);
+  
+  const handleResetZoom = useCallback(() => {
+    setState(prev => ({
+      ...prev,
+      scale: 1,
+    }));
+    
+    if (wrapperRef.current) {
+      wrapperRef.current.scrollLeft = 0;
+      wrapperRef.current.scrollTop = 0;
+    }
+  }, []);
   
   // Update local state when props change
   useEffect(() => {
@@ -67,11 +102,67 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
       ...prev,
       rooms,
       selectedRoomId,
+      selectedRoomIds: prev.selectedRoomIds, // Keep the multi-select state
       selectedObjectId,
       activeTool,
       placingObjectType,
     }));
   }, [rooms, selectedRoomId, selectedObjectId, activeTool, placingObjectType]);
+  
+  // Add keyboard shortcuts for canvas controls
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+        // Don't capture keyboard events when typing in form fields
+        return;
+      }
+
+      if (e.key === 'Delete' && selectedRoomId) {
+        // Delete the selected room
+        const newRooms = rooms.filter(room => room.id !== selectedRoomId);
+        onRoomsChange(newRooms);
+        onSelectRoom(null);
+      } else if (e.key === ' ' && !state.isPanning) {
+        // Space bar - toggle panning mode
+        setState(prev => ({ ...prev, isPanning: true }));
+        
+        if (canvasRef.current) {
+          canvasRef.current.style.cursor = 'grab';
+        }
+      } else if (e.key === '+' || e.key === '=') {
+        // Zoom in
+        handleZoomIn();
+      } else if (e.key === '-') {
+        // Zoom out
+        handleZoomOut();
+      } else if (e.key === 'p' || e.key === 'P') {
+        // Toggle preview mode
+        setState(prev => ({ ...prev, isPreviewMode: !prev.isPreviewMode }));
+      } else if (e.key === 'Escape' && state.isPreviewMode) {
+        // Exit preview mode
+        setState(prev => ({ ...prev, isPreviewMode: false }));
+      }
+    };
+    
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (e.key === ' ') {
+        // Space bar released - exit panning mode
+        setState(prev => ({ ...prev, isPanning: false }));
+        
+        if (canvasRef.current) {
+          canvasRef.current.style.cursor = 'crosshair';
+        }
+      }
+    };
+    
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+    
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
+    };
+  }, [state.isPanning, state.isPreviewMode, selectedRoomId, onRoomsChange, onSelectRoom, rooms, handleZoomIn, handleZoomOut]);
   
   // Check for rooms that are close to each other for snapping
   const checkRoomProximity = (testRoom: Room): Room => {
@@ -142,33 +233,6 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
     }
     
     return snappedRoom;
-  };
-  
-  // Zoom functions
-  const handleZoomIn = () => {
-    setState(prev => ({
-      ...prev,
-      scale: prev.scale * SCALE_FACTOR,
-    }));
-  };
-  
-  const handleZoomOut = () => {
-    setState(prev => ({
-      ...prev,
-      scale: prev.scale / SCALE_FACTOR,
-    }));
-  };
-  
-  const handleResetZoom = () => {
-    setState(prev => ({
-      ...prev,
-      scale: 1,
-    }));
-    
-    if (wrapperRef.current) {
-      wrapperRef.current.scrollLeft = 0;
-      wrapperRef.current.scrollTop = 0;
-    }
   };
   
   // Canvas event handlers
@@ -309,7 +373,7 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
     const y = (e.clientY - rect.top) / state.scale;
     
     // Middle mouse button or Spacebar + left click enables panning
-    if (e.button === 1 || (e.button === 0 && activeTool === 'move')) {
+    if (e.button === 1 || (e.button === 0 && activeTool === 'move' && e.ctrlKey)) {
       setState(prev => ({
         ...prev,
         isPanning: true,
@@ -327,10 +391,30 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
         drawStart: { x, y },
         drawEnd: { x, y },
       }));
+    } else if (activeTool === 'move' && e.button === 0) {
+      // Start selection rectangle
+      setState(prev => ({
+        ...prev,
+        isSelecting: true,
+        selectStart: { x, y },
+        selectEnd: { x, y },
+        // Keep the current selection if Shift key is pressed, otherwise clear it
+        selectedRoomIds: e.shiftKey ? prev.selectedRoomIds : [],
+      }));
+      
+      // If not multi-selecting with shift, deselect current selection
+      if (!e.shiftKey) {
+        onSelectRoom(null);
+        onSelectObject(null);
+      }
     } else {
       // Deselect when clicking on empty canvas
       onSelectRoom(null);
       onSelectObject(null);
+      setState(prev => ({
+        ...prev,
+        selectedRoomIds: [],
+      }));
     }
   };
   
@@ -354,6 +438,12 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
       setState(prev => ({
         ...prev,
         lastMouse: { x: e.clientX, y: e.clientY },
+      }));
+    } else if (state.isSelecting && state.selectStart) {
+      // Update selection rectangle
+      setState(prev => ({
+        ...prev,
+        selectEnd: { x, y },
       }));
     } else if (state.isDrawing && state.drawStart) {
       setState(prev => ({
@@ -427,6 +517,58 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
       }
     }
     
+    if (state.isSelecting && state.selectStart && state.selectEnd) {
+      // Process the selection rectangle to find rooms within it
+      const { x: x1, y: y1 } = state.selectStart;
+      const { x: x2, y: y2 } = state.selectEnd;
+      
+      const selectionBounds = {
+        left: Math.min(x1, x2),
+        top: Math.min(y1, y2),
+        right: Math.max(x1, x2),
+        bottom: Math.max(y1, y2)
+      };
+      
+      // Find rooms inside the selection rectangle
+      const selectedRoomIds: string[] = rooms
+        .filter(room => {
+          const roomBounds = {
+            left: room.x,
+            top: room.y,
+            right: room.x + room.width,
+            bottom: room.y + room.height
+          };
+          
+          // Room is within selection if any part overlaps
+          return !(
+            roomBounds.right < selectionBounds.left ||
+            roomBounds.left > selectionBounds.right ||
+            roomBounds.bottom < selectionBounds.top ||
+            roomBounds.top > selectionBounds.bottom
+          );
+        })
+        .map(room => room.id);
+      
+      if (selectedRoomIds.length > 0) {
+        // Set the primary selected room (for property panel)
+        onSelectRoom(selectedRoomIds[0]);
+        
+        // Update selected room IDs - use concat and filter for uniqueness
+        setState(prev => ({
+          ...prev,
+          selectedRoomIds: Array.from(
+            new Set(prev.selectedRoomIds.concat(selectedRoomIds))
+          )
+        }));
+        
+        // For future expansion, we'll add multi-select support to the parent component
+        // Currently we only use the local selectedRoomIds state
+        // if (onMultiSelectRooms) {
+        //   onMultiSelectRooms(selectedRoomIds);
+        // }
+      }
+    }
+    
     if (state.isDrawing && state.drawStart && state.drawEnd) {
       const { x: x1, y: y1 } = state.drawStart;
       const { x: x2, y: y2 } = state.drawEnd;
@@ -454,8 +596,11 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
       isDragging: false,
       isResizing: false,
       isPanning: false,
+      isSelecting: false,
       drawStart: null,
       drawEnd: null,
+      selectStart: null,
+      selectEnd: null,
       activeResizeHandle: null,
     }));
   };
@@ -529,6 +674,29 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
           </Button>
         )}
         
+        {/* Preview Mode Toggle */}
+        <Button
+          variant={state.isPreviewMode ? "default" : "outline"}
+          size="icon"
+          className="h-8 w-8 rounded-full"
+          onClick={() => setState(prev => ({ ...prev, isPreviewMode: !prev.isPreviewMode }))}
+          title="Toggle Preview Mode"
+        >
+          <svg 
+            xmlns="http://www.w3.org/2000/svg" 
+            viewBox="0 0 24 24" 
+            fill="none" 
+            stroke="currentColor" 
+            strokeWidth="2" 
+            strokeLinecap="round" 
+            strokeLinejoin="round" 
+            className="h-4 w-4"
+          >
+            <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
+            <circle cx="12" cy="12" r="3" />
+          </svg>
+        </Button>
+        
         <div className="text-xs bg-slate-100 px-2 py-1 rounded">
           {Math.round(state.scale * 100)}%
         </div>
@@ -552,6 +720,7 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
               key={room.id}
               room={room}
               isSelected={room.id === selectedRoomId}
+              isPartOfMultiSelection={state.selectedRoomIds.includes(room.id) && room.id !== selectedRoomId}
               onSelect={handleRoomSelect}
               onMoveStart={handleRoomMoveStart}
               onResizeStart={handleRoomResizeStart}
@@ -576,6 +745,24 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
                 height: `${Math.abs(state.drawEnd.y - state.drawStart.y)}px`,
               }}
             />
+          )}
+          
+          {/* Selection rectangle */}
+          {state.isSelecting && state.selectStart && state.selectEnd && (
+            <div
+              className="absolute border border-blue-500 bg-blue-100/30 pointer-events-none"
+              style={{
+                left: `${Math.min(state.selectStart.x, state.selectEnd.x)}px`,
+                top: `${Math.min(state.selectStart.y, state.selectEnd.y)}px`,
+                width: `${Math.abs(state.selectEnd.x - state.selectStart.x)}px`,
+                height: `${Math.abs(state.selectEnd.y - state.selectStart.y)}px`,
+              }}
+            />
+          )}
+          
+          {/* Preview mode - simplified view of the floor plan */}
+          {state.isPreviewMode && (
+            <PreviewMode rooms={rooms} scale={state.scale} />
           )}
         </div>
       </div>

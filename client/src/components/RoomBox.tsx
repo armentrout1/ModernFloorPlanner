@@ -17,6 +17,7 @@ interface RoomBoxProps {
   selectedObjectId?: string | null;
   placingObjectType?: ObjectType | null;
   scale: number;
+  isPartOfMultiSelection?: boolean; // New prop for multi-select
 }
 
 const RoomBox: React.FC<RoomBoxProps> = ({
@@ -31,7 +32,8 @@ const RoomBox: React.FC<RoomBoxProps> = ({
   onObjectDragStart,
   selectedObjectId,
   placingObjectType,
-  scale
+  scale,
+  isPartOfMultiSelection = false
 }) => {
   const [isEditingName, setIsEditingName] = useState(false);
   
@@ -93,10 +95,12 @@ const RoomBox: React.FC<RoomBoxProps> = ({
     borderRadius: '2px',
     boxShadow: isSelected 
       ? '0 0 0 2px rgba(59, 130, 246, 0.8)' 
-      : '0 1px 3px rgba(0, 0, 0, 0.1)',
+      : isPartOfMultiSelection
+        ? '0 0 0 2px rgba(99, 102, 241, 0.6), inset 0 0 0 1px rgba(255, 255, 255, 0.3)'
+        : '0 1px 3px rgba(0, 0, 0, 0.1)',
     cursor: placingObjectType ? 'crosshair' : 'move',
     userSelect: 'none',
-    zIndex: isSelected ? 10 : 1,
+    zIndex: isSelected || isPartOfMultiSelection ? 10 : 1,
   };
   
   const resizeHandles: ResizeHandle[] = ['nw', 'ne', 'sw', 'se'];
