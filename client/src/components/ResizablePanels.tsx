@@ -80,7 +80,15 @@ export function ResizablePanels({
           onExpand={() => onLeftCollapsedChange?.(false)}
           className="bg-white"
         >
-          {!leftCollapsed && (
+          {leftCollapsed ? (
+            <div className="relative h-full">
+              <div className="absolute top-1/2 left-2 -translate-y-1/2 z-10">
+                <div className="vertical-text text-xs text-gray-500 bg-white/80 py-4 px-1 rounded shadow-sm">
+                  {leftPanelTitle}
+                </div>
+              </div>
+            </div>
+          ) : (
             <div className="flex flex-col h-full border-r border-gray-200">
               {/* Left panel header with title */}
               <div className="border-b border-gray-200 bg-gray-50 px-3 py-2">
@@ -115,7 +123,15 @@ export function ResizablePanels({
           onExpand={() => onRightCollapsedChange?.(false)}
           className="bg-white"
         >
-          {!rightCollapsed && (
+          {rightCollapsed ? (
+            <div className="relative h-full">
+              <div className="absolute top-1/2 right-2 -translate-y-1/2 z-10">
+                <div className="vertical-text text-xs text-gray-500 bg-white/80 py-4 px-1 rounded shadow-sm">
+                  {rightPanelTitle}
+                </div>
+              </div>
+            </div>
+          ) : (
             <div className="flex flex-col h-full border-l border-gray-200">
               {/* Right panel header with title */}
               <div className="border-b border-gray-200 bg-gray-50 px-3 py-2">
@@ -130,22 +146,7 @@ export function ResizablePanels({
         </Panel>
       </PanelGroup>
       
-      {/* Labels for collapsed panels */}
-      {leftCollapsed && (
-        <div className="absolute top-1/2 left-2 -translate-y-1/2 z-10">
-          <div className="vertical-text text-xs text-gray-500 bg-white/80 py-4 px-1 rounded shadow-sm">
-            {leftPanelTitle}
-          </div>
-        </div>
-      )}
-      
-      {rightCollapsed && (
-        <div className="absolute top-1/2 right-2 -translate-y-1/2 z-10">
-          <div className="vertical-text text-xs text-gray-500 bg-white/80 py-4 px-1 rounded shadow-sm">
-            {rightPanelTitle}
-          </div>
-        </div>
-      )}
+      {/* Labels for collapsed panels are positioned relative to the panels */}
     </div>
   );
 }
