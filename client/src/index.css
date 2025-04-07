@@ -6,9 +6,15 @@
 .vertical-text {
   writing-mode: vertical-rl;
   text-orientation: mixed;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
 }
 
 @layer base {
+  :root {
+    --primary-rgb: 79, 70, 229; /* Indigo color RGB values */
+  }
+  
   * {
     @apply border-border;
   }

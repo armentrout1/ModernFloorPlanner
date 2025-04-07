@@ -55,20 +55,28 @@ const CollapsiblePanel: React.FC<CollapsiblePanelProps> = ({
   const handleResizeMove = (e: MouseEvent) => {
     if (!isResizing) return;
     
+    // Calculate delta based on starting point
     const deltaX = e.clientX - startXRef.current;
+    
     // Apply the delta based on panel position (left or right)
+    // Multiply by 1.5 for faster response to small movements
     let newWidth = position === 'left' 
-      ? startWidthRef.current + deltaX 
-      : startWidthRef.current - deltaX;
+      ? startWidthRef.current + (deltaX * 1.5)
+      : startWidthRef.current - (deltaX * 1.5);
     
     // Clamp width to min/max values
     newWidth = Math.max(minWidth, Math.min(maxWidth, newWidth));
+    
+    // Update immediately to give responsive feeling
+    document.documentElement.style.cursor = 'col-resize';
     setPanelWidth(newWidth);
   };
   
   // Handle resize end event
   const handleResizeEnd = () => {
     setIsResizing(false);
+    // Restore cursor
+    document.documentElement.style.cursor = '';
     window.removeEventListener('mousemove', handleResizeMove);
     window.removeEventListener('mouseup', handleResizeEnd);
   };
@@ -83,10 +91,11 @@ const CollapsiblePanel: React.FC<CollapsiblePanelProps> = ({
   
   // Calculate panel style based on expanded state and current width
   const panelStyle: React.CSSProperties = {
-    width: isExpanded ? panelWidth : 40,
-    minWidth: isExpanded ? minWidth : 40,
-    maxWidth: isExpanded ? maxWidth : 40,
-    transition: isResizing ? 'none' : 'width 0.3s ease-in-out',
+    width: isExpanded ? panelWidth : 48,
+    minWidth: isExpanded ? minWidth : 48,
+    maxWidth: isExpanded ? maxWidth : 48,
+    transition: isResizing ? 'none' : 'width 0.3s ease-in-out, background-color 0.3s ease',
+    backgroundColor: isExpanded ? undefined : 'rgba(var(--primary-rgb), 0.06)',
   };
   
   return (
@@ -100,18 +109,20 @@ const CollapsiblePanel: React.FC<CollapsiblePanelProps> = ({
     >
       {/* Toggle button */}
       <Button
-        variant="ghost"
+        variant="outline"
         size="icon"
         className={cn(
-          'absolute top-2 h-8 w-8 rounded-full bg-white shadow-md z-10',
+          'absolute top-2 h-9 w-9 rounded-full bg-background shadow-md z-10 border-2',
+          isExpanded ? 'border-primary/60 hover:border-primary/80' : 'border-primary/30 hover:border-primary/60',
           position === 'left' ? 'right-0 translate-x-1/2' : 'left-0 -translate-x-1/2'
         )}
         onClick={togglePanel}
+        title={isExpanded ? "Collapse panel" : "Expand panel"}
       >
         {position === 'left' ? (
-          isExpanded ? <ChevronLeft className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />
+          isExpanded ? <ChevronLeft className="h-5 w-5 text-primary" /> : <ChevronRight className="h-5 w-5 text-primary" />
         ) : (
-          isExpanded ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />
+          isExpanded ? <ChevronRight className="h-5 w-5 text-primary" /> : <ChevronLeft className="h-5 w-5 text-primary" />
         )}
       </Button>
       
@@ -120,13 +131,21 @@ const CollapsiblePanel: React.FC<CollapsiblePanelProps> = ({
         <div
           ref={resizeHandleRef}
           className={cn(
-            'absolute top-0 h-full w-4 cursor-col-resize z-10 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity',
-            position === 'left' ? 'right-0 translate-x-1/2' : 'left-0 -translate-x-1/2'
+            'absolute top-0 h-full w-12 cursor-col-resize z-10 flex items-center justify-center',
+            position === 'left' ? 'right-0 translate-x-1/2' : 'left-0 -translate-x-1/2',
+            isResizing ? 'opacity-100' : 'opacity-80 hover:opacity-100'
           )}
           onMouseDown={handleResizeStart}
+          title="Drag to resize panel"
         >
-          <div className="h-16 w-1 rounded-full bg-slate-300 hover:bg-slate-400 transition-colors">
-            <GripVertical className="text-slate-500 h-4 w-4 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 opacity-50" />
+          <div className="h-32 w-3 rounded-full bg-primary/30 hover:bg-primary/70 transition-colors flex items-center justify-center shadow-md">
+            <div className="h-24 flex flex-col gap-2 justify-center items-center">
+              <div className="w-5 h-1.5 bg-primary/80 rounded-full shadow-sm"></div>
+              <div className="w-5 h-1.5 bg-primary/80 rounded-full shadow-sm"></div>
+              <div className="w-5 h-1.5 bg-primary/80 rounded-full shadow-sm"></div>
+              <div className="w-5 h-1.5 bg-primary/80 rounded-full shadow-sm"></div>
+              <div className="w-5 h-1.5 bg-primary/80 rounded-full shadow-sm"></div>
+            </div>
           </div>
         </div>
       )}
@@ -141,8 +160,8 @@ const CollapsiblePanel: React.FC<CollapsiblePanelProps> = ({
       
       {/* Collapsed panel label */}
       {!isExpanded && (
-        <div className="h-full flex items-center justify-center">
-          <div className="text-xs text-slate-500 vertical-text transform -rotate-90 whitespace-nowrap">
+        <div className="h-full flex items-center justify-center py-8">
+          <div className="text-sm font-medium text-primary/70 vertical-text whitespace-nowrap tracking-wide">
             {displayTitle}
           </div>
         </div>
