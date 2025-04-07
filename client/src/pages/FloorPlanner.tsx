@@ -56,6 +56,7 @@ const FloorPlanner: React.FC = () => {
           selectedRoomId={selectedRoomId}
           onRoomsChange={handleRoomsChange}
           onSelectRoom={handleSelectRoom}
+          onUpdateRoom={handleUpdateRoom}
         />
         
         <PropertyPanel

@@ -2,6 +2,7 @@ import React, { useRef, useEffect, useState } from 'react';
 import { Room, Position, ResizeHandle, CanvasState } from '@/utils/types';
 import CanvasControls from './CanvasControls';
 import RoomBox from './RoomBox';
+import TotalAreaDisplay from './TotalAreaDisplay';
 import { 
   GRID_SIZE, 
   SCALE_FACTOR, 
@@ -17,6 +18,7 @@ interface CanvasContainerProps {
   selectedRoomId: string | null;
   onRoomsChange: (rooms: Room[]) => void;
   onSelectRoom: (roomId: string | null) => void;
+  onUpdateRoom: (roomId: string, updates: Partial<Room>) => void;
 }
 
 const CanvasContainer: React.FC<CanvasContainerProps> = ({
@@ -25,6 +27,7 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
   selectedRoomId,
   onRoomsChange,
   onSelectRoom,
+  onUpdateRoom,
 }) => {
   const canvasRef = useRef<HTMLDivElement>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
@@ -51,6 +54,42 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
       selectedRoomId,
     }));
   }, [rooms, selectedRoomId]);
+  
+  // Check for rooms that are close to each other for snapping
+  const checkRoomProximity = (testRoom: Room): Room => {
+    const snapThreshold = GRID_SIZE; // 1 foot in pixels
+    let snappedRoom = { ...testRoom };
+    
+    // Don't check proximity if this is the only room
+    if (rooms.length <= 1) return snappedRoom;
+    
+    // Skip the room we're currently checking
+    const otherRooms = rooms.filter(r => r.id !== testRoom.id);
+    
+    for (const otherRoom of otherRooms) {
+      // Check right edge of testRoom to left edge of otherRoom
+      if (Math.abs((testRoom.x + testRoom.width) - otherRoom.x) <= snapThreshold) {
+        snappedRoom.x = otherRoom.x - testRoom.width;
+      }
+      
+      // Check left edge of testRoom to right edge of otherRoom
+      if (Math.abs(testRoom.x - (otherRoom.x + otherRoom.width)) <= snapThreshold) {
+        snappedRoom.x = otherRoom.x + otherRoom.width;
+      }
+      
+      // Check bottom edge of testRoom to top edge of otherRoom
+      if (Math.abs((testRoom.y + testRoom.height) - otherRoom.y) <= snapThreshold) {
+        snappedRoom.y = otherRoom.y - testRoom.height;
+      }
+      
+      // Check top edge of testRoom to bottom edge of otherRoom
+      if (Math.abs(testRoom.y - (otherRoom.y + otherRoom.height)) <= snapThreshold) {
+        snappedRoom.y = otherRoom.y + otherRoom.height;
+      }
+    }
+    
+    return snappedRoom;
+  };
   
   // Zoom functions
   const handleZoomIn = () => {
@@ -120,11 +159,12 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
       
       const updatedRooms = rooms.map(room => {
         if (room.id === selectedRoomId) {
-          return {
+          const updatedRoom = {
             ...room,
             x: snapToGrid(room.x + dx),
             y: snapToGrid(room.y + dy),
           };
+          return checkRoomProximity(updatedRoom);
         }
         return room;
       });
@@ -223,6 +263,8 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
         onResetZoom={handleResetZoom}
       />
       
+      <TotalAreaDisplay rooms={rooms} />
+      
       <div 
         ref={wrapperRef} 
         className="w-full h-full overflow-auto bg-slate-100"
@@ -244,6 +286,7 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
               onSelect={handleRoomSelect}
               onMoveStart={handleRoomMoveStart}
               onResizeStart={handleRoomResizeStart}
+              onUpdateRoom={onUpdateRoom}
               scale={state.scale}
             />
           ))}

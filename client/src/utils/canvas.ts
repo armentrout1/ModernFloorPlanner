@@ -20,11 +20,42 @@ export function feetToPixels(feet: number): number {
   return (feet / FEET_PER_GRID) * GRID_SIZE;
 }
 
+// Convert a decimal feet value to feet and inches
+export function feetToFeetAndInches(feet: number): string {
+  const wholeFeet = Math.floor(feet);
+  const inches = Math.round((feet - wholeFeet) * 12);
+  
+  if (inches === 12) {
+    return `${wholeFeet + 1}'`;
+  } else if (inches === 0) {
+    return `${wholeFeet}'`;
+  } else {
+    return `${wholeFeet}' ${inches}"`;
+  }
+}
+
 // Format dimensions as feet
 export function formatDimensions(width: number, height: number): string {
-  const widthInFeet = pixelsToFeet(width).toFixed(1);
-  const heightInFeet = pixelsToFeet(height).toFixed(1);
-  return `${widthInFeet}' × ${heightInFeet}'`;
+  const widthInFeet = pixelsToFeet(width);
+  const heightInFeet = pixelsToFeet(height);
+  return `${feetToFeetAndInches(widthInFeet)} × ${feetToFeetAndInches(heightInFeet)}`;
+}
+
+// Calculate the area of a room in square feet
+export function calculateRoomArea(room: Room): number {
+  const widthFeet = pixelsToFeet(room.width);
+  const heightFeet = pixelsToFeet(room.height);
+  return widthFeet * heightFeet;
+}
+
+// Calculate the total area of all rooms
+export function calculateTotalArea(rooms: Room[]): number {
+  return rooms.reduce((total, room) => total + calculateRoomArea(room), 0);
+}
+
+// Format area value as square feet
+export function formatArea(area: number): string {
+  return `${Math.round(area)} sq ft`;
 }
 
 // Create a new room with default values

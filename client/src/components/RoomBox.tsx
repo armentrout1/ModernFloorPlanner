@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Room, ResizeHandle } from '@/utils/types';
-import { formatDimensions } from '@/utils/canvas';
+import { formatDimensions, calculateRoomArea, formatArea } from '@/utils/canvas';
+import RoomLabel from './RoomLabel';
 
 interface RoomBoxProps {
   room: Room;
@@ -8,6 +9,7 @@ interface RoomBoxProps {
   onSelect: (roomId: string) => void;
   onResizeStart: (roomId: string, handle: ResizeHandle) => void;
   onMoveStart: (roomId: string, clientX: number, clientY: number) => void;
+  onUpdateRoom: (roomId: string, updates: Partial<Room>) => void;
   scale: number;
 }
 
@@ -17,9 +19,12 @@ const RoomBox: React.FC<RoomBoxProps> = ({
   onSelect,
   onResizeStart,
   onMoveStart,
+  onUpdateRoom,
   scale,
 }) => {
-  const { id, x, y, width, height, color = '#93c5fd' } = room;
+  const { id, x, y, width, height, name = 'Room', color = '#93c5fd' } = room;
+  const [isEditingName, setIsEditingName] = useState(false);
+  const roomArea = calculateRoomArea(room);
 
   const handleMouseDown = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -34,6 +39,17 @@ const RoomBox: React.FC<RoomBoxProps> = ({
   const handleResizeStart = (e: React.MouseEvent, handle: ResizeHandle) => {
     e.stopPropagation();
     onResizeStart(id, handle);
+  };
+
+  const handleStartEditName = () => {
+    setIsEditingName(true);
+  };
+
+  const handleSaveName = (newName: string) => {
+    setIsEditingName(false);
+    if (newName.trim() !== name) {
+      onUpdateRoom(id, { name: newName.trim() || 'Room' });
+    }
   };
 
   const roomStyle: React.CSSProperties = {
@@ -55,8 +71,36 @@ const RoomBox: React.FC<RoomBoxProps> = ({
       onMouseDown={handleMouseDown}
       onDoubleClick={handleMoveStart}
     >
-      <div className="p-2 text-sm text-slate-600" onMouseDown={handleMoveStart}>
-        {formatDimensions(width, height)}
+      <div className="p-2" onMouseDown={(e) => e.stopPropagation()}>
+        <div className="flex justify-between items-center mb-1">
+          <RoomLabel 
+            name={name}
+            isEditing={isEditingName}
+            onStartEdit={handleStartEditName}
+            onSave={handleSaveName}
+          />
+          <span className="text-xs text-slate-500">{formatArea(roomArea)}</span>
+        </div>
+        <div 
+          className="text-sm text-slate-600 font-medium bg-white/70 px-1.5 py-0.5 rounded-sm inline-block"
+          onMouseDown={handleMoveStart}
+        >
+          {formatDimensions(width, height)}
+        </div>
+      </div>
+
+      {/* Width dimension on top */}
+      <div className="absolute top-0 left-0 w-full flex justify-center -translate-y-5 pointer-events-none">
+        <div className="text-xs px-1 py-0.5 bg-white/80 rounded shadow-sm">
+          {formatDimensions(width, 0).split('×')[0].trim()}
+        </div>
+      </div>
+
+      {/* Height dimension on right */}
+      <div className="absolute top-0 right-0 h-full flex items-center translate-x-5 pointer-events-none">
+        <div className="text-xs px-1 py-0.5 bg-white/80 rounded shadow-sm -rotate-90 origin-left">
+          {formatDimensions(0, height).split('×')[1].trim()}
+        </div>
       </div>
 
       {/* Resize handles */}

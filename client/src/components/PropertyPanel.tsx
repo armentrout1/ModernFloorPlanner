@@ -2,7 +2,9 @@ import React from 'react';
 import { Room } from '@/utils/types';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { pixelsToFeet } from '@/utils/canvas';
+import { Button } from '@/components/ui/button';
+import { Separator } from '@/components/ui/separator';
+import { pixelsToFeet, feetToPixels, calculateRoomArea, formatArea } from '@/utils/canvas';
 
 interface PropertyPanelProps {
   selectedRoom: Room | null;
@@ -15,12 +17,14 @@ const PropertyPanel: React.FC<PropertyPanelProps> = ({
 }) => {
   if (!selectedRoom) {
     return (
-      <aside className="w-64 border-l border-slate-200 bg-white p-4 hidden lg:block">
+      <aside className="w-72 border-l border-slate-200 bg-white p-4 hidden lg:block">
         <h2 className="font-semibold text-slate-700 mb-4">Room Properties</h2>
         <p className="text-slate-500 text-sm">Select a room to edit its properties</p>
       </aside>
     );
   }
+
+  const roomArea = calculateRoomArea(selectedRoom);
 
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     onUpdateRoom(selectedRoom.id, { name: e.target.value });
@@ -29,7 +33,7 @@ const PropertyPanel: React.FC<PropertyPanelProps> = ({
   const handleWidthChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const widthInFeet = parseFloat(e.target.value);
     if (!isNaN(widthInFeet) && widthInFeet > 0) {
-      const widthInPixels = widthInFeet * 20; // 1 foot = 20 pixels
+      const widthInPixels = feetToPixels(widthInFeet);
       onUpdateRoom(selectedRoom.id, { width: widthInPixels });
     }
   };
@@ -37,7 +41,52 @@ const PropertyPanel: React.FC<PropertyPanelProps> = ({
   const handleHeightChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const heightInFeet = parseFloat(e.target.value);
     if (!isNaN(heightInFeet) && heightInFeet > 0) {
-      const heightInPixels = heightInFeet * 20; // 1 foot = 20 pixels
+      const heightInPixels = feetToPixels(heightInFeet);
+      onUpdateRoom(selectedRoom.id, { height: heightInPixels });
+    }
+  };
+
+  // Handle direct feet and inches input
+  const handleWidthFeetInchesChange = (e: React.ChangeEvent<HTMLInputElement>, unit: 'feet' | 'inches') => {
+    const value = parseInt(e.target.value);
+    if (isNaN(value)) return;
+
+    const currentWidthInFeet = pixelsToFeet(selectedRoom.width);
+    const wholeFeet = Math.floor(currentWidthInFeet);
+    const inches = Math.round((currentWidthInFeet - wholeFeet) * 12);
+    
+    let newWidthInFeet: number;
+    
+    if (unit === 'feet') {
+      newWidthInFeet = value + (inches / 12);
+    } else {
+      newWidthInFeet = wholeFeet + (value / 12);
+    }
+    
+    if (newWidthInFeet > 0) {
+      const widthInPixels = feetToPixels(newWidthInFeet);
+      onUpdateRoom(selectedRoom.id, { width: widthInPixels });
+    }
+  };
+
+  const handleHeightFeetInchesChange = (e: React.ChangeEvent<HTMLInputElement>, unit: 'feet' | 'inches') => {
+    const value = parseInt(e.target.value);
+    if (isNaN(value)) return;
+
+    const currentHeightInFeet = pixelsToFeet(selectedRoom.height);
+    const wholeFeet = Math.floor(currentHeightInFeet);
+    const inches = Math.round((currentHeightInFeet - wholeFeet) * 12);
+    
+    let newHeightInFeet: number;
+    
+    if (unit === 'feet') {
+      newHeightInFeet = value + (inches / 12);
+    } else {
+      newHeightInFeet = wholeFeet + (value / 12);
+    }
+    
+    if (newHeightInFeet > 0) {
+      const heightInPixels = feetToPixels(newHeightInFeet);
       onUpdateRoom(selectedRoom.id, { height: heightInPixels });
     }
   };
@@ -45,7 +94,7 @@ const PropertyPanel: React.FC<PropertyPanelProps> = ({
   const handleXChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const xInFeet = parseFloat(e.target.value);
     if (!isNaN(xInFeet)) {
-      const xInPixels = xInFeet * 20; // 1 foot = 20 pixels
+      const xInPixels = feetToPixels(xInFeet);
       onUpdateRoom(selectedRoom.id, { x: xInPixels });
     }
   };
@@ -53,7 +102,7 @@ const PropertyPanel: React.FC<PropertyPanelProps> = ({
   const handleYChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const yInFeet = parseFloat(e.target.value);
     if (!isNaN(yInFeet)) {
-      const yInPixels = yInFeet * 20; // 1 foot = 20 pixels
+      const yInPixels = feetToPixels(yInFeet);
       onUpdateRoom(selectedRoom.id, { y: yInPixels });
     }
   };
@@ -62,9 +111,21 @@ const PropertyPanel: React.FC<PropertyPanelProps> = ({
     onUpdateRoom(selectedRoom.id, { color: e.target.value });
   };
 
+  // Calculate feet and inches for width and height
+  const widthInFeet = pixelsToFeet(selectedRoom.width);
+  const widthFeet = Math.floor(widthInFeet);
+  const widthInches = Math.round((widthInFeet - widthFeet) * 12);
+  
+  const heightInFeet = pixelsToFeet(selectedRoom.height);
+  const heightFeet = Math.floor(heightInFeet);
+  const heightInches = Math.round((heightInFeet - heightFeet) * 12);
+
   return (
-    <aside className="w-64 border-l border-slate-200 bg-white p-4 hidden lg:block">
-      <h2 className="font-semibold text-slate-700 mb-4">Room Properties</h2>
+    <aside className="w-72 border-l border-slate-200 bg-white p-4 hidden lg:block">
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="font-semibold text-slate-700">Room Properties</h2>
+        <span className="text-sm font-medium text-primary">{formatArea(roomArea)}</span>
+      </div>
       
       <div className="mb-4">
         <Label className="block text-sm font-medium text-slate-700 mb-1">Name</Label>
@@ -76,33 +137,85 @@ const PropertyPanel: React.FC<PropertyPanelProps> = ({
         />
       </div>
       
+      <Separator className="my-4" />
+      
       <div className="mb-4">
-        <Label className="block text-sm font-medium text-slate-700 mb-1">Dimensions</Label>
-        <div className="grid grid-cols-2 gap-2">
-          <div>
-            <span className="block text-xs text-slate-500">Width (ft)</span>
+        <Label className="block text-sm font-medium text-slate-700 mb-1">Width</Label>
+        
+        <div className="flex items-center gap-2 mb-2">
+          <div className="flex-1">
+            <span className="block text-xs text-slate-500">Feet</span>
             <Input 
               type="number" 
-              value={pixelsToFeet(selectedRoom.width).toFixed(1)} 
-              onChange={handleWidthChange}
-              step="0.1"
-              min="3"
+              value={widthFeet} 
+              onChange={(e) => handleWidthFeetInchesChange(e, 'feet')}
+              min="1"
               className="w-full"
             />
           </div>
-          <div>
-            <span className="block text-xs text-slate-500">Height (ft)</span>
+          <div className="flex-1">
+            <span className="block text-xs text-slate-500">Inches</span>
             <Input 
               type="number" 
-              value={pixelsToFeet(selectedRoom.height).toFixed(1)} 
-              onChange={handleHeightChange}
-              step="0.1"
-              min="3"
+              value={widthInches}
+              onChange={(e) => handleWidthFeetInchesChange(e, 'inches')}
+              min="0"
+              max="11"
               className="w-full"
             />
           </div>
         </div>
+        
+        <span className="block text-xs text-slate-500">Decimal (ft)</span>
+        <Input 
+          type="number" 
+          value={pixelsToFeet(selectedRoom.width).toFixed(1)} 
+          onChange={handleWidthChange}
+          step="0.1"
+          min="1"
+          className="w-full"
+        />
       </div>
+      
+      <div className="mb-4">
+        <Label className="block text-sm font-medium text-slate-700 mb-1">Height</Label>
+        
+        <div className="flex items-center gap-2 mb-2">
+          <div className="flex-1">
+            <span className="block text-xs text-slate-500">Feet</span>
+            <Input 
+              type="number" 
+              value={heightFeet}
+              onChange={(e) => handleHeightFeetInchesChange(e, 'feet')}
+              min="1"
+              className="w-full"
+            />
+          </div>
+          <div className="flex-1">
+            <span className="block text-xs text-slate-500">Inches</span>
+            <Input 
+              type="number" 
+              value={heightInches}
+              onChange={(e) => handleHeightFeetInchesChange(e, 'inches')}
+              min="0"
+              max="11"
+              className="w-full"
+            />
+          </div>
+        </div>
+        
+        <span className="block text-xs text-slate-500">Decimal (ft)</span>
+        <Input 
+          type="number" 
+          value={pixelsToFeet(selectedRoom.height).toFixed(1)} 
+          onChange={handleHeightChange}
+          step="0.1"
+          min="1"
+          className="w-full"
+        />
+      </div>
+      
+      <Separator className="my-4" />
       
       <div className="mb-4">
         <Label className="block text-sm font-medium text-slate-700 mb-1">Position</Label>
