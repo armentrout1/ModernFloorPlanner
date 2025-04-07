@@ -7,6 +7,7 @@ import MaterialCalculationPanel from '@/components/MaterialCalculationPanel';
 import SaveSketchModal from '@/components/SaveSketchModal';
 import LoadSketchDialog from '@/components/LoadSketchDialog';
 import { ResizablePanels } from '@/components/ResizablePanels';
+import PanelHeaderControls from '@/components/PanelHeaderControls';
 import { Room, ObjectType } from '@/utils/types';
 import { SavedSketch } from '@/utils/api';
 import { useToast } from '@/hooks/use-toast';
@@ -286,6 +287,18 @@ const FloorPlanner: React.FC = () => {
     ? selectedRoom.objects.find(obj => obj.id === selectedObjectId) || null
     : null;
 
+  // Add state for panel controls
+  const [leftCollapsed, setLeftCollapsed] = useState(false);
+  const [rightCollapsed, setRightCollapsed] = useState(false);
+  const [leftPanelExpanded, setLeftPanelExpanded] = useState(false);
+  const [rightPanelExpanded, setRightPanelExpanded] = useState(false);
+  
+  // Panel control handlers
+  const handleToggleLeftPanel = (collapsed: boolean) => setLeftCollapsed(collapsed);
+  const handleToggleRightPanel = (collapsed: boolean) => setRightCollapsed(collapsed);
+  const handleExpandLeftPanel = () => setLeftPanelExpanded(!leftPanelExpanded);
+  const handleExpandRightPanel = () => setRightPanelExpanded(!rightPanelExpanded);
+
   return (
     <div className="bg-slate-50 text-slate-800 h-screen flex flex-col">
       <AppHeader 
@@ -297,14 +310,32 @@ const FloorPlanner: React.FC = () => {
         canSave={rooms.length > 0}
       />
       
+      {/* Panel controls header */}
+      <PanelHeaderControls
+        leftPanelTitle="Tools & Actions"
+        rightPanelTitle={showMaterialPanel ? "Materials" : "Properties"}
+        leftPanelExpanded={leftPanelExpanded}
+        rightPanelExpanded={rightPanelExpanded}
+        leftCollapsed={leftCollapsed}
+        rightCollapsed={rightCollapsed}
+        onToggleLeftPanel={handleToggleLeftPanel}
+        onToggleRightPanel={handleToggleRightPanel}
+        onExpandLeftPanel={handleExpandLeftPanel}
+        onExpandRightPanel={handleExpandRightPanel}
+      />
+      
       <div className="flex-grow overflow-hidden">
         <ResizablePanels
-          leftPanelWidth={20}
-          rightPanelWidth={25}
+          leftPanelWidth={leftPanelExpanded ? 70 : 20}
+          rightPanelWidth={rightPanelExpanded ? 70 : 25}
           leftPanelTitle="Tools & Actions"
           rightPanelTitle={showMaterialPanel ? "Materials" : "Properties"}
           leftPanelMinSize={15}
           rightPanelMinSize={15}
+          leftCollapsed={leftCollapsed}
+          rightCollapsed={rightCollapsed}
+          onLeftCollapsedChange={handleToggleLeftPanel}
+          onRightCollapsedChange={handleToggleRightPanel}
           leftPanel={
             <div className="h-full">
               <Sidebar 
