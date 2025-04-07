@@ -6,6 +6,7 @@ import PropertyPanel from '@/components/PropertyPanel';
 import MaterialCalculationPanel from '@/components/MaterialCalculationPanel';
 import SaveSketchModal from '@/components/SaveSketchModal';
 import LoadSketchDialog from '@/components/LoadSketchDialog';
+import CollapsiblePanel from '@/components/CollapsiblePanel';
 import { Room, ObjectType } from '@/utils/types';
 import { SavedSketch } from '@/utils/api';
 import { useToast } from '@/hooks/use-toast';
@@ -297,36 +298,42 @@ const FloorPlanner: React.FC = () => {
       />
       
       <div className="flex flex-grow overflow-hidden">
-        <Sidebar 
-          activeTool={activeTool} 
-          onSelectTool={handleSelectTool} 
-          onApplyAction={handleApplyAction}
-        />
+        <CollapsiblePanel position="left" width={250}>
+          <Sidebar 
+            activeTool={activeTool} 
+            onSelectTool={handleSelectTool} 
+            onApplyAction={handleApplyAction}
+          />
+        </CollapsiblePanel>
         
-        <CanvasContainer
-          activeTool={activeTool}
-          placingObjectType={placingObjectType}
-          rooms={rooms}
-          selectedRoomId={selectedRoomId}
-          selectedObjectId={selectedObjectId}
-          onRoomsChange={handleRoomsChange}
-          onSelectRoom={handleSelectRoom}
-          onSelectObject={handleSelectObject}
-          onUpdateRoom={handleUpdateRoom}
-        />
-        
-        {showMaterialPanel ? (
-          <MaterialCalculationPanel
+        <div className="flex-grow relative overflow-hidden">
+          <CanvasContainer
+            activeTool={activeTool}
+            placingObjectType={placingObjectType}
             rooms={rooms}
-          />
-        ) : (
-          <PropertyPanel
-            selectedRoom={selectedRoom}
-            selectedObject={selectedObject}
+            selectedRoomId={selectedRoomId}
+            selectedObjectId={selectedObjectId}
+            onRoomsChange={handleRoomsChange}
+            onSelectRoom={handleSelectRoom}
+            onSelectObject={handleSelectObject}
             onUpdateRoom={handleUpdateRoom}
-            onDeleteRoom={handleDeleteSelectedRoom}
           />
-        )}
+        </div>
+        
+        <CollapsiblePanel position="right" width={280}>
+          {showMaterialPanel ? (
+            <MaterialCalculationPanel
+              rooms={rooms}
+            />
+          ) : (
+            <PropertyPanel
+              selectedRoom={selectedRoom}
+              selectedObject={selectedObject}
+              onUpdateRoom={handleUpdateRoom}
+              onDeleteRoom={handleDeleteSelectedRoom}
+            />
+          )}
+        </CollapsiblePanel>
       </div>
 
       {/* Save Sketch Modal */}

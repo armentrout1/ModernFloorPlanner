@@ -23,8 +23,9 @@ import {
 import {
   Tooltip,
   TooltipContent,
-  TooltipProvider,
   TooltipTrigger,
+  TooltipProvider,
+  CenteredTooltipContent,
 } from '@/components/ui/tooltip';
 
 interface SidebarProps {
@@ -60,12 +61,12 @@ const Sidebar: React.FC<SidebarProps> = ({
                         onClick={() => onSelectTool('room')}
                       >
                         <Square className="h-4 w-4 mr-2 flex-shrink-0" />
-                        <span className="truncate">Room</span>
+                        <span className="truncate">Draw Room</span>
                       </Button>
                     </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Draw room (R)</p>
-                    </TooltipContent>
+                    <CenteredTooltipContent>
+                      <p>Click and drag to draw a room (R)</p>
+                    </CenteredTooltipContent>
                   </Tooltip>
                   
                   <Tooltip>
@@ -77,12 +78,12 @@ const Sidebar: React.FC<SidebarProps> = ({
                         onClick={() => onSelectTool('move')}
                       >
                         <Move className="h-4 w-4 mr-2 flex-shrink-0" />
-                        <span className="truncate">Move</span>
+                        <span className="truncate">Select & Move</span>
                       </Button>
                     </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Select and move (M)</p>
-                    </TooltipContent>
+                    <CenteredTooltipContent>
+                      <p>Select and move rooms or objects (M)</p>
+                    </CenteredTooltipContent>
                   </Tooltip>
                 </div>
               </AccordionContent>
@@ -101,12 +102,12 @@ const Sidebar: React.FC<SidebarProps> = ({
                         onClick={() => onSelectTool('door')}
                       >
                         <DoorOpenIcon className="h-4 w-4 mr-2 flex-shrink-0" />
-                        <span className="truncate">Door</span>
+                        <span className="truncate">Add Door</span>
                       </Button>
                     </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Add door to room (D)</p>
-                    </TooltipContent>
+                    <CenteredTooltipContent>
+                      <p>Select a wall to place a door (D)</p>
+                    </CenteredTooltipContent>
                   </Tooltip>
                   
                   <Tooltip>
@@ -118,12 +119,12 @@ const Sidebar: React.FC<SidebarProps> = ({
                         onClick={() => onSelectTool('window')}
                       >
                         <WindowIcon className="h-4 w-4 mr-2 flex-shrink-0" />
-                        <span className="truncate">Window</span>
+                        <span className="truncate">Add Window</span>
                       </Button>
                     </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Add window to room (W)</p>
-                    </TooltipContent>
+                    <CenteredTooltipContent>
+                      <p>Select a wall to place a window (W)</p>
+                    </CenteredTooltipContent>
                   </Tooltip>
                 </div>
               </AccordionContent>
@@ -142,12 +143,12 @@ const Sidebar: React.FC<SidebarProps> = ({
                         onClick={() => onApplyAction('auto-align')}
                       >
                         <LayoutTemplate className="h-4 w-4 mr-2 flex-shrink-0" />
-                        <span className="truncate">Auto-align</span>
+                        <span className="truncate">Auto-Align Rooms</span>
                       </Button>
                     </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Auto-align selected rooms</p>
-                    </TooltipContent>
+                    <CenteredTooltipContent>
+                      <p>Automatically align rooms by their edges</p>
+                    </CenteredTooltipContent>
                   </Tooltip>
                   
                   <Tooltip>
@@ -159,12 +160,12 @@ const Sidebar: React.FC<SidebarProps> = ({
                         onClick={() => onApplyAction('distribute-horizontal')}
                       >
                         <ChevronsLeftRight className="h-4 w-4 mr-2 flex-shrink-0" />
-                        <span className="truncate">Dist. Horizontal</span>
+                        <span className="truncate">Distribute Horizontally</span>
                       </Button>
                     </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Distribute rooms horizontally</p>
-                    </TooltipContent>
+                    <CenteredTooltipContent>
+                      <p>Evenly space rooms horizontally</p>
+                    </CenteredTooltipContent>
                   </Tooltip>
                   
                   <Tooltip>
@@ -176,12 +177,12 @@ const Sidebar: React.FC<SidebarProps> = ({
                         onClick={() => onApplyAction('distribute-vertical')}
                       >
                         <ChevronsUpDown className="h-4 w-4 mr-2 flex-shrink-0" />
-                        <span className="truncate">Dist. Vertical</span>
+                        <span className="truncate">Distribute Vertically</span>
                       </Button>
                     </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Distribute rooms vertically</p>
-                    </TooltipContent>
+                    <CenteredTooltipContent>
+                      <p>Evenly space rooms vertically</p>
+                    </CenteredTooltipContent>
                   </Tooltip>
                 </div>
               </AccordionContent>
@@ -200,12 +201,12 @@ const Sidebar: React.FC<SidebarProps> = ({
                         onClick={() => onApplyAction('mirror-horizontal')}
                       >
                         <FlipHorizontal className="h-4 w-4 mr-2 flex-shrink-0" />
-                        <span className="truncate">Mirror H</span>
+                        <span className="truncate">Mirror Horizontally</span>
                       </Button>
                     </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Mirror room horizontally</p>
-                    </TooltipContent>
+                    <CenteredTooltipContent>
+                      <p>Flip selected room horizontally</p>
+                    </CenteredTooltipContent>
                   </Tooltip>
                   
                   <Tooltip>
@@ -217,12 +218,12 @@ const Sidebar: React.FC<SidebarProps> = ({
                         onClick={() => onApplyAction('mirror-vertical')}
                       >
                         <FlipVertical className="h-4 w-4 mr-2 flex-shrink-0" />
-                        <span className="truncate">Mirror V</span>
+                        <span className="truncate">Mirror Vertically</span>
                       </Button>
                     </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Mirror room vertically</p>
-                    </TooltipContent>
+                    <CenteredTooltipContent>
+                      <p>Flip selected room vertically</p>
+                    </CenteredTooltipContent>
                   </Tooltip>
                   
                   <Tooltip>
@@ -234,12 +235,12 @@ const Sidebar: React.FC<SidebarProps> = ({
                         onClick={() => onApplyAction('center-room')}
                       >
                         <LayoutGrid className="h-4 w-4 mr-2 flex-shrink-0" />
-                        <span className="truncate">Center</span>
+                        <span className="truncate">Center Room</span>
                       </Button>
                     </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Center room in viewport</p>
-                    </TooltipContent>
+                    <CenteredTooltipContent>
+                      <p>Center selected room in viewport</p>
+                    </CenteredTooltipContent>
                   </Tooltip>
                 </div>
               </AccordionContent>

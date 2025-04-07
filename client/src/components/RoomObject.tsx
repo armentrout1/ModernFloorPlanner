@@ -38,29 +38,33 @@ const RoomObject: React.FC<RoomObjectProps> = ({
     // Position object based on wall side
     switch (wallSide) {
       case 'top':
-        styles.left = `${position.x - objSize / 2}px`;
+        // For top wall - position horizontally based on percentage, vertically at the top edge
+        styles.left = `${(room.width * object.position / 100) - objSize / 2}px`;
         styles.top = `-${objSize / 2}px`;
         styles.width = `${objSize}px`;
         styles.height = `${objSize}px`;
         styles.transform = 'rotate(0deg)';
         break;
       case 'right':
+        // For right wall - position horizontally at the right edge, vertically based on percentage
         styles.left = `${room.width - objSize / 2}px`;
-        styles.top = `${position.y - objSize / 2}px`;
+        styles.top = `${(room.height * object.position / 100) - objSize / 2}px`;
         styles.width = `${objSize}px`;
         styles.height = `${objSize}px`;
         styles.transform = 'rotate(90deg)';
         break;
       case 'bottom':
-        styles.left = `${position.x - objSize / 2}px`;
+        // For bottom wall - position horizontally based on percentage, vertically at the bottom edge
+        styles.left = `${(room.width * object.position / 100) - objSize / 2}px`;
         styles.top = `${room.height - objSize / 2}px`;
         styles.width = `${objSize}px`;
         styles.height = `${objSize}px`;
         styles.transform = 'rotate(180deg)';
         break;
       case 'left':
+        // For left wall - position horizontally at the left edge, vertically based on percentage
         styles.left = `-${objSize / 2}px`;
-        styles.top = `${position.y - objSize / 2}px`;
+        styles.top = `${(room.height * object.position / 100) - objSize / 2}px`;
         styles.width = `${objSize}px`;
         styles.height = `${objSize}px`;
         styles.transform = 'rotate(-90deg)';
