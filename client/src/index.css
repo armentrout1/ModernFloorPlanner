@@ -54,11 +54,35 @@
 /* Room touch feedback */
 .room-box {
   touch-action: none;
+  -webkit-tap-highlight-color: rgba(59, 130, 246, 0.4); /* iOS tap highlight */
 }
 
 .room-touching {
   box-shadow: 0 0 0 5px rgba(59, 130, 246, 0.8), 0 0 15px rgba(0, 0, 0, 0.3) !important;
   background-color: rgba(59, 130, 246, 0.1);
+}
+
+/* Room objects (doors/windows) touch feedback */
+.room-object {
+  touch-action: none;
+  transition: transform 0.1s ease-out;
+}
+
+.object-touching {
+  filter: brightness(1.2) contrast(1.2);
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+}
+
+/* For better touch device recognition */
+@media (hover: none) and (pointer: coarse) {
+  .room-box {
+    border: 2px solid rgba(59, 130, 246, 0.5);
+  }
+  
+  [class*="resize-handle"] {
+    min-width: 24px !important;
+    min-height: 24px !important;
+  }
 }
 
 /* Responsive adjustments for mobile */

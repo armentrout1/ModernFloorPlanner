@@ -71,51 +71,31 @@ const RoomBox: React.FC<RoomBoxProps> = ({
   
   // Track touch interactions
   const [isTouching, setIsTouching] = useState(false);
-  const touchTimeoutRef = useRef<number | null>(null);
   
   const handleTouchStart = (e: React.TouchEvent) => {
     e.stopPropagation();
-    
-    // Prevent default to avoid scrolling
-    e.preventDefault();
+    e.preventDefault(); // Prevent default to avoid scrolling
     
     // Ignore if in object placement mode
     if (placingObjectType) return;
     
-    // Visual feedback for touch - add pressed effect
+    // Visual feedback for touch
     setIsTouching(true);
     
-    // Set a short timeout to determine if this is a touch-and-hold or just a tap
-    if (touchTimeoutRef.current) {
-      window.clearTimeout(touchTimeoutRef.current);
+    // Immediately select the room and start moving
+    if (e.touches.length === 1) {
+      const touch = e.touches[0];
+      onSelect(room.id);
+      onMoveStart(room.id, touch.clientX, touch.clientY);
     }
-    
-    touchTimeoutRef.current = window.setTimeout(() => {
-      // This is a touch-and-hold, start the move operation
-      if (e.touches.length === 1) {
-        const touch = e.touches[0];
-        onSelect(room.id);
-        onMoveStart(room.id, touch.clientX, touch.clientY);
-      }
-    }, 100); // Short delay for better touch experience
-    
-    // Also select the room immediately for visual feedback
-    onSelect(room.id);
   };
   
   const handleTouchMove = (e: React.TouchEvent) => {
     e.stopPropagation();
     e.preventDefault();
     
-    // If we're already dragging (after the timeout), let the parent component handle it
-    if (isTouching && e.touches.length === 1) {
-      const touch = e.touches[0];
-      // Clear the timeout as we're now definitely moving
-      if (touchTimeoutRef.current) {
-        window.clearTimeout(touchTimeoutRef.current);
-        touchTimeoutRef.current = null;
-      }
-    }
+    // No extra handling needed - parent component will handle the movement
+    // since onMoveStart was called in handleTouchStart
   };
   
   const handleTouchEnd = (e: React.TouchEvent) => {
@@ -123,12 +103,6 @@ const RoomBox: React.FC<RoomBoxProps> = ({
     
     // Remove touching state
     setIsTouching(false);
-    
-    // Clear any pending timeout
-    if (touchTimeoutRef.current) {
-      window.clearTimeout(touchTimeoutRef.current);
-      touchTimeoutRef.current = null;
-    }
   };
   
   const handleResizeStart = (e: React.MouseEvent, handle: ResizeHandle) => {

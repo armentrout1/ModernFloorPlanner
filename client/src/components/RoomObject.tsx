@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Room, RoomObject as RoomObjectType } from '@/utils/types';
 import { DoorOpenIcon, Square as WindowIcon } from 'lucide-react';
 import { calculateObjectPosition } from '@/utils/canvas';
@@ -88,9 +88,16 @@ const RoomObject: React.FC<RoomObjectProps> = ({
     }
   };
   
+  const [isObjectTouching, setIsObjectTouching] = useState(false);
+  
   const handleTouchStart = (e: React.TouchEvent) => {
     e.stopPropagation();
     e.preventDefault();
+    
+    // Visual feedback
+    setIsObjectTouching(true);
+    
+    // Select object and start dragging immediately
     onSelect(object.id);
     
     if (onDragStart && e.touches.length === 1) {
@@ -99,12 +106,22 @@ const RoomObject: React.FC<RoomObjectProps> = ({
     }
   };
   
+  const handleTouchEnd = () => {
+    setIsObjectTouching(false);
+  };
+  
   return (
     <div
-      className={`room-object ${isSelected ? 'selected' : ''}`}
-      style={getStyles()}
+      className={`room-object ${isSelected ? 'selected' : ''} ${isObjectTouching ? 'object-touching' : ''}`}
+      style={{
+        ...getStyles(),
+        transform: isObjectTouching ? 'scale(1.1)' : '',
+        zIndex: isObjectTouching ? 50 : (isSelected ? 30 : 20),
+      }}
       onMouseDown={handleMouseDown}
       onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+      onTouchCancel={handleTouchEnd}
     >
       <div 
         className={`w-full h-full flex items-center justify-center

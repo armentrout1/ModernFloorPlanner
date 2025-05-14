@@ -636,6 +636,12 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
       setLastTouches(Array.from(e.touches));
     }
     
+    // Check if touch is on a room or on the canvas itself
+    if (e.target !== canvasRef.current) {
+      // Touch is likely on a room or other element - don't handle here
+      return;
+    }
+    
     // Single touch - similar to mouse behavior
     if (e.touches.length === 1) {
       if (activeTool === 'room') {
@@ -645,8 +651,8 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
           drawStart: { x, y },
           drawEnd: { x, y },
         }));
-      } else if (activeTool === 'move') {
-        // Handle panning with single finger
+      } else {
+        // Default to panning with single finger when touching the canvas (not a room)
         setState(prev => ({
           ...prev,
           isPanning: true,
