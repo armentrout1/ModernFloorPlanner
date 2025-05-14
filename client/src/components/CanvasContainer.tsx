@@ -605,6 +605,172 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
     }));
   };
   
+  // Touch Handling
+  const [touchDistance, setTouchDistance] = useState<number | null>(null);
+  const [lastTouches, setLastTouches] = useState<React.Touch[]>([]);
+  
+  // Calculate distance between two touch points for pinch-to-zoom
+  const getTouchDistance = (touches: TouchList): number => {
+    if (touches.length < 2) return 0;
+    
+    const dx = touches[0].clientX - touches[1].clientX;
+    const dy = touches[0].clientY - touches[1].clientY;
+    return Math.sqrt(dx * dx + dy * dy);
+  };
+  
+  // Handle touch start on canvas
+  const handleCanvasTouchStart = (e: React.TouchEvent) => {
+    // Prevent default browser behavior like scrolling/zooming
+    e.preventDefault();
+    
+    const rect = canvasRef.current?.getBoundingClientRect();
+    if (!rect || e.touches.length === 0) return;
+    
+    const touch = e.touches[0];
+    const x = (touch.clientX - rect.left) / state.scale;
+    const y = (touch.clientY - rect.top) / state.scale;
+    
+    // Store touches for later reference
+    if (e.touches.length > 0) {
+      setLastTouches(Array.from(e.touches));
+    }
+    
+    // Single touch - similar to mouse behavior
+    if (e.touches.length === 1) {
+      if (activeTool === 'room') {
+        setState(prev => ({
+          ...prev,
+          isDrawing: true,
+          drawStart: { x, y },
+          drawEnd: { x, y },
+        }));
+      } else if (activeTool === 'move') {
+        // Handle panning with single finger
+        setState(prev => ({
+          ...prev,
+          isPanning: true,
+          lastMouse: { x: touch.clientX, y: touch.clientY },
+        }));
+        
+        if (canvasRef.current) {
+          canvasRef.current.style.cursor = 'grabbing';
+        }
+      }
+    } 
+    // Multi-touch - handle pinch zoom
+    else if (e.touches.length === 2) {
+      // Store initial distance for pinch detection
+      const initialDistance = getTouchDistance(e.touches);
+      setTouchDistance(initialDistance);
+    }
+  };
+  
+  // Handle touch move on canvas
+  const handleCanvasTouchMove = (e: React.TouchEvent) => {
+    // Prevent default browser behavior
+    e.preventDefault();
+    
+    const rect = canvasRef.current?.getBoundingClientRect();
+    if (!rect || e.touches.length === 0) return;
+    
+    // Handle single touch movement
+    if (e.touches.length === 1) {
+      const touch = e.touches[0];
+      const x = (touch.clientX - rect.left) / state.scale;
+      const y = (touch.clientY - rect.top) / state.scale;
+      
+      if (state.isPanning && wrapperRef.current) {
+        // Calculate the delta change for panning
+        const dx = touch.clientX - state.lastMouse.x;
+        const dy = touch.clientY - state.lastMouse.y;
+        
+        // Pan by updating scroll position
+        wrapperRef.current.scrollLeft -= dx;
+        wrapperRef.current.scrollTop -= dy;
+        
+        // Update last touch position
+        setState(prev => ({
+          ...prev,
+          lastMouse: { x: touch.clientX, y: touch.clientY },
+        }));
+      } else if (state.isDrawing && state.drawStart) {
+        setState(prev => ({
+          ...prev,
+          drawEnd: { x, y },
+        }));
+      }
+      
+      // Store current touches for later reference
+      setLastTouches(Array.from(e.touches));
+    } 
+    // Handle pinch gesture for zooming
+    else if (e.touches.length === 2 && touchDistance !== null) {
+      const currentDistance = getTouchDistance(e.touches);
+      const delta = currentDistance - touchDistance;
+      
+      // Threshold to prevent tiny movements from triggering zoom
+      if (Math.abs(delta) > 10) {
+        if (delta > 0) {
+          handleZoomIn();
+        } else {
+          handleZoomOut();
+        }
+        setTouchDistance(currentDistance);
+      }
+      
+      // Store current touches
+      setLastTouches(Array.from(e.touches));
+    }
+  };
+  
+  // Handle touch end on canvas
+  const handleCanvasTouchEnd = (e: React.TouchEvent) => {
+    // Don't prevent default here to allow normal touch behavior after the interaction
+    
+    if (state.isDrawing && state.drawStart && state.drawEnd) {
+      // Similar to handleCanvasMouseUp for drawing
+      // Calculate width and height
+      const width = Math.abs(state.drawEnd.x - state.drawStart.x);
+      const height = Math.abs(state.drawEnd.y - state.drawStart.y);
+      
+      // Only create a room if it's larger than the minimum size
+      if (width >= ROOM_MIN_SIZE && height >= ROOM_MIN_SIZE) {
+        const newRoom = createRoom(
+          Math.min(state.drawStart.x, state.drawEnd.x),
+          Math.min(state.drawStart.y, state.drawEnd.y),
+          width,
+          height
+        );
+        
+        onRoomsChange([...rooms, newRoom]);
+        onSelectRoom(newRoom.id);
+      }
+    }
+    
+    // Reset touch-specific states
+    setTouchDistance(null);
+    
+    // Reset all interaction states
+    setState(prev => ({ 
+      ...prev, 
+      isDrawing: false, 
+      isPanning: false,
+      isDragging: false,
+      isResizing: false,
+      isSelecting: false,
+      drawStart: null, 
+      drawEnd: null,
+      selectStart: null,
+      selectEnd: null,
+      activeResizeHandle: null,
+    }));
+    
+    // Reset cursor
+    if (canvasRef.current) {
+      canvasRef.current.style.cursor = 'crosshair';
+    }
+  };
+  
   const handleRoomSelect = (roomId: string) => {
     onSelectRoom(roomId);
   };
@@ -714,6 +880,10 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
           onMouseMove={handleCanvasMouseMove}
           onMouseUp={handleCanvasMouseUp}
           onMouseLeave={handleCanvasMouseUp}
+          onTouchStart={handleCanvasTouchStart}
+          onTouchMove={handleCanvasTouchMove}
+          onTouchEnd={handleCanvasTouchEnd}
+          onTouchCancel={handleCanvasTouchEnd}
         >
           {rooms.map(room => (
             <RoomBox

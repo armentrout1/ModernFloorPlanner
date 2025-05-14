@@ -69,6 +69,23 @@ const RoomBox: React.FC<RoomBoxProps> = ({
     onMoveStart(room.id, e.clientX, e.clientY);
   };
   
+  const handleTouchStart = (e: React.TouchEvent) => {
+    e.stopPropagation();
+    
+    // Prevent default to avoid scrolling
+    e.preventDefault();
+    
+    // Ignore if in object placement mode
+    if (placingObjectType) return;
+    
+    // Use the first touch point
+    if (e.touches.length === 1) {
+      const touch = e.touches[0];
+      onSelect(room.id);
+      onMoveStart(room.id, touch.clientX, touch.clientY);
+    }
+  };
+  
   const handleResizeStart = (e: React.MouseEvent, handle: ResizeHandle) => {
     e.stopPropagation();
     onResizeStart(room.id, handle);
@@ -111,6 +128,7 @@ const RoomBox: React.FC<RoomBoxProps> = ({
       style={roomStyle}
       onClick={handleClick}
       onMouseDown={handleMouseDown}
+      onTouchStart={handleTouchStart}
     >
       {/* Room dimensions display */}
       <div className="absolute inset-0 flex items-center justify-center text-xs font-medium text-blue-800 pointer-events-none">
