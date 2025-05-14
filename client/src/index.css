@@ -51,6 +51,16 @@
   user-select: none;
 }
 
+/* Room touch feedback */
+.room-box {
+  touch-action: none;
+}
+
+.room-touching {
+  box-shadow: 0 0 0 5px rgba(59, 130, 246, 0.8), 0 0 15px rgba(0, 0, 0, 0.3) !important;
+  background-color: rgba(59, 130, 246, 0.1);
+}
+
 /* Responsive adjustments for mobile */
 @media (max-width: 768px) {
   .panel-controls {

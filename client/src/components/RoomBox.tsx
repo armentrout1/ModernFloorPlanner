@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Room, Position, ResizeHandle, WallSide, ObjectType } from '@/utils/types';
 import { formatDimensions, getResizeHandlePosition, detectWallClick } from '@/utils/canvas';
 import RoomLabel from './RoomLabel';
@@ -69,6 +69,10 @@ const RoomBox: React.FC<RoomBoxProps> = ({
     onMoveStart(room.id, e.clientX, e.clientY);
   };
   
+  // Track touch interactions
+  const [isTouching, setIsTouching] = useState(false);
+  const touchTimeoutRef = useRef<number | null>(null);
+  
   const handleTouchStart = (e: React.TouchEvent) => {
     e.stopPropagation();
     
@@ -78,11 +82,52 @@ const RoomBox: React.FC<RoomBoxProps> = ({
     // Ignore if in object placement mode
     if (placingObjectType) return;
     
-    // Use the first touch point
-    if (e.touches.length === 1) {
+    // Visual feedback for touch - add pressed effect
+    setIsTouching(true);
+    
+    // Set a short timeout to determine if this is a touch-and-hold or just a tap
+    if (touchTimeoutRef.current) {
+      window.clearTimeout(touchTimeoutRef.current);
+    }
+    
+    touchTimeoutRef.current = window.setTimeout(() => {
+      // This is a touch-and-hold, start the move operation
+      if (e.touches.length === 1) {
+        const touch = e.touches[0];
+        onSelect(room.id);
+        onMoveStart(room.id, touch.clientX, touch.clientY);
+      }
+    }, 100); // Short delay for better touch experience
+    
+    // Also select the room immediately for visual feedback
+    onSelect(room.id);
+  };
+  
+  const handleTouchMove = (e: React.TouchEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    
+    // If we're already dragging (after the timeout), let the parent component handle it
+    if (isTouching && e.touches.length === 1) {
       const touch = e.touches[0];
-      onSelect(room.id);
-      onMoveStart(room.id, touch.clientX, touch.clientY);
+      // Clear the timeout as we're now definitely moving
+      if (touchTimeoutRef.current) {
+        window.clearTimeout(touchTimeoutRef.current);
+        touchTimeoutRef.current = null;
+      }
+    }
+  };
+  
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    e.stopPropagation();
+    
+    // Remove touching state
+    setIsTouching(false);
+    
+    // Clear any pending timeout
+    if (touchTimeoutRef.current) {
+      window.clearTimeout(touchTimeoutRef.current);
+      touchTimeoutRef.current = null;
     }
   };
   
@@ -117,24 +162,32 @@ const RoomBox: React.FC<RoomBoxProps> = ({
     backgroundColor: room.color || '#93c5fd',
     borderRadius: '2px',
     boxShadow: isSelected 
-      ? '0 0 0 2px rgba(59, 130, 246, 0.8)' 
+      ? '0 0 0 4px rgba(59, 130, 246, 0.8), 0 0 10px rgba(0, 0, 0, 0.2)' 
       : isPartOfMultiSelection
-        ? '0 0 0 2px rgba(99, 102, 241, 0.6), inset 0 0 0 1px rgba(255, 255, 255, 0.3)'
+        ? '0 0 0 3px rgba(99, 102, 241, 0.6), inset 0 0 0 1px rgba(255, 255, 255, 0.3)'
         : '0 1px 3px rgba(0, 0, 0, 0.1)',
     cursor: placingObjectType ? 'crosshair' : 'move',
     userSelect: 'none',
     zIndex: isSelected || isPartOfMultiSelection ? 10 : 1,
+    // Add a subtle transition for visual feedback on touch
+    transition: 'box-shadow 0.15s ease, transform 0.05s ease',
   };
   
   const resizeHandles: ResizeHandle[] = ['nw', 'ne', 'sw', 'se'];
   
   return (
     <div 
-      className="room-box" 
-      style={roomStyle}
+      className={`room-box ${isTouching ? 'room-touching' : ''}`}
+      style={{
+        ...roomStyle,
+        transform: isTouching ? 'scale(0.98)' : 'scale(1)',
+      }}
       onClick={handleClick}
       onMouseDown={handleMouseDown}
       onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+      onTouchCancel={handleTouchEnd}
     >
       {/* Room dimensions display */}
       <div className="absolute inset-0 flex items-center justify-center text-xs font-medium text-blue-800 pointer-events-none">
@@ -157,13 +210,17 @@ const RoomBox: React.FC<RoomBoxProps> = ({
         return (
           <div
             key={handle}
-            className="absolute w-3 h-3 bg-white border border-blue-500 rounded-sm cursor-nwse-resize z-20"
+            className="absolute resize-handle w-3 h-3 bg-white border-2 border-blue-500 rounded-sm cursor-nwse-resize z-20 
+                      shadow-md hover:bg-blue-100 active:bg-blue-200"
             style={{
-              left: handle.includes('w') ? -4 : undefined,
-              right: handle.includes('e') ? -4 : undefined,
-              top: handle.includes('n') ? -4 : undefined,
-              bottom: handle.includes('s') ? -4 : undefined,
+              left: handle.includes('w') ? -6 : undefined,
+              right: handle.includes('e') ? -6 : undefined,
+              top: handle.includes('n') ? -6 : undefined,
+              bottom: handle.includes('s') ? -6 : undefined,
               cursor: `${handle}-resize`,
+              width: '16px',
+              height: '16px',
+              touchAction: 'none',
             }}
             onMouseDown={(e) => handleResizeStart(e, handle as ResizeHandle)}
             onTouchStart={(e) => handleResizeTouchStart(e, handle as ResizeHandle)}
