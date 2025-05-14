@@ -91,6 +91,12 @@ const RoomBox: React.FC<RoomBoxProps> = ({
     onResizeStart(room.id, handle);
   };
   
+  const handleResizeTouchStart = (e: React.TouchEvent, handle: ResizeHandle) => {
+    e.stopPropagation();
+    e.preventDefault();
+    onResizeStart(room.id, handle);
+  };
+  
   const handleStartEditName = () => {
     setIsEditingName(true);
   };
@@ -160,6 +166,7 @@ const RoomBox: React.FC<RoomBoxProps> = ({
               cursor: `${handle}-resize`,
             }}
             onMouseDown={(e) => handleResizeStart(e, handle as ResizeHandle)}
+            onTouchStart={(e) => handleResizeTouchStart(e, handle as ResizeHandle)}
           />
         );
       })}

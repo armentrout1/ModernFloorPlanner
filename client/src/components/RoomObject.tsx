@@ -88,11 +88,23 @@ const RoomObject: React.FC<RoomObjectProps> = ({
     }
   };
   
+  const handleTouchStart = (e: React.TouchEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    onSelect(object.id);
+    
+    if (onDragStart && e.touches.length === 1) {
+      const touch = e.touches[0];
+      onDragStart(object.id, touch.clientX, touch.clientY);
+    }
+  };
+  
   return (
     <div
       className={`room-object ${isSelected ? 'selected' : ''}`}
       style={getStyles()}
       onMouseDown={handleMouseDown}
+      onTouchStart={handleTouchStart}
     >
       <div 
         className={`w-full h-full flex items-center justify-center

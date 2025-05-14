@@ -9,7 +9,8 @@ import { MoveHorizontal, MoveVertical, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { 
   GRID_SIZE, 
-  SCALE_FACTOR, 
+  SCALE_FACTOR,
+  ROOM_MIN_SIZE,
   snapToGrid, 
   createRoom, 
   getResizedRoom,
@@ -610,7 +611,7 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
   const [lastTouches, setLastTouches] = useState<React.Touch[]>([]);
   
   // Calculate distance between two touch points for pinch-to-zoom
-  const getTouchDistance = (touches: TouchList): number => {
+  const getTouchDistance = (touches: React.TouchList): number => {
     if (touches.length < 2) return 0;
     
     const dx = touches[0].clientX - touches[1].clientX;
