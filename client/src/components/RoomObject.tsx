@@ -164,36 +164,41 @@ const RoomObject: React.FC<RoomObjectProps> = ({
   };
   
   return (
-    <div
-      className={`room-object ${isSelected ? 'selected' : ''} ${isObjectTouching ? 'object-touching' : ''}`}
-      style={{
-        ...getStyles(),
-        transform: isObjectTouching ? 'scale(1.1)' : '',
-        zIndex: isObjectTouching ? 50 : (isSelected ? 30 : 20),
-      }}
-      onMouseDown={handleMouseDown}
-      onTouchStart={handleTouchStart}
-      onTouchEnd={handleTouchEnd}
-      onTouchCancel={handleTouchEnd}
-    >
-      <div 
-        className={`w-full h-full flex items-center justify-center
-                   ${object.type === 'door' ? 'text-orange-500' : 'text-blue-500'} 
-                   ${isSelected ? 'opacity-100' : 'opacity-85'}`}
+    <>
+      {/* Door swing arc - render behind the door */}
+      {renderDoorSwing()}
+      
+      <div
+        className={`room-object ${isSelected ? 'selected' : ''} ${isObjectTouching ? 'object-touching' : ''}`}
+        style={{
+          ...getStyles(),
+          transform: isObjectTouching ? 'scale(1.1)' : '',
+          zIndex: isObjectTouching ? 50 : (isSelected ? 30 : 20),
+        }}
+        onMouseDown={handleMouseDown}
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+        onTouchCancel={handleTouchEnd}
       >
-        {object.type === 'door' ? (
-          <DoorOpenIcon 
-            className="w-full h-full p-1"
-            style={{ background: 'rgba(255, 255, 255, 0.8)', borderRadius: '4px' }}
-          />
-        ) : (
-          <WindowIcon 
-            className="w-full h-full p-1"
-            style={{ background: 'rgba(255, 255, 255, 0.8)', borderRadius: '4px' }}
-          />
-        )}
+        <div 
+          className={`w-full h-full flex items-center justify-center
+                     ${object.type === 'door' ? 'text-orange-500' : 'text-blue-500'} 
+                     ${isSelected ? 'opacity-100' : 'opacity-85'}`}
+        >
+          {object.type === 'door' ? (
+            <DoorOpenIcon 
+              className="w-full h-full p-1"
+              style={{ background: 'rgba(255, 255, 255, 0.8)', borderRadius: '4px' }}
+            />
+          ) : (
+            <WindowIcon 
+              className="w-full h-full p-1"
+              style={{ background: 'rgba(255, 255, 255, 0.8)', borderRadius: '4px' }}
+            />
+          )}
+        </div>
       </div>
-    </div>
+    </>
   );
 };
 

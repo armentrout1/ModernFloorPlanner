@@ -1,9 +1,12 @@
 import React from 'react';
-import { Room, RoomObject as RoomObjectType } from '@/utils/types';
+import { Room, RoomObject as RoomObjectType, DoorStyle, SwingDirection, SwingSide } from '@/utils/types';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { DoorOpenIcon, Square as WindowIcon, Trash2 } from 'lucide-react';
+import { getStandardDoorSizes, inchesToPixels, pixelsToInches } from '@/utils/canvas';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -57,6 +60,45 @@ const PropertyPanel: React.FC<PropertyPanelProps> = ({
       onUpdateRoom(selectedRoom.id, { objects: updatedObjects });
     }
   };
+
+  const handleDoorPropertyChange = (property: keyof NonNullable<RoomObjectType['doorProperties']>, value: any) => {
+    if (selectedRoom && selectedObject && selectedObject.type === 'door' && selectedRoom.objects) {
+      const updatedObjects = selectedRoom.objects.map(obj => {
+        if (obj.id === selectedObject.id) {
+          return {
+            ...obj,
+            doorProperties: {
+              ...obj.doorProperties!,
+              [property]: value,
+            },
+          };
+        }
+        return obj;
+      });
+      
+      onUpdateRoom(selectedRoom.id, { objects: updatedObjects });
+    }
+  };
+
+  const handleDoorSizeChange = (width: number) => {
+    if (selectedRoom && selectedObject && selectedObject.type === 'door' && selectedRoom.objects) {
+      const updatedObjects = selectedRoom.objects.map(obj => {
+        if (obj.id === selectedObject.id) {
+          return {
+            ...obj,
+            size: inchesToPixels(width), // Update the size property too
+            doorProperties: {
+              ...obj.doorProperties!,
+              width,
+            },
+          };
+        }
+        return obj;
+      });
+      
+      onUpdateRoom(selectedRoom.id, { objects: updatedObjects });
+    }
+  };
   
   // Calculate room dimensions in feet if a room is selected
   const widthFeet = selectedRoom ? pixelsToFeet(selectedRoom.width) : 0;
@@ -98,6 +140,87 @@ const PropertyPanel: React.FC<PropertyPanelProps> = ({
               <Trash2 className="h-4 w-4 text-red-500" />
             </Button>
           </div>
+
+          {/* Door-specific properties */}
+          {selectedObject.type === 'door' && selectedObject.doorProperties && (
+            <>
+              <div className="space-y-2">
+                <Label>Door Style</Label>
+                <Select
+                  value={selectedObject.doorProperties.style}
+                  onValueChange={(value: DoorStyle) => handleDoorPropertyChange('style', value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="single">Single Door</SelectItem>
+                    <SelectItem value="double">Double Door</SelectItem>
+                    <SelectItem value="sliding">Sliding Door</SelectItem>
+                    <SelectItem value="bifold">Bifold Door</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Door Width</Label>
+                <Select
+                  value={selectedObject.doorProperties.width.toString()}
+                  onValueChange={(value) => handleDoorSizeChange(parseInt(value))}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {getStandardDoorSizes().map(size => (
+                      <SelectItem key={size.width} value={size.width.toString()}>
+                        {size.label} ({size.width}" wide)
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Swing properties - only show for hinged doors */}
+              {selectedObject.doorProperties.style !== 'sliding' && (
+                <>
+                  <div className="space-y-2">
+                    <Label>Swing Direction</Label>
+                    <RadioGroup
+                      value={selectedObject.doorProperties.swingDirection}
+                      onValueChange={(value: SwingDirection) => handleDoorPropertyChange('swingDirection', value)}
+                    >
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="inward" id="inward" />
+                        <Label htmlFor="inward">Inward</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="outward" id="outward" />
+                        <Label htmlFor="outward">Outward</Label>
+                      </div>
+                    </RadioGroup>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Swing Side</Label>
+                    <RadioGroup
+                      value={selectedObject.doorProperties.swingSide}
+                      onValueChange={(value: SwingSide) => handleDoorPropertyChange('swingSide', value)}
+                    >
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="left" id="left" />
+                        <Label htmlFor="left">Left</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="right" id="right" />
+                        <Label htmlFor="right">Right</Label>
+                      </div>
+                    </RadioGroup>
+                  </div>
+                </>
+              )}
+            </>
+          )}
           
           <div className="space-y-2">
             <Label>Wall</Label>
