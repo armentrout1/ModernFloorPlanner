@@ -206,21 +206,19 @@ const RoomObject = ({ room, object, scale, isSelected, onSelect, onDragStart }: 
     );
   }
 
-  // Render window
+  // Render window - Professional architectural style
   if (object.type === 'window') {
-    const windowSize = 30; // Standard window size
+    const windowSize = 36; // Standard window size
 
     return (
       <div style={{ position: 'absolute' }}>
-        {/* Window opening line */}
+        {/* Main window opening - thicker line break in wall */}
         <div
           style={{
             position: 'absolute',
-            backgroundColor: '#4A90E2',
-            opacity: 1,
+            backgroundColor: '#FFFFFF', // White background to show wall break
+            border: isSelected ? '2px solid #3B82F6' : '1px solid #333',
             zIndex: 1000,
-            border: isSelected ? '3px solid #3B82F6' : '2px solid #2C5282',
-            boxShadow: '0 0 4px rgba(0,0,0,0.3)',
             ...((() => {
               const styles: React.CSSProperties = {};
               
@@ -260,7 +258,7 @@ const RoomObject = ({ room, object, scale, isSelected, onSelect, onDragStart }: 
           onTouchCancel={handleTouchEnd}
         />
         
-        {/* Window frame lines for architectural detail */}
+        {/* Window sill lines - professional architectural representation */}
         <svg
           style={{
             position: 'absolute',
@@ -268,25 +266,24 @@ const RoomObject = ({ room, object, scale, isSelected, onSelect, onDragStart }: 
             height: `${windowSize}px`,
             pointerEvents: 'none',
             zIndex: 15,
-            opacity: 0.8,
             ...((() => {
               const svgStyle: React.CSSProperties = {};
               
               switch (object.wallSide) {
                 case 'top':
                   svgStyle.left = `${(room.width * object.position / 100) - windowSize / 2}px`;
-                  svgStyle.top = `8px`;
+                  svgStyle.top = `2px`;
                   break;
                 case 'right':
-                  svgStyle.left = `${room.width - 8 - windowSize}px`;
+                  svgStyle.left = `${room.width - 6 - windowSize}px`;
                   svgStyle.top = `${(room.height * object.position / 100) - windowSize / 2}px`;
                   break;
                 case 'bottom':
                   svgStyle.left = `${(room.width * object.position / 100) - windowSize / 2}px`;
-                  svgStyle.top = `${room.height - 8 - windowSize}px`;
+                  svgStyle.top = `${room.height - 6 - windowSize}px`;
                   break;
                 case 'left':
-                  svgStyle.left = `8px`;
+                  svgStyle.left = `2px`;
                   svgStyle.top = `${(room.height * object.position / 100) - windowSize / 2}px`;
                   break;
               }
@@ -295,16 +292,24 @@ const RoomObject = ({ room, object, scale, isSelected, onSelect, onDragStart }: 
             })())
           }}
         >
-          {/* Window frame lines - horizontal and vertical dividers */}
+          {/* Professional window sill lines */}
           {object.wallSide === 'top' || object.wallSide === 'bottom' ? (
             <>
-              <line x1={windowSize/3} y1="0" x2={windowSize/3} y2={windowSize} stroke="#4A90E2" strokeWidth="1" />
-              <line x1={2*windowSize/3} y1="0" x2={2*windowSize/3} y2={windowSize} stroke="#4A90E2" strokeWidth="1" />
+              {/* Top/bottom walls - two horizontal parallel lines */}
+              <line x1="0" y1="2" x2={windowSize} y2="2" stroke="#333" strokeWidth="1.5" />
+              <line x1="0" y1="6" x2={windowSize} y2="6" stroke="#333" strokeWidth="1.5" />
+              {/* Window frame divisions */}
+              <line x1={windowSize/3} y1="2" x2={windowSize/3} y2="6" stroke="#333" strokeWidth="1" />
+              <line x1={2*windowSize/3} y1="2" x2={2*windowSize/3} y2="6" stroke="#333" strokeWidth="1" />
             </>
           ) : (
             <>
-              <line x1="0" y1={windowSize/3} x2={windowSize} y2={windowSize/3} stroke="#4A90E2" strokeWidth="1" />
-              <line x1="0" y1={2*windowSize/3} x2={windowSize} y2={2*windowSize/3} stroke="#4A90E2" strokeWidth="1" />
+              {/* Left/right walls - two vertical parallel lines */}
+              <line x1="2" y1="0" x2="2" y2={windowSize} stroke="#333" strokeWidth="1.5" />
+              <line x1="6" y1="0" x2="6" y2={windowSize} stroke="#333" strokeWidth="1.5" />
+              {/* Window frame divisions */}
+              <line x1="2" y1={windowSize/3} x2="6" y2={windowSize/3} stroke="#333" strokeWidth="1" />
+              <line x1="2" y1={2*windowSize/3} x2="6" y2={2*windowSize/3} stroke="#333" strokeWidth="1" />
             </>
           )}
         </svg>
