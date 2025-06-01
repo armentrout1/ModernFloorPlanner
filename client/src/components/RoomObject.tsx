@@ -237,8 +237,8 @@ const RoomObject: React.FC<RoomObjectProps> = ({
         };
         swingStyle = {
           position: 'absolute',
-          left: `${doorX + (isRightSwing ? 0 : doorWidth)}px`,
-          top: isInward ? '3px' : `-${swingRadius}px`,
+          left: `${doorX + (isRightSwing ? 0 : doorWidth - swingRadius)}px`,
+          top: isInward ? '3px' : `-${swingRadius - 3}px`,
           width: `${swingRadius}px`,
           height: `${swingRadius}px`,
           zIndex: 5,
@@ -330,7 +330,10 @@ const RoomObject: React.FC<RoomObjectProps> = ({
             className="pointer-events-none"
           >
             <path
-              d={`M 0 0 L ${swingRadius} 0 A ${swingRadius} ${swingRadius} 0 0 1 0 ${swingRadius} Z`}
+              d={isRightSwing 
+                ? `M 0 0 L ${swingRadius} 0 A ${swingRadius} ${swingRadius} 0 0 1 0 ${swingRadius} Z`
+                : `M ${swingRadius} 0 L 0 0 A ${swingRadius} ${swingRadius} 0 0 0 ${swingRadius} ${swingRadius} Z`
+              }
               fill="none"
               stroke="#FF6B35"
               strokeWidth="1.5"
