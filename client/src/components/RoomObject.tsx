@@ -208,43 +208,167 @@ const RoomObject: React.FC<RoomObjectProps> = ({
     setIsObjectTouching(false);
   };
   
-  return (
-    <>
-      {/* Door swing arc - render behind the door */}
-      {renderDoorSwing()}
-      
-      <div
-        className={`room-object ${isSelected ? 'selected' : ''} ${isObjectTouching ? 'object-touching' : ''}`}
-        style={{
-          ...getStyles(),
-          transform: isObjectTouching ? 'scale(1.1)' : '',
-          zIndex: isObjectTouching ? 50 : (isSelected ? 30 : 20),
-        }}
-        onMouseDown={handleMouseDown}
-        onTouchStart={handleTouchStart}
-        onTouchEnd={handleTouchEnd}
-        onTouchCancel={handleTouchEnd}
-      >
-        {object.type === 'door' ? (
-          <>
-            {/* Render door elements */}
-            {renderDoorElements()}
-          </>
-        ) : (
-          <div 
-            className="w-full h-full flex items-center justify-center text-blue-500"
-            style={{
-              opacity: isSelected ? 1 : 0.85,
-            }}
+  if (object.type === 'door') {
+    // For doors, render as unified architectural element
+    const doorWidth = object.doorProperties ? inchesToPixels(object.doorProperties.width) : 40;
+    const isRightSwing = object.doorProperties?.swingSide === 'right';
+    const isInward = object.doorProperties?.swingDirection === 'inward';
+    const swingRadius = doorWidth * 0.9;
+
+    // Calculate door position
+    const doorX = (room.width * object.position / 100) - doorWidth / 2;
+    const doorY = (room.height * object.position / 100) - doorWidth / 2;
+
+    let doorLineStyle: React.CSSProperties = {};
+    let swingStyle: React.CSSProperties = {};
+    let swingOrigin = '';
+    let arcPath = '';
+
+    switch (object.wallSide) {
+      case 'top':
+        doorLineStyle = {
+          position: 'absolute',
+          left: `${doorX}px`,
+          top: '0px',
+          width: `${doorWidth}px`,
+          height: '3px',
+          backgroundColor: '#8B4513',
+          zIndex: 10,
+        };
+        swingStyle = {
+          position: 'absolute',
+          left: `${doorX + (isRightSwing ? 0 : doorWidth)}px`,
+          top: isInward ? '3px' : `-${swingRadius}px`,
+          width: `${swingRadius}px`,
+          height: `${swingRadius}px`,
+          zIndex: 5,
+        };
+        swingOrigin = isRightSwing ? '0 0' : `${swingRadius} 0`;
+        arcPath = isRightSwing 
+          ? `M 0 0 L ${swingRadius} 0 A ${swingRadius} ${swingRadius} 0 0 ${isInward ? 1 : 0} 0 ${isInward ? swingRadius : -swingRadius} Z`
+          : `M ${swingRadius} 0 L 0 0 A ${swingRadius} ${swingRadius} 0 0 ${isInward ? 0 : 1} ${swingRadius} ${isInward ? swingRadius : -swingRadius} Z`;
+        break;
+
+      case 'right':
+        doorLineStyle = {
+          position: 'absolute',
+          left: `${room.width - 3}px`,
+          top: `${doorY}px`,
+          width: '3px',
+          height: `${doorWidth}px`,
+          backgroundColor: '#8B4513',
+          zIndex: 10,
+        };
+        swingStyle = {
+          position: 'absolute',
+          left: isInward ? `${room.width - swingRadius - 3}px` : `${room.width - 3}px`,
+          top: `${doorY + (isRightSwing ? 0 : doorWidth)}px`,
+          width: `${swingRadius}px`,
+          height: `${swingRadius}px`,
+          zIndex: 5,
+        };
+        break;
+
+      case 'bottom':
+        doorLineStyle = {
+          position: 'absolute',
+          left: `${doorX}px`,
+          top: `${room.height - 3}px`,
+          width: `${doorWidth}px`,
+          height: '3px',
+          backgroundColor: '#8B4513',
+          zIndex: 10,
+        };
+        swingStyle = {
+          position: 'absolute',
+          left: `${doorX + (isRightSwing ? doorWidth : 0)}px`,
+          top: isInward ? `${room.height - swingRadius - 3}px` : `${room.height - 3}px`,
+          width: `${swingRadius}px`,
+          height: `${swingRadius}px`,
+          zIndex: 5,
+        };
+        break;
+
+      case 'left':
+        doorLineStyle = {
+          position: 'absolute',
+          left: '0px',
+          top: `${doorY}px`,
+          width: '3px',
+          height: `${doorWidth}px`,
+          backgroundColor: '#8B4513',
+          zIndex: 10,
+        };
+        swingStyle = {
+          position: 'absolute',
+          left: isInward ? '3px' : `-${swingRadius}px`,
+          top: `${doorY + (isRightSwing ? doorWidth : 0)}px`,
+          width: `${swingRadius}px`,
+          height: `${swingRadius}px`,
+          zIndex: 5,
+        };
+        break;
+    }
+
+    return (
+      <>
+        {/* Door opening line */}
+        <div 
+          style={doorLineStyle}
+          onMouseDown={handleMouseDown}
+          onTouchStart={handleTouchStart}
+          onTouchEnd={handleTouchEnd}
+          onTouchCancel={handleTouchEnd}
+          className={`cursor-pointer ${isSelected ? 'ring-2 ring-blue-500' : ''}`}
+        />
+        
+        {/* Door swing arc */}
+        {object.doorProperties?.style !== 'sliding' && (
+          <svg 
+            style={swingStyle}
+            viewBox={`0 0 ${swingRadius} ${swingRadius}`}
+            className="pointer-events-none"
           >
-            <WindowIcon 
-              className="w-full h-full p-1"
-              style={{ background: 'rgba(255, 255, 255, 0.8)', borderRadius: '4px' }}
+            <path
+              d={`M 0 0 L ${swingRadius} 0 A ${swingRadius} ${swingRadius} 0 0 1 0 ${swingRadius} Z`}
+              fill="none"
+              stroke="#FF6B35"
+              strokeWidth="1.5"
+              strokeDasharray="4,2"
+              opacity="0.8"
             />
-          </div>
+          </svg>
         )}
+      </>
+    );
+  }
+
+  // For windows, use the existing approach
+  return (
+    <div
+      className={`room-object ${isSelected ? 'selected' : ''} ${isObjectTouching ? 'object-touching' : ''}`}
+      style={{
+        ...getStyles(),
+        transform: isObjectTouching ? 'scale(1.1)' : '',
+        zIndex: isObjectTouching ? 50 : (isSelected ? 30 : 20),
+      }}
+      onMouseDown={handleMouseDown}
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+      onTouchCancel={handleTouchEnd}
+    >
+      <div 
+        className="w-full h-full flex items-center justify-center text-blue-500"
+        style={{
+          opacity: isSelected ? 1 : 0.85,
+        }}
+      >
+        <WindowIcon 
+          className="w-full h-full p-1"
+          style={{ background: 'rgba(255, 255, 255, 0.8)', borderRadius: '4px' }}
+        />
       </div>
-    </>
+    </div>
   );
 };
 
