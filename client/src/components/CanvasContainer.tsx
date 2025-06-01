@@ -71,19 +71,17 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
     isPreviewMode: false, // For quick preview
   });
 
-  // Global object drag state
-  const [dragState, setDragState] = useState<{
-    isDraggingObject: boolean;
-    draggedObjectId: string | null;
-    draggedObject: any | null;
-    sourceRoomId: string | null;
+  // Enhanced door interaction state
+  const [doorState, setDoorState] = useState<{
+    mode: 'idle' | 'placing' | 'dragging';
+    cursorPreview: { position: Position; targetWall: { roomId: string; wallSide: WallSide; position: number } | null } | null;
+    draggedDoor: { objectId: string; object: any; sourceRoomId: string } | null;
     previewPosition: Position | null;
     targetWall: { roomId: string; wallSide: WallSide; position: number } | null;
   }>({
-    isDraggingObject: false,
-    draggedObjectId: null,
-    draggedObject: null,
-    sourceRoomId: null,
+    mode: 'idle',
+    cursorPreview: null,
+    draggedDoor: null,
     previewPosition: null,
     targetWall: null,
   });
@@ -126,6 +124,17 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
       activeTool,
       placingObjectType,
     }));
+    
+    // Reset door state when tool changes
+    if (placingObjectType !== 'door') {
+      setDoorState({
+        mode: 'idle',
+        cursorPreview: null,
+        draggedDoor: null,
+        previewPosition: null,
+        targetWall: null,
+      });
+    }
   }, [rooms, selectedRoomId, selectedObjectId, activeTool, placingObjectType]);
   
   // Add keyboard shortcuts for canvas controls
@@ -352,11 +361,15 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
     
     if (!sourceRoom || !draggedObject) return;
     
-    setDragState({
-      isDraggingObject: true,
-      draggedObjectId: objectId,
-      draggedObject,
-      sourceRoomId: sourceRoom.id,
+    // Enter door dragging mode
+    setDoorState({
+      mode: 'dragging',
+      cursorPreview: null,
+      draggedDoor: {
+        objectId,
+        object: draggedObject,
+        sourceRoomId: sourceRoom.id,
+      },
       previewPosition: null,
       targetWall: null,
     });
@@ -503,17 +516,33 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
     const x = (e.clientX - rect.left) / state.scale;
     const y = (e.clientY - rect.top) / state.scale;
     
-    // Handle object dragging with wall detection
-    if (dragState.isDraggingObject && dragState.draggedObjectId) {
+    // Handle door cursor preview when door tool is active
+    if (placingObjectType === 'door' && doorState.mode !== 'dragging') {
       const targetWall = findWallAtPosition(x, y);
       
-      setDragState(prev => ({
+      setDoorState(prev => ({
+        ...prev,
+        mode: 'placing',
+        cursorPreview: {
+          position: { x, y },
+          targetWall,
+        },
+      }));
+      
+      return; // Early return to prevent other interactions
+    }
+
+    // Handle door dragging
+    if (doorState.mode === 'dragging' && doorState.draggedDoor) {
+      const targetWall = findWallAtPosition(x, y);
+      
+      setDoorState(prev => ({
         ...prev,
         previewPosition: { x, y },
         targetWall,
       }));
       
-      return; // Early return to prevent other interactions during object drag
+      return; // Early return to prevent other interactions during door drag
     }
     
     if (state.isPanning && wrapperRef.current) {
@@ -586,24 +615,45 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
   };
   
   const handleCanvasMouseUp = () => {
-    // Handle object drop
-    if (dragState.isDraggingObject && dragState.targetWall && dragState.draggedObject) {
-      const { targetWall, draggedObject, sourceRoomId } = dragState;
+    // Handle door placement from cursor preview
+    if (doorState.mode === 'placing' && doorState.cursorPreview?.targetWall && placingObjectType === 'door') {
+      const { targetWall } = doorState.cursorPreview;
+      const targetRoom = rooms.find(r => r.id === targetWall.roomId);
+      
+      if (targetRoom) {
+        const newDoor = createRoomObject('door', targetWall.wallSide, targetWall.position, 40);
+        
+        const updatedRooms = rooms.map(room => 
+          room.id === targetWall.roomId 
+            ? { ...room, objects: [...(room.objects || []), newDoor] }
+            : room
+        );
+        
+        onRoomsChange(updatedRooms);
+        onSelectObject(newDoor.id);
+      }
+      
+      return; // Early return to prevent other actions
+    }
+
+    // Handle door drop from dragging
+    if (doorState.mode === 'dragging' && doorState.targetWall && doorState.draggedDoor) {
+      const { targetWall, draggedDoor } = doorState;
       
       // Create updated rooms array
       const updatedRooms = rooms.map(room => {
         // Remove object from source room
-        if (room.id === sourceRoomId) {
+        if (room.id === draggedDoor.sourceRoomId) {
           return {
             ...room,
-            objects: room.objects?.filter(obj => obj.id !== dragState.draggedObjectId) || []
+            objects: room.objects?.filter(obj => obj.id !== draggedDoor.objectId) || []
           };
         }
         
         // Add object to target room
         if (room.id === targetWall.roomId) {
           const movedObject = {
-            ...draggedObject,
+            ...draggedDoor.object,
             wallSide: targetWall.wallSide,
             position: targetWall.position,
           };
@@ -619,12 +669,11 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
       
       onRoomsChange(updatedRooms);
       
-      // Reset drag state
-      setDragState({
-        isDraggingObject: false,
-        draggedObjectId: null,
-        draggedObject: null,
-        sourceRoomId: null,
+      // Reset door state
+      setDoorState({
+        mode: 'idle',
+        cursorPreview: null,
+        draggedDoor: null,
         previewPosition: null,
         targetWall: null,
       });
@@ -1071,120 +1120,221 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
             />
           )}
 
-          {/* Object drag preview and wall highlighting */}
-          {dragState.isDraggingObject && (
+          {/* Door cursor preview and drag preview */}
+          {(doorState.mode === 'placing' || doorState.mode === 'dragging') && (
             <>
-              {/* Highlight target walls */}
-              {rooms.map(room => (
-                <div key={`wall-highlight-${room.id}`}>
-                  {/* Top wall */}
-                  <div
-                    className={`absolute pointer-events-none ${
-                      dragState.targetWall?.roomId === room.id && dragState.targetWall?.wallSide === 'top'
-                        ? 'bg-green-400 opacity-60'
-                        : 'bg-gray-300 opacity-30'
-                    }`}
-                    style={{
-                      left: `${room.x}px`,
-                      top: `${room.y - 4}px`,
-                      width: `${room.width}px`,
-                      height: '8px',
-                    }}
-                  />
-                  {/* Right wall */}
-                  <div
-                    className={`absolute pointer-events-none ${
-                      dragState.targetWall?.roomId === room.id && dragState.targetWall?.wallSide === 'right'
-                        ? 'bg-green-400 opacity-60'
-                        : 'bg-gray-300 opacity-30'
-                    }`}
-                    style={{
-                      left: `${room.x + room.width - 4}px`,
-                      top: `${room.y}px`,
-                      width: '8px',
-                      height: `${room.height}px`,
-                    }}
-                  />
-                  {/* Bottom wall */}
-                  <div
-                    className={`absolute pointer-events-none ${
-                      dragState.targetWall?.roomId === room.id && dragState.targetWall?.wallSide === 'bottom'
-                        ? 'bg-green-400 opacity-60'
-                        : 'bg-gray-300 opacity-30'
-                    }`}
-                    style={{
-                      left: `${room.x}px`,
-                      top: `${room.y + room.height - 4}px`,
-                      width: `${room.width}px`,
-                      height: '8px',
-                    }}
-                  />
-                  {/* Left wall */}
-                  <div
-                    className={`absolute pointer-events-none ${
-                      dragState.targetWall?.roomId === room.id && dragState.targetWall?.wallSide === 'left'
-                        ? 'bg-green-400 opacity-60'
-                        : 'bg-gray-300 opacity-30'
-                    }`}
-                    style={{
-                      left: `${room.x - 4}px`,
-                      top: `${room.y}px`,
-                      width: '8px',
-                      height: `${room.height}px`,
-                    }}
-                  />
-                </div>
-              ))}
-
-              {/* Door preview at target position */}
-              {dragState.targetWall && dragState.draggedObject && (
+              {/* Cursor preview when placing doors */}
+              {doorState.mode === 'placing' && doorState.cursorPreview?.targetWall && (
                 (() => {
-                  const { targetWall } = dragState;
+                  const { targetWall } = doorState.cursorPreview;
                   const targetRoom = rooms.find(r => r.id === targetWall.roomId);
                   if (!targetRoom) return null;
 
-                  const doorSize = dragState.draggedObject.doorProperties 
-                    ? inchesToPixels(dragState.draggedObject.doorProperties.width) 
-                    : 40;
+                  const doorSize = inchesToPixels(36); // Default 36" door
 
-                  let previewStyle: React.CSSProperties = {
-                    position: 'absolute',
-                    backgroundColor: '#FF6B35',
-                    opacity: 0.7,
-                    pointerEvents: 'none',
-                    zIndex: 50,
-                  };
-
-                  // Position preview based on target wall
-                  switch (targetWall.wallSide) {
-                    case 'top':
-                      previewStyle.left = `${targetRoom.x + (targetRoom.width * targetWall.position / 100) - doorSize / 2}px`;
-                      previewStyle.top = `${targetRoom.y}px`;
-                      previewStyle.width = `${doorSize}px`;
-                      previewStyle.height = '6px';
-                      break;
-                    case 'right':
-                      previewStyle.left = `${targetRoom.x + targetRoom.width - 6}px`;
-                      previewStyle.top = `${targetRoom.y + (targetRoom.height * targetWall.position / 100) - doorSize / 2}px`;
-                      previewStyle.width = '6px';
-                      previewStyle.height = `${doorSize}px`;
-                      break;
-                    case 'bottom':
-                      previewStyle.left = `${targetRoom.x + (targetRoom.width * targetWall.position / 100) - doorSize / 2}px`;
-                      previewStyle.top = `${targetRoom.y + targetRoom.height - 6}px`;
-                      previewStyle.width = `${doorSize}px`;
-                      previewStyle.height = '6px';
-                      break;
-                    case 'left':
-                      previewStyle.left = `${targetRoom.x}px`;
-                      previewStyle.top = `${targetRoom.y + (targetRoom.height * targetWall.position / 100) - doorSize / 2}px`;
-                      previewStyle.width = '6px';
-                      previewStyle.height = `${doorSize}px`;
-                      break;
-                  }
-
-                  return <div style={previewStyle} />;
+                  return (
+                    <div key="door-cursor-preview">
+                      {/* Door line preview */}
+                      <div
+                        className="absolute pointer-events-none"
+                        style={{
+                          backgroundColor: '#FF6B35',
+                          opacity: 0.6,
+                          zIndex: 50,
+                          ...((() => {
+                            const baseStyle: React.CSSProperties = {};
+                            switch (targetWall.wallSide) {
+                              case 'top':
+                                baseStyle.left = `${targetRoom.x + (targetRoom.width * targetWall.position / 100) - doorSize / 2}px`;
+                                baseStyle.top = `${targetRoom.y}px`;
+                                baseStyle.width = `${doorSize}px`;
+                                baseStyle.height = '6px';
+                                break;
+                              case 'right':
+                                baseStyle.left = `${targetRoom.x + targetRoom.width - 6}px`;
+                                baseStyle.top = `${targetRoom.y + (targetRoom.height * targetWall.position / 100) - doorSize / 2}px`;
+                                baseStyle.width = '6px';
+                                baseStyle.height = `${doorSize}px`;
+                                break;
+                              case 'bottom':
+                                baseStyle.left = `${targetRoom.x + (targetRoom.width * targetWall.position / 100) - doorSize / 2}px`;
+                                baseStyle.top = `${targetRoom.y + targetRoom.height - 6}px`;
+                                baseStyle.width = `${doorSize}px`;
+                                baseStyle.height = '6px';
+                                break;
+                              case 'left':
+                                baseStyle.left = `${targetRoom.x}px`;
+                                baseStyle.top = `${targetRoom.y + (targetRoom.height * targetWall.position / 100) - doorSize / 2}px`;
+                                baseStyle.width = '6px';
+                                baseStyle.height = `${doorSize}px`;
+                                break;
+                            }
+                            return baseStyle;
+                          })())
+                        }}
+                      />
+                      
+                      {/* Door swing arc preview */}
+                      <svg
+                        className="absolute pointer-events-none"
+                        style={{
+                          opacity: 0.4,
+                          zIndex: 45,
+                          ...((() => {
+                            const svgStyle: React.CSSProperties = {
+                              width: `${doorSize}px`,
+                              height: `${doorSize}px`,
+                            };
+                            
+                            switch (targetWall.wallSide) {
+                              case 'top':
+                                svgStyle.left = `${targetRoom.x + (targetRoom.width * targetWall.position / 100) - doorSize / 2}px`;
+                                svgStyle.top = `${targetRoom.y + 6}px`;
+                                break;
+                              case 'right':
+                                svgStyle.left = `${targetRoom.x + targetRoom.width - 6 - doorSize}px`;
+                                svgStyle.top = `${targetRoom.y + (targetRoom.height * targetWall.position / 100) - doorSize / 2}px`;
+                                break;
+                              case 'bottom':
+                                svgStyle.left = `${targetRoom.x + (targetRoom.width * targetWall.position / 100) - doorSize / 2}px`;
+                                svgStyle.top = `${targetRoom.y + targetRoom.height - 6 - doorSize}px`;
+                                break;
+                              case 'left':
+                                svgStyle.left = `${targetRoom.x + 6}px`;
+                                svgStyle.top = `${targetRoom.y + (targetRoom.height * targetWall.position / 100) - doorSize / 2}px`;
+                                break;
+                            }
+                            
+                            return svgStyle;
+                          })())
+                        }}
+                      >
+                        <path
+                          d={`M 0 0 L ${doorSize} 0 A ${doorSize} ${doorSize} 0 0 1 0 ${doorSize}`}
+                          fill="none"
+                          stroke="#FF6B35"
+                          strokeWidth="1.5"
+                          strokeDasharray="4,2"
+                          transform={(() => {
+                            let rotation = 0;
+                            const center = doorSize / 2;
+                            
+                            switch (targetWall.wallSide) {
+                              case 'top': rotation = 0; break;
+                              case 'right': rotation = 270; break;
+                              case 'bottom': rotation = 180; break;
+                              case 'left': rotation = 90; break;
+                            }
+                            
+                            return `rotate(${rotation} ${center} ${center})`;
+                          })()}
+                        />
+                      </svg>
+                    </div>
+                  );
                 })()
+              )}
+
+              {/* Wall highlighting during drag */}
+              {doorState.mode === 'dragging' && (
+                <>
+                  {rooms.map(room => (
+                    <div key={`wall-highlight-${room.id}`}>
+                      {['top', 'right', 'bottom', 'left'].map(wallSide => (
+                        <div
+                          key={`${wallSide}-wall`}
+                          className={`absolute pointer-events-none ${
+                            doorState.targetWall?.roomId === room.id && doorState.targetWall?.wallSide === wallSide
+                              ? 'bg-green-400 opacity-60'
+                              : 'bg-gray-300 opacity-30'
+                          }`}
+                          style={{
+                            ...((() => {
+                              const wallStyle: React.CSSProperties = {};
+                              switch (wallSide) {
+                                case 'top':
+                                  wallStyle.left = `${room.x}px`;
+                                  wallStyle.top = `${room.y - 4}px`;
+                                  wallStyle.width = `${room.width}px`;
+                                  wallStyle.height = '8px';
+                                  break;
+                                case 'right':
+                                  wallStyle.left = `${room.x + room.width - 4}px`;
+                                  wallStyle.top = `${room.y}px`;
+                                  wallStyle.width = '8px';
+                                  wallStyle.height = `${room.height}px`;
+                                  break;
+                                case 'bottom':
+                                  wallStyle.left = `${room.x}px`;
+                                  wallStyle.top = `${room.y + room.height - 4}px`;
+                                  wallStyle.width = `${room.width}px`;
+                                  wallStyle.height = '8px';
+                                  break;
+                                case 'left':
+                                  wallStyle.left = `${room.x - 4}px`;
+                                  wallStyle.top = `${room.y}px`;
+                                  wallStyle.width = '8px';
+                                  wallStyle.height = `${room.height}px`;
+                                  break;
+                              }
+                              return wallStyle;
+                            })())
+                          }}
+                        />
+                      ))}
+                    </div>
+                  ))}
+
+                  {/* Dragged door preview */}
+                  {doorState.targetWall && doorState.draggedDoor && (
+                    (() => {
+                      const { targetWall, draggedDoor } = doorState;
+                      const targetRoom = rooms.find(r => r.id === targetWall.roomId);
+                      if (!targetRoom) return null;
+
+                      const doorSize = draggedDoor.object.doorProperties 
+                        ? inchesToPixels(draggedDoor.object.doorProperties.width) 
+                        : inchesToPixels(36);
+
+                      let previewStyle: React.CSSProperties = {
+                        position: 'absolute',
+                        backgroundColor: '#FF6B35',
+                        opacity: 0.7,
+                        pointerEvents: 'none',
+                        zIndex: 50,
+                      };
+
+                      switch (targetWall.wallSide) {
+                        case 'top':
+                          previewStyle.left = `${targetRoom.x + (targetRoom.width * targetWall.position / 100) - doorSize / 2}px`;
+                          previewStyle.top = `${targetRoom.y}px`;
+                          previewStyle.width = `${doorSize}px`;
+                          previewStyle.height = '6px';
+                          break;
+                        case 'right':
+                          previewStyle.left = `${targetRoom.x + targetRoom.width - 6}px`;
+                          previewStyle.top = `${targetRoom.y + (targetRoom.height * targetWall.position / 100) - doorSize / 2}px`;
+                          previewStyle.width = '6px';
+                          previewStyle.height = `${doorSize}px`;
+                          break;
+                        case 'bottom':
+                          previewStyle.left = `${targetRoom.x + (targetRoom.width * targetWall.position / 100) - doorSize / 2}px`;
+                          previewStyle.top = `${targetRoom.y + targetRoom.height - 6}px`;
+                          previewStyle.width = `${doorSize}px`;
+                          previewStyle.height = '6px';
+                          break;
+                        case 'left':
+                          previewStyle.left = `${targetRoom.x}px`;
+                          previewStyle.top = `${targetRoom.y + (targetRoom.height * targetWall.position / 100) - doorSize / 2}px`;
+                          previewStyle.width = '6px';
+                          previewStyle.height = `${doorSize}px`;
+                          break;
+                      }
+
+                      return <div key="dragged-door-preview" style={previewStyle} />;
+                    })()
+                  )}
+                </>
               )}
             </>
           )}
