@@ -100,6 +100,10 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
     previewPosition: null,
     targetWall: null,
   });
+
+  // Navigation state
+  const [isPanMode, setIsPanMode] = useState(false);
+  const [spacebarPressed, setSpacebarPressed] = useState(false);
   
   // Zoom functions
   const handleZoomIn = useCallback(() => {
@@ -125,6 +129,71 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
     if (wrapperRef.current) {
       wrapperRef.current.scrollLeft = 0;
       wrapperRef.current.scrollTop = 0;
+    }
+  }, []);
+
+  // Fit all rooms to screen
+  const handleFitToScreen = useCallback(() => {
+    if (!wrapperRef.current || rooms.length === 0) return;
+    
+    // Find the bounds of all rooms
+    let minX = Infinity;
+    let minY = Infinity;
+    let maxX = -Infinity;
+    let maxY = -Infinity;
+    
+    rooms.forEach(room => {
+      minX = Math.min(minX, room.x);
+      minY = Math.min(minY, room.y);
+      maxX = Math.max(maxX, room.x + room.width);
+      maxY = Math.max(maxY, room.y + room.height);
+    });
+    
+    // Add padding
+    const padding = 100;
+    minX -= padding;
+    minY -= padding;
+    maxX += padding;
+    maxY += padding;
+    
+    // Get viewport dimensions
+    const viewportWidth = wrapperRef.current.clientWidth;
+    const viewportHeight = wrapperRef.current.clientHeight;
+    
+    // Calculate required scale to fit all rooms
+    const scaleX = viewportWidth / (maxX - minX);
+    const scaleY = viewportHeight / (maxY - minY);
+    const newScale = Math.min(scaleX, scaleY, 1); // Don't zoom in more than 1x
+    
+    // Set new scale
+    setState(prev => ({
+      ...prev,
+      scale: newScale,
+    }));
+    
+    // Center the view
+    const centerX = (minX + maxX) / 2;
+    const centerY = (minY + maxY) / 2;
+    
+    // Set scroll position after a short delay to allow scale change to apply
+    setTimeout(() => {
+      if (wrapperRef.current) {
+        wrapperRef.current.scrollLeft = centerX * newScale - viewportWidth / 2;
+        wrapperRef.current.scrollTop = centerY * newScale - viewportHeight / 2;
+      }
+    }, 10);
+  }, [rooms]);
+
+  // Toggle pan mode
+  const handleTogglePanMode = useCallback(() => {
+    setIsPanMode(prev => !prev);
+  }, []);
+
+  // Pan the canvas by a specific amount
+  const panCanvas = useCallback((deltaX: number, deltaY: number) => {
+    if (wrapperRef.current) {
+      wrapperRef.current.scrollLeft += deltaX;
+      wrapperRef.current.scrollTop += deltaY;
     }
   }, []);
   
@@ -160,12 +229,49 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
     }
   }, [rooms, selectedRoomId, selectedObjectId, activeTool, placingObjectType]);
   
-  // Add keyboard shortcuts for canvas controls
+  // Enhanced keyboard navigation support
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
         // Don't capture keyboard events when typing in form fields
         return;
+      }
+
+      const panDistance = e.ctrlKey ? 100 : 20; // Larger distance with Ctrl
+
+      switch (e.code) {
+        case 'Space':
+          e.preventDefault();
+          setSpacebarPressed(true);
+          break;
+        case 'ArrowUp':
+          e.preventDefault();
+          panCanvas(0, -panDistance);
+          break;
+        case 'ArrowDown':
+          e.preventDefault();
+          panCanvas(0, panDistance);
+          break;
+        case 'ArrowLeft':
+          e.preventDefault();
+          panCanvas(-panDistance, 0);
+          break;
+        case 'ArrowRight':
+          e.preventDefault();
+          panCanvas(panDistance, 0);
+          break;
+        case 'Home':
+          e.preventDefault();
+          handleFitToScreen();
+          break;
+        case 'PageUp':
+          e.preventDefault();
+          handleZoomIn();
+          break;
+        case 'PageDown':
+          e.preventDefault();
+          handleZoomOut();
+          break;
       }
 
       if (e.key === 'Delete' && selectedRoomId) {
@@ -1322,6 +1428,9 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
         onZoomIn={handleZoomIn}
         onZoomOut={handleZoomOut}
         onResetZoom={handleResetZoom}
+        onFitToScreen={handleFitToScreen}
+        onTogglePanMode={handleTogglePanMode}
+        isPanMode={isPanMode}
       />
       
       <TotalAreaDisplay rooms={rooms} />
