@@ -343,8 +343,11 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
     return false;
   };
 
-  // Check if there's an adjoining room that would block placement
-  const hasAdjoiningRoomConflict = (roomId: string, wallSide: WallSide, position: number): boolean => {
+  // Check if there's an adjoining room that would block placement (only for windows)
+  const hasAdjoiningRoomConflict = (roomId: string, wallSide: WallSide, position: number, objectType: ObjectType): boolean => {
+    // Doors are allowed on shared walls, only windows are blocked
+    if (objectType === 'door') return false;
+    
     const room = rooms.find(r => r.id === roomId);
     if (!room) return false;
 
@@ -629,7 +632,7 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
       let validTargetWall = null;
       if (targetWall) {
         const hasConflict = hasConflictingObjects(targetWall.roomId, targetWall.wallSide, targetWall.position, placingObjectType);
-        const hasRoomConflict = hasAdjoiningRoomConflict(targetWall.roomId, targetWall.wallSide, targetWall.position);
+        const hasRoomConflict = hasAdjoiningRoomConflict(targetWall.roomId, targetWall.wallSide, targetWall.position, placingObjectType);
         
         if (!hasConflict && !hasRoomConflict) {
           validTargetWall = targetWall;
@@ -662,7 +665,7 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
           doorState.draggedDoor.object.type,
           doorState.draggedDoor.objectId // Exclude the object being dragged
         );
-        const hasRoomConflict = hasAdjoiningRoomConflict(targetWall.roomId, targetWall.wallSide, targetWall.position);
+        const hasRoomConflict = hasAdjoiningRoomConflict(targetWall.roomId, targetWall.wallSide, targetWall.position, doorState.draggedDoor.object.type);
         
         if (!hasConflict && !hasRoomConflict) {
           validTargetWall = targetWall;
