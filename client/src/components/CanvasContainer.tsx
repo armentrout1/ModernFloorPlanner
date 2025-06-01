@@ -377,6 +377,8 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
          newRoom.x + newRoom.width > existingRoom.x - tolerance)
       );
       
+      console.log('Rooms adjacent check:', roomsAdjacent);
+      
       if (roomsAdjacent) {
         // Check if any windows would be on the shared wall
         for (const obj of existingRoom.objects) {
