@@ -97,11 +97,45 @@ const RoomObject = ({ room, object, scale, isSelected, onSelect, onDragStart }: 
         {/* Door opening line */}
         <div
           style={{
-            ...getObjectStyles(),
+            position: 'absolute',
             backgroundColor: '#FF6B35',
             opacity: 1,
-            zIndex: 100, // Much higher z-index to render above walls
-            border: isSelected ? '2px solid #3B82F6' : 'none',
+            zIndex: 1000,
+            border: isSelected ? '3px solid #3B82F6' : '2px solid #000000',
+            boxShadow: '0 0 4px rgba(0,0,0,0.5)',
+            ...((() => {
+              const size = object.doorProperties ? inchesToPixels(object.doorProperties.width) : 40;
+              const styles: React.CSSProperties = {};
+              
+              switch (object.wallSide) {
+                case 'top':
+                  styles.left = `${(room.width * object.position / 100) - size / 2}px`;
+                  styles.top = '0px';
+                  styles.width = `${size}px`;
+                  styles.height = '8px';
+                  break;
+                case 'right':
+                  styles.left = `${room.width - 8}px`;
+                  styles.top = `${(room.height * object.position / 100) - size / 2}px`;
+                  styles.width = '8px';
+                  styles.height = `${size}px`;
+                  break;
+                case 'bottom':
+                  styles.left = `${(room.width * object.position / 100) - size / 2}px`;
+                  styles.top = `${room.height - 8}px`;
+                  styles.width = `${size}px`;
+                  styles.height = '8px';
+                  break;
+                case 'left':
+                  styles.left = '0px';
+                  styles.top = `${(room.height * object.position / 100) - size / 2}px`;
+                  styles.width = '8px';
+                  styles.height = `${size}px`;
+                  break;
+              }
+              
+              return styles;
+            })())
           }}
           onMouseDown={handleMouseDown}
           onTouchStart={handleTouchStart}
