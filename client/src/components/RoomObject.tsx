@@ -24,21 +24,12 @@ interface RoomObjectProps {
 }
 
 const RoomObject = ({ room, object, scale, isSelected, onSelect, onDragStart }: RoomObjectProps) => {
-  const handleClick = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    onSelect(object.id);
-  };
-
   const handleMouseDown = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    // Only start dragging if this is already selected (second click)
-    if (isSelected && onDragStart) {
+    onSelect(object.id);
+    if (onDragStart) {
       onDragStart(object.id, e.clientX, e.clientY);
-    } else {
-      // First click just selects
-      onSelect(object.id);
     }
   };
 
