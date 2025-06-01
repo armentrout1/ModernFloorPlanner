@@ -169,9 +169,9 @@ const RoomObject: React.FC<RoomObjectProps> = ({
           d={`M 0 0 L ${swingRadius} 0 A ${swingRadius} ${swingRadius} 0 0 1 0 ${swingRadius} Z`}
           fill="none"
           stroke="#FF6B35"
-          strokeWidth="1"
-          strokeDasharray="3,2"
-          opacity="0.8"
+          strokeWidth="2"
+          strokeDasharray="5,3"
+          opacity="1"
         />
       </svg>
     );

@@ -245,20 +245,17 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
     if (!room) return;
     
     // Detect which wall was clicked and at what position
-    const wallDetection = detectWallClick(room, position, 15); // Increased detection threshold for better usability
+    const wallDetection = detectWallClick(room, position, 25); // Larger detection threshold for easier door placement
     
     if (wallDetection) {
       const { wallSide, percentage } = wallDetection;
       
-      // Create a new room object (door or window)
+      // Create a new room object (door or window) at the exact click position
       const objectSize = placingObjectType === 'door' ? 40 : 30;
       const newObject = createRoomObject(placingObjectType, wallSide, percentage, objectSize);
       
-      // Check if position is at least 10% from the edges for better placement
-      const adjustedPercentage = Math.max(10, Math.min(90, percentage));
-      if (percentage !== adjustedPercentage) {
-        newObject.position = adjustedPercentage;
-      }
+      // Use the exact percentage from the click position
+      newObject.position = percentage;
       
       // Update the room with the new object
       const currentObjects = room.objects || [];
