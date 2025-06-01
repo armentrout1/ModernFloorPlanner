@@ -98,9 +98,10 @@ const RoomObject = ({ room, object, scale, isSelected, onSelect, onDragStart }: 
         <div
           style={{
             ...getObjectStyles(),
-            backgroundColor: '#FF6B35', // Use the same orange color as preview
+            backgroundColor: '#FF6B35',
+            opacity: 1,
+            zIndex: 25, // Higher z-index to ensure visibility
             border: isSelected ? '2px solid #3B82F6' : 'none',
-            opacity: isSelected ? 0.8 : 0.8, // Make door line visible but not overwhelming
           }}
           onMouseDown={handleMouseDown}
           onTouchStart={handleTouchStart}
