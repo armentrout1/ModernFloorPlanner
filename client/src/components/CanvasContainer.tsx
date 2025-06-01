@@ -7,6 +7,7 @@ import TotalAreaDisplay from './TotalAreaDisplay';
 import PreviewMode from './PreviewMode';
 import { MoveHorizontal, MoveVertical, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useToast } from '@/hooks/use-toast';
 import { 
   GRID_SIZE, 
   SCALE_FACTOR,
@@ -340,6 +341,81 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
         return true;
       }
     }
+    return false;
+  };
+
+  // Check if placing a room would conflict with existing windows
+  const wouldRoomPlacementConflictWithWindows = (newRoom: { x: number; y: number; width: number; height: number }): boolean => {
+    const tolerance = 10;
+    
+    for (const existingRoom of rooms) {
+      if (!existingRoom.objects) continue;
+      
+      // Check if rooms would be adjacent
+      const roomsAdjacent = (
+        // New room touches existing room's right wall
+        (Math.abs(newRoom.x - (existingRoom.x + existingRoom.width)) < tolerance &&
+         newRoom.y < existingRoom.y + existingRoom.height + tolerance &&
+         newRoom.y + newRoom.height > existingRoom.y - tolerance) ||
+        
+        // New room touches existing room's left wall  
+        (Math.abs(newRoom.x + newRoom.width - existingRoom.x) < tolerance &&
+         newRoom.y < existingRoom.y + existingRoom.height + tolerance &&
+         newRoom.y + newRoom.height > existingRoom.y - tolerance) ||
+        
+        // New room touches existing room's bottom wall
+        (Math.abs(newRoom.y - (existingRoom.y + existingRoom.height)) < tolerance &&
+         newRoom.x < existingRoom.x + existingRoom.width + tolerance &&
+         newRoom.x + newRoom.width > existingRoom.x - tolerance) ||
+        
+        // New room touches existing room's top wall
+        (Math.abs(newRoom.y + newRoom.height - existingRoom.y) < tolerance &&
+         newRoom.x < existingRoom.x + existingRoom.width + tolerance &&
+         newRoom.x + newRoom.width > existingRoom.x - tolerance)
+      );
+      
+      if (roomsAdjacent) {
+        // Check if any windows would be on the shared wall
+        for (const obj of existingRoom.objects) {
+          if (obj.type === 'window') {
+            // Calculate window world position
+            let windowX: number, windowY: number;
+            
+            switch (obj.wallSide) {
+              case 'top':
+                windowX = existingRoom.x + (existingRoom.width * obj.position / 100);
+                windowY = existingRoom.y;
+                break;
+              case 'bottom':
+                windowX = existingRoom.x + (existingRoom.width * obj.position / 100);
+                windowY = existingRoom.y + existingRoom.height;
+                break;
+              case 'left':
+                windowX = existingRoom.x;
+                windowY = existingRoom.y + (existingRoom.height * obj.position / 100);
+                break;
+              case 'right':
+                windowX = existingRoom.x + existingRoom.width;
+                windowY = existingRoom.y + (existingRoom.height * obj.position / 100);
+                break;
+            }
+            
+            // Check if window would be on the shared wall with new room
+            const windowOnSharedWall = (
+              (windowX >= newRoom.x - tolerance && windowX <= newRoom.x + newRoom.width + tolerance &&
+               (Math.abs(windowY - newRoom.y) < tolerance || Math.abs(windowY - (newRoom.y + newRoom.height)) < tolerance)) ||
+              (windowY >= newRoom.y - tolerance && windowY <= newRoom.y + newRoom.height + tolerance &&
+               (Math.abs(windowX - newRoom.x) < tolerance || Math.abs(windowX - (newRoom.x + newRoom.width)) < tolerance))
+            );
+            
+            if (windowOnSharedWall) {
+              return true;
+            }
+          }
+        }
+      }
+    }
+    
     return false;
   };
 
@@ -722,12 +798,18 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
         y: selectedRoom.y + dy
       };
       
-      // Update all rooms, replacing the one being moved
-      const updatedRooms = rooms.map(room => 
-        room.id === selectedRoomId ? updatedRoom : room
-      );
+      // Check if this position would conflict with existing windows
+      const wouldConflict = wouldRoomPlacementConflictWithWindows(updatedRoom);
       
-      onRoomsChange(updatedRooms);
+      if (!wouldConflict) {
+        // Update all rooms, replacing the one being moved
+        const updatedRooms = rooms.map(room => 
+          room.id === selectedRoomId ? updatedRoom : room
+        );
+        
+        onRoomsChange(updatedRooms);
+      }
+      // If there's a conflict, simply don't update the room position (blocking the movement)
       
       // Always update the last mouse position
       setState(prev => ({
@@ -741,12 +823,18 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
       // Get the resized room with constraints applied
       const newRoom = getResizedRoom(selectedRoom, state.activeResizeHandle, { x, y });
       
-      // Update all rooms, replacing the one being resized
-      const updatedRooms = rooms.map(room => 
-        room.id === selectedRoomId ? newRoom : room
-      );
+      // Check if this resize would conflict with existing windows
+      const wouldConflict = wouldRoomPlacementConflictWithWindows(newRoom);
       
-      onRoomsChange(updatedRooms);
+      if (!wouldConflict) {
+        // Update all rooms, replacing the one being resized
+        const updatedRooms = rooms.map(room => 
+          room.id === selectedRoomId ? newRoom : room
+        );
+        
+        onRoomsChange(updatedRooms);
+      }
+      // If there's a conflict, don't allow the resize
     }
   };
   
@@ -946,8 +1034,15 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
       
       if (width > 20 && height > 20) {
         const newRoom = createRoom(x, y, width, height);
-        onRoomsChange([...rooms, newRoom]);
-        onSelectRoom(newRoom.id);
+        
+        // Check if this new room would conflict with existing windows
+        const wouldConflict = wouldRoomPlacementConflictWithWindows(newRoom);
+        
+        if (!wouldConflict) {
+          onRoomsChange([...rooms, newRoom]);
+          onSelectRoom(newRoom.id);
+        }
+        // If there's a conflict, simply don't create the room
       }
     }
     
