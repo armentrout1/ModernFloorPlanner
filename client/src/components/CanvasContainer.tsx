@@ -69,6 +69,23 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
     activeResizeHandle: null,
     isPreviewMode: false, // For quick preview
   });
+
+  // Global object drag state
+  const [dragState, setDragState] = useState<{
+    isDraggingObject: boolean;
+    draggedObjectId: string | null;
+    draggedObject: any | null;
+    sourceRoomId: string | null;
+    previewPosition: Position | null;
+    targetWall: { roomId: string; wallSide: WallSide; position: number } | null;
+  }>({
+    isDraggingObject: false,
+    draggedObjectId: null,
+    draggedObject: null,
+    sourceRoomId: null,
+    previewPosition: null,
+    targetWall: null,
+  });
   
   // Zoom functions
   const handleZoomIn = useCallback(() => {
@@ -280,7 +297,69 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
   };
   
   // Handler for starting object drag
+  // Enhanced wall detection for global dragging
+  const findWallAtPosition = (x: number, y: number) => {
+    const threshold = 20; // Distance threshold for wall detection
+    
+    for (const room of rooms) {
+      const roomLeft = room.x;
+      const roomRight = room.x + room.width;
+      const roomTop = room.y;
+      const roomBottom = room.y + room.height;
+      
+      // Check top wall
+      if (Math.abs(y - roomTop) <= threshold && x >= roomLeft && x <= roomRight) {
+        const position = ((x - roomLeft) / room.width) * 100;
+        return { roomId: room.id, wallSide: 'top' as WallSide, position: Math.max(10, Math.min(90, position)) };
+      }
+      
+      // Check bottom wall
+      if (Math.abs(y - roomBottom) <= threshold && x >= roomLeft && x <= roomRight) {
+        const position = ((x - roomLeft) / room.width) * 100;
+        return { roomId: room.id, wallSide: 'bottom' as WallSide, position: Math.max(10, Math.min(90, position)) };
+      }
+      
+      // Check left wall
+      if (Math.abs(x - roomLeft) <= threshold && y >= roomTop && y <= roomBottom) {
+        const position = ((y - roomTop) / room.height) * 100;
+        return { roomId: room.id, wallSide: 'left' as WallSide, position: Math.max(10, Math.min(90, position)) };
+      }
+      
+      // Check right wall
+      if (Math.abs(x - roomRight) <= threshold && y >= roomTop && y <= roomBottom) {
+        const position = ((y - roomTop) / room.height) * 100;
+        return { roomId: room.id, wallSide: 'right' as WallSide, position: Math.max(10, Math.min(90, position)) };
+      }
+    }
+    
+    return null;
+  };
+
   const handleObjectDragStart = (objectId: string, clientX: number, clientY: number) => {
+    // Find the object and its source room
+    let sourceRoom = null;
+    let draggedObject = null;
+    
+    for (const room of rooms) {
+      const obj = room.objects?.find(o => o.id === objectId);
+      if (obj) {
+        sourceRoom = room;
+        draggedObject = obj;
+        break;
+      }
+    }
+    
+    if (!sourceRoom || !draggedObject) return;
+    
+    setDragState({
+      isDraggingObject: true,
+      draggedObjectId: objectId,
+      draggedObject,
+      sourceRoomId: sourceRoom.id,
+      previewPosition: null,
+      targetWall: null,
+    });
+    
     setState(prev => ({
       ...prev,
       isDragging: true,
@@ -423,6 +502,19 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
     const x = (e.clientX - rect.left) / state.scale;
     const y = (e.clientY - rect.top) / state.scale;
     
+    // Handle object dragging with wall detection
+    if (dragState.isDraggingObject && dragState.draggedObjectId) {
+      const targetWall = findWallAtPosition(x, y);
+      
+      setDragState(prev => ({
+        ...prev,
+        previewPosition: { x, y },
+        targetWall,
+      }));
+      
+      return; // Early return to prevent other interactions during object drag
+    }
+    
     if (state.isPanning && wrapperRef.current) {
       // Calculate the delta change since last mouse position for panning
       const dx = e.clientX - state.lastMouse.x;
@@ -493,6 +585,50 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
   };
   
   const handleCanvasMouseUp = () => {
+    // Handle object drop
+    if (dragState.isDraggingObject && dragState.targetWall && dragState.draggedObject) {
+      const { targetWall, draggedObject, sourceRoomId } = dragState;
+      
+      // Create updated rooms array
+      const updatedRooms = rooms.map(room => {
+        // Remove object from source room
+        if (room.id === sourceRoomId) {
+          return {
+            ...room,
+            objects: room.objects?.filter(obj => obj.id !== dragState.draggedObjectId) || []
+          };
+        }
+        
+        // Add object to target room
+        if (room.id === targetWall.roomId) {
+          const movedObject = {
+            ...draggedObject,
+            wallSide: targetWall.wallSide,
+            position: targetWall.position,
+          };
+          
+          return {
+            ...room,
+            objects: [...(room.objects || []), movedObject]
+          };
+        }
+        
+        return room;
+      });
+      
+      onRoomsChange(updatedRooms);
+      
+      // Reset drag state
+      setDragState({
+        isDraggingObject: false,
+        draggedObjectId: null,
+        draggedObject: null,
+        sourceRoomId: null,
+        previewPosition: null,
+        targetWall: null,
+      });
+    }
+    
     if (state.isDragging && selectedRoomId) {
       // Apply grid snapping and proximity checks on mouse up
       const selectedRoom = rooms.find(room => room.id === selectedRoomId);
@@ -932,6 +1068,124 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
                 height: `${Math.abs(state.selectEnd.y - state.selectStart.y)}px`,
               }}
             />
+          )}
+
+          {/* Object drag preview and wall highlighting */}
+          {dragState.isDraggingObject && (
+            <>
+              {/* Highlight target walls */}
+              {rooms.map(room => (
+                <div key={`wall-highlight-${room.id}`}>
+                  {/* Top wall */}
+                  <div
+                    className={`absolute pointer-events-none ${
+                      dragState.targetWall?.roomId === room.id && dragState.targetWall?.wallSide === 'top'
+                        ? 'bg-green-400 opacity-60'
+                        : 'bg-gray-300 opacity-30'
+                    }`}
+                    style={{
+                      left: `${room.x}px`,
+                      top: `${room.y - 4}px`,
+                      width: `${room.width}px`,
+                      height: '8px',
+                    }}
+                  />
+                  {/* Right wall */}
+                  <div
+                    className={`absolute pointer-events-none ${
+                      dragState.targetWall?.roomId === room.id && dragState.targetWall?.wallSide === 'right'
+                        ? 'bg-green-400 opacity-60'
+                        : 'bg-gray-300 opacity-30'
+                    }`}
+                    style={{
+                      left: `${room.x + room.width - 4}px`,
+                      top: `${room.y}px`,
+                      width: '8px',
+                      height: `${room.height}px`,
+                    }}
+                  />
+                  {/* Bottom wall */}
+                  <div
+                    className={`absolute pointer-events-none ${
+                      dragState.targetWall?.roomId === room.id && dragState.targetWall?.wallSide === 'bottom'
+                        ? 'bg-green-400 opacity-60'
+                        : 'bg-gray-300 opacity-30'
+                    }`}
+                    style={{
+                      left: `${room.x}px`,
+                      top: `${room.y + room.height - 4}px`,
+                      width: `${room.width}px`,
+                      height: '8px',
+                    }}
+                  />
+                  {/* Left wall */}
+                  <div
+                    className={`absolute pointer-events-none ${
+                      dragState.targetWall?.roomId === room.id && dragState.targetWall?.wallSide === 'left'
+                        ? 'bg-green-400 opacity-60'
+                        : 'bg-gray-300 opacity-30'
+                    }`}
+                    style={{
+                      left: `${room.x - 4}px`,
+                      top: `${room.y}px`,
+                      width: '8px',
+                      height: `${room.height}px`,
+                    }}
+                  />
+                </div>
+              ))}
+
+              {/* Door preview at target position */}
+              {dragState.targetWall && dragState.draggedObject && (
+                (() => {
+                  const { targetWall } = dragState;
+                  const targetRoom = rooms.find(r => r.id === targetWall.roomId);
+                  if (!targetRoom) return null;
+
+                  const doorSize = dragState.draggedObject.doorProperties 
+                    ? inchesToPixels(dragState.draggedObject.doorProperties.width) 
+                    : 40;
+
+                  let previewStyle: React.CSSProperties = {
+                    position: 'absolute',
+                    backgroundColor: '#FF6B35',
+                    opacity: 0.7,
+                    pointerEvents: 'none',
+                    zIndex: 50,
+                  };
+
+                  // Position preview based on target wall
+                  switch (targetWall.wallSide) {
+                    case 'top':
+                      previewStyle.left = `${targetRoom.x + (targetRoom.width * targetWall.position / 100) - doorSize / 2}px`;
+                      previewStyle.top = `${targetRoom.y}px`;
+                      previewStyle.width = `${doorSize}px`;
+                      previewStyle.height = '6px';
+                      break;
+                    case 'right':
+                      previewStyle.left = `${targetRoom.x + targetRoom.width - 6}px`;
+                      previewStyle.top = `${targetRoom.y + (targetRoom.height * targetWall.position / 100) - doorSize / 2}px`;
+                      previewStyle.width = '6px';
+                      previewStyle.height = `${doorSize}px`;
+                      break;
+                    case 'bottom':
+                      previewStyle.left = `${targetRoom.x + (targetRoom.width * targetWall.position / 100) - doorSize / 2}px`;
+                      previewStyle.top = `${targetRoom.y + targetRoom.height - 6}px`;
+                      previewStyle.width = `${doorSize}px`;
+                      previewStyle.height = '6px';
+                      break;
+                    case 'left':
+                      previewStyle.left = `${targetRoom.x}px`;
+                      previewStyle.top = `${targetRoom.y + (targetRoom.height * targetWall.position / 100) - doorSize / 2}px`;
+                      previewStyle.width = '6px';
+                      previewStyle.height = `${doorSize}px`;
+                      break;
+                  }
+
+                  return <div style={previewStyle} />;
+                })()
+              )}
+            </>
           )}
           
           {/* Preview mode - simplified view of the floor plan */}
