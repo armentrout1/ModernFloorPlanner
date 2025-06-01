@@ -46,8 +46,8 @@ const FloorPlanner: React.FC = () => {
     if (['door', 'window'].includes(tool)) {
       // When selecting door or window tool, set the placing object type
       setPlacingObjectType(tool as ObjectType);
-      // Also switch to move tool for object placement
-      setActiveTool('move');
+      // Keep the tool active to show visual feedback
+      setActiveTool(tool);
     } else {
       setPlacingObjectType(null);
       setActiveTool(tool);
