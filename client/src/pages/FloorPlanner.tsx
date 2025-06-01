@@ -1,3 +1,15 @@
+/**
+ * CRITICAL: DOORS & WINDOWS FUNCTIONALITY
+ * 
+ * This file contains core doors/windows logic. Before making ANY changes:
+ * 1. Read DOORS_AND_WINDOWS.md thoroughly
+ * 2. Test all door/window placement scenarios after changes
+ * 3. Verify drag-and-drop behavior still works
+ * 4. Check property panel updates correctly
+ * 
+ * Last verified: June 1, 2025
+ */
+
 import React, { useState, useEffect } from 'react';
 import AppHeader from '@/components/AppHeader';
 import Sidebar from '@/components/Sidebar';
