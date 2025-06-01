@@ -125,8 +125,8 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
       placingObjectType,
     }));
     
-    // Reset door state when tool changes
-    if (placingObjectType !== 'door') {
+    // Reset door state when tool changes away from door
+    if (placingObjectType !== 'door' && doorState.mode !== 'dragging') {
       setDoorState({
         mode: 'idle',
         cursorPreview: null,
@@ -134,6 +134,14 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
         previewPosition: null,
         targetWall: null,
       });
+    }
+    
+    // When door tool becomes active, ensure we're ready for placing
+    if (placingObjectType === 'door' && doorState.mode === 'idle') {
+      setDoorState(prev => ({
+        ...prev,
+        mode: 'idle', // Start in idle so doors can be picked up
+      }));
     }
   }, [rooms, selectedRoomId, selectedObjectId, activeTool, placingObjectType]);
   
@@ -361,24 +369,27 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
     
     if (!sourceRoom || !draggedObject) return;
     
-    // Enter door dragging mode
-    setDoorState({
-      mode: 'dragging',
-      cursorPreview: null,
-      draggedDoor: {
-        objectId,
-        object: draggedObject,
-        sourceRoomId: sourceRoom.id,
-      },
-      previewPosition: null,
-      targetWall: null,
-    });
-    
-    setState(prev => ({
-      ...prev,
-      isDragging: true,
-      lastMouse: { x: clientX, y: clientY },
-    }));
+    // Only handle door dragging for now
+    if (draggedObject.type === 'door') {
+      // Enter door dragging mode
+      setDoorState({
+        mode: 'dragging',
+        cursorPreview: null,
+        draggedDoor: {
+          objectId,
+          object: draggedObject,
+          sourceRoomId: sourceRoom.id,
+        },
+        previewPosition: null,
+        targetWall: null,
+      });
+      
+      setState(prev => ({
+        ...prev,
+        isDragging: true,
+        lastMouse: { x: clientX, y: clientY },
+      }));
+    }
   };
   
   // Center the view on a particular room
@@ -516,7 +527,7 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
     const x = (e.clientX - rect.left) / state.scale;
     const y = (e.clientY - rect.top) / state.scale;
     
-    // Handle door cursor preview when door tool is active
+    // Handle door cursor preview when door tool is active (but not when dragging)
     if (placingObjectType === 'door' && doorState.mode !== 'dragging') {
       const targetWall = findWallAtPosition(x, y);
       
@@ -631,6 +642,15 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
         
         onRoomsChange(updatedRooms);
         onSelectObject(newDoor.id);
+        
+        // Reset door state to idle so the newly placed door can be immediately picked up
+        setDoorState({
+          mode: 'idle',
+          cursorPreview: null,
+          draggedDoor: null,
+          previewPosition: null,
+          targetWall: null,
+        });
       }
       
       return; // Early return to prevent other actions
