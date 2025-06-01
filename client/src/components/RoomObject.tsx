@@ -100,7 +100,7 @@ const RoomObject = ({ room, object, scale, isSelected, onSelect, onDragStart }: 
             ...getObjectStyles(),
             backgroundColor: '#FF6B35',
             opacity: 1,
-            zIndex: 25, // Higher z-index to ensure visibility
+            zIndex: 100, // Much higher z-index to render above walls
             border: isSelected ? '2px solid #3B82F6' : 'none',
           }}
           onMouseDown={handleMouseDown}
