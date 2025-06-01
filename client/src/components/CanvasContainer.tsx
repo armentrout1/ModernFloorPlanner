@@ -770,8 +770,15 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
     const x = (e.clientX - rect.left) / state.scale;
     const y = (e.clientY - rect.top) / state.scale;
     
-    // Middle mouse button or Spacebar + left click enables panning
-    if (e.button === 1 || (e.button === 0 && activeTool === 'move' && e.ctrlKey)) {
+    // Enhanced panning conditions:
+    // 1. Middle mouse button
+    // 2. Spacebar + left click
+    // 3. Pan mode + left click
+    // 4. Right mouse button
+    if (e.button === 1 || 
+        (e.button === 0 && spacebarPressed) || 
+        (e.button === 0 && isPanMode) ||
+        e.button === 2) {
       setState(prev => ({
         ...prev,
         isPanning: true,
@@ -781,6 +788,11 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
       // Change cursor to grabbing
       if (canvasRef.current) {
         canvasRef.current.style.cursor = 'grabbing';
+      }
+      
+      // Prevent context menu on right click
+      if (e.button === 2) {
+        e.preventDefault();
       }
     } else if (activeTool === 'room') {
       setState(prev => ({
@@ -1434,6 +1446,15 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
       />
       
       <TotalAreaDisplay rooms={rooms} />
+      
+      {/* Navigation Status Indicator */}
+      {(spacebarPressed || isPanMode || state.isPanning) && (
+        <div className="absolute top-4 left-4 bg-blue-600 text-white px-3 py-2 rounded-md shadow-md z-20 text-sm">
+          {state.isPanning ? '🖐️ Panning...' : 
+           spacebarPressed ? '⌨️ Hold Space + Drag to Pan' : 
+           '🖱️ Pan Mode Active'}
+        </div>
+      )}
       
       {/* Canvas Navigation Controls */}
       <div className="absolute left-1/2 bottom-4 -translate-x-1/2 flex items-center gap-2 z-10 bg-white/90 rounded-full shadow-md px-4 py-2 border border-slate-200">
