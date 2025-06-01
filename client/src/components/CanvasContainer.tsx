@@ -16,7 +16,8 @@ import {
   getResizedRoom,
   detectWallClick,
   createRoomObject,
-  centerRoomInViewport
+  centerRoomInViewport,
+  inchesToPixels
 } from '@/utils/canvas';
 
 interface CanvasContainerProps {
