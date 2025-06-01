@@ -779,6 +779,9 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
         (e.button === 0 && spacebarPressed) || 
         (e.button === 0 && isPanMode) ||
         e.button === 2) {
+      
+      console.log('Starting pan mode:', { button: e.button, spacebarPressed, isPanMode });
+      
       setState(prev => ({
         ...prev,
         isPanning: true,
@@ -790,10 +793,11 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
         canvasRef.current.style.cursor = 'grabbing';
       }
       
-      // Prevent context menu on right click
-      if (e.button === 2) {
-        e.preventDefault();
-      }
+      // Prevent all default behaviors for panning
+      e.preventDefault();
+      e.stopPropagation();
+      
+      return; // Exit early to prevent other handlers
     } else if (activeTool === 'room') {
       setState(prev => ({
         ...prev,
@@ -897,9 +901,14 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
       const dx = e.clientX - state.lastMouse.x;
       const dy = e.clientY - state.lastMouse.y;
       
+      console.log('Panning delta:', { dx, dy, clientX: e.clientX, clientY: e.clientY });
+      console.log('Current scroll:', { scrollLeft: wrapperRef.current.scrollLeft, scrollTop: wrapperRef.current.scrollTop });
+      
       // Pan by updating scroll position (invert direction for natural panning feel)
       wrapperRef.current.scrollLeft -= dx;
       wrapperRef.current.scrollTop -= dy;
+      
+      console.log('New scroll:', { scrollLeft: wrapperRef.current.scrollLeft, scrollTop: wrapperRef.current.scrollTop });
       
       // Update last mouse position
       setState(prev => ({
