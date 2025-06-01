@@ -76,50 +76,7 @@ const RoomObject: React.FC<RoomObjectProps> = ({
     return styles;
   };
 
-  // Render simple door representation
-  const renderDoorElements = () => {
-    if (object.type !== 'door') return null;
-
-    const doorWidth = object.doorProperties ? inchesToPixels(object.doorProperties.width) : 40;
-    
-    // Simple door line representation
-    const doorStyle: React.CSSProperties = {
-      position: 'absolute',
-      backgroundColor: '#8B4513',
-      pointerEvents: 'none',
-      zIndex: 10,
-    };
-
-    // Position door line based on wall side
-    switch (object.wallSide) {
-      case 'top':
-        doorStyle.left = '0px';
-        doorStyle.top = '2px';
-        doorStyle.width = '100%';
-        doorStyle.height = '3px';
-        break;
-      case 'right':
-        doorStyle.left = '2px';
-        doorStyle.top = '0px';
-        doorStyle.width = '3px';
-        doorStyle.height = '100%';
-        break;
-      case 'bottom':
-        doorStyle.left = '0px';
-        doorStyle.top = '2px';
-        doorStyle.width = '100%';
-        doorStyle.height = '3px';
-        break;
-      case 'left':
-        doorStyle.left = '2px';
-        doorStyle.top = '0px';
-        doorStyle.width = '3px';
-        doorStyle.height = '100%';
-        break;
-    }
-
-    return <div style={doorStyle} />;
-  };
+  // Remove the old door rendering function since we have the new architectural one
 
   // Render simple door swing arc
   const renderDoorSwing = () => {
@@ -311,12 +268,16 @@ const RoomObject: React.FC<RoomObjectProps> = ({
       <>
         {/* Door opening line */}
         <div 
-          style={doorLineStyle}
+          style={{
+            ...doorLineStyle,
+            backgroundColor: isSelected ? '#FF6B35' : '#8B4513',
+            boxShadow: isSelected ? '0 0 0 2px #3B82F6' : 'none',
+          }}
           onMouseDown={handleMouseDown}
           onTouchStart={handleTouchStart}
           onTouchEnd={handleTouchEnd}
           onTouchCancel={handleTouchEnd}
-          className={`cursor-pointer ${isSelected ? 'ring-2 ring-blue-500' : ''}`}
+          className="cursor-pointer"
         />
         
         {/* Door swing arc */}
@@ -362,33 +323,38 @@ const RoomObject: React.FC<RoomObjectProps> = ({
     );
   }
 
-  // For windows, use the existing approach
-  return (
-    <div
-      className={`room-object ${isSelected ? 'selected' : ''} ${isObjectTouching ? 'object-touching' : ''}`}
-      style={{
-        ...getStyles(),
-        transform: isObjectTouching ? 'scale(1.1)' : '',
-        zIndex: isObjectTouching ? 50 : (isSelected ? 30 : 20),
-      }}
-      onMouseDown={handleMouseDown}
-      onTouchStart={handleTouchStart}
-      onTouchEnd={handleTouchEnd}
-      onTouchCancel={handleTouchEnd}
-    >
-      <div 
-        className="w-full h-full flex items-center justify-center text-blue-500"
+  // For windows only, use the existing approach
+  if (object.type === 'window') {
+    return (
+      <div
+        className={`room-object ${isSelected ? 'selected' : ''} ${isObjectTouching ? 'object-touching' : ''}`}
         style={{
-          opacity: isSelected ? 1 : 0.85,
+          ...getStyles(),
+          transform: isObjectTouching ? 'scale(1.1)' : '',
+          zIndex: isObjectTouching ? 50 : (isSelected ? 30 : 20),
         }}
+        onMouseDown={handleMouseDown}
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+        onTouchCancel={handleTouchEnd}
       >
-        <WindowIcon 
-          className="w-full h-full p-1"
-          style={{ background: 'rgba(255, 255, 255, 0.8)', borderRadius: '4px' }}
-        />
+        <div 
+          className="w-full h-full flex items-center justify-center text-blue-500"
+          style={{
+            opacity: isSelected ? 1 : 0.85,
+          }}
+        >
+          <WindowIcon 
+            className="w-full h-full p-1"
+            style={{ background: 'rgba(255, 255, 255, 0.8)', borderRadius: '4px' }}
+          />
+        </div>
       </div>
-    </div>
-  );
+    );
+  }
+
+  // Fallback for unknown object types
+  return null;
 };
 
 export default RoomObject;
