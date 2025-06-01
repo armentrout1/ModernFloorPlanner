@@ -1235,24 +1235,29 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
                         }}
                       >
                         <path
-                          d={`M 0 0 L ${doorSize} 0 A ${doorSize} ${doorSize} 0 0 1 0 ${doorSize}`}
+                          d={(() => {
+                            // Create the proper door swing arc based on wall side
+                            switch (targetWall.wallSide) {
+                              case 'top':
+                                // Door swings into room (downward)
+                                return `M 0 0 L ${doorSize} 0 A ${doorSize} ${doorSize} 0 0 1 0 ${doorSize} Z`;
+                              case 'right':
+                                // Door swings into room (leftward)
+                                return `M ${doorSize} 0 L ${doorSize} ${doorSize} A ${doorSize} ${doorSize} 0 0 1 0 0 Z`;
+                              case 'bottom':
+                                // Door swings into room (upward)
+                                return `M ${doorSize} ${doorSize} L 0 ${doorSize} A ${doorSize} ${doorSize} 0 0 1 ${doorSize} 0 Z`;
+                              case 'left':
+                                // Door swings into room (rightward)
+                                return `M 0 ${doorSize} L 0 0 A ${doorSize} ${doorSize} 0 0 1 ${doorSize} ${doorSize} Z`;
+                              default:
+                                return `M 0 0 L ${doorSize} 0 A ${doorSize} ${doorSize} 0 0 1 0 ${doorSize} Z`;
+                            }
+                          })()}
                           fill="none"
                           stroke="#FF6B35"
                           strokeWidth="1.5"
                           strokeDasharray="4,2"
-                          transform={(() => {
-                            let rotation = 0;
-                            const center = doorSize / 2;
-                            
-                            switch (targetWall.wallSide) {
-                              case 'top': rotation = 0; break;
-                              case 'right': rotation = 270; break;
-                              case 'bottom': rotation = 180; break;
-                              case 'left': rotation = 90; break;
-                            }
-                            
-                            return `rotate(${rotation} ${center} ${center})`;
-                          })()}
                         />
                       </svg>
                     </div>
