@@ -217,46 +217,78 @@ const RoomObject = ({ room, object, scale, isSelected, onSelect, onDragStart }: 
               })()}
             />
             
-            {/* Door swing line (shows door when open) */}
-            <line
-              x1={(() => {
+            {/* Door swing line (jagged line showing door when open) */}
+            <path
+              d={(() => {
+                const createJaggedLine = (x1: number, y1: number, x2: number, y2: number) => {
+                  const segments = 6; // Number of jagged segments
+                  const length = Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2);
+                  const segmentLength = length / segments;
+                  const angle = Math.atan2(y2 - y1, x2 - x1);
+                  const jagHeight = 3; // Height of the jags
+                  
+                  let path = `M ${x1} ${y1}`;
+                  
+                  for (let i = 1; i <= segments; i++) {
+                    const progress = i / segments;
+                    const baseX = x1 + (x2 - x1) * progress;
+                    const baseY = y1 + (y2 - y1) * progress;
+                    
+                    // Create jag in the middle of each segment
+                    if (i < segments) {
+                      const midProgress = (i - 0.5) / segments;
+                      const midX = x1 + (x2 - x1) * midProgress;
+                      const midY = y1 + (y2 - y1) * midProgress;
+                      
+                      // Offset perpendicular to the line for jag
+                      const perpX = midX + Math.cos(angle + Math.PI / 2) * jagHeight;
+                      const perpY = midY + Math.sin(angle + Math.PI / 2) * jagHeight;
+                      
+                      path += ` L ${perpX} ${perpY} L ${baseX} ${baseY}`;
+                    } else {
+                      path += ` L ${baseX} ${baseY}`;
+                    }
+                  }
+                  
+                  return path;
+                };
+                
+                let x1, y1, x2, y2;
+                
                 switch (object.wallSide) {
-                  case 'top': return isRightSwing ? 0 : doorSize;
-                  case 'right': return isRightSwing ? doorSize : 0;
-                  case 'bottom': return isRightSwing ? doorSize : 0;
-                  case 'left': return isRightSwing ? 0 : doorSize;
-                  default: return 0;
+                  case 'top':
+                    x1 = isRightSwing ? 0 : doorSize;
+                    y1 = 0;
+                    x2 = isRightSwing ? doorSize : 0;
+                    y2 = doorSize;
+                    break;
+                  case 'right':
+                    x1 = isRightSwing ? doorSize : 0;
+                    y1 = isRightSwing ? 0 : doorSize;
+                    x2 = isRightSwing ? 0 : doorSize;
+                    y2 = isRightSwing ? doorSize : 0;
+                    break;
+                  case 'bottom':
+                    x1 = isRightSwing ? doorSize : 0;
+                    y1 = doorSize;
+                    x2 = isRightSwing ? 0 : doorSize;
+                    y2 = 0;
+                    break;
+                  case 'left':
+                    x1 = isRightSwing ? 0 : doorSize;
+                    y1 = isRightSwing ? doorSize : 0;
+                    x2 = isRightSwing ? doorSize : 0;
+                    y2 = isRightSwing ? 0 : doorSize;
+                    break;
+                  default:
+                    x1 = 0; y1 = 0; x2 = doorSize; y2 = doorSize;
                 }
+                
+                return createJaggedLine(x1, y1, x2, y2);
               })()}
-              y1={(() => {
-                switch (object.wallSide) {
-                  case 'top': return 0;
-                  case 'right': return isRightSwing ? 0 : doorSize;
-                  case 'bottom': return doorSize;
-                  case 'left': return isRightSwing ? doorSize : 0;
-                  default: return 0;
-                }
-              })()}
-              x2={(() => {
-                switch (object.wallSide) {
-                  case 'top': return isRightSwing ? doorSize : 0;
-                  case 'right': return isRightSwing ? 0 : doorSize;
-                  case 'bottom': return isRightSwing ? 0 : doorSize;
-                  case 'left': return isRightSwing ? doorSize : 0;
-                  default: return doorSize;
-                }
-              })()}
-              y2={(() => {
-                switch (object.wallSide) {
-                  case 'top': return doorSize;
-                  case 'right': return isRightSwing ? doorSize : 0;
-                  case 'bottom': return 0;
-                  case 'left': return isRightSwing ? 0 : doorSize;
-                  default: return doorSize;
-                }
-              })()}
+              fill="none"
               stroke="#FF6B35"
-              strokeWidth="2"
+              strokeWidth="1.5"
               opacity="0.8"
             />
           </svg>
