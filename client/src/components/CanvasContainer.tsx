@@ -946,6 +946,30 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
         console.log('Updating rooms with moved door'); // Debug log
         onRoomsChange(updatedRooms);
         onSelectObject(draggedDoor.objectId);
+      } else {
+        // No valid target wall - restore object to its original position
+        console.log('No valid target wall, keeping object in original position');
+        
+        // Make sure the object stays in its source room at its original position
+        const updatedRooms = rooms.map(room => {
+          if (room.id === draggedDoor.sourceRoomId) {
+            // Ensure the object is still in the room (in case it was temporarily removed)
+            const existingObjects = room.objects || [];
+            const objectExists = existingObjects.some(obj => obj.id === draggedDoor.objectId);
+            
+            if (!objectExists) {
+              // Add the object back to its original position
+              return {
+                ...room,
+                objects: [...existingObjects, draggedDoor.object]
+              };
+            }
+          }
+          return room;
+        });
+        
+        onRoomsChange(updatedRooms);
+        onSelectObject(draggedDoor.objectId);
       }
       
       // Always reset door state after dragging
