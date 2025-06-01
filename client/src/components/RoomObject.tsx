@@ -220,7 +220,7 @@ const RoomObject = ({ room, object, scale, isSelected, onSelect, onDragStart }: 
 
   // Render window - Real architectural style
   if (object.type === 'window') {
-    const windowSize = 48; // Standard window width
+    const windowSize = object.size; // Use actual window size from properties
 
     return (
       <div style={{ position: 'absolute' }}>
