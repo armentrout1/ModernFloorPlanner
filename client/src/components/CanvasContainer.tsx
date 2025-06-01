@@ -318,6 +318,98 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
   
   // Handler for starting object drag
   // Enhanced wall detection for global dragging
+  // Check if a wall location has conflicting objects
+  const hasConflictingObjects = (roomId: string, wallSide: WallSide, position: number, objectType: ObjectType, excludeObjectId?: string): boolean => {
+    const room = rooms.find(r => r.id === roomId);
+    if (!room || !room.objects) return false;
+
+    const objectSize = objectType === 'door' ? 40 : 48;
+    const minPosition = position - (objectSize / 2) / (wallSide === 'top' || wallSide === 'bottom' ? room.width : room.height) * 100;
+    const maxPosition = position + (objectSize / 2) / (wallSide === 'top' || wallSide === 'bottom' ? room.width : room.height) * 100;
+
+    for (const obj of room.objects) {
+      if (excludeObjectId && obj.id === excludeObjectId) continue;
+      if (obj.wallSide !== wallSide) continue;
+
+      const objSize = obj.type === 'door' ? 40 : 48;
+      const objMinPos = obj.position - (objSize / 2) / (wallSide === 'top' || wallSide === 'bottom' ? room.width : room.height) * 100;
+      const objMaxPos = obj.position + (objSize / 2) / (wallSide === 'top' || wallSide === 'bottom' ? room.width : room.height) * 100;
+
+      // Check for overlap
+      if (!(maxPosition < objMinPos || minPosition > objMaxPos)) {
+        return true;
+      }
+    }
+    return false;
+  };
+
+  // Check if there's an adjoining room that would block placement
+  const hasAdjoiningRoomConflict = (roomId: string, wallSide: WallSide, position: number): boolean => {
+    const room = rooms.find(r => r.id === roomId);
+    if (!room) return false;
+
+    // Calculate the world position of the wall segment
+    let wallX: number, wallY: number;
+    
+    switch (wallSide) {
+      case 'top':
+        wallX = room.x + (room.width * position / 100);
+        wallY = room.y;
+        break;
+      case 'bottom':
+        wallX = room.x + (room.width * position / 100);
+        wallY = room.y + room.height;
+        break;
+      case 'left':
+        wallX = room.x;
+        wallY = room.y + (room.height * position / 100);
+        break;
+      case 'right':
+        wallX = room.x + room.width;
+        wallY = room.y + (room.height * position / 100);
+        break;
+    }
+
+    // Check if there's a room directly adjacent to this wall position
+    for (const otherRoom of rooms) {
+      if (otherRoom.id === roomId) continue;
+
+      const tolerance = 10;
+      
+      switch (wallSide) {
+        case 'top':
+          // Check if there's a room above
+          if (Math.abs(otherRoom.y + otherRoom.height - wallY) < tolerance &&
+              wallX >= otherRoom.x - tolerance && wallX <= otherRoom.x + otherRoom.width + tolerance) {
+            return true;
+          }
+          break;
+        case 'bottom':
+          // Check if there's a room below
+          if (Math.abs(otherRoom.y - wallY) < tolerance &&
+              wallX >= otherRoom.x - tolerance && wallX <= otherRoom.x + otherRoom.width + tolerance) {
+            return true;
+          }
+          break;
+        case 'left':
+          // Check if there's a room to the left
+          if (Math.abs(otherRoom.x + otherRoom.width - wallX) < tolerance &&
+              wallY >= otherRoom.y - tolerance && wallY <= otherRoom.y + otherRoom.height + tolerance) {
+            return true;
+          }
+          break;
+        case 'right':
+          // Check if there's a room to the right
+          if (Math.abs(otherRoom.x - wallX) < tolerance &&
+              wallY >= otherRoom.y - tolerance && wallY <= otherRoom.y + otherRoom.height + tolerance) {
+            return true;
+          }
+          break;
+      }
+    }
+    return false;
+  };
+
   const findWallAtPosition = (x: number, y: number) => {
     const threshold = 20; // Distance threshold for wall detection
     
@@ -533,12 +625,23 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
     if ((placingObjectType === 'door' || placingObjectType === 'window') && doorState.mode !== 'dragging') {
       const targetWall = findWallAtPosition(x, y);
       
+      // Validate placement location
+      let validTargetWall = null;
+      if (targetWall) {
+        const hasConflict = hasConflictingObjects(targetWall.roomId, targetWall.wallSide, targetWall.position, placingObjectType);
+        const hasRoomConflict = hasAdjoiningRoomConflict(targetWall.roomId, targetWall.wallSide, targetWall.position);
+        
+        if (!hasConflict && !hasRoomConflict) {
+          validTargetWall = targetWall;
+        }
+      }
+      
       setDoorState(prev => ({
         ...prev,
         mode: 'placing',
         cursorPreview: {
           position: { x, y },
-          targetWall,
+          targetWall: validTargetWall,
         },
       }));
       
@@ -549,10 +652,27 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
     if (doorState.mode === 'dragging' && doorState.draggedDoor) {
       const targetWall = findWallAtPosition(x, y);
       
+      // Validate dragging target location
+      let validTargetWall = null;
+      if (targetWall) {
+        const hasConflict = hasConflictingObjects(
+          targetWall.roomId, 
+          targetWall.wallSide, 
+          targetWall.position, 
+          doorState.draggedDoor.object.type,
+          doorState.draggedDoor.objectId // Exclude the object being dragged
+        );
+        const hasRoomConflict = hasAdjoiningRoomConflict(targetWall.roomId, targetWall.wallSide, targetWall.position);
+        
+        if (!hasConflict && !hasRoomConflict) {
+          validTargetWall = targetWall;
+        }
+      }
+      
       setDoorState(prev => ({
         ...prev,
         previewPosition: { x, y },
-        targetWall,
+        targetWall: validTargetWall,
       }));
       
       return; // Early return to prevent other interactions during door drag
@@ -1197,7 +1317,9 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
                       <div
                         className="absolute pointer-events-none"
                         style={{
-                          backgroundColor: placingObjectType === 'door' ? '#FF6B35' : '#4A90E2',
+                          backgroundColor: doorState.cursorPreview?.targetWall ? 
+                            (placingObjectType === 'door' ? '#FF6B35' : '#4A90E2') : 
+                            '#FF4444', // Red for invalid placement
                           opacity: 0.6,
                           zIndex: 50,
                           ...((() => {
