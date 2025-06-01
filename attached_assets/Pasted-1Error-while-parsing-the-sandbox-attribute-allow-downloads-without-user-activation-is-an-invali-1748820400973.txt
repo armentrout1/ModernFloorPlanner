@@ -1,0 +1,414 @@
+1Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.Understand this error
+framework-bfed75ff30a22f4a.js:1 Unrecognized feature: 'ambient-light-sensor'.
+_ @ framework-bfed75ff30a22f4a.js:1Understand this warning
+framework-bfed75ff30a22f4a.js:1 Unrecognized feature: 'battery'.
+_ @ framework-bfed75ff30a22f4a.js:1Understand this warning
+framework-bfed75ff30a22f4a.js:1 Unrecognized feature: 'execution-while-not-rendered'.
+_ @ framework-bfed75ff30a22f4a.js:1Understand this warning
+framework-bfed75ff30a22f4a.js:1 Unrecognized feature: 'execution-while-out-of-viewport'.
+_ @ framework-bfed75ff30a22f4a.js:1Understand this warning
+framework-bfed75ff30a22f4a.js:1 Unrecognized feature: 'layout-animations'.
+_ @ framework-bfed75ff30a22f4a.js:1Understand this warning
+framework-bfed75ff30a22f4a.js:1 Unrecognized feature: 'legacy-image-formats'.
+_ @ framework-bfed75ff30a22f4a.js:1Understand this warning
+framework-bfed75ff30a22f4a.js:1 Unrecognized feature: 'navigation-override'.
+_ @ framework-bfed75ff30a22f4a.js:1Understand this warning
+framework-bfed75ff30a22f4a.js:1 Unrecognized feature: 'oversized-images'.
+_ @ framework-bfed75ff30a22f4a.js:1Understand this warning
+framework-bfed75ff30a22f4a.js:1 Unrecognized feature: 'publickey-credentials'.
+_ @ framework-bfed75ff30a22f4a.js:1Understand this warning
+framework-bfed75ff30a22f4a.js:1 Unrecognized feature: 'speaker-selection'.
+_ @ framework-bfed75ff30a22f4a.js:1Understand this warning
+framework-bfed75ff30a22f4a.js:1 Unrecognized feature: 'unoptimized-images'.
+_ @ framework-bfed75ff30a22f4a.js:1Understand this warning
+framework-bfed75ff30a22f4a.js:1 Unrecognized feature: 'unsized-media'.
+_ @ framework-bfed75ff30a22f4a.js:1Understand this warning
+framework-bfed75ff30a22f4a.js:1 Unrecognized feature: 'pointer-lock'.
+_ @ framework-bfed75ff30a22f4a.js:1Understand this warning
+framework-bfed75ff30a22f4a.js:1 Allow attribute will take precedence over 'allowfullscreen'.
+_ @ framework-bfed75ff30a22f4a.js:1Understand this warning
+framework-bfed75ff30a22f4a.js:1 Allow attribute will take precedence over 'allowpaymentrequest'.
+_ @ framework-bfed75ff30a22f4a.js:1Understand this warning
+_app-b0234c20f1cf8075.js:38 onClick is deprecated, please use onPress
+(anonymous) @ _app-b0234c20f1cf8075.js:38Understand this warning
+22_app-b0234c20f1cf8075.js:38 If you do not provide children, you must specify an aria-label for accessibility
+(anonymous) @ _app-b0234c20f1cf8075.js:38Understand this warning
+sp.replit.com/v1/t:1 
+            
+            
+           Failed to load resource: net::ERR_NETWORK_CHANGEDUnderstand this error
+workspace_iframe.html:32 Unrecognized feature: 'ambient-light-sensor'.Understand this warning
+workspace_iframe.html:32 Unrecognized feature: 'battery'.Understand this warning
+workspace_iframe.html:32 Unrecognized feature: 'execution-while-not-rendered'.Understand this warning
+workspace_iframe.html:32 Unrecognized feature: 'execution-while-out-of-viewport'.Understand this warning
+workspace_iframe.html:32 Unrecognized feature: 'layout-animations'.Understand this warning
+workspace_iframe.html:32 Unrecognized feature: 'legacy-image-formats'.Understand this warning
+workspace_iframe.html:32 Unrecognized feature: 'navigation-override'.Understand this warning
+workspace_iframe.html:32 Unrecognized feature: 'oversized-images'.Understand this warning
+workspace_iframe.html:32 Unrecognized feature: 'publickey-credentials'.Understand this warning
+workspace_iframe.html:32 Unrecognized feature: 'speaker-selection'.Understand this warning
+workspace_iframe.html:32 Unrecognized feature: 'unoptimized-images'.Understand this warning
+workspace_iframe.html:32 Unrecognized feature: 'unsized-media'.Understand this warning
+workspace_iframe.html:32 Allow attribute will take precedence over 'allowfullscreen'.Understand this warning
+workspace_iframe.html:32 Allow attribute will take precedence over 'allowpaymentrequest'.Understand this warning
+Console.js:61 Checking room placement conflict for: Object
+Console.js:61 Existing rooms: Array(0)
+Console.js:61 Room creation conflict check: false Object
+Console.js:61 Checking room placement conflict for: Object
+Console.js:61 Existing rooms: Array(1)
+Console.js:61 Checking existing room: Object
+Console.js:61 Room creation conflict check: false Object
+Console.js:61 Starting pan mode: Object
+Console.js:61 Panning delta: Object
+Console.js:61 Current scroll: Object
+Console.js:61 New scroll: Object
+Console.js:61 Panning delta: Object
+Console.js:61 Current scroll: Object
+Console.js:61 New scroll: Object
+Console.js:61 Panning delta: Object
+Console.js:61 Current scroll: Object
+Console.js:61 New scroll: Object
+Console.js:61 Panning delta: Object
+Console.js:61 Current scroll: Object
+Console.js:61 New scroll: Object
+Console.js:61 Panning delta: Object
+Console.js:61 Current scroll: Object
+Console.js:61 New scroll: Object
+Console.js:61 Panning delta: Object
+Console.js:61 Current scroll: Object
+Console.js:61 New scroll: Object
+Console.js:61 Panning delta: Object
+Console.js:61 Current scroll: Object
+Console.js:61 New scroll: Object
+Console.js:61 Panning delta: Object
+Console.js:61 Current scroll: Object
+Console.js:61 New scroll: Object
+Console.js:61 Panning delta: Object
+Console.js:61 Current scroll: Object
+Console.js:61 New scroll: Object
+Console.js:61 Panning delta: Object
+Console.js:61 Current scroll: Object
+Console.js:61 New scroll: Object
+Console.js:61 Panning delta: Object
+Console.js:61 Current scroll: Object
+Console.js:61 New scroll: Object
+Console.js:61 Panning delta: Object
+Console.js:61 Current scroll: Object
+Console.js:61 New scroll: Object
+Console.js:61 Panning delta: Object
+Console.js:61 Current scroll: Object
+Console.js:61 New scroll: Object
+Console.js:61 Panning delta: Object
+Console.js:61 Current scroll: Object
+Console.js:61 New scroll: Object
+Console.js:61 Panning delta: Object
+Console.js:61 Current scroll: Object
+Console.js:61 New scroll: Object
+Console.js:61 Panning delta: Object
+Console.js:61 Current scroll: Object
+Console.js:61 New scroll: Object
+Console.js:61 Panning delta: Object
+Console.js:61 Current scroll: Object
+Console.js:61 New scroll: Object
+Console.js:61 Panning delta: Object
+Console.js:61 Current scroll: Object
+Console.js:61 New scroll: Object
+Console.js:61 Panning delta: Object
+Console.js:61 Current scroll: Object
+Console.js:61 New scroll: Object
+Console.js:61 Panning delta: Object
+Console.js:61 Current scroll: Object
+Console.js:61 New scroll: Object
+Console.js:61 Panning delta: Object
+Console.js:61 Current scroll: Object
+Console.js:61 New scroll: Object
+Console.js:61 Panning delta: Object
+Console.js:61 Current scroll: Object
+Console.js:61 New scroll: Object
+Console.js:61 Panning delta: Object
+Console.js:61 Current scroll: Object
+Console.js:61 New scroll: Object
+Console.js:61 Panning delta: Object
+Console.js:61 Current scroll: Object
+Console.js:61 New scroll: Object
+Console.js:61 Panning delta: Object
+Console.js:61 Current scroll: Object
+Console.js:61 New scroll: Object
+Console.js:61 Panning delta: Object
+Console.js:61 Current scroll: Object
+Console.js:61 New scroll: Object
+Console.js:61 Panning delta: Object
+Console.js:61 Current scroll: Object
+Console.js:61 New scroll: Object
+Console.js:61 Panning delta: Object
+Console.js:61 Current scroll: Object
+Console.js:61 New scroll: Object
+Console.js:61 Panning delta: Object
+Console.js:61 Current scroll: Object
+Console.js:61 New scroll: Object
+Console.js:61 Panning delta: Object
+Console.js:61 Current scroll: Object
+Console.js:61 New scroll: Object
+Console.js:61 Panning delta: Object
+Console.js:61 Current scroll: Object
+Console.js:61 New scroll: Object
+Console.js:61 Panning delta: Object
+Console.js:61 Current scroll: Object
+Console.js:61 New scroll: Object
+Console.js:61 Panning delta: Object
+Console.js:61 Current scroll: Object
+Console.js:61 New scroll: Object
+Console.js:61 Panning delta: Object
+Console.js:61 Current scroll: Object
+Console.js:61 New scroll: Object
+Console.js:61 Panning delta: Object
+Console.js:61 Current scroll: Object
+Console.js:61 New scroll: Object
+Console.js:61 Panning delta: Object
+Console.js:61 Current scroll: Object
+Console.js:61 New scroll: Object
+Console.js:61 Panning delta: Object
+Console.js:61 Current scroll: Object
+Console.js:61 New scroll: Object
+Console.js:61 Panning delta: Object
+Console.js:61 Current scroll: Object
+Console.js:61 New scroll: Object
+Console.js:61 Panning delta: Object
+Console.js:61 Current scroll: Object
+Console.js:61 New scroll: Object
+Console.js:61 Panning delta: Object
+Console.js:61 Current scroll: Object
+Console.js:61 New scroll: Object
+Console.js:61 Panning delta: Object
+Console.js:61 Current scroll: Object
+Console.js:61 New scroll: Object
+Console.js:61 Panning delta: Object
+Console.js:61 Current scroll: Object
+Console.js:61 New scroll: Object
+Console.js:61 Panning delta: Object
+Console.js:61 Current scroll: Object
+Console.js:61 New scroll: Object
+Console.js:61 Panning delta: Object
+Console.js:61 Current scroll: Object
+Console.js:61 New scroll: Object
+Console.js:61 Panning delta: Object
+Console.js:61 Current scroll: Object
+Console.js:61 New scroll: Object
+Console.js:61 Panning delta: Object
+Console.js:61 Current scroll: Object
+Console.js:61 New scroll: Object
+Console.js:61 Panning delta: Object
+Console.js:61 Current scroll: Object
+Console.js:61 New scroll: Object
+Console.js:61 Panning delta: Object
+Console.js:61 Current scroll: Object
+Console.js:61 New scroll: Object
+Console.js:61 Panning delta: Object
+Console.js:61 Current scroll: Object
+Console.js:61 New scroll: Object
+Console.js:61 Panning delta: Object
+Console.js:61 Current scroll: Object
+Console.js:61 New scroll: Object
+Console.js:61 Panning delta: Object
+Console.js:61 Current scroll: Object
+Console.js:61 New scroll: Object
+Console.js:61 Panning delta: Object
+Console.js:61 Current scroll: Object
+Console.js:61 New scroll: Object
+Console.js:61 Panning delta: Object
+Console.js:61 Current scroll: Object
+Console.js:61 New scroll: Object
+Console.js:61 Panning delta: Object
+Console.js:61 Current scroll: Object
+Console.js:61 New scroll: Object
+Console.js:61 Panning delta: Object
+Console.js:61 Current scroll: Object
+Console.js:61 New scroll: Object
+Console.js:61 Panning delta: Object
+Console.js:61 Current scroll: Object
+Console.js:61 New scroll: Object
+Console.js:61 Panning delta: Object
+Console.js:61 Current scroll: Object
+Console.js:61 New scroll: Object
+Console.js:61 Panning delta: Object
+Console.js:61 Current scroll: Object
+Console.js:61 New scroll: Object
+Console.js:61 Panning delta: Object
+Console.js:61 Current scroll: Object
+Console.js:61 New scroll: Object
+Console.js:61 Panning delta: Object
+Console.js:61 Current scroll: Object
+Console.js:61 New scroll: Object
+Console.js:61 Panning delta: Object
+Console.js:61 Current scroll: Object
+Console.js:61 New scroll: Object
+Console.js:61 Starting pan mode: Object
+Console.js:61 Panning delta: Object
+Console.js:61 Current scroll: Object
+Console.js:61 New scroll: Object
+Console.js:61 Panning delta: Object
+Console.js:61 Current scroll: Object
+Console.js:61 New scroll: Object
+Console.js:61 Panning delta: Object
+Console.js:61 Current scroll: Object
+Console.js:61 New scroll: Object
+Console.js:61 Panning delta: Object
+Console.js:61 Current scroll: Object
+Console.js:61 New scroll: Object
+Console.js:61 Panning delta: Object
+Console.js:61 Current scroll: Object
+Console.js:61 New scroll: Object
+Console.js:61 Panning delta: Object
+Console.js:61 Current scroll: Object
+Console.js:61 New scroll: Object
+Console.js:61 Panning delta: Object
+Console.js:61 Current scroll: Object
+Console.js:61 New scroll: Object
+Console.js:61 Panning delta: Object
+Console.js:61 Current scroll: Object
+Console.js:61 New scroll: Object
+Console.js:61 Panning delta: Object
+Console.js:61 Current scroll: Object
+Console.js:61 New scroll: Object
+Console.js:61 Panning delta: Object
+Console.js:61 Current scroll: Object
+Console.js:61 New scroll: Object
+Console.js:61 Panning delta: Object
+Console.js:61 Current scroll: Object
+Console.js:61 New scroll: Object
+Console.js:61 Panning delta: Object
+Console.js:61 Current scroll: Object
+Console.js:61 New scroll: Object
+Console.js:61 Panning delta: Object
+Console.js:61 Current scroll: Object
+Console.js:61 New scroll: Object
+Console.js:61 Panning delta: Object
+Console.js:61 Current scroll: Object
+Console.js:61 New scroll: Object
+Console.js:61 Panning delta: Object
+Console.js:61 Current scroll: Object
+Console.js:61 New scroll: Object
+Console.js:61 Panning delta: Object
+Console.js:61 Current scroll: Object
+Console.js:61 New scroll: Object
+Console.js:61 Panning delta: Object
+Console.js:61 Current scroll: Object
+Console.js:61 New scroll: Object
+Console.js:61 Panning delta: Object
+Console.js:61 Current scroll: Object
+Console.js:61 New scroll: Object
+Console.js:61 Panning delta: Object
+Console.js:61 Current scroll: Object
+Console.js:61 New scroll: Object
+Console.js:61 Panning delta: Object
+Console.js:61 Current scroll: Object
+Console.js:61 New scroll: Object
+Console.js:61 Panning delta: Object
+Console.js:61 Current scroll: Object
+Console.js:61 New scroll: Object
+Console.js:61 Panning delta: Object
+Console.js:61 Current scroll: Object
+Console.js:61 New scroll: Object
+Console.js:61 Panning delta: Object
+Console.js:61 Current scroll: Object
+Console.js:61 New scroll: Object
+Console.js:61 Panning delta: Object
+Console.js:61 Current scroll: Object
+Console.js:61 New scroll: Object
+Console.js:61 Panning delta: Object
+Console.js:61 Current scroll: Object
+Console.js:61 New scroll: Object
+Console.js:61 Panning delta: Object
+Console.js:61 Current scroll: Object
+Console.js:61 New scroll: Object
+Console.js:61 Panning delta: Object
+Console.js:61 Current scroll: Object
+Console.js:61 New scroll: Object
+Console.js:61 Panning delta: Object
+Console.js:61 Current scroll: Object
+Console.js:61 New scroll: Object
+Console.js:61 Panning delta: Object
+Console.js:61 Current scroll: Object
+Console.js:61 New scroll: Object
+Console.js:61 Panning delta: Object
+Console.js:61 Current scroll: Object
+Console.js:61 New scroll: Object
+Console.js:61 Panning delta: Object
+Console.js:61 Current scroll: Object
+Console.js:61 New scroll: Object
+Console.js:61 Panning delta: Object
+Console.js:61 Current scroll: Object
+Console.js:61 New scroll: Object
+Console.js:61 Panning delta: Object
+Console.js:61 Current scroll: Object
+Console.js:61 New scroll: Object
+Console.js:61 Panning delta: Object
+Console.js:61 Current scroll: Object
+Console.js:61 New scroll: Object
+Console.js:61 Panning delta: Object
+Console.js:61 Current scroll: Object
+Console.js:61 New scroll: Object
+Console.js:61 Panning delta: Object
+Console.js:61 Current scroll: Object
+Console.js:61 New scroll: Object
+Console.js:61 Panning delta: Object
+Console.js:61 Current scroll: Object
+Console.js:61 New scroll: Object
+Console.js:61 Panning delta: Object
+Console.js:61 Current scroll: Object
+Console.js:61 New scroll: Object
+Console.js:61 Panning delta: Object
+Console.js:61 Current scroll: Object
+Console.js:61 New scroll: Object
+Console.js:61 Panning delta: Object
+Console.js:61 Current scroll: Object
+Console.js:61 New scroll: Object
+Console.js:61 Panning delta: Object
+Console.js:61 Current scroll: Object
+Console.js:61 New scroll: Object
+Console.js:61 Panning delta: Object
+Console.js:61 Current scroll: Object
+Console.js:61 New scroll: Object
+Console.js:61 Panning delta: Object
+Console.js:61 Current scroll: Object
+Console.js:61 New scroll: Object
+Console.js:61 Panning delta: Object
+Console.js:61 Current scroll: Object
+Console.js:61 New scroll: Object
+Console.js:61 Panning delta: Object
+Console.js:61 Current scroll: Object
+Console.js:61 New scroll: Object
+Console.js:61 Panning delta: Object
+Console.js:61 Current scroll: Object
+Console.js:61 New scroll: Object
+Console.js:61 Panning delta: Object
+Console.js:61 Current scroll: Object
+Console.js:61 New scroll: Object
+Console.js:61 Panning delta: Object
+Console.js:61 Current scroll: Object
+Console.js:61 New scroll: Object
+Console.js:61 Panning delta: Object
+Console.js:61 Current scroll: Object
+Console.js:61 New scroll: Object
+Console.js:61 Panning delta: Object
+Console.js:61 Current scroll: Object
+Console.js:61 New scroll: Object
+Console.js:61 Panning delta: Object
+Console.js:61 Current scroll: Object
+Console.js:61 New scroll: Object
+Console.js:61 Panning delta: Object
+Console.js:61 Current scroll: Object
+Console.js:61 New scroll: Object
+Console.js:61 Panning delta: Object
+Console.js:61 Current scroll: Object
+Console.js:61 New scroll: Object
+Console.js:61 Panning delta: Object
+Console.js:61 Current scroll: Object
+Console.js:61 New scroll: Object
+Console.js:61 Panning delta: ObjectclientX: 745clientY: 267dx: 1dy: 0[[Prototype]]: Object
+Console.js:61 Current scroll: Object
+Console.js:61 New scroll: Object
+Console.js:61 Panning delta: Object
+Console.js:61 Current scroll: Object
+Console.js:61 New scroll: Object
+Console.js:61 Starting pan mode: Object

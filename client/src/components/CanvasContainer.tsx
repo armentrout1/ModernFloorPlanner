@@ -127,8 +127,9 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
     }));
     
     if (wrapperRef.current) {
-      wrapperRef.current.scrollLeft = 0;
-      wrapperRef.current.scrollTop = 0;
+      // Center the view in the expanded scroll area
+      wrapperRef.current.scrollLeft = 1000;
+      wrapperRef.current.scrollTop = 1000;
     }
   }, []);
 
@@ -780,7 +781,7 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
         (e.button === 0 && isPanMode) ||
         e.button === 2) {
       
-      console.log('Starting pan mode:', { button: e.button, spacebarPressed, isPanMode });
+
       
       setState(prev => ({
         ...prev,
@@ -901,14 +902,9 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
       const dx = e.clientX - state.lastMouse.x;
       const dy = e.clientY - state.lastMouse.y;
       
-      console.log('Panning delta:', { dx, dy, clientX: e.clientX, clientY: e.clientY });
-      console.log('Current scroll:', { scrollLeft: wrapperRef.current.scrollLeft, scrollTop: wrapperRef.current.scrollTop });
-      
       // Pan by updating scroll position (invert direction for natural panning feel)
       wrapperRef.current.scrollLeft -= dx;
       wrapperRef.current.scrollTop -= dy;
-      
-      console.log('New scroll:', { scrollLeft: wrapperRef.current.scrollLeft, scrollTop: wrapperRef.current.scrollTop });
       
       // Update last mouse position
       setState(prev => ({
@@ -1434,7 +1430,7 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
     onSelectRoom(roomId);
   };
   
-  // Calculate canvas style based on scale
+  // Calculate canvas style based on scale with proper positioning for full panning
   const canvasStyle: React.CSSProperties = {
     width: '4000px',
     height: '4000px',
@@ -1445,6 +1441,8 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
       linear-gradient(to right, rgba(209, 213, 219, 0.3) 1px, transparent 1px),
       linear-gradient(to bottom, rgba(209, 213, 219, 0.3) 1px, transparent 1px)
     `,
+    // Add margin to ensure scroll area on all sides
+    margin: '1000px',
   };
   
   return (
