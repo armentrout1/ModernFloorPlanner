@@ -239,51 +239,51 @@ export function getStandardDoorSizes(): { label: string; width: number; height: 
   ];
 }
 
-// Determine which wall side and position was clicked
+// Determine which wall side and position was clicked (using relative coordinates)
 export function detectWallClick(
   room: Room,
   clickPosition: Position,
   threshold: number = 10
 ): { wallSide: WallSide; percentage: number } | null {
-  const { x, y, width, height } = room;
+  const { width, height } = room;
   
   // Check top wall
-  if (Math.abs(clickPosition.y - y) <= threshold && 
-      clickPosition.x >= x && 
-      clickPosition.x <= x + width) {
+  if (Math.abs(clickPosition.y) <= threshold && 
+      clickPosition.x >= 0 && 
+      clickPosition.x <= width) {
     return {
       wallSide: 'top',
-      percentage: ((clickPosition.x - x) / width) * 100
+      percentage: (clickPosition.x / width) * 100
     };
   }
   
   // Check right wall
-  if (Math.abs(clickPosition.x - (x + width)) <= threshold && 
-      clickPosition.y >= y && 
-      clickPosition.y <= y + height) {
+  if (Math.abs(clickPosition.x - width) <= threshold && 
+      clickPosition.y >= 0 && 
+      clickPosition.y <= height) {
     return {
       wallSide: 'right',
-      percentage: ((clickPosition.y - y) / height) * 100
+      percentage: (clickPosition.y / height) * 100
     };
   }
   
   // Check bottom wall
-  if (Math.abs(clickPosition.y - (y + height)) <= threshold && 
-      clickPosition.x >= x && 
-      clickPosition.x <= x + width) {
+  if (Math.abs(clickPosition.y - height) <= threshold && 
+      clickPosition.x >= 0 && 
+      clickPosition.x <= width) {
     return {
       wallSide: 'bottom',
-      percentage: ((clickPosition.x - x) / width) * 100
+      percentage: (clickPosition.x / width) * 100
     };
   }
   
   // Check left wall
-  if (Math.abs(clickPosition.x - x) <= threshold && 
-      clickPosition.y >= y && 
-      clickPosition.y <= y + height) {
+  if (Math.abs(clickPosition.x) <= threshold && 
+      clickPosition.y >= 0 && 
+      clickPosition.y <= height) {
     return {
       wallSide: 'left',
-      percentage: ((clickPosition.y - y) / height) * 100
+      percentage: (clickPosition.y / height) * 100
     };
   }
   
