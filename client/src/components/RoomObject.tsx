@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { Room, RoomObject as RoomObjectType } from '@/utils/types';
+import { Room, RoomObject as RoomObjectType, DoorProperties } from '@/utils/types';
 import { DoorOpenIcon, Square as WindowIcon } from 'lucide-react';
-import { calculateObjectPosition } from '@/utils/canvas';
+import { calculateObjectPosition, inchesToPixels } from '@/utils/canvas';
 
 interface RoomObjectProps {
   room: Room;
@@ -24,7 +24,7 @@ const RoomObject: React.FC<RoomObjectProps> = ({
   
   // Calculate styles based on the object wall side and position
   const getStyles = (): React.CSSProperties => {
-    const { type, size, wallSide } = object;
+    const { type, size, wallSide, doorProperties } = object;
     let styles: React.CSSProperties = {
       position: 'absolute',
       pointerEvents: 'all',
@@ -32,13 +32,17 @@ const RoomObject: React.FC<RoomObjectProps> = ({
       zIndex: isSelected ? 30 : 20,
     };
     
-    // Size of the object
-    const objSize = size || (type === 'door' ? 40 : 30);
+    // Size of the object - use door properties if available
+    let objSize = size;
+    if (type === 'door' && doorProperties) {
+      objSize = inchesToPixels(doorProperties.width);
+    } else {
+      objSize = size || (type === 'door' ? 40 : 30);
+    }
     
     // Position object based on wall side
     switch (wallSide) {
       case 'top':
-        // For top wall - position horizontally based on percentage, vertically at the top edge
         styles.left = `${(room.width * object.position / 100) - objSize / 2}px`;
         styles.top = `-${objSize / 2}px`;
         styles.width = `${objSize}px`;
@@ -46,7 +50,6 @@ const RoomObject: React.FC<RoomObjectProps> = ({
         styles.transform = 'rotate(0deg)';
         break;
       case 'right':
-        // For right wall - position horizontally at the right edge, vertically based on percentage
         styles.left = `${room.width - objSize / 2}px`;
         styles.top = `${(room.height * object.position / 100) - objSize / 2}px`;
         styles.width = `${objSize}px`;
@@ -54,7 +57,6 @@ const RoomObject: React.FC<RoomObjectProps> = ({
         styles.transform = 'rotate(90deg)';
         break;
       case 'bottom':
-        // For bottom wall - position horizontally based on percentage, vertically at the bottom edge
         styles.left = `${(room.width * object.position / 100) - objSize / 2}px`;
         styles.top = `${room.height - objSize / 2}px`;
         styles.width = `${objSize}px`;
@@ -62,7 +64,6 @@ const RoomObject: React.FC<RoomObjectProps> = ({
         styles.transform = 'rotate(180deg)';
         break;
       case 'left':
-        // For left wall - position horizontally at the left edge, vertically based on percentage
         styles.left = `-${objSize / 2}px`;
         styles.top = `${(room.height * object.position / 100) - objSize / 2}px`;
         styles.width = `${objSize}px`;
@@ -77,6 +78,58 @@ const RoomObject: React.FC<RoomObjectProps> = ({
     }
     
     return styles;
+  };
+
+  // Render door swing arc if this is a door
+  const renderDoorSwing = () => {
+    if (object.type !== 'door' || !object.doorProperties || object.doorProperties.style === 'sliding') {
+      return null;
+    }
+
+    const { doorProperties, wallSide } = object;
+    const doorWidth = inchesToPixels(doorProperties.width);
+    const swingRadius = doorWidth * 0.8; // Swing arc is slightly smaller than door width
+    
+    // Calculate swing arc position and rotation
+    let swingStyles: React.CSSProperties = {
+      position: 'absolute',
+      width: `${swingRadius * 2}px`,
+      height: `${swingRadius * 2}px`,
+      border: '1px dashed rgba(255, 165, 0, 0.6)',
+      borderRadius: '50%',
+      pointerEvents: 'none',
+      zIndex: isSelected ? 25 : 15,
+    };
+
+    // Position the swing arc based on wall side and swing direction
+    const isInward = doorProperties.swingDirection === 'inward';
+    const isRightSwing = doorProperties.swingSide === 'right';
+
+    switch (wallSide) {
+      case 'top':
+        swingStyles.left = `${isRightSwing ? -swingRadius : -swingRadius}px`;
+        swingStyles.top = `${isInward ? -swingRadius : -swingRadius}px`;
+        break;
+      case 'right':
+        swingStyles.left = `${isInward ? -swingRadius : -swingRadius}px`;
+        swingStyles.top = `${isRightSwing ? -swingRadius : -swingRadius}px`;
+        break;
+      case 'bottom':
+        swingStyles.left = `${isRightSwing ? -swingRadius : -swingRadius}px`;
+        swingStyles.top = `${isInward ? -swingRadius : -swingRadius}px`;
+        break;
+      case 'left':
+        swingStyles.left = `${isInward ? -swingRadius : -swingRadius}px`;
+        swingStyles.top = `${isRightSwing ? -swingRadius : -swingRadius}px`;
+        break;
+    }
+
+    return (
+      <div 
+        style={swingStyles}
+        className="opacity-70"
+      />
+    );
   };
   
   const handleMouseDown = (e: React.MouseEvent) => {

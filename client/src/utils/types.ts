@@ -23,12 +23,25 @@ export type WallSide = 'top' | 'right' | 'bottom' | 'left';
 
 export type ObjectType = 'door' | 'window';
 
+export type DoorStyle = 'single' | 'double' | 'sliding' | 'bifold';
+export type SwingDirection = 'inward' | 'outward';
+export type SwingSide = 'left' | 'right';
+
+export interface DoorProperties {
+  style: DoorStyle;
+  swingDirection: SwingDirection;
+  swingSide: SwingSide;
+  width: number; // Width in pixels (converted from inches)
+  height: number; // Height in pixels (converted from inches)
+}
+
 export interface RoomObject {
   id: string;
   type: ObjectType;
   wallSide: WallSide;
   position: number; // Percentage along the wall (0-100)
   size: number; // Size in pixels
+  doorProperties?: DoorProperties; // Only present when type is 'door'
 }
 
 export interface CanvasState {

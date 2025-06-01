@@ -196,13 +196,47 @@ export function createRoomObject(
   position: number,
   size: number = 30
 ): RoomObject {
-  return {
+  const baseObject = {
     id: `obj_${generateId()}`,
     type,
     wallSide,
     position,
-    size
+    size: size || (type === 'door' ? 40 : 30),
   };
+
+  // Add default door properties if this is a door
+  if (type === 'door') {
+    return {
+      ...baseObject,
+      doorProperties: {
+        style: 'single',
+        swingDirection: 'inward',
+        swingSide: 'right',
+        width: 36, // 36 inches = ~3 feet
+        height: 80, // 80 inches = ~6.67 feet
+      },
+    };
+  }
+
+  return baseObject;
+}
+
+export function inchesToPixels(inches: number): number {
+  return (inches * GRID_SIZE) / 12; // 12 inches per foot, GRID_SIZE pixels per foot
+}
+
+export function pixelsToInches(pixels: number): number {
+  return (pixels * 12) / GRID_SIZE;
+}
+
+export function getStandardDoorSizes(): { label: string; width: number; height: number }[] {
+  return [
+    { label: '24"', width: 24, height: 80 },
+    { label: '28"', width: 28, height: 80 },
+    { label: '30"', width: 30, height: 80 },
+    { label: '32"', width: 32, height: 80 },
+    { label: '36"', width: 36, height: 80 },
+  ];
 }
 
 // Determine which wall side and position was clicked

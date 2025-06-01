@@ -40,12 +40,31 @@ export type WallSide = z.infer<typeof wallSideSchema>;
 export const objectTypeSchema = z.enum(['door', 'window']);
 export type ObjectType = z.infer<typeof objectTypeSchema>;
 
+export const doorStyleSchema = z.enum(['single', 'double', 'sliding', 'bifold']);
+export type DoorStyle = z.infer<typeof doorStyleSchema>;
+
+export const swingDirectionSchema = z.enum(['inward', 'outward']);
+export type SwingDirection = z.infer<typeof swingDirectionSchema>;
+
+export const swingSideSchema = z.enum(['left', 'right']);
+export type SwingSide = z.infer<typeof swingSideSchema>;
+
+export const doorPropertiesSchema = z.object({
+  style: doorStyleSchema,
+  swingDirection: swingDirectionSchema,
+  swingSide: swingSideSchema,
+  width: z.number().positive(),
+  height: z.number().positive(),
+});
+export type DoorProperties = z.infer<typeof doorPropertiesSchema>;
+
 export const roomObjectSchema = z.object({
   id: z.string(),
   type: objectTypeSchema,
   wallSide: wallSideSchema,
   position: z.number(), // Percentage along the wall (0-100)
   size: z.number(), // Size in pixels
+  doorProperties: doorPropertiesSchema.optional(),
 });
 export type RoomObject = z.infer<typeof roomObjectSchema>;
 
