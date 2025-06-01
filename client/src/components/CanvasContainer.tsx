@@ -371,9 +371,9 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
     
     if (!sourceRoom || !draggedObject) return;
     
-    // Only handle door dragging for now
-    if (draggedObject.type === 'door') {
-      // Enter door dragging mode
+    // Handle door and window dragging
+    if (draggedObject.type === 'door' || draggedObject.type === 'window') {
+      // Enter door dragging mode (works for both doors and windows)
       setDoorState({
         mode: 'dragging',
         cursorPreview: null,
@@ -529,8 +529,8 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
     const x = (e.clientX - rect.left) / state.scale;
     const y = (e.clientY - rect.top) / state.scale;
     
-    // Handle door cursor preview when door tool is active (but not when dragging)
-    if (placingObjectType === 'door' && doorState.mode !== 'dragging') {
+    // Handle object cursor preview when door or window tool is active (but not when dragging)
+    if ((placingObjectType === 'door' || placingObjectType === 'window') && doorState.mode !== 'dragging') {
       const targetWall = findWallAtPosition(x, y);
       
       setDoorState(prev => ({
@@ -628,24 +628,29 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
   };
   
   const handleCanvasMouseUp = () => {
-    // Handle door placement from cursor preview
-    if (doorState.mode === 'placing' && doorState.cursorPreview?.targetWall && placingObjectType === 'door') {
+    // Handle object placement from cursor preview (doors and windows)
+    if (doorState.mode === 'placing' && doorState.cursorPreview?.targetWall && (placingObjectType === 'door' || placingObjectType === 'window')) {
       const { targetWall } = doorState.cursorPreview;
       const targetRoom = rooms.find(r => r.id === targetWall.roomId);
       
       if (targetRoom) {
-        const newDoor = createRoomObject('door', targetWall.wallSide, targetWall.position, 40);
+        const newObject = createRoomObject(
+          placingObjectType, 
+          targetWall.wallSide, 
+          targetWall.position, 
+          placingObjectType === 'door' ? 40 : 30
+        );
         
         const updatedRooms = rooms.map(room => 
           room.id === targetWall.roomId 
-            ? { ...room, objects: [...(room.objects || []), newDoor] }
+            ? { ...room, objects: [...(room.objects || []), newObject] }
             : room
         );
         
         onRoomsChange(updatedRooms);
-        onSelectObject(newDoor.id);
+        onSelectObject(newObject.id);
         
-        // Reset door state to idle so the newly placed door can be immediately picked up
+        // Reset state to idle so the newly placed object can be immediately picked up
         setDoorState({
           mode: 'idle',
           cursorPreview: null,
@@ -1174,53 +1179,53 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
             />
           )}
 
-          {/* Door cursor preview and drag preview */}
+          {/* Object cursor preview and drag preview */}
           {(doorState.mode === 'placing' || doorState.mode === 'dragging') && (
             <>
-              {/* Cursor preview when placing doors */}
+              {/* Cursor preview when placing objects */}
               {doorState.mode === 'placing' && doorState.cursorPreview?.targetWall && (
                 (() => {
                   const { targetWall } = doorState.cursorPreview;
                   const targetRoom = rooms.find(r => r.id === targetWall.roomId);
                   if (!targetRoom) return null;
 
-                  const doorSize = inchesToPixels(36); // Default 36" door
+                  const objectSize = placingObjectType === 'door' ? inchesToPixels(36) : 30;
 
                   return (
-                    <div key="door-cursor-preview">
-                      {/* Door line preview */}
+                    <div key="object-cursor-preview">
+                      {/* Object line preview */}
                       <div
                         className="absolute pointer-events-none"
                         style={{
-                          backgroundColor: '#FF6B35',
+                          backgroundColor: placingObjectType === 'door' ? '#FF6B35' : '#4A90E2',
                           opacity: 0.6,
                           zIndex: 50,
                           ...((() => {
                             const baseStyle: React.CSSProperties = {};
                             switch (targetWall.wallSide) {
                               case 'top':
-                                baseStyle.left = `${targetRoom.x + (targetRoom.width * targetWall.position / 100) - doorSize / 2}px`;
+                                baseStyle.left = `${targetRoom.x + (targetRoom.width * targetWall.position / 100) - objectSize / 2}px`;
                                 baseStyle.top = `${targetRoom.y}px`;
-                                baseStyle.width = `${doorSize}px`;
+                                baseStyle.width = `${objectSize}px`;
                                 baseStyle.height = '6px';
                                 break;
                               case 'right':
                                 baseStyle.left = `${targetRoom.x + targetRoom.width - 6}px`;
-                                baseStyle.top = `${targetRoom.y + (targetRoom.height * targetWall.position / 100) - doorSize / 2}px`;
+                                baseStyle.top = `${targetRoom.y + (targetRoom.height * targetWall.position / 100) - objectSize / 2}px`;
                                 baseStyle.width = '6px';
-                                baseStyle.height = `${doorSize}px`;
+                                baseStyle.height = `${objectSize}px`;
                                 break;
                               case 'bottom':
-                                baseStyle.left = `${targetRoom.x + (targetRoom.width * targetWall.position / 100) - doorSize / 2}px`;
+                                baseStyle.left = `${targetRoom.x + (targetRoom.width * targetWall.position / 100) - objectSize / 2}px`;
                                 baseStyle.top = `${targetRoom.y + targetRoom.height - 6}px`;
-                                baseStyle.width = `${doorSize}px`;
+                                baseStyle.width = `${objectSize}px`;
                                 baseStyle.height = '6px';
                                 break;
                               case 'left':
                                 baseStyle.left = `${targetRoom.x}px`;
-                                baseStyle.top = `${targetRoom.y + (targetRoom.height * targetWall.position / 100) - doorSize / 2}px`;
+                                baseStyle.top = `${targetRoom.y + (targetRoom.height * targetWall.position / 100) - objectSize / 2}px`;
                                 baseStyle.width = '6px';
-                                baseStyle.height = `${doorSize}px`;
+                                baseStyle.height = `${objectSize}px`;
                                 break;
                             }
                             return baseStyle;
@@ -1228,67 +1233,65 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
                         }}
                       />
                       
-                      {/* Door swing arc preview */}
-                      <svg
-                        className="absolute pointer-events-none"
-                        style={{
-                          opacity: 0.4,
-                          zIndex: 45,
-                          ...((() => {
-                            const svgStyle: React.CSSProperties = {
-                              width: `${doorSize}px`,
-                              height: `${doorSize}px`,
-                            };
-                            
-                            switch (targetWall.wallSide) {
-                              case 'top':
-                                svgStyle.left = `${targetRoom.x + (targetRoom.width * targetWall.position / 100) - doorSize / 2}px`;
-                                svgStyle.top = `${targetRoom.y + 6}px`;
-                                break;
-                              case 'right':
-                                svgStyle.left = `${targetRoom.x + targetRoom.width - 6 - doorSize}px`;
-                                svgStyle.top = `${targetRoom.y + (targetRoom.height * targetWall.position / 100) - doorSize / 2}px`;
-                                break;
-                              case 'bottom':
-                                svgStyle.left = `${targetRoom.x + (targetRoom.width * targetWall.position / 100) - doorSize / 2}px`;
-                                svgStyle.top = `${targetRoom.y + targetRoom.height - 6 - doorSize}px`;
-                                break;
-                              case 'left':
-                                svgStyle.left = `${targetRoom.x + 6}px`;
-                                svgStyle.top = `${targetRoom.y + (targetRoom.height * targetWall.position / 100) - doorSize / 2}px`;
-                                break;
-                            }
-                            
-                            return svgStyle;
-                          })())
-                        }}
-                      >
-                        <path
-                          d={(() => {
-                            // Create the proper door swing arc based on wall side
-                            switch (targetWall.wallSide) {
-                              case 'top':
-                                // Door swings into room (downward)
-                                return `M 0 0 L ${doorSize} 0 A ${doorSize} ${doorSize} 0 0 1 0 ${doorSize} Z`;
-                              case 'right':
-                                // Door swings into room (leftward)
-                                return `M ${doorSize} 0 L ${doorSize} ${doorSize} A ${doorSize} ${doorSize} 0 0 1 0 0 Z`;
-                              case 'bottom':
-                                // Door swings into room (upward)
-                                return `M ${doorSize} ${doorSize} L 0 ${doorSize} A ${doorSize} ${doorSize} 0 0 1 ${doorSize} 0 Z`;
-                              case 'left':
-                                // Door swings into room (rightward)
-                                return `M 0 ${doorSize} L 0 0 A ${doorSize} ${doorSize} 0 0 1 ${doorSize} ${doorSize} Z`;
-                              default:
-                                return `M 0 0 L ${doorSize} 0 A ${doorSize} ${doorSize} 0 0 1 0 ${doorSize} Z`;
-                            }
-                          })()}
-                          fill="none"
-                          stroke="#FF6B35"
-                          strokeWidth="1.5"
-                          strokeDasharray="4,2"
-                        />
-                      </svg>
+                      {/* Object swing arc preview (only for doors) */}
+                      {placingObjectType === 'door' && (
+                        <svg
+                          className="absolute pointer-events-none"
+                          style={{
+                            opacity: 0.4,
+                            zIndex: 45,
+                            ...((() => {
+                              const svgStyle: React.CSSProperties = {
+                                width: `${objectSize}px`,
+                                height: `${objectSize}px`,
+                              };
+                              
+                              switch (targetWall.wallSide) {
+                                case 'top':
+                                  svgStyle.left = `${targetRoom.x + (targetRoom.width * targetWall.position / 100) - objectSize / 2}px`;
+                                  svgStyle.top = `${targetRoom.y + 6}px`;
+                                  break;
+                                case 'right':
+                                  svgStyle.left = `${targetRoom.x + targetRoom.width - 6 - objectSize}px`;
+                                  svgStyle.top = `${targetRoom.y + (targetRoom.height * targetWall.position / 100) - objectSize / 2}px`;
+                                  break;
+                                case 'bottom':
+                                  svgStyle.left = `${targetRoom.x + (targetRoom.width * targetWall.position / 100) - objectSize / 2}px`;
+                                  svgStyle.top = `${targetRoom.y + targetRoom.height - 6 - objectSize}px`;
+                                  break;
+                                case 'left':
+                                  svgStyle.left = `${targetRoom.x + 6}px`;
+                                  svgStyle.top = `${targetRoom.y + (targetRoom.height * targetWall.position / 100) - objectSize / 2}px`;
+                                  break;
+                              }
+                              
+                              return svgStyle;
+                            })())
+                          }}
+                        >
+                          <path
+                            d={(() => {
+                              // Create the proper door swing arc based on wall side
+                              switch (targetWall.wallSide) {
+                                case 'top':
+                                  return `M 0 0 L ${objectSize} 0 A ${objectSize} ${objectSize} 0 0 1 0 ${objectSize} Z`;
+                                case 'right':
+                                  return `M ${objectSize} 0 L ${objectSize} ${objectSize} A ${objectSize} ${objectSize} 0 0 1 0 0 Z`;
+                                case 'bottom':
+                                  return `M ${objectSize} ${objectSize} L 0 ${objectSize} A ${objectSize} ${objectSize} 0 0 1 ${objectSize} 0 Z`;
+                                case 'left':
+                                  return `M 0 ${objectSize} L 0 0 A ${objectSize} ${objectSize} 0 0 1 ${objectSize} ${objectSize} Z`;
+                                default:
+                                  return `M 0 0 L ${objectSize} 0 A ${objectSize} ${objectSize} 0 0 1 0 ${objectSize} Z`;
+                              }
+                            })()}
+                            fill="none"
+                            stroke="#FF6B35"
+                            strokeWidth="1.5"
+                            strokeDasharray="4,2"
+                          />
+                        </svg>
+                      )}
                     </div>
                   );
                 })()

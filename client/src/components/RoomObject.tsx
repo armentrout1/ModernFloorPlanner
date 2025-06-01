@@ -208,25 +208,106 @@ const RoomObject = ({ room, object, scale, isSelected, onSelect, onDragStart }: 
 
   // Render window
   if (object.type === 'window') {
+    const windowSize = 30; // Standard window size
+
     return (
-      <div
-        style={{
-          ...getObjectStyles(),
-          backgroundColor: 'rgba(135, 206, 235, 0.8)',
-          border: isSelected ? '2px solid #3B82F6' : '2px solid #87CEEB',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}
-        onMouseDown={handleMouseDown}
-        onTouchStart={handleTouchStart}
-        onTouchEnd={handleTouchEnd}
-        onTouchCancel={handleTouchEnd}
-      >
-        <Square 
-          size={12}
-          color="#4682B4"
+      <div style={{ position: 'absolute' }}>
+        {/* Window opening line */}
+        <div
+          style={{
+            position: 'absolute',
+            backgroundColor: '#4A90E2',
+            opacity: 1,
+            zIndex: 1000,
+            border: isSelected ? '3px solid #3B82F6' : '2px solid #2C5282',
+            boxShadow: '0 0 4px rgba(0,0,0,0.3)',
+            ...((() => {
+              const styles: React.CSSProperties = {};
+              
+              switch (object.wallSide) {
+                case 'top':
+                  styles.left = `${(room.width * object.position / 100) - windowSize / 2}px`;
+                  styles.top = '0px';
+                  styles.width = `${windowSize}px`;
+                  styles.height = '8px';
+                  break;
+                case 'right':
+                  styles.left = `${room.width - 8}px`;
+                  styles.top = `${(room.height * object.position / 100) - windowSize / 2}px`;
+                  styles.width = '8px';
+                  styles.height = `${windowSize}px`;
+                  break;
+                case 'bottom':
+                  styles.left = `${(room.width * object.position / 100) - windowSize / 2}px`;
+                  styles.top = `${room.height - 8}px`;
+                  styles.width = `${windowSize}px`;
+                  styles.height = '8px';
+                  break;
+                case 'left':
+                  styles.left = '0px';
+                  styles.top = `${(room.height * object.position / 100) - windowSize / 2}px`;
+                  styles.width = '8px';
+                  styles.height = `${windowSize}px`;
+                  break;
+              }
+              
+              return styles;
+            })())
+          }}
+          onMouseDown={handleMouseDown}
+          onTouchStart={handleTouchStart}
+          onTouchEnd={handleTouchEnd}
+          onTouchCancel={handleTouchEnd}
         />
+        
+        {/* Window frame lines for architectural detail */}
+        <svg
+          style={{
+            position: 'absolute',
+            width: `${windowSize}px`,
+            height: `${windowSize}px`,
+            pointerEvents: 'none',
+            zIndex: 15,
+            opacity: 0.8,
+            ...((() => {
+              const svgStyle: React.CSSProperties = {};
+              
+              switch (object.wallSide) {
+                case 'top':
+                  svgStyle.left = `${(room.width * object.position / 100) - windowSize / 2}px`;
+                  svgStyle.top = `8px`;
+                  break;
+                case 'right':
+                  svgStyle.left = `${room.width - 8 - windowSize}px`;
+                  svgStyle.top = `${(room.height * object.position / 100) - windowSize / 2}px`;
+                  break;
+                case 'bottom':
+                  svgStyle.left = `${(room.width * object.position / 100) - windowSize / 2}px`;
+                  svgStyle.top = `${room.height - 8 - windowSize}px`;
+                  break;
+                case 'left':
+                  svgStyle.left = `8px`;
+                  svgStyle.top = `${(room.height * object.position / 100) - windowSize / 2}px`;
+                  break;
+              }
+              
+              return svgStyle;
+            })())
+          }}
+        >
+          {/* Window frame lines - horizontal and vertical dividers */}
+          {object.wallSide === 'top' || object.wallSide === 'bottom' ? (
+            <>
+              <line x1={windowSize/3} y1="0" x2={windowSize/3} y2={windowSize} stroke="#4A90E2" strokeWidth="1" />
+              <line x1={2*windowSize/3} y1="0" x2={2*windowSize/3} y2={windowSize} stroke="#4A90E2" strokeWidth="1" />
+            </>
+          ) : (
+            <>
+              <line x1="0" y1={windowSize/3} x2={windowSize} y2={windowSize/3} stroke="#4A90E2" strokeWidth="1" />
+              <line x1="0" y1={2*windowSize/3} x2={windowSize} y2={2*windowSize/3} stroke="#4A90E2" strokeWidth="1" />
+            </>
+          )}
+        </svg>
       </div>
     );
   }
