@@ -143,7 +143,7 @@ const RoomObject = ({ room, object, scale, isSelected, onSelect, onDragStart }: 
           onTouchCancel={handleTouchEnd}
         />
         
-        {/* Door swing arc */}
+        {/* Door swing arc and door line */}
         {doorProps.style !== 'sliding' && (
           <svg
             style={{
@@ -181,6 +181,7 @@ const RoomObject = ({ room, object, scale, isSelected, onSelect, onDragStart }: 
               })()
             }}
           >
+            {/* Door swing arc */}
             <path
               d={`M 0 0 L ${doorSize} 0 A ${doorSize} ${doorSize} 0 0 1 0 ${doorSize}`}
               fill="none"
@@ -214,6 +215,49 @@ const RoomObject = ({ room, object, scale, isSelected, onSelect, onDragStart }: 
 
                 return `rotate(${rotation} ${center} ${center})`;
               })()}
+            />
+            
+            {/* Door swing line (shows door when open) */}
+            <line
+              x1={(() => {
+                switch (object.wallSide) {
+                  case 'top': return isRightSwing ? 0 : doorSize;
+                  case 'right': return isRightSwing ? doorSize : 0;
+                  case 'bottom': return isRightSwing ? doorSize : 0;
+                  case 'left': return isRightSwing ? 0 : doorSize;
+                  default: return 0;
+                }
+              })()}
+              y1={(() => {
+                switch (object.wallSide) {
+                  case 'top': return 0;
+                  case 'right': return isRightSwing ? 0 : doorSize;
+                  case 'bottom': return doorSize;
+                  case 'left': return isRightSwing ? doorSize : 0;
+                  default: return 0;
+                }
+              })()}
+              x2={(() => {
+                switch (object.wallSide) {
+                  case 'top': return isRightSwing ? doorSize : 0;
+                  case 'right': return isRightSwing ? 0 : doorSize;
+                  case 'bottom': return isRightSwing ? 0 : doorSize;
+                  case 'left': return isRightSwing ? doorSize : 0;
+                  default: return doorSize;
+                }
+              })()}
+              y2={(() => {
+                switch (object.wallSide) {
+                  case 'top': return doorSize;
+                  case 'right': return isRightSwing ? doorSize : 0;
+                  case 'bottom': return 0;
+                  case 'left': return isRightSwing ? 0 : doorSize;
+                  default: return doorSize;
+                }
+              })()}
+              stroke="#FF6B35"
+              strokeWidth="2"
+              opacity="0.8"
             />
           </svg>
         )}
