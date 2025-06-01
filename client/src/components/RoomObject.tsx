@@ -80,55 +80,167 @@ const RoomObject: React.FC<RoomObjectProps> = ({
     return styles;
   };
 
-  // Render door swing arc if this is a door
-  const renderDoorSwing = () => {
-    if (object.type !== 'door' || !object.doorProperties || object.doorProperties.style === 'sliding') {
+  // Render architectural door representation
+  const renderArchitecturalDoor = () => {
+    if (object.type !== 'door' || !object.doorProperties) {
       return null;
     }
 
     const { doorProperties, wallSide } = object;
     const doorWidth = inchesToPixels(doorProperties.width);
-    const swingRadius = doorWidth * 0.8; // Swing arc is slightly smaller than door width
+    const doorThickness = 4; // Door panel thickness in pixels
     
-    // Calculate swing arc position and rotation
-    let swingStyles: React.CSSProperties = {
+    const elements = [];
+    
+    // Door opening (gap in wall)
+    const openingStyle: React.CSSProperties = {
       position: 'absolute',
-      width: `${swingRadius * 2}px`,
-      height: `${swingRadius * 2}px`,
-      border: '1px dashed rgba(255, 165, 0, 0.6)',
-      borderRadius: '50%',
+      backgroundColor: 'transparent',
       pointerEvents: 'none',
-      zIndex: isSelected ? 25 : 15,
+      zIndex: 5,
     };
 
-    // Position the swing arc based on wall side and swing direction
-    const isInward = doorProperties.swingDirection === 'inward';
-    const isRightSwing = doorProperties.swingSide === 'right';
+    // Door panel (hinge line)
+    const panelStyle: React.CSSProperties = {
+      position: 'absolute',
+      backgroundColor: '#8B4513',
+      pointerEvents: 'none',
+      zIndex: 10,
+    };
 
+    // Position elements based on wall side
     switch (wallSide) {
       case 'top':
-        swingStyles.left = `${isRightSwing ? -swingRadius : -swingRadius}px`;
-        swingStyles.top = `${isInward ? -swingRadius : -swingRadius}px`;
+        openingStyle.left = `${-doorWidth / 2}px`;
+        openingStyle.top = `${-doorThickness / 2}px`;
+        openingStyle.width = `${doorWidth}px`;
+        openingStyle.height = `${doorThickness}px`;
+        
+        panelStyle.left = `${doorProperties.swingSide === 'right' ? -doorWidth / 2 : doorWidth / 2 - 2}px`;
+        panelStyle.top = `${-doorThickness / 2}px`;
+        panelStyle.width = '2px';
+        panelStyle.height = `${doorThickness}px`;
         break;
+        
       case 'right':
-        swingStyles.left = `${isInward ? -swingRadius : -swingRadius}px`;
-        swingStyles.top = `${isRightSwing ? -swingRadius : -swingRadius}px`;
+        openingStyle.left = `${-doorThickness / 2}px`;
+        openingStyle.top = `${-doorWidth / 2}px`;
+        openingStyle.width = `${doorThickness}px`;
+        openingStyle.height = `${doorWidth}px`;
+        
+        panelStyle.left = `${-doorThickness / 2}px`;
+        panelStyle.top = `${doorProperties.swingSide === 'right' ? -doorWidth / 2 : doorWidth / 2 - 2}px`;
+        panelStyle.width = `${doorThickness}px`;
+        panelStyle.height = '2px';
         break;
+        
       case 'bottom':
-        swingStyles.left = `${isRightSwing ? -swingRadius : -swingRadius}px`;
-        swingStyles.top = `${isInward ? -swingRadius : -swingRadius}px`;
+        openingStyle.left = `${-doorWidth / 2}px`;
+        openingStyle.top = `${-doorThickness / 2}px`;
+        openingStyle.width = `${doorWidth}px`;
+        openingStyle.height = `${doorThickness}px`;
+        
+        panelStyle.left = `${doorProperties.swingSide === 'right' ? doorWidth / 2 - 2 : -doorWidth / 2}px`;
+        panelStyle.top = `${-doorThickness / 2}px`;
+        panelStyle.width = '2px';
+        panelStyle.height = `${doorThickness}px`;
         break;
+        
       case 'left':
-        swingStyles.left = `${isInward ? -swingRadius : -swingRadius}px`;
-        swingStyles.top = `${isRightSwing ? -swingRadius : -swingRadius}px`;
+        openingStyle.left = `${-doorThickness / 2}px`;
+        openingStyle.top = `${-doorWidth / 2}px`;
+        openingStyle.width = `${doorThickness}px`;
+        openingStyle.height = `${doorWidth}px`;
+        
+        panelStyle.left = `${-doorThickness / 2}px`;
+        panelStyle.top = `${doorProperties.swingSide === 'right' ? doorWidth / 2 - 2 : -doorWidth / 2}px`;
+        panelStyle.width = `${doorThickness}px`;
+        panelStyle.height = '2px';
+        break;
+    }
+
+    elements.push(
+      <div key="opening" style={openingStyle} />,
+      <div key="panel" style={panelStyle} />
+    );
+
+    return elements;
+  };
+
+  // Render door swing arc for hinged doors
+  const renderDoorSwing = () => {
+    if (object.type !== 'door' || !object.doorProperties || 
+        ['sliding', 'bifold'].includes(object.doorProperties.style)) {
+      return null;
+    }
+
+    const { doorProperties, wallSide } = object;
+    const doorWidth = inchesToPixels(doorProperties.width);
+    const swingRadius = doorWidth * 0.9;
+    
+    // Create SVG for quarter-circle arc
+    const svgSize = swingRadius + 10;
+    let svgStyle: React.CSSProperties = {
+      position: 'absolute',
+      width: `${svgSize}px`,
+      height: `${svgSize}px`,
+      pointerEvents: 'none',
+      zIndex: isSelected ? 15 : 8,
+      opacity: isSelected ? 0.8 : 0.4,
+    };
+
+    // Calculate arc positioning and rotation
+    const isInward = doorProperties.swingDirection === 'inward';
+    const isRightSwing = doorProperties.swingSide === 'right';
+    
+    let arcPath = '';
+    let transform = '';
+    
+    // Create quarter-circle path
+    const centerX = 5;
+    const centerY = 5;
+    
+    switch (wallSide) {
+      case 'top':
+        svgStyle.left = `${isRightSwing ? -swingRadius - 5 : -5}px`;
+        svgStyle.top = `${isInward ? -5 : -swingRadius - 5}px`;
+        arcPath = `M ${centerX} ${centerY} L ${centerX + swingRadius} ${centerY} A ${swingRadius} ${swingRadius} 0 0 ${isInward ? 1 : 0} ${centerX} ${centerY + (isInward ? swingRadius : -swingRadius)}`;
+        transform = isRightSwing ? '' : `rotate(180 ${centerX} ${centerY})`;
+        break;
+        
+      case 'right':
+        svgStyle.left = `${isInward ? -swingRadius - 5 : -5}px`;
+        svgStyle.top = `${isRightSwing ? -swingRadius - 5 : -5}px`;
+        arcPath = `M ${centerX} ${centerY} L ${centerX} ${centerY + swingRadius} A ${swingRadius} ${swingRadius} 0 0 ${isInward ? 0 : 1} ${centerX + (isInward ? -swingRadius : swingRadius)} ${centerY}`;
+        transform = isRightSwing ? '' : `rotate(180 ${centerX} ${centerY})`;
+        break;
+        
+      case 'bottom':
+        svgStyle.left = `${isRightSwing ? -5 : -swingRadius - 5}px`;
+        svgStyle.top = `${isInward ? -swingRadius - 5 : -5}px`;
+        arcPath = `M ${centerX} ${centerY} L ${centerX - swingRadius} ${centerY} A ${swingRadius} ${swingRadius} 0 0 ${isInward ? 0 : 1} ${centerX} ${centerY + (isInward ? -swingRadius : swingRadius)}`;
+        transform = isRightSwing ? '' : `rotate(180 ${centerX} ${centerY})`;
+        break;
+        
+      case 'left':
+        svgStyle.left = `${isInward ? -5 : -swingRadius - 5}px`;
+        svgStyle.top = `${isRightSwing ? -5 : -swingRadius - 5}px`;
+        arcPath = `M ${centerX} ${centerY} L ${centerX} ${centerY - swingRadius} A ${swingRadius} ${swingRadius} 0 0 ${isInward ? 1 : 0} ${centerX + (isInward ? swingRadius : -swingRadius)} ${centerY}`;
+        transform = isRightSwing ? '' : `rotate(180 ${centerX} ${centerY})`;
         break;
     }
 
     return (
-      <div 
-        style={swingStyles}
-        className="opacity-70"
-      />
+      <svg style={svgStyle} viewBox={`0 0 ${svgSize} ${svgSize}`}>
+        <path
+          d={arcPath}
+          fill="none"
+          stroke="#FF6B35"
+          strokeWidth="1"
+          strokeDasharray="3,2"
+          transform={transform}
+        />
+      </svg>
     );
   };
   
@@ -180,23 +292,24 @@ const RoomObject: React.FC<RoomObjectProps> = ({
         onTouchEnd={handleTouchEnd}
         onTouchCancel={handleTouchEnd}
       >
-        <div 
-          className={`w-full h-full flex items-center justify-center
-                     ${object.type === 'door' ? 'text-orange-500' : 'text-blue-500'} 
-                     ${isSelected ? 'opacity-100' : 'opacity-85'}`}
-        >
-          {object.type === 'door' ? (
-            <DoorOpenIcon 
-              className="w-full h-full p-1"
-              style={{ background: 'rgba(255, 255, 255, 0.8)', borderRadius: '4px' }}
-            />
-          ) : (
+        {object.type === 'door' ? (
+          <>
+            {/* Render architectural door elements */}
+            {renderArchitecturalDoor()}
+          </>
+        ) : (
+          <div 
+            className="w-full h-full flex items-center justify-center text-blue-500"
+            style={{
+              opacity: isSelected ? 1 : 0.85,
+            }}
+          >
             <WindowIcon 
               className="w-full h-full p-1"
               style={{ background: 'rgba(255, 255, 255, 0.8)', borderRadius: '4px' }}
             />
-          )}
-        </div>
+          </div>
+        )}
       </div>
     </>
   );

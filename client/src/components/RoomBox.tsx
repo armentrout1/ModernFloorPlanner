@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { Room, Position, ResizeHandle, WallSide, ObjectType } from '@/utils/types';
-import { formatDimensions, getResizeHandlePosition, detectWallClick } from '@/utils/canvas';
+import { formatDimensions, getResizeHandlePosition, detectWallClick, inchesToPixels } from '@/utils/canvas';
 import RoomLabel from './RoomLabel';
 import RoomObject from './RoomObject';
 
@@ -147,6 +147,101 @@ const RoomBox: React.FC<RoomBoxProps> = ({
     transition: 'box-shadow 0.15s ease, transform 0.05s ease',
   };
   
+  // Render walls with door openings
+  const renderWallsWithOpenings = () => {
+    const wallThickness = 2;
+    const doors = room.objects?.filter(obj => obj.type === 'door') || [];
+    
+    return (
+      <>
+        {/* Top wall */}
+        {renderWallSegments('top', wallThickness, doors)}
+        {/* Right wall */}
+        {renderWallSegments('right', wallThickness, doors)}
+        {/* Bottom wall */}
+        {renderWallSegments('bottom', wallThickness, doors)}
+        {/* Left wall */}
+        {renderWallSegments('left', wallThickness, doors)}
+      </>
+    );
+  };
+
+  const renderWallSegments = (wallSide: WallSide, thickness: number, doors: any[]) => {
+    const doorsOnWall = doors.filter(door => door.wallSide === wallSide);
+    
+    if (doorsOnWall.length === 0) {
+      // No doors, render full wall
+      return renderFullWall(wallSide, thickness);
+    }
+
+    // Sort doors by position
+    const sortedDoors = doorsOnWall.sort((a, b) => a.position - b.position);
+    const segments = [];
+    
+    const wallLength = wallSide === 'top' || wallSide === 'bottom' ? room.width : room.height;
+    let lastEnd = 0;
+
+    sortedDoors.forEach((door, index) => {
+      const doorWidth = door.doorProperties ? inchesToPixels(door.doorProperties.width) : 40;
+      const doorStart = (door.position / 100) * wallLength - doorWidth / 2;
+      const doorEnd = doorStart + doorWidth;
+
+      // Add segment before door
+      if (doorStart > lastEnd) {
+        segments.push(renderWallSegment(wallSide, thickness, lastEnd, doorStart));
+      }
+
+      lastEnd = doorEnd;
+    });
+
+    // Add final segment after last door
+    if (lastEnd < wallLength) {
+      segments.push(renderWallSegment(wallSide, thickness, lastEnd, wallLength));
+    }
+
+    return segments;
+  };
+
+  const renderFullWall = (wallSide: WallSide, thickness: number) => {
+    const style: React.CSSProperties = {
+      position: 'absolute',
+      backgroundColor: 'currentColor',
+      pointerEvents: 'none',
+    };
+
+    switch (wallSide) {
+      case 'top':
+        return <div key={`wall-${wallSide}`} style={{...style, top: 0, left: 0, width: '100%', height: thickness}} />;
+      case 'right':
+        return <div key={`wall-${wallSide}`} style={{...style, top: 0, right: 0, width: thickness, height: '100%'}} />;
+      case 'bottom':
+        return <div key={`wall-${wallSide}`} style={{...style, bottom: 0, left: 0, width: '100%', height: thickness}} />;
+      case 'left':
+        return <div key={`wall-${wallSide}`} style={{...style, top: 0, left: 0, width: thickness, height: '100%'}} />;
+    }
+  };
+
+  const renderWallSegment = (wallSide: WallSide, thickness: number, start: number, end: number) => {
+    const style: React.CSSProperties = {
+      position: 'absolute',
+      backgroundColor: 'currentColor',
+      pointerEvents: 'none',
+    };
+
+    const segmentId = `wall-${wallSide}-${start}-${end}`;
+
+    switch (wallSide) {
+      case 'top':
+        return <div key={segmentId} style={{...style, top: 0, left: start, width: end - start, height: thickness}} />;
+      case 'right':
+        return <div key={segmentId} style={{...style, top: start, right: 0, width: thickness, height: end - start}} />;
+      case 'bottom':
+        return <div key={segmentId} style={{...style, bottom: 0, left: start, width: end - start, height: thickness}} />;
+      case 'left':
+        return <div key={segmentId} style={{...style, top: start, left: 0, width: thickness, height: end - start}} />;
+    }
+  };
+
   const resizeHandles: ResizeHandle[] = ['nw', 'ne', 'sw', 'se'];
   
   return (
@@ -155,6 +250,7 @@ const RoomBox: React.FC<RoomBoxProps> = ({
       style={{
         ...roomStyle,
         transform: isTouching ? 'scale(0.98)' : 'scale(1)',
+        border: 'none', // Remove default border since we're drawing custom walls
       }}
       onClick={handleClick}
       onMouseDown={handleMouseDown}
@@ -163,6 +259,8 @@ const RoomBox: React.FC<RoomBoxProps> = ({
       onTouchEnd={handleTouchEnd}
       onTouchCancel={handleTouchEnd}
     >
+      {/* Custom walls with door openings */}
+      {renderWallsWithOpenings()}
       {/* Room dimensions display */}
       <div className="absolute inset-0 flex items-center justify-center text-xs font-medium text-blue-800 pointer-events-none">
         {formatDimensions(room.width, room.height)}
