@@ -638,7 +638,7 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
           placingObjectType, 
           targetWall.wallSide, 
           targetWall.position, 
-          placingObjectType === 'door' ? 40 : 36
+          placingObjectType === 'door' ? 40 : 48
         );
         
         const updatedRooms = rooms.map(room => 
@@ -1189,7 +1189,7 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
                   const targetRoom = rooms.find(r => r.id === targetWall.roomId);
                   if (!targetRoom) return null;
 
-                  const objectSize = placingObjectType === 'door' ? inchesToPixels(36) : 36;
+                  const objectSize = placingObjectType === 'door' ? inchesToPixels(36) : 48;
 
                   return (
                     <div key="object-cursor-preview">
