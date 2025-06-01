@@ -661,13 +661,16 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
       return; // Early return to prevent other actions
     }
 
-    // Handle door drop from dragging
+    // Handle door drop from dragging - CRITICAL FIX
     if (doorState.mode === 'dragging' && doorState.draggedDoor) {
+      console.log('Door drop detected:', doorState.targetWall); // Debug log
+      
       const { draggedDoor } = doorState;
       
       // If there's a target wall, move the door there
       if (doorState.targetWall) {
         const { targetWall } = doorState;
+        console.log('Moving door to:', targetWall); // Debug log
         
         // Create updated rooms array
         const updatedRooms = rooms.map(room => {
@@ -696,14 +699,12 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
           return room;
         });
         
+        console.log('Updating rooms with moved door'); // Debug log
         onRoomsChange(updatedRooms);
-        onSelectObject(draggedDoor.objectId); // Keep door selected after move
-      } else {
-        // No valid target wall, door snaps back to original position
-        // Door remains in its original location (no changes needed)
+        onSelectObject(draggedDoor.objectId);
       }
       
-      // Reset door state
+      // Always reset door state after dragging
       setDoorState({
         mode: 'idle',
         cursorPreview: null,
@@ -711,6 +712,14 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
         previewPosition: null,
         targetWall: null,
       });
+      
+      // Reset canvas dragging state too
+      setState(prev => ({
+        ...prev,
+        isDragging: false,
+      }));
+      
+      return; // Early return to prevent other actions
     }
     
     if (state.isDragging && selectedRoomId) {
