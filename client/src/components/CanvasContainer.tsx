@@ -674,16 +674,27 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
         
         // Create updated rooms array
         const updatedRooms = rooms.map(room => {
-          // Remove object from source room
-          if (room.id === draggedDoor.sourceRoomId) {
+          if (room.id === draggedDoor.sourceRoomId && room.id === targetWall.roomId) {
+            // Same room - remove and add in one step
+            const filteredObjects = room.objects?.filter(obj => obj.id !== draggedDoor.objectId) || [];
+            const movedObject = {
+              ...draggedDoor.object,
+              wallSide: targetWall.wallSide,
+              position: targetWall.position,
+            };
+            
+            return {
+              ...room,
+              objects: [...filteredObjects, movedObject]
+            };
+          } else if (room.id === draggedDoor.sourceRoomId) {
+            // Remove object from source room
             return {
               ...room,
               objects: room.objects?.filter(obj => obj.id !== draggedDoor.objectId) || []
             };
-          }
-          
-          // Add object to target room
-          if (room.id === targetWall.roomId) {
+          } else if (room.id === targetWall.roomId) {
+            // Add object to target room
             const movedObject = {
               ...draggedDoor.object,
               wallSide: targetWall.wallSide,
