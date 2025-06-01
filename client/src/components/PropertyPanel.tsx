@@ -111,6 +111,22 @@ const PropertyPanel: React.FC<PropertyPanelProps> = ({
       onUpdateRoom(selectedRoom.id, { objects: updatedObjects });
     }
   };
+
+  const handleObjectSizeChange = (sizeInPixels: number) => {
+    if (selectedRoom && selectedObject && selectedRoom.objects) {
+      const updatedObjects = selectedRoom.objects.map(obj => {
+        if (obj.id === selectedObject.id) {
+          return {
+            ...obj,
+            size: sizeInPixels,
+          };
+        }
+        return obj;
+      });
+      
+      onUpdateRoom(selectedRoom.id, { objects: updatedObjects });
+    }
+  };
   
   // Calculate room dimensions in feet if a room is selected
   const widthFeet = selectedRoom ? pixelsToFeet(selectedRoom.width) : 0;
@@ -186,11 +202,48 @@ const PropertyPanel: React.FC<PropertyPanelProps> = ({
                   <SelectContent>
                     {getStandardDoorSizes().map(size => (
                       <SelectItem key={size.width} value={size.width.toString()}>
-                        {size.label} ({size.width}" wide)
+                        {size.label} ({size.width}" × {size.height}")
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
+                <div className="text-xs text-slate-500">
+                  Current size: {selectedObject.doorProperties.width}" × {selectedObject.doorProperties.height}"
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Custom Size (inches)</Label>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <Label className="text-xs">Width</Label>
+                    <Input
+                      type="number"
+                      value={selectedObject.doorProperties.width}
+                      onChange={(e) => {
+                        const width = parseInt(e.target.value) || 24;
+                        handleDoorSizeChange(width);
+                      }}
+                      min="18"
+                      max="48"
+                      className="text-sm"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs">Height</Label>
+                    <Input
+                      type="number"
+                      value={selectedObject.doorProperties.height}
+                      onChange={(e) => {
+                        const height = parseInt(e.target.value) || 80;
+                        handleDoorPropertyChange('height', height);
+                      }}
+                      min="78"
+                      max="96"
+                      className="text-sm"
+                    />
+                  </div>
+                </div>
               </div>
 
               {/* Swing properties - only show for hinged doors */}
@@ -214,23 +267,77 @@ const PropertyPanel: React.FC<PropertyPanelProps> = ({
                   </div>
 
                   <div className="space-y-2">
-                    <Label>Swing Side</Label>
+                    <Label>Door Hand</Label>
                     <RadioGroup
                       value={selectedObject.doorProperties.swingSide}
                       onValueChange={(value: SwingSide) => handleDoorPropertyChange('swingSide', value)}
                     >
                       <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="left" id="left" />
-                        <Label htmlFor="left">Left</Label>
+                        <RadioGroupItem value="left" id="lh" />
+                        <Label htmlFor="lh">Left Hand (LH)</Label>
                       </div>
                       <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="right" id="right" />
-                        <Label htmlFor="right">Right</Label>
+                        <RadioGroupItem value="right" id="rh" />
+                        <Label htmlFor="rh">Right Hand (RH)</Label>
                       </div>
                     </RadioGroup>
+                    <div className="text-xs text-slate-500">
+                      {selectedObject.doorProperties.swingSide === 'left' ? 
+                        'Hinges on left when door opens away from you' : 
+                        'Hinges on right when door opens away from you'
+                      }
+                    </div>
                   </div>
                 </>
               )}
+            </>
+          )}
+
+          {/* Window-specific properties */}
+          {selectedObject.type === 'window' && (
+            <>
+              <div className="space-y-2">
+                <Label>Window Width (inches)</Label>
+                <Input
+                  type="number"
+                  value={Math.round(pixelsToInches(selectedObject.size))}
+                  onChange={(e) => {
+                    const width = parseInt(e.target.value) || 24;
+                    const sizeInPixels = inchesToPixels(width);
+                    handleObjectSizeChange(sizeInPixels);
+                  }}
+                  min="12"
+                  max="96"
+                  className="text-sm"
+                />
+                <div className="text-xs text-slate-500">
+                  Current size: {Math.round(pixelsToInches(selectedObject.size))}" × 36" (height fixed)
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Standard Window Sizes</Label>
+                <Select
+                  value={Math.round(pixelsToInches(selectedObject.size)).toString()}
+                  onValueChange={(value) => {
+                    const width = parseInt(value);
+                    const sizeInPixels = inchesToPixels(width);
+                    handleObjectSizeChange(sizeInPixels);
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="24">24" × 36"</SelectItem>
+                    <SelectItem value="30">30" × 36"</SelectItem>
+                    <SelectItem value="36">36" × 36"</SelectItem>
+                    <SelectItem value="48">48" × 36"</SelectItem>
+                    <SelectItem value="60">60" × 36"</SelectItem>
+                    <SelectItem value="72">72" × 36"</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </>
           )}
           
