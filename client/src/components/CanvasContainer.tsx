@@ -662,37 +662,46 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
     }
 
     // Handle door drop from dragging
-    if (doorState.mode === 'dragging' && doorState.targetWall && doorState.draggedDoor) {
-      const { targetWall, draggedDoor } = doorState;
+    if (doorState.mode === 'dragging' && doorState.draggedDoor) {
+      const { draggedDoor } = doorState;
       
-      // Create updated rooms array
-      const updatedRooms = rooms.map(room => {
-        // Remove object from source room
-        if (room.id === draggedDoor.sourceRoomId) {
-          return {
-            ...room,
-            objects: room.objects?.filter(obj => obj.id !== draggedDoor.objectId) || []
-          };
-        }
+      // If there's a target wall, move the door there
+      if (doorState.targetWall) {
+        const { targetWall } = doorState;
         
-        // Add object to target room
-        if (room.id === targetWall.roomId) {
-          const movedObject = {
-            ...draggedDoor.object,
-            wallSide: targetWall.wallSide,
-            position: targetWall.position,
-          };
+        // Create updated rooms array
+        const updatedRooms = rooms.map(room => {
+          // Remove object from source room
+          if (room.id === draggedDoor.sourceRoomId) {
+            return {
+              ...room,
+              objects: room.objects?.filter(obj => obj.id !== draggedDoor.objectId) || []
+            };
+          }
           
-          return {
-            ...room,
-            objects: [...(room.objects || []), movedObject]
-          };
-        }
+          // Add object to target room
+          if (room.id === targetWall.roomId) {
+            const movedObject = {
+              ...draggedDoor.object,
+              wallSide: targetWall.wallSide,
+              position: targetWall.position,
+            };
+            
+            return {
+              ...room,
+              objects: [...(room.objects || []), movedObject]
+            };
+          }
+          
+          return room;
+        });
         
-        return room;
-      });
-      
-      onRoomsChange(updatedRooms);
+        onRoomsChange(updatedRooms);
+        onSelectObject(draggedDoor.objectId); // Keep door selected after move
+      } else {
+        // No valid target wall, door snaps back to original position
+        // Door remains in its original location (no changes needed)
+      }
       
       // Reset door state
       setDoorState({
