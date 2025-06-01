@@ -32,6 +32,7 @@ interface CanvasContainerProps {
   onUpdateRoom: (roomId: string, updates: Partial<Room>) => void;
   selectedRoomIds?: string[]; // New prop for multi-select
   onMultiSelectRooms?: (roomIds: string[]) => void; // New callback for multi-select
+  onObjectPlaced?: () => void; // Callback when an object is placed
 }
 
 const CanvasContainer: React.FC<CanvasContainerProps> = ({
@@ -44,6 +45,7 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
   onSelectRoom,
   onSelectObject,
   onUpdateRoom,
+  onObjectPlaced,
 }) => {
   const canvasRef = useRef<HTMLDivElement>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
@@ -651,6 +653,9 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
           previewPosition: null,
           targetWall: null,
         });
+        
+        // Notify parent that an object was placed so tool can be reset
+        onObjectPlaced?.();
       }
       
       return; // Early return to prevent other actions

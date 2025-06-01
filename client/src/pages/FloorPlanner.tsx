@@ -54,6 +54,12 @@ const FloorPlanner: React.FC = () => {
     }
   };
 
+  const handleObjectPlaced = () => {
+    // Reset tool after object placement to prevent accidental multiple placements
+    setPlacingObjectType(null);
+    setActiveTool('select');
+  };
+
   const handleApplyAction = (action: string) => {
     switch (action) {
       case 'auto-align':
@@ -356,6 +362,7 @@ const FloorPlanner: React.FC = () => {
               onSelectRoom={handleSelectRoom}
               onSelectObject={handleSelectObject}
               onUpdateRoom={handleUpdateRoom}
+              onObjectPlaced={handleObjectPlaced}
             />
           }
           rightPanel={
