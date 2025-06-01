@@ -347,8 +347,11 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
   // Check if placing a room would conflict with existing windows
   const wouldRoomPlacementConflictWithWindows = (newRoom: { x: number; y: number; width: number; height: number }): boolean => {
     const tolerance = 10;
+    console.log('Checking room placement conflict for:', newRoom);
+    console.log('Existing rooms:', rooms);
     
     for (const existingRoom of rooms) {
+      console.log('Checking existing room:', existingRoom);
       if (!existingRoom.objects) continue;
       
       // Check if rooms would be adjacent
@@ -1037,12 +1040,14 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
         
         // Check if this new room would conflict with existing windows
         const wouldConflict = wouldRoomPlacementConflictWithWindows(newRoom);
+        console.log('Room creation conflict check:', wouldConflict, newRoom); // Debug log
         
         if (!wouldConflict) {
           onRoomsChange([...rooms, newRoom]);
           onSelectRoom(newRoom.id);
+        } else {
+          console.log('Room creation blocked due to window conflict'); // Debug log
         }
-        // If there's a conflict, simply don't create the room
       }
     }
     
