@@ -897,7 +897,7 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
       const dx = e.clientX - state.lastMouse.x;
       const dy = e.clientY - state.lastMouse.y;
       
-      // Pan by updating scroll position
+      // Pan by updating scroll position (invert direction for natural panning feel)
       wrapperRef.current.scrollLeft -= dx;
       wrapperRef.current.scrollTop -= dy;
       
@@ -906,6 +906,10 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
         ...prev,
         lastMouse: { x: e.clientX, y: e.clientY },
       }));
+      
+      // Prevent default behavior to avoid any browser interference
+      e.preventDefault();
+      return;
     } else if (state.isSelecting && state.selectStart) {
       // Update selection rectangle
       setState(prev => ({
@@ -1423,8 +1427,8 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
   
   // Calculate canvas style based on scale
   const canvasStyle: React.CSSProperties = {
-    width: '2000px',
-    height: '2000px',
+    width: '4000px',
+    height: '4000px',
     transformOrigin: '0 0',
     transform: `scale(${state.scale})`,
     backgroundSize: `${GRID_SIZE}px ${GRID_SIZE}px`,
