@@ -235,18 +235,15 @@ const RoomObject: React.FC<RoomObjectProps> = ({
           backgroundColor: '#8B4513',
           zIndex: 10,
         };
+        // Swing arc should be positioned from hinge point and swing into the room (inward) or out of room (outward)
         swingStyle = {
           position: 'absolute',
-          left: `${doorX + (isRightSwing ? 0 : doorWidth - swingRadius)}px`,
+          left: `${doorX + (isRightSwing ? doorWidth - swingRadius : 0)}px`,
           top: isInward ? '3px' : `-${swingRadius - 3}px`,
           width: `${swingRadius}px`,
           height: `${swingRadius}px`,
           zIndex: 5,
         };
-        swingOrigin = isRightSwing ? '0 0' : `${swingRadius} 0`;
-        arcPath = isRightSwing 
-          ? `M 0 0 L ${swingRadius} 0 A ${swingRadius} ${swingRadius} 0 0 ${isInward ? 1 : 0} 0 ${isInward ? swingRadius : -swingRadius} Z`
-          : `M ${swingRadius} 0 L 0 0 A ${swingRadius} ${swingRadius} 0 0 ${isInward ? 0 : 1} ${swingRadius} ${isInward ? swingRadius : -swingRadius} Z`;
         break;
 
       case 'right':
@@ -262,7 +259,7 @@ const RoomObject: React.FC<RoomObjectProps> = ({
         swingStyle = {
           position: 'absolute',
           left: isInward ? `${room.width - swingRadius - 3}px` : `${room.width - 3}px`,
-          top: `${doorY + (isRightSwing ? 0 : doorWidth)}px`,
+          top: `${doorY + (isRightSwing ? doorWidth - swingRadius : 0)}px`,
           width: `${swingRadius}px`,
           height: `${swingRadius}px`,
           zIndex: 5,
@@ -281,7 +278,7 @@ const RoomObject: React.FC<RoomObjectProps> = ({
         };
         swingStyle = {
           position: 'absolute',
-          left: `${doorX + (isRightSwing ? doorWidth : 0)}px`,
+          left: `${doorX + (isRightSwing ? 0 : doorWidth - swingRadius)}px`,
           top: isInward ? `${room.height - swingRadius - 3}px` : `${room.height - 3}px`,
           width: `${swingRadius}px`,
           height: `${swingRadius}px`,
@@ -301,8 +298,8 @@ const RoomObject: React.FC<RoomObjectProps> = ({
         };
         swingStyle = {
           position: 'absolute',
-          left: isInward ? '3px' : `-${swingRadius}px`,
-          top: `${doorY + (isRightSwing ? doorWidth : 0)}px`,
+          left: isInward ? '3px' : `-${swingRadius - 3}px`,
+          top: `${doorY + (isRightSwing ? 0 : doorWidth - swingRadius)}px`,
           width: `${swingRadius}px`,
           height: `${swingRadius}px`,
           zIndex: 5,
@@ -330,10 +327,29 @@ const RoomObject: React.FC<RoomObjectProps> = ({
             className="pointer-events-none"
           >
             <path
-              d={isRightSwing 
-                ? `M 0 0 L ${swingRadius} 0 A ${swingRadius} ${swingRadius} 0 0 1 0 ${swingRadius} Z`
-                : `M ${swingRadius} 0 L 0 0 A ${swingRadius} ${swingRadius} 0 0 0 ${swingRadius} ${swingRadius} Z`
-              }
+              d={(() => {
+                // Generate proper swing arc based on wall side and swing direction
+                switch (object.wallSide) {
+                  case 'top':
+                    return isRightSwing 
+                      ? `M 0 0 L ${swingRadius} 0 A ${swingRadius} ${swingRadius} 0 0 1 0 ${swingRadius}`
+                      : `M ${swingRadius} 0 L 0 0 A ${swingRadius} ${swingRadius} 0 0 0 ${swingRadius} ${swingRadius}`;
+                  case 'right':
+                    return isRightSwing 
+                      ? `M ${swingRadius} 0 L ${swingRadius} ${swingRadius} A ${swingRadius} ${swingRadius} 0 0 1 0 0`
+                      : `M ${swingRadius} ${swingRadius} L ${swingRadius} 0 A ${swingRadius} ${swingRadius} 0 0 0 0 ${swingRadius}`;
+                  case 'bottom':
+                    return isRightSwing 
+                      ? `M ${swingRadius} ${swingRadius} L 0 ${swingRadius} A ${swingRadius} ${swingRadius} 0 0 1 ${swingRadius} 0`
+                      : `M 0 ${swingRadius} L ${swingRadius} ${swingRadius} A ${swingRadius} ${swingRadius} 0 0 0 0 0`;
+                  case 'left':
+                    return isRightSwing 
+                      ? `M 0 ${swingRadius} L 0 0 A ${swingRadius} ${swingRadius} 0 0 1 ${swingRadius} ${swingRadius}`
+                      : `M 0 0 L 0 ${swingRadius} A ${swingRadius} ${swingRadius} 0 0 0 ${swingRadius} 0`;
+                  default:
+                    return '';
+                }
+              })()}
               fill="none"
               stroke="#FF6B35"
               strokeWidth="1.5"
