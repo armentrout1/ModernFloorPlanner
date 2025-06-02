@@ -18,6 +18,7 @@ import PropertyPanel from '@/components/PropertyPanel';
 import MaterialCalculationPanel from '@/components/MaterialCalculationPanel';
 import SaveSketchModal from '@/components/SaveSketchModal';
 import LoadSketchDialog from '@/components/LoadSketchDialog';
+import KeyboardShortcutsDialog from '@/components/KeyboardShortcutsDialog';
 import { ResizablePanels } from '@/components/ResizablePanels';
 import PanelHeaderControls from '@/components/PanelHeaderControls';
 import { Room, ObjectType } from '@/utils/types';
@@ -41,6 +42,7 @@ const FloorPlanner: React.FC = () => {
   const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
   const [isLoadDialogOpen, setIsLoadDialogOpen] = useState(false);
   const [showMaterialPanel, setShowMaterialPanel] = useState(false);
+  const [showKeyboardShortcuts, setShowKeyboardShortcuts] = useState(false);
   const { toast } = useToast();
 
   const handleNewSketch = () => {
@@ -326,6 +328,7 @@ const FloorPlanner: React.FC = () => {
         onToggleMaterialPanel={toggleMaterialPanel}
         showMaterialPanel={showMaterialPanel}
         canSave={rooms.length > 0}
+        onShowKeyboardShortcuts={() => setShowKeyboardShortcuts(true)}
       />
       
       {/* Panel controls header */}
@@ -411,6 +414,12 @@ const FloorPlanner: React.FC = () => {
         open={isLoadDialogOpen}
         onOpenChange={setIsLoadDialogOpen}
         onLoadSketch={handleLoadSketch}
+      />
+
+      {/* Keyboard Shortcuts Dialog */}
+      <KeyboardShortcutsDialog
+        open={showKeyboardShortcuts}
+        onOpenChange={setShowKeyboardShortcuts}
       />
     </div>
   );
