@@ -1533,15 +1533,17 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
         ref={wrapperRef} 
         className="w-full h-full overflow-auto bg-slate-100"
       >
-        <div style={{ padding: '2000px' }}>
-          <div
-            ref={canvasRef}
-            className="relative bg-white cursor-crosshair"
-            style={canvasStyle}
-            onMouseDown={handleCanvasMouseDown}
-            onMouseMove={handleCanvasMouseMove}
-            onMouseUp={handleCanvasMouseUp}
-            onMouseLeave={handleCanvasMouseUp}
+        <div
+          ref={canvasRef}
+          className="relative bg-white cursor-crosshair"
+          style={{
+            ...canvasStyle,
+            margin: '1000px', // Add margin for scroll space
+          }}
+          onMouseDown={handleCanvasMouseDown}
+          onMouseMove={handleCanvasMouseMove}
+          onMouseUp={handleCanvasMouseUp}
+          onMouseLeave={handleCanvasMouseUp}
             onTouchStart={handleCanvasTouchStart}
             onTouchMove={handleCanvasTouchMove}
             onTouchEnd={handleCanvasTouchEnd}
