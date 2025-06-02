@@ -100,10 +100,6 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
     previewPosition: null,
     targetWall: null,
   });
-
-  // Navigation state
-  const [isPanMode, setIsPanMode] = useState(false);
-  const [spacebarPressed, setSpacebarPressed] = useState(false);
   
   // Zoom functions
   const handleZoomIn = useCallback(() => {
@@ -127,84 +123,8 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
     }));
     
     if (wrapperRef.current) {
-      const canvasSize = 4000;
-      const margin = 200;
-      const totalSize = canvasSize + (margin * 2);
-      
-      const viewportWidth = wrapperRef.current.clientWidth;
-      const viewportHeight = wrapperRef.current.clientHeight;
-      
-      // Calculate center position dynamically
-      const centerX = (totalSize - viewportWidth) / 2;
-      const centerY = (totalSize - viewportHeight) / 2;
-      
-      wrapperRef.current.scrollLeft = centerX;
-      wrapperRef.current.scrollTop = centerY;
-    }
-  }, []);
-
-  // Fit all rooms to screen
-  const handleFitToScreen = useCallback(() => {
-    if (!wrapperRef.current || rooms.length === 0) return;
-    
-    // Find the bounds of all rooms
-    let minX = Infinity;
-    let minY = Infinity;
-    let maxX = -Infinity;
-    let maxY = -Infinity;
-    
-    rooms.forEach(room => {
-      minX = Math.min(minX, room.x);
-      minY = Math.min(minY, room.y);
-      maxX = Math.max(maxX, room.x + room.width);
-      maxY = Math.max(maxY, room.y + room.height);
-    });
-    
-    // Add padding
-    const padding = 100;
-    minX -= padding;
-    minY -= padding;
-    maxX += padding;
-    maxY += padding;
-    
-    // Get viewport dimensions
-    const viewportWidth = wrapperRef.current.clientWidth;
-    const viewportHeight = wrapperRef.current.clientHeight;
-    
-    // Calculate required scale to fit all rooms
-    const scaleX = viewportWidth / (maxX - minX);
-    const scaleY = viewportHeight / (maxY - minY);
-    const newScale = Math.min(scaleX, scaleY, 1); // Don't zoom in more than 1x
-    
-    // Set new scale
-    setState(prev => ({
-      ...prev,
-      scale: newScale,
-    }));
-    
-    // Center the view
-    const centerX = (minX + maxX) / 2;
-    const centerY = (minY + maxY) / 2;
-    
-    // Set scroll position after a short delay to allow scale change to apply
-    setTimeout(() => {
-      if (wrapperRef.current) {
-        wrapperRef.current.scrollLeft = centerX * newScale - viewportWidth / 2;
-        wrapperRef.current.scrollTop = centerY * newScale - viewportHeight / 2;
-      }
-    }, 10);
-  }, [rooms]);
-
-  // Toggle pan mode
-  const handleTogglePanMode = useCallback(() => {
-    setIsPanMode(prev => !prev);
-  }, []);
-
-  // Pan the canvas by a specific amount
-  const panCanvas = useCallback((deltaX: number, deltaY: number) => {
-    if (wrapperRef.current) {
-      wrapperRef.current.scrollLeft += deltaX;
-      wrapperRef.current.scrollTop += deltaY;
+      wrapperRef.current.scrollLeft = 0;
+      wrapperRef.current.scrollTop = 0;
     }
   }, []);
   
@@ -239,73 +159,13 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
       }));
     }
   }, [rooms, selectedRoomId, selectedObjectId, activeTool, placingObjectType]);
-
-  // Initialize scroll position to center the canvas
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (wrapperRef.current) {
-        const canvasSize = 4000;
-        const margin = 200;
-        const totalSize = canvasSize + (margin * 2);
-        
-        const viewportWidth = wrapperRef.current.clientWidth;
-        const viewportHeight = wrapperRef.current.clientHeight;
-        
-        // Calculate center position dynamically
-        const centerX = (totalSize - viewportWidth) / 2;
-        const centerY = (totalSize - viewportHeight) / 2;
-        
-        wrapperRef.current.scrollLeft = centerX;
-        wrapperRef.current.scrollTop = centerY;
-      }
-    }, 100);
-    
-    return () => clearTimeout(timer);
-  }, []);
   
-  // Enhanced keyboard navigation support
+  // Add keyboard shortcuts for canvas controls
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
         // Don't capture keyboard events when typing in form fields
         return;
-      }
-
-      const panDistance = e.ctrlKey ? 100 : 20; // Larger distance with Ctrl
-
-      switch (e.code) {
-        case 'Space':
-          e.preventDefault();
-          setSpacebarPressed(true);
-          break;
-        case 'ArrowUp':
-          e.preventDefault();
-          panCanvas(0, -panDistance);
-          break;
-        case 'ArrowDown':
-          e.preventDefault();
-          panCanvas(0, panDistance);
-          break;
-        case 'ArrowLeft':
-          e.preventDefault();
-          panCanvas(-panDistance, 0);
-          break;
-        case 'ArrowRight':
-          e.preventDefault();
-          panCanvas(panDistance, 0);
-          break;
-        case 'Home':
-          e.preventDefault();
-          handleFitToScreen();
-          break;
-        case 'PageUp':
-          e.preventDefault();
-          handleZoomIn();
-          break;
-        case 'PageDown':
-          e.preventDefault();
-          handleZoomOut();
-          break;
       }
 
       if (e.key === 'Delete' && selectedRoomId) {
@@ -796,17 +656,16 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
 
   // Handle spacebar + click for panning
   const handleCanvasMouseDown = (e: React.MouseEvent) => {
-    // PRIORITY 1: Check for panning first - trumps all other interactions
-    // Enhanced panning conditions:
-    // 1. Middle mouse button
-    // 2. Spacebar + left click
-    // 3. Pan mode + left click
-    // 4. Right mouse button
-    if (e.button === 1 || 
-        (e.button === 0 && spacebarPressed) || 
-        (e.button === 0 && isPanMode) ||
-        e.button === 2) {
-      
+    if (e.target !== canvasRef.current) return;
+    
+    const rect = canvasRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    
+    const x = (e.clientX - rect.left) / state.scale;
+    const y = (e.clientY - rect.top) / state.scale;
+    
+    // Middle mouse button or Spacebar + left click enables panning
+    if (e.button === 1 || (e.button === 0 && activeTool === 'move' && e.ctrlKey)) {
       setState(prev => ({
         ...prev,
         isPanning: true,
@@ -817,25 +676,7 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
       if (canvasRef.current) {
         canvasRef.current.style.cursor = 'grabbing';
       }
-      
-      // Prevent all default behaviors for panning
-      e.preventDefault();
-      e.stopPropagation();
-      
-      return; // Exit early to prevent other handlers
-    }
-    
-    // PRIORITY 2: Only proceed with other tools if not panning
-    // Check if click is on canvas for other interactions
-    if (e.target !== canvasRef.current) return;
-    
-    const rect = canvasRef.current?.getBoundingClientRect();
-    if (!rect) return;
-    
-    const x = (e.clientX - rect.left) / state.scale;
-    const y = (e.clientY - rect.top) / state.scale;
-    
-    if (activeTool === 'room') {
+    } else if (activeTool === 'room') {
       setState(prev => ({
         ...prev,
         isDrawing: true,
@@ -870,27 +711,6 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
   };
   
   const handleCanvasMouseMove = (e: React.MouseEvent) => {
-    // PRIORITY 1: Handle panning first - trumps all other interactions
-    if (state.isPanning && wrapperRef.current) {
-      // Calculate the delta change since last mouse position for panning
-      const dx = e.clientX - state.lastMouse.x;
-      const dy = e.clientY - state.lastMouse.y;
-      
-      // Pan by updating scroll position (invert direction for natural panning feel)
-      wrapperRef.current.scrollLeft -= dx;
-      wrapperRef.current.scrollTop -= dy;
-      
-      // Update last mouse position
-      setState(prev => ({
-        ...prev,
-        lastMouse: { x: e.clientX, y: e.clientY },
-      }));
-      
-      // Prevent default behavior to avoid any browser interference
-      e.preventDefault();
-      return;
-    }
-    
     const rect = canvasRef.current?.getBoundingClientRect();
     if (!rect) return;
     
@@ -954,7 +774,21 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
       return; // Early return to prevent other interactions during door drag
     }
     
-    if (state.isSelecting && state.selectStart) {
+    if (state.isPanning && wrapperRef.current) {
+      // Calculate the delta change since last mouse position for panning
+      const dx = e.clientX - state.lastMouse.x;
+      const dy = e.clientY - state.lastMouse.y;
+      
+      // Pan by updating scroll position
+      wrapperRef.current.scrollLeft -= dx;
+      wrapperRef.current.scrollTop -= dy;
+      
+      // Update last mouse position
+      setState(prev => ({
+        ...prev,
+        lastMouse: { x: e.clientX, y: e.clientY },
+      }));
+    } else if (state.isSelecting && state.selectStart) {
       // Update selection rectangle
       setState(prev => ({
         ...prev,
@@ -1469,11 +1303,11 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
     onSelectRoom(roomId);
   };
   
-  // Calculate canvas style based on scale with proper positioning for full panning
+  // Calculate canvas style based on scale
   const canvasStyle: React.CSSProperties = {
-    width: '4000px',
-    height: '4000px',
-    transformOrigin: 'center center',
+    width: '2000px',
+    height: '2000px',
+    transformOrigin: '0 0',
     transform: `scale(${state.scale})`,
     backgroundSize: `${GRID_SIZE}px ${GRID_SIZE}px`,
     backgroundImage: `
@@ -1488,21 +1322,9 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
         onZoomIn={handleZoomIn}
         onZoomOut={handleZoomOut}
         onResetZoom={handleResetZoom}
-        onFitToScreen={handleFitToScreen}
-        onTogglePanMode={handleTogglePanMode}
-        isPanMode={isPanMode}
       />
       
       <TotalAreaDisplay rooms={rooms} />
-      
-      {/* Navigation Status Indicator */}
-      {(spacebarPressed || isPanMode || state.isPanning) && (
-        <div className="absolute top-4 left-4 bg-blue-600 text-white px-3 py-2 rounded-md shadow-md z-20 text-sm">
-          {state.isPanning ? '🖐️ Panning...' : 
-           spacebarPressed ? '⌨️ Hold Space + Drag to Pan' : 
-           '🖱️ Pan Mode Active'}
-        </div>
-      )}
       
       {/* Canvas Navigation Controls */}
       <div className="absolute left-1/2 bottom-4 -translate-x-1/2 flex items-center gap-2 z-10 bg-white/90 rounded-full shadow-md px-4 py-2 border border-slate-200">
@@ -1563,18 +1385,15 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
         <div
           ref={canvasRef}
           className="relative bg-white cursor-crosshair"
-          style={{
-            ...canvasStyle,
-            margin: '200px', // Add reasonable margin for scroll space
-          }}
+          style={canvasStyle}
           onMouseDown={handleCanvasMouseDown}
           onMouseMove={handleCanvasMouseMove}
           onMouseUp={handleCanvasMouseUp}
           onMouseLeave={handleCanvasMouseUp}
-            onTouchStart={handleCanvasTouchStart}
-            onTouchMove={handleCanvasTouchMove}
-            onTouchEnd={handleCanvasTouchEnd}
-            onTouchCancel={handleCanvasTouchEnd}
+          onTouchStart={handleCanvasTouchStart}
+          onTouchMove={handleCanvasTouchMove}
+          onTouchEnd={handleCanvasTouchEnd}
+          onTouchCancel={handleCanvasTouchEnd}
         >
           {rooms.map(room => (
             <RoomBox
