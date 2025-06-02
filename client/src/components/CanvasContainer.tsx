@@ -127,11 +127,9 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
     }));
     
     if (wrapperRef.current) {
-      // Center the view in the expanded scroll area
-      const centerX = wrapperRef.current.scrollWidth / 2 - wrapperRef.current.clientWidth / 2;
-      const centerY = wrapperRef.current.scrollHeight / 2 - wrapperRef.current.clientHeight / 2;
-      wrapperRef.current.scrollLeft = centerX;
-      wrapperRef.current.scrollTop = centerY;
+      // Center the view in the scroll area (2000px padding)
+      wrapperRef.current.scrollLeft = 2000;
+      wrapperRef.current.scrollTop = 2000;
     }
   }, []);
 
@@ -231,6 +229,18 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
       }));
     }
   }, [rooms, selectedRoomId, selectedObjectId, activeTool, placingObjectType]);
+
+  // Initialize scroll position to center the canvas
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (wrapperRef.current) {
+        wrapperRef.current.scrollLeft = 2000;
+        wrapperRef.current.scrollTop = 2000;
+      }
+    }, 100);
+    
+    return () => clearTimeout(timer);
+  }, []);
   
   // Enhanced keyboard navigation support
   useEffect(() => {
@@ -1523,7 +1533,7 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
         ref={wrapperRef} 
         className="w-full h-full overflow-auto bg-slate-100"
       >
-        <div style={{ padding: '100vh 100vw' }}>
+        <div style={{ padding: '2000px' }}>
           <div
             ref={canvasRef}
             className="relative bg-white cursor-crosshair"
