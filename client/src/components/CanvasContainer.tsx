@@ -849,6 +849,27 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
   };
   
   const handleCanvasMouseMove = (e: React.MouseEvent) => {
+    // PRIORITY 1: Handle panning first - trumps all other interactions
+    if (state.isPanning && wrapperRef.current) {
+      // Calculate the delta change since last mouse position for panning
+      const dx = e.clientX - state.lastMouse.x;
+      const dy = e.clientY - state.lastMouse.y;
+      
+      // Pan by updating scroll position (invert direction for natural panning feel)
+      wrapperRef.current.scrollLeft -= dx;
+      wrapperRef.current.scrollTop -= dy;
+      
+      // Update last mouse position
+      setState(prev => ({
+        ...prev,
+        lastMouse: { x: e.clientX, y: e.clientY },
+      }));
+      
+      // Prevent default behavior to avoid any browser interference
+      e.preventDefault();
+      return;
+    }
+    
     const rect = canvasRef.current?.getBoundingClientRect();
     if (!rect) return;
     
@@ -912,25 +933,7 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
       return; // Early return to prevent other interactions during door drag
     }
     
-    if (state.isPanning && wrapperRef.current) {
-      // Calculate the delta change since last mouse position for panning
-      const dx = e.clientX - state.lastMouse.x;
-      const dy = e.clientY - state.lastMouse.y;
-      
-      // Pan by updating scroll position (invert direction for natural panning feel)
-      wrapperRef.current.scrollLeft -= dx;
-      wrapperRef.current.scrollTop -= dy;
-      
-      // Update last mouse position
-      setState(prev => ({
-        ...prev,
-        lastMouse: { x: e.clientX, y: e.clientY },
-      }));
-      
-      // Prevent default behavior to avoid any browser interference
-      e.preventDefault();
-      return;
-    } else if (state.isSelecting && state.selectStart) {
+    if (state.isSelecting && state.selectStart) {
       // Update selection rectangle
       setState(prev => ({
         ...prev,
