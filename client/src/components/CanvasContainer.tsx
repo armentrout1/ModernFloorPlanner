@@ -1822,7 +1822,6 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
           {state.isPreviewMode && (
             <PreviewMode rooms={rooms} scale={state.scale} />
           )}
-          </div>
         </div>
       </div>
     </main>
