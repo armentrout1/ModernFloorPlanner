@@ -127,9 +127,19 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
     }));
     
     if (wrapperRef.current) {
-      // Center the view in the scroll area (2000px padding)
-      wrapperRef.current.scrollLeft = 2000;
-      wrapperRef.current.scrollTop = 2000;
+      const canvasSize = 4000;
+      const margin = 200;
+      const totalSize = canvasSize + (margin * 2);
+      
+      const viewportWidth = wrapperRef.current.clientWidth;
+      const viewportHeight = wrapperRef.current.clientHeight;
+      
+      // Calculate center position dynamically
+      const centerX = (totalSize - viewportWidth) / 2;
+      const centerY = (totalSize - viewportHeight) / 2;
+      
+      wrapperRef.current.scrollLeft = centerX;
+      wrapperRef.current.scrollTop = centerY;
     }
   }, []);
 
@@ -234,8 +244,19 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
   useEffect(() => {
     const timer = setTimeout(() => {
       if (wrapperRef.current) {
-        wrapperRef.current.scrollLeft = 2000;
-        wrapperRef.current.scrollTop = 2000;
+        const canvasSize = 4000;
+        const margin = 200;
+        const totalSize = canvasSize + (margin * 2);
+        
+        const viewportWidth = wrapperRef.current.clientWidth;
+        const viewportHeight = wrapperRef.current.clientHeight;
+        
+        // Calculate center position dynamically
+        const centerX = (totalSize - viewportWidth) / 2;
+        const centerY = (totalSize - viewportHeight) / 2;
+        
+        wrapperRef.current.scrollLeft = centerX;
+        wrapperRef.current.scrollTop = centerY;
       }
     }, 100);
     
@@ -1452,7 +1473,7 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
   const canvasStyle: React.CSSProperties = {
     width: '4000px',
     height: '4000px',
-    transformOrigin: '0 0',
+    transformOrigin: 'center center',
     transform: `scale(${state.scale})`,
     backgroundSize: `${GRID_SIZE}px ${GRID_SIZE}px`,
     backgroundImage: `
