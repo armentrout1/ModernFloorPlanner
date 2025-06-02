@@ -1538,7 +1538,7 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
           className="relative bg-white cursor-crosshair"
           style={{
             ...canvasStyle,
-            margin: '1000px', // Add margin for scroll space
+            margin: '200px', // Add reasonable margin for scroll space
           }}
           onMouseDown={handleCanvasMouseDown}
           onMouseMove={handleCanvasMouseMove}
