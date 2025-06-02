@@ -128,8 +128,10 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
     
     if (wrapperRef.current) {
       // Center the view in the expanded scroll area
-      wrapperRef.current.scrollLeft = 1000;
-      wrapperRef.current.scrollTop = 1000;
+      const centerX = wrapperRef.current.scrollWidth / 2 - wrapperRef.current.clientWidth / 2;
+      const centerY = wrapperRef.current.scrollHeight / 2 - wrapperRef.current.clientHeight / 2;
+      wrapperRef.current.scrollLeft = centerX;
+      wrapperRef.current.scrollTop = centerY;
     }
   }, []);
 
@@ -1521,18 +1523,19 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
         ref={wrapperRef} 
         className="w-full h-full overflow-auto bg-slate-100"
       >
-        <div
-          ref={canvasRef}
-          className="relative bg-white cursor-crosshair"
-          style={canvasStyle}
-          onMouseDown={handleCanvasMouseDown}
-          onMouseMove={handleCanvasMouseMove}
-          onMouseUp={handleCanvasMouseUp}
-          onMouseLeave={handleCanvasMouseUp}
-          onTouchStart={handleCanvasTouchStart}
-          onTouchMove={handleCanvasTouchMove}
-          onTouchEnd={handleCanvasTouchEnd}
-          onTouchCancel={handleCanvasTouchEnd}
+        <div style={{ padding: '100vh 100vw' }}>
+          <div
+            ref={canvasRef}
+            className="relative bg-white cursor-crosshair"
+            style={canvasStyle}
+            onMouseDown={handleCanvasMouseDown}
+            onMouseMove={handleCanvasMouseMove}
+            onMouseUp={handleCanvasMouseUp}
+            onMouseLeave={handleCanvasMouseUp}
+            onTouchStart={handleCanvasTouchStart}
+            onTouchMove={handleCanvasTouchMove}
+            onTouchEnd={handleCanvasTouchEnd}
+            onTouchCancel={handleCanvasTouchEnd}
         >
           {rooms.map(room => (
             <RoomBox
@@ -1807,6 +1810,7 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
           {state.isPreviewMode && (
             <PreviewMode rooms={rooms} scale={state.scale} />
           )}
+          </div>
         </div>
       </div>
     </main>
