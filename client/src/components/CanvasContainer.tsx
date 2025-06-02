@@ -775,14 +775,7 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
 
   // Handle spacebar + click for panning
   const handleCanvasMouseDown = (e: React.MouseEvent) => {
-    if (e.target !== canvasRef.current) return;
-    
-    const rect = canvasRef.current?.getBoundingClientRect();
-    if (!rect) return;
-    
-    const x = (e.clientX - rect.left) / state.scale;
-    const y = (e.clientY - rect.top) / state.scale;
-    
+    // PRIORITY 1: Check for panning first - trumps all other interactions
     // Enhanced panning conditions:
     // 1. Middle mouse button
     // 2. Spacebar + left click
@@ -792,8 +785,6 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
         (e.button === 0 && spacebarPressed) || 
         (e.button === 0 && isPanMode) ||
         e.button === 2) {
-      
-
       
       setState(prev => ({
         ...prev,
@@ -811,7 +802,19 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
       e.stopPropagation();
       
       return; // Exit early to prevent other handlers
-    } else if (activeTool === 'room') {
+    }
+    
+    // PRIORITY 2: Only proceed with other tools if not panning
+    // Check if click is on canvas for other interactions
+    if (e.target !== canvasRef.current) return;
+    
+    const rect = canvasRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    
+    const x = (e.clientX - rect.left) / state.scale;
+    const y = (e.clientY - rect.top) / state.scale;
+    
+    if (activeTool === 'room') {
       setState(prev => ({
         ...prev,
         isDrawing: true,
