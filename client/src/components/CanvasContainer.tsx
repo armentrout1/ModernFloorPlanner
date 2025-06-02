@@ -1441,8 +1441,6 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
       linear-gradient(to right, rgba(209, 213, 219, 0.3) 1px, transparent 1px),
       linear-gradient(to bottom, rgba(209, 213, 219, 0.3) 1px, transparent 1px)
     `,
-    // Add margin to ensure scroll area on all sides
-    margin: '1000px',
   };
   
   return (
