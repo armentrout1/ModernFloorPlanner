@@ -1,16 +1,14 @@
 # Product ecosystem: start here
 
-This repository participates in the **Master Product Ecosystem Blueprint v1.0**, dated September 4, 2026.
+Active blueprint package: **v1.1 — My Way**, 2026-09-05.
 
-Read in this order:
+Read:
+1. [My Way workflow and controlling amendment](docs/ecosystem/MY_WAY_WORKFLOW.md)
+2. [Master product architecture v1.0](docs/ecosystem/MASTER_PRODUCT_ECOSYSTEM_BLUEPRINT.md)
+3. [Capability dependencies](docs/ecosystem/CAPABILITY_DEPENDENCIES.md)
+4. [Product roadmap](docs/ecosystem/PRODUCT_ROADMAP.md)
+5. [Repo-local workspace and parallel rules](docs/ecosystem/WORKSPACE_AND_PARALLEL_BUILD_RULES.md)
 
-1. [Master architecture and product boundaries](docs/ecosystem/MASTER_PRODUCT_ECOSYSTEM_BLUEPRINT.md)
-2. [Cross-product capability dependencies](docs/ecosystem/CAPABILITY_DEPENDENCIES.md)
-3. [This product's roadmap](docs/ecosystem/PRODUCT_ROADMAP.md)
-4. [Workspace and parallel-build rules](docs/ecosystem/WORKSPACE_AND_PARALLEL_BUILD_RULES.md)
+The My Way amendment supersedes old instructions about a control folder, combined workspace, documentation-branch-only delivery or mandatory staging/preview. Keep separate product repositories, local folders and product chats. Ordinary authorized releases go to the verified production branch. Specialized engines and UI stay in their owning products.
 
-FixDoneNow is the initial integration/reference application, not the owner of every engine. LedgerLine, ProjectRoll, and the drawing product remain independently usable and commercially separable products. Stripe is an external provider, not an owned repository.
-
-The canonical shared architecture and dependency register live in `armentrout1/fixdonenow` at the paths above. Other repositories carry versioned copies. A copy is not an automatic synchronization service. A coordinator must reconcile mirrors when shared contracts change.
-
-This addition is documentation and working agreements only. Existing product roadmaps remain relevant within their domains. No application, database, credential, customer, or production configuration is changed by this blueprint.
+Canonical shared policy: `armentrout1/fixdonenow`, these paths on `main`. Other products carry mirrored policy. Cross-product execution tasks live as issues in the owning repository; the dependency register links capabilities, not duplicate task queues. No automatic worker or chat synchronization is installed by these documents. Local paths remain unverified until a local agent checks them.

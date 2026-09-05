@@ -1,42 +1,15 @@
-# Workspace and parallel-build rules
+# Repo-local workspace and parallel-build rules
 
-Blueprint version: 1.0. This portable document contains no machine-specific secrets or absolute user paths.
+Active package v1.1. Read `MY_WAY_WORKFLOW.md` first. No ecosystem-control folder, shared repository or required multi-root workspace.
 
-## Repository registry
+Use `REPOSITORIES.json` for product-to-GitHub identity. Store verified machine roots in an ignored `.ecosystem.local.json` inside each existing checkout as needed; add it to local Git exclusions before writing. Never put Windows usernames/paths, database URLs, tokens or private inventory in public commits. No secrets belong in this file.
 
-| Product key | Expected GitHub remote identity | Machine registry key | Selection |
-| --- | --- | --- | --- |
-| fixdonenow | armentrout1/fixdonenow | FIXDONENOW_ROOT | Known product; historical duplicate checkouts require selection |
-| ledgerline | armentrout1/ledgerline | LEDGERLINE_ROOT | Known product; prior exact local root available |
-| projectroll | armentrout1/projectroll | PROJECTROLL_ROOT | Known photo product; historical root available |
-| drawing | armentrout1/ModernFloorPlanner | DRAWING_ROOT | Candidate; local root and final product choice not verified |
+At setup and before edits verify: actual root, normalized origin, branch, HEAD, upstream, dirty status and worktree relationship. Preserve local-only commits, stashes and untracked work. A historical path is a search candidate, not current proof. Do not move, rename, reset, clean or clone repos merely for uniform folder names. Missing or multiple roots get a precise unresolved note.
 
-Record exact machine paths in a private local `workspace-registry.json` outside the repositories, or a private-only registry. Never publish usernames, local inventory, credentials, database URLs or private deployment configuration into a public repository. Do not change repository visibility as part of workspace setup.
+A cross-repo task explicitly identifies its target and reads the target instructions. Access must be permitted by the execution environment; changing directories does not expand it. Keep commands scoped to the intended root. Keep separate product chats as the default; authorized cross-repo work is allowed when supported, not guaranteed by a document.
 
-For each checkout record: observed root, normalized remote identity, branch, HEAD, upstream, clean/dirty status, worktree/common-Git-directory relationship, stash count, timestamp, selected purpose, and whether it is canonical or a worker checkout. Historical paths are search candidates, not current filesystem proof.
+One writer per checkout and one publishing owner per repository. Workers in different repos may run concurrently. Check open ecosystem issues for in-progress work before claiming a task. Reconcile remote changes without force; do not share a dirty working tree. Use separate worktrees only when deliberately needed for same-repo parallelism, not as a new staging prerequisite.
 
-## Locate before creating
+Worker handoff: originating request; owner repo/issue; capability ID; verified root/remote; current SHA; authorized scope; compatible interface version; reproduction and acceptance; producer commit/deployment; consumer result. READY does not mean a worker started.
 
-Inspect known paths first, then relevant local Codex/GitHub/project directories for `.git` directories AND worktree `.git` files. Resolve `git rev-parse --show-toplevel` and remote identity. Never choose a folder merely because its name resembles the product.
-
-Preserve all dirty files, stashes, local-only commits and worktrees. Do not move, rename, delete, reset or clean existing checkouts. Do not create new clones before resolving existing candidates. If a checkout truly does not exist, clone the verified repository into an explicitly chosen empty directory; do not initialize an unrelated new repository. A limited or failed search is not proof of absence.
-
-One private editor workspace may point at all selected existing directories. It is a navigation file, not a fifth codebase and not a reason to relocate repositories. Record optional clean worker-worktree paths separately from canonical checkouts.
-
-## Before every worker
-
-Verify current path, root, normalized origin, branch, HEAD, upstream and status. Read `ECOSYSTEM.md`, this product's roadmap and assigned requirement IDs. Confirm the intended environment without printing values. Refuse unexpected roots, dirty overlap or unauthorized production configuration.
-
-Assign one writer per checkout. Concurrent same-repository tasks require independent branches/worktrees and a named integrator. Stop for actual overlap; do not overwrite another worker's edits. Cross-product contracts are owned by their producer and coordinated through the shared register.
-
-## Worker packet and return contract
-
-Packet: product; requirement IDs; verified local root; expected remote; base SHA; task branch; owned files; API/UI/schema version; dependencies; tests; release scope; explicit exclusions.
-
-Return: changed behavior and files; commit and push; actual validation commands/results; interface changes; consumer impact; unresolved requirements; production actions actually performed; next owner. Never label source checks as browser, database, or deployed integration proof.
-
-## Shared-document synchronization
-
-Canonical master and dependency register: FixDoneNow. Copies in other products must match its approved version byte-for-byte. Product roadmaps are product-specific. Record shared-file hashes and canonical commit in the handoff manifest. Synchronization is a deliberate coordinator action, not an already-running background process.
-
-Keep each application's existing runtime/toolchain; there is no ecosystem-wide Node upgrade requirement. Do not move secrets between products. Test dependencies using actual supported interfaces, not cross-database access or forced readiness flags.
+Read portable policy and product roadmap at session start, and reread after an authorized repo switch. Do not assume running sessions automatically reload changed instructions. Sync local main normally; remote documentation commits do not alter local folders. Historical v1 documentation branches are not the current operating instructions once v1.1 is on main.

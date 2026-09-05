@@ -1,0 +1,13 @@
+{
+  "blueprint_package": "1.1",
+  "canonical_policy_repo": "armentrout1/fixdonenow",
+  "local_map_filename": ".ecosystem.local.json",
+  "control_folder": null,
+  "repositories": [
+    {"product": "fixdonenow", "repository": "armentrout1/fixdonenow", "delivery_branch": "main", "owns": ["CRM", "jobs", "marketplace", "host workflow", "integration adapters"]},
+    {"product": "ledgerline", "repository": "armentrout1/ledgerline", "delivery_branch": "main", "owns": ["estimates", "invoices", "financial UI", "accounting"]},
+    {"product": "projectroll", "repository": "armentrout1/projectroll", "delivery_branch": "main", "owns": ["photos", "annotations", "media storage", "photo reports"], "broad_build_status": "parked_until_activated"},
+    {"product": "drawing", "repository": "armentrout1/ModernFloorPlanner", "delivery_branch": "main", "selection": "provisional", "owns": ["geometry", "measurements", "takeoffs", "drawing UI"], "broad_build_status": "parked_until_activated"}
+  ],
+  "note": "Delivery branches are repository targets, not evidence of successful deployments. Verify deployment bindings before releasing application changes. Local roots require local verification."
+}
