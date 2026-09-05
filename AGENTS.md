@@ -1,0 +1,3 @@
+# Repository working agreement
+
+For ecosystem or cross-product work, first read `ECOSYSTEM.md` and the documents it links. Reuse capabilities from their owning product; do not fork another product's engine or UI into this repository. Verify the actual local Git root, remote, branch, and working tree before edits. Never infer a checkout from a folder name. Respect task-specific authorization and existing security policies. The ecosystem roadmap is not permission to deploy, move money, change secrets, or implement every planned feature. Photo and drawing implementation remains parked until explicitly activated.
