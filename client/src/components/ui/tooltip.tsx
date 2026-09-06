@@ -26,16 +26,31 @@ const Tooltip = ({
   defaultOpen = false, 
   open, 
   onOpenChange,
+  autoClose = true,
+  autoCloseDelay = 3000,
   ...props 
 }: TooltipPrimitive.TooltipProps & { 
   autoClose?: boolean;
   autoCloseDelay?: number;
 }) => {
+  const [internalOpen, setInternalOpen] = React.useState(defaultOpen);
+  const isOpen = open ?? internalOpen;
+  const changeOpen = React.useCallback((nextOpen: boolean) => {
+    if (open === undefined) setInternalOpen(nextOpen);
+    onOpenChange?.(nextOpen);
+  }, [open, onOpenChange]);
+
+  // Close only this tooltip. Synthetic Escape would dismiss unrelated dialogs/menus.
+  React.useEffect(() => {
+    if (!isOpen || !autoClose) return;
+    const timer = setTimeout(() => changeOpen(false), autoCloseDelay);
+    return () => clearTimeout(timer);
+  }, [isOpen, autoClose, autoCloseDelay, changeOpen]);
+
   return (
     <TooltipPrimitive.Root
-      defaultOpen={defaultOpen}
-      open={open}
-      onOpenChange={onOpenChange}
+      open={isOpen}
+      onOpenChange={changeOpen}
       {...props}
     />
   )
@@ -81,36 +96,10 @@ const CenteredTooltipContent = React.forwardRef<
     offsetY?: number;
   }
 >(({ className, offsetY = 0, ...props }, ref) => {
-  // State to track if tooltip was shown at least once
-  const [hasShown, setHasShown] = React.useState(false);
-  
-  // Set hasShown to true when tooltip is shown
-  React.useEffect(() => {
-    const timer = setTimeout(() => {
-      setHasShown(true);
-    }, 100);
-    
-    return () => clearTimeout(timer);
-  }, []);
-  
-  // Auto-hide the tooltip after a delay
-  React.useEffect(() => {
-    if (hasShown) {
-      const timer = setTimeout(() => {
-        // Dispatch ESC key event to close the tooltip
-        document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
-      }, 3000);
-      
-      return () => clearTimeout(timer);
-    }
-  }, [hasShown]);
-  
   return (
     <TooltipPrimitive.Portal>
       <div 
-        className={`fixed inset-0 flex items-center justify-center pointer-events-none z-50 ${
-          hasShown ? 'animate-in fade-in-0' : ''
-        }`}
+        className="fixed inset-0 flex items-center justify-center pointer-events-none z-50"
         style={{ 
           // Apply vertical offset if specified
           transform: offsetY ? `translateY(${offsetY}px)` : 'none'

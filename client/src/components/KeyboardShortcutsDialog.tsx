@@ -28,6 +28,8 @@ const shortcuts: KeyboardShortcut[] = [
   { keys: ['Escape'], description: 'Deselect all items / Exit preview mode', category: 'Edit' },
   { keys: ['Shift', 'Click'], description: 'Multi-select rooms', category: 'Edit' },
   
+  { keys: ['Ctrl/Cmd', 'Z'], description: 'Undo last room or opening deletion in this sketch session', category: 'Edit' },
+
   // Navigation & View
   { keys: ['Mouse Wheel'], description: 'Zoom in/out', category: 'Navigation' },
   { keys: ['Space', 'Drag'], description: 'Pan canvas', category: 'Navigation' },

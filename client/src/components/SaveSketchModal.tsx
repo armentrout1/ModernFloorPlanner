@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -34,9 +34,13 @@ const SaveSketchModal: React.FC<SaveSketchModalProps> = ({
   const { toast } = useToast();
   const [sketchName, setSketchName] = useState(currentSketchName);
 
+  const saving = useRef(false);
+  // Reset only when changing sketches; reopening a failed save preserves the draft name.
+  useEffect(() => { setSketchName(currentSketchName); }, [currentSketchId, currentSketchName]);
   const [isSaving, setIsSaving] = useState(false);
 
   const handleSave = async () => {
+    if (saving.current) return;
     if (!sketchName.trim()) {
       toast({
         title: 'Sketch name required',
@@ -47,6 +51,7 @@ const SaveSketchModal: React.FC<SaveSketchModalProps> = ({
     }
 
     // Save the sketch
+    saving.current = true;
     setIsSaving(true);
     try {
       const savedSketch = await saveSketch(sketchName, rooms, currentSketchId);
@@ -66,18 +71,20 @@ const SaveSketchModal: React.FC<SaveSketchModalProps> = ({
         variant: 'destructive',
       });
     } finally {
+      saving.current = false;
       setIsSaving(false);
     }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
+    if (e.key === 'Enter' && !e.repeat && !e.nativeEvent.isComposing) {
+      e.preventDefault();
       handleSave();
     }
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={nextOpen => { if (!saving.current) onOpenChange(nextOpen); }}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>Save Sketch</DialogTitle>
@@ -89,6 +96,7 @@ const SaveSketchModal: React.FC<SaveSketchModalProps> = ({
             </Label>
             <Input
               id="sketch-name"
+              disabled={isSaving}
               value={sketchName}
               onChange={(e) => setSketchName(e.target.value)}
               onKeyDown={handleKeyDown}
@@ -103,7 +111,7 @@ const SaveSketchModal: React.FC<SaveSketchModalProps> = ({
         </div>
         <DialogFooter>
           <DialogClose asChild>
-            <Button variant="outline">Cancel</Button>
+            <Button variant="outline" disabled={isSaving}>Cancel</Button>
           </DialogClose>
           <Button 
             onClick={handleSave} 

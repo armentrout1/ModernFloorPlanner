@@ -3,6 +3,8 @@ import { Button } from '@/components/ui/button';
 import { FileIcon, SaveIcon, FolderOpenIcon, CalculatorIcon, Keyboard } from 'lucide-react';
 
 interface AppHeaderProps {
+  onUndoDelete: () => void;
+  canUndoDelete: boolean;
   onNewSketch: () => void;
   onSaveSketch: () => void;
   onLoadSketch: () => void;
@@ -13,6 +15,8 @@ interface AppHeaderProps {
 }
 
 const AppHeader: React.FC<AppHeaderProps> = ({ 
+  onUndoDelete,
+  canUndoDelete,
   onNewSketch, 
   onSaveSketch, 
   onLoadSketch,
@@ -27,6 +31,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({
         <h1 className="text-xl font-bold text-primary">Modern Floor Planner</h1>
       </div>
       <div className="flex items-center space-x-3">
+        <Button onClick={onUndoDelete} disabled={!canUndoDelete} variant="outline" title="Restore the last deletion (Ctrl/Cmd+Z)">Undo delete</Button>
         <Button 
           onClick={onShowKeyboardShortcuts}
           variant="outline"

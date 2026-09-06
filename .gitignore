@@ -4,3 +4,6 @@ dist
 server/public
 vite.config.ts.*
 *.tar.gz
+# Local automated acceptance evidence
+/test-results/
+/playwright-report/

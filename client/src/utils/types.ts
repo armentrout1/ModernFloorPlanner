@@ -31,8 +31,8 @@ export interface DoorProperties {
   style: DoorStyle;
   swingDirection: SwingDirection;
   swingSide: SwingSide;
-  width: number; // Width in pixels (converted from inches)
-  height: number; // Height in pixels (converted from inches)
+  width: number; // Entered width in inches; RoomObject.size remains pixels
+  height: number; // Entered height in inches
 }
 
 export interface RoomObject {

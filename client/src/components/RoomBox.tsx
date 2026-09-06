@@ -258,6 +258,7 @@ const RoomBox: React.FC<RoomBoxProps> = ({
   
   return (
     <div 
+      data-testid={`room-${room.id}`}
       className={`room-box ${isTouching ? 'room-touching' : ''}`}
       style={{
         ...roomStyle,
@@ -294,6 +295,7 @@ const RoomBox: React.FC<RoomBoxProps> = ({
         return (
           <div
             key={handle}
+            data-testid={`resize-${room.id}-${handle}`}
             className="absolute resize-handle w-3 h-3 bg-white border-2 border-blue-500 rounded-sm cursor-nwse-resize z-20 
                       shadow-md hover:bg-blue-100 active:bg-blue-200"
             style={{

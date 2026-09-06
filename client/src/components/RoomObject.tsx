@@ -149,6 +149,10 @@ const RoomObject = ({ room, object, scale, isSelected, onSelect, onDragStart }: 
               return styles;
             })())
           }}
+          data-testid={`opening-${object.id}`}
+          data-opening-type={object.type}
+          data-wall-side={object.wallSide}
+          onClick={event => event.stopPropagation()}
           onMouseDown={handleMouseDown}
           onTouchStart={handleTouchStart}
           onTouchEnd={handleTouchEnd}
@@ -264,6 +268,10 @@ const RoomObject = ({ room, object, scale, isSelected, onSelect, onDragStart }: 
               return styles;
             })())
           }}
+          data-testid={`opening-${object.id}`}
+          data-opening-type={object.type}
+          data-wall-side={object.wallSide}
+          onClick={event => event.stopPropagation()}
           onMouseDown={handleMouseDown}
           onTouchStart={handleTouchStart}
           onTouchEnd={handleTouchEnd}

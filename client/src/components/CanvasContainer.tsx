@@ -12,6 +12,7 @@
 
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { Room, Position, ResizeHandle, CanvasState, ObjectType, WallSide } from '@/utils/types';
+import { shouldIgnoreEditorShortcut } from '@/utils/keyboard';
 import CanvasControls from './CanvasControls';
 import RoomBox from './RoomBox';
 import RoomObject from './RoomObject';
@@ -163,17 +164,13 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
   // Add keyboard shortcuts for canvas controls
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+      if (shouldIgnoreEditorShortcut(e) || e.ctrlKey || e.metaKey || e.altKey) {
         // Don't capture keyboard events when typing in form fields
         return;
       }
 
-      if (e.key === 'Delete' && selectedRoomId) {
-        // Delete the selected room
-        const newRooms = rooms.filter(room => room.id !== selectedRoomId);
-        onRoomsChange(newRooms);
-        onSelectRoom(null);
-      } else if (e.key === ' ' && !state.isPanning) {
+      if (e.key === ' ' && !state.isPanning) {
+        e.preventDefault();
         // Space bar - toggle panning mode
         setState(prev => ({ ...prev, isPanning: true }));
         
@@ -1322,6 +1319,9 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
         onZoomIn={handleZoomIn}
         onZoomOut={handleZoomOut}
         onResetZoom={handleResetZoom}
+        onFitToScreen={handleResetView}
+        onTogglePanMode={() => setState(previous => ({ ...previous, isPanning: !previous.isPanning }))}
+        isPanMode={state.isPanning}
       />
       
       <TotalAreaDisplay rooms={rooms} />

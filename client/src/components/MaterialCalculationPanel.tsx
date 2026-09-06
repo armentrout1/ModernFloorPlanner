@@ -24,6 +24,20 @@ const MaterialCalculationPanel: React.FC<MaterialCalculationPanelProps> = ({ roo
     <div className="w-80 bg-white border-l border-slate-200 overflow-y-auto p-4">
       <h2 className="text-lg font-semibold mb-3">Material Calculations</h2>
       
+      {materials.widthWarnings.length > 0 && (
+        <div role="status" className="mb-4 rounded border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950">
+          <p className="font-semibold">Review saved door widths</p>
+          <p>These doors have conflicting saved widths. Trim uses the entered width. Select each door and confirm its width in Properties.</p>
+          <ul className="mt-2 space-y-1">
+            {materials.widthWarnings.map(warning => (
+              <li key={`${warning.roomId}:${warning.doorId}`}>
+                {warning.roomName}, {warning.wallSide} wall: entered {warning.enteredWidthInches.toLocaleString(undefined, { maximumFractionDigits: 6 })} in; sketch {warning.sketchWidthInches.toLocaleString(undefined, { maximumFractionDigits: 6 })} in.
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       <Card className="mb-4">
         <CardHeader className="py-4">
           <CardTitle className="text-base">Floor Area</CardTitle>
@@ -89,7 +103,7 @@ const MaterialCalculationPanel: React.FC<MaterialCalculationPanelProps> = ({ roo
               <TableBody>
                 {materials.doorSizes.map((doorSize, index) => (
                   <TableRow key={index}>
-                    <TableCell>{doorSize.width.toFixed(1)} ft</TableCell>
+                    <TableCell>{(doorSize.width * 12).toLocaleString(undefined, { maximumFractionDigits: 6 })} in</TableCell>
                     <TableCell>{doorSize.count}</TableCell>
                   </TableRow>
                 ))}

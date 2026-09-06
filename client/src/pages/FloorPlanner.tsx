@@ -11,6 +11,8 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { deleteSelection, restoreDeletion, type DeletedItem } from '@/utils/editorCommands';
+import { shouldIgnoreEditorShortcut } from '@/utils/keyboard';
 import AppHeader from '@/components/AppHeader';
 import Sidebar from '@/components/Sidebar';
 import CanvasContainer from '@/components/CanvasContainer';
@@ -33,8 +35,13 @@ import {
 
 const FloorPlanner: React.FC = () => {
   const [rooms, setRooms] = useState<Room[]>([]);
-  const [selectedRoomId, setSelectedRoomId] = useState<string | null>(null);
+  const [deletions, setDeletions] = useState<DeletedItem[]>([]);
+  const [roomSelectionId, setSelectedRoomId] = useState<string | null>(null);
   const [selectedObjectId, setSelectedObjectId] = useState<string | null>(null);
+  // An opening's current parent remains authoritative after a cross-room drag.
+  const selectedRoomId = selectedObjectId
+    ? rooms.find(room => room.objects?.some(object => object.id === selectedObjectId))?.id ?? null
+    : roomSelectionId;
   const [activeTool, setActiveTool] = useState<string>('room');
   const [placingObjectType, setPlacingObjectType] = useState<ObjectType | null>(null);
   const [currentSketchId, setCurrentSketchId] = useState<number | undefined>(undefined);
@@ -48,6 +55,7 @@ const FloorPlanner: React.FC = () => {
   const handleNewSketch = () => {
     if (rooms.length === 0 || window.confirm('This will clear your current sketch. Continue?')) {
       setRooms([]);
+      setDeletions([]);
       setSelectedRoomId(null);
       setSelectedObjectId(null);
       setCurrentSketchId(undefined);
@@ -203,6 +211,8 @@ const FloorPlanner: React.FC = () => {
   
   const handleSelectObject = (objectId: string | null) => {
     setSelectedObjectId(objectId);
+    const parent = rooms.find(room => room.objects?.some(object => object.id === objectId));
+    if (parent) setSelectedRoomId(parent.id);
   };
 
   const handleUpdateRoom = (roomId: string, updates: Partial<Room>) => {
@@ -234,6 +244,8 @@ const FloorPlanner: React.FC = () => {
   };
 
   const handleLoadSketch = (sketch: SavedSketch) => {
+    if (rooms.length && !window.confirm("Replace the current sketch? Save any changes you want to keep first.")) return;
+    setDeletions([]);
     // Clear the current state
     setSelectedRoomId(null);
     setSelectedObjectId(null);
@@ -250,57 +262,46 @@ const FloorPlanner: React.FC = () => {
   };
   
   const handleDeleteSelectedRoom = () => {
-    if (selectedRoomId) {
-      // Delete the selected room from the rooms array
-      setRooms(currentRooms => currentRooms.filter(room => room.id !== selectedRoomId));
-      setSelectedRoomId(null);
-      setSelectedObjectId(null);
-      
-      toast({
-        title: 'Room deleted',
-        description: 'The selected room has been deleted.',
-      });
-    } else if (selectedObjectId && selectedRoom) {
-      // If an object is selected but not a room, delete the object
-      const updatedObjects = selectedRoom.objects?.filter(obj => obj.id !== selectedObjectId) || [];
-      handleUpdateRoom(selectedRoom.id, { objects: updatedObjects });
-      setSelectedObjectId(null);
-      
-      toast({
-        title: 'Object deleted',
-        description: 'The selected object has been deleted.',
-      });
-    }
+    const result = deleteSelection(rooms, selectedRoomId, selectedObjectId);
+    if (!result) return;
+    setRooms(result.rooms);
+    setDeletions(previous => [...previous.slice(-19), result.deleted]);
+    setSelectedObjectId(null);
+    setSelectedRoomId(result.deleted.kind === 'room' ? null : result.deleted.roomId);
+    toast({ title: result.deleted.kind === 'room' ? 'Room deleted' : 'Opening deleted',
+      description: 'Use Undo delete to restore it during this sketch session.' });
   };
-  
-  // Set up keyboard event listeners
+
+  const handleUndoDelete = () => {
+    const deleted = deletions.at(-1);
+    if (!deleted) return;
+    const restored = restoreDeletion(rooms, deleted);
+    if (!restored) return;
+    setRooms(restored);
+    setDeletions(previous => previous.slice(0, -1));
+    setSelectedRoomId(deleted.kind === 'room' ? deleted.room.id : deleted.roomId);
+    setSelectedObjectId(deleted.kind === 'opening' ? deleted.object.id : null);
+  };
+
+  // One owner for deletion prevents a second listener from deleting the parent room.
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // Delete key (Delete or Backspace)
-      if ((e.key === 'Delete' || e.key === 'Backspace') && 
-          (selectedRoomId || selectedObjectId) && 
-          !isSaveModalOpen && 
-          !isLoadDialogOpen) {
-        // Prevent default behavior if in an input field
-        if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
-          return;
-        }
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (shouldIgnoreEditorShortcut(event) || isSaveModalOpen || isLoadDialogOpen || showKeyboardShortcuts) return;
+      if ((event.ctrlKey || event.metaKey) && !event.altKey && !event.shiftKey && event.key.toLowerCase() === 'z') {
+        if (deletions.length) { event.preventDefault(); handleUndoDelete(); }
+      } else if (!event.ctrlKey && !event.metaKey && !event.altKey &&
+                 (event.key === 'Delete' || event.key === 'Backspace') && (selectedRoomId || selectedObjectId)) {
+        event.preventDefault();
         handleDeleteSelectedRoom();
       }
     };
-    
-    // Add event listener
     window.addEventListener('keydown', handleKeyDown);
-    
-    // Cleanup
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [selectedRoomId, selectedObjectId, isSaveModalOpen, isLoadDialogOpen]);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [rooms, deletions, selectedRoomId, selectedObjectId, isSaveModalOpen, isLoadDialogOpen, showKeyboardShortcuts]);
 
-  const selectedRoom = selectedRoomId 
-    ? rooms.find(room => room.id === selectedRoomId) || null 
-    : null;
+  const selectedRoom = (selectedObjectId
+    ? rooms.find(room => room.objects?.some(object => object.id === selectedObjectId))
+    : rooms.find(room => room.id === selectedRoomId)) ?? null;
     
   // Find selected object if any
   const selectedObject = selectedRoom && selectedObjectId && selectedRoom.objects 
@@ -322,6 +323,8 @@ const FloorPlanner: React.FC = () => {
   return (
     <div className="bg-slate-50 text-slate-800 h-screen flex flex-col">
       <AppHeader 
+        onUndoDelete={handleUndoDelete}
+        canUndoDelete={deletions.length > 0}
         onNewSketch={handleNewSketch} 
         onSaveSketch={handleSaveClick}
         onLoadSketch={handleLoadClick}
@@ -371,7 +374,7 @@ const FloorPlanner: React.FC = () => {
               activeTool={activeTool}
               placingObjectType={placingObjectType}
               rooms={rooms}
-              selectedRoomId={selectedRoomId}
+              selectedRoomId={selectedRoom?.id ?? null}
               selectedObjectId={selectedObjectId}
               onRoomsChange={handleRoomsChange}
               onSelectRoom={handleSelectRoom}

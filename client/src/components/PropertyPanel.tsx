@@ -63,15 +63,7 @@ const PropertyPanel: React.FC<PropertyPanelProps> = ({
     }
   };
   
-  const handleDeleteObject = () => {
-    if (selectedRoom && selectedObject && selectedRoom.objects) {
-      // Filter out the selected object
-      const updatedObjects = selectedRoom.objects.filter(obj => obj.id !== selectedObject.id);
-      
-      // Update the room
-      onUpdateRoom(selectedRoom.id, { objects: updatedObjects });
-    }
-  };
+
 
   const handleDoorPropertyChange = (property: keyof NonNullable<RoomObjectType['doorProperties']>, value: any) => {
     if (selectedRoom && selectedObject && selectedObject.type === 'door' && selectedRoom.objects) {
@@ -163,7 +155,8 @@ const PropertyPanel: React.FC<PropertyPanelProps> = ({
               variant="outline" 
               size="icon" 
               className="h-7 w-7" 
-              onClick={handleDeleteObject}
+              onClick={onDeleteRoom}
+              aria-label="Delete opening"
             >
               <Trash2 className="h-4 w-4 text-red-500" />
             </Button>
@@ -207,6 +200,15 @@ const PropertyPanel: React.FC<PropertyPanelProps> = ({
                     ))}
                   </SelectContent>
                 </Select>
+                {Math.abs(inchesToPixels(selectedObject.doorProperties.width) - selectedObject.size) > 1e-8 && (
+                  <div className="text-xs text-amber-800 space-y-2">
+                    <p>Saved widths disagree: the entered width is {selectedObject.doorProperties.width} inches;
+                      the sketch width is {pixelsToInches(selectedObject.size)} inches. Verify the measurement.</p>
+                    <Button variant="outline" size="sm" onClick={() => handleDoorSizeChange(selectedObject.doorProperties!.width)}>
+                      Confirm entered width
+                    </Button>
+                  </div>
+                )}
                 <div className="text-xs text-slate-500">
                   Current size: {selectedObject.doorProperties.width}" × {selectedObject.doorProperties.height}"
                 </div>
@@ -376,7 +378,7 @@ const PropertyPanel: React.FC<PropertyPanelProps> = ({
                   <AlertDialogHeader>
                     <AlertDialogTitle>Are you sure?</AlertDialogTitle>
                     <AlertDialogDescription>
-                      This will permanently delete this room and all objects inside it.
+                      This removes the room and its openings. Undo delete can restore them during this sketch session.
                       You can also press the Delete key to remove the selected room.
                     </AlertDialogDescription>
                   </AlertDialogHeader>

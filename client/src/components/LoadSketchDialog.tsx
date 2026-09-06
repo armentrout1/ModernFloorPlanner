@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -36,6 +36,8 @@ const LoadSketchDialog: React.FC<LoadSketchDialogProps> = ({
   const [selectedSketchId, setSelectedSketchId] = useState<number | null>(null);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [newName, setNewName] = useState('');
+  const renaming = useRef(false);
+  const [isRenaming, setIsRenaming] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
   // Load sketches when dialog opens
@@ -59,19 +61,36 @@ const LoadSketchDialog: React.FC<LoadSketchDialogProps> = ({
   };
 
   const saveNewName = async (id: number) => {
-    if (newName.trim()) {
-      const updatedSketch = await renameSketch(id, newName);
-      if (updatedSketch) {
-        setSketches(sketches.map(sketch => 
-          sketch.id === id ? updatedSketch : sketch
-        ));
-        toast({
-          title: 'Sketch renamed',
-          description: `Sketch has been renamed to "${newName}".`,
-        });
-      }
+    // Enter and blur can fire together before React commits a disabled state.
+    if (renaming.current) return;
+    if (!newName.trim()) {
+      setEditingId(null);
+      return;
     }
-    setEditingId(null);
+    renaming.current = true;
+    setIsRenaming(true);
+    try {
+      const updatedSketch = await renameSketch(id, newName);
+      if (!updatedSketch) {
+        toast({
+          title: 'Rename failed',
+          description: 'Your draft name is preserved. Try saving it again.',
+          variant: 'destructive',
+        });
+        return;
+      }
+      setSketches(current => current.map(sketch =>
+        sketch.id === id ? updatedSketch : sketch
+      ));
+      setEditingId(null);
+      toast({
+        title: 'Sketch renamed',
+        description: `Sketch has been renamed to "${newName}".`,
+      });
+    } finally {
+      renaming.current = false;
+      setIsRenaming(false);
+    }
   };
 
   const handleDelete = async (id: number) => {
@@ -125,6 +144,8 @@ const LoadSketchDialog: React.FC<LoadSketchDialogProps> = ({
                   {editingId === sketch.id ? (
                     <div className="p-3 border rounded-md bg-white">
                       <Input
+                        aria-label="New sketch name"
+                        disabled={isRenaming}
                         value={newName}
                         onChange={e => setNewName(e.target.value)}
                         onKeyDown={e => e.key === 'Enter' && saveNewName(sketch.id)}
@@ -142,6 +163,7 @@ const LoadSketchDialog: React.FC<LoadSketchDialogProps> = ({
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button
+                            aria-label={`Options for ${sketch.name}`}
                             variant="ghost"
                             className="absolute top-2 right-2 h-6 w-6 p-0"
                           >
