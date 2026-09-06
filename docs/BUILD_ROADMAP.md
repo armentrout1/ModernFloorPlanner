@@ -3,7 +3,7 @@
 Version: 1.0 · 2026-09-06  
 Repository: `armentrout1/ModernFloorPlanner` · delivery branch: `main` (reverify before release)  
 Reviewed baseline: `876968e78d7070775e7924f33a3164ba20905d42`  
-Status: **M1, M2A and M2B producer checks passed locally; NOT DEPLOYED. M2B issue #5 defines geometry validation, measurement actions and selected quantity policies. M2C is eligible for a separate assignment; M2C–M8 remain unstarted.**
+Status: **M1, M2A, M2B and M2C producer checks passed locally; NOT DEPLOYED. M2C issue #6 delivers the shared quantity engine and immutable snapshot contract. M3A is eligible for a separate assignment; M3–M8 remain unstarted.**
 First execution task: [MFP-M1 / issue #2](https://github.com/armentrout1/ModernFloorPlanner/issues/2).  
 Evidence and dated external research: [research and audit](RESEARCH_AND_AUDIT_2026-09-06.md).
 
@@ -15,7 +15,7 @@ This roadmap implements the owner's September 6 direction. During the explicitly
 
 `AGENTS.md` and the v1.1 My Way workflow control repository operations. This file controls this product's build sequence; `docs/ecosystem/PRODUCT_ROADMAP.md` maps it to ecosystem capabilities. Existing feature documents describe historical intent, not current runtime certification. Do not maintain another independently updated build roadmap in an outputs folder.
 
-The owner's bounded M2A and subsequent M2B assignments accepted the preceding task's local producer verification as sufficient entry evidence. [Issue #3](https://github.com/armentrout1/ModernFloorPlanner/issues/3) and then [issue #5](https://github.com/armentrout1/ModernFloorPlanner/issues/5) were claimed before their application writes. Issue #2 remains open and unreleased. M2C and later milestones require their own assignments. No deployment, charge or cross-repo change is authorized by this document.
+The owner's bounded M2A, M2B and M2C assignments accepted the preceding task's local producer verification as sufficient entry evidence. [Issue #3](https://github.com/armentrout1/ModernFloorPlanner/issues/3), [issue #5](https://github.com/armentrout1/ModernFloorPlanner/issues/5) and [issue #6](https://github.com/armentrout1/ModernFloorPlanner/issues/6) were each claimed before their application writes. Issue #2 remains open and unreleased. M3A and later milestones require their own assignments. No deployment, charge or cross-repo change is authorized by this document.
 
 ### Initial scope
 
@@ -87,7 +87,7 @@ Autosave committed edits, visibly distinguishing local draft, saving, saved, fai
 
 Store recoverable local drafts keyed by user/workspace/design; clear or protect them on logout/account switch and warn on shared devices. Local recovery is not promised full offline synchronization. On reconnection, compare base revision and offer recovery as a new revision/copy instead of automatically replacing newer work. Keep unsent edits when save or authentication fails.
 
-A quantity snapshot binds geometry revision/hash, engine version, policy version, units, selected scope, unrounded basis, display values, assumptions and completeness. Issued/exported snapshots are immutable. Subsequent edits create a new revision and new snapshot. Published estimate/report references must continue to resolve their original snapshot under the applicable authorization and retention rules.
+A quantity snapshot binds geometry revision/hash, engine version, policy version, units, selected scope, unrounded canonical basis, assumptions and completeness. M2C keeps explicit display precision and conversion at a separate presentation boundary; persisted/exported display content remains later work. Issued/exported snapshots are immutable. Subsequent edits create a new revision and new snapshot. Published estimate/report references must continue to resolve their original snapshot under the applicable authorization and retention rules.
 
 ### A7 — Product boundaries remain intact
 
@@ -103,7 +103,7 @@ For a rectangular room measured inside finished faces, let L and W be plan dimen
 | --- | --- | --- |
 | Floor area | L × W | Do not deduct doors/windows; explicitly selected floor voids/exclusions are separate. |
 | Flat ceiling area | L × W | Do not deduct wall openings; ceiling voids are separate. |
-| Gross wall area | Sum of selected wall-face length × height | All four walls by default; unknown required height makes affected output incomplete. |
+| Gross wall area | Sum of selected wall-face length × height | Wall faces must be explicitly selected; unknown required height makes affected output incomplete. |
 | Net wall area | Gross selected wall area minus eligible opening areas on those faces | Opening width AND height required; show gross and deductions separately. |
 | Baseboard/base shoe | Selected floor-level wall lengths minus union of eligible interruptions/exclusions | Subtract door openings once per affected face; normal elevated windows do not affect it. |
 | Crown/ceiling perimeter | Selected top-of-wall lengths | Ordinary doors/windows do not deduct; full-height gaps require explicit policy. |
@@ -115,7 +115,7 @@ For a rectangular room measured inside finished faces, let L and W be plan dimen
 
 Opening measure basis must identify nominal, clear, finished or rough opening. Do not pretend nominal door size equals exact field trim cuts. Initial casing quantities are geometric allowances; installation returns, joints and cutting waste remain explicit allowances.
 
-Reject or flag invalid geometry instead of clamping an impossible result to zero and calling it valid. Two openings cannot overlap on the same face. An unknown window height allows floor totals but makes the affected net-wall result incomplete. Per-surface selection and partial completeness must propagate into exports and API responses. Consumer-ready estimating snapshots require confirmation of all dimensions on which selected outputs depend.
+Reject or flag invalid geometry instead of clamping an impossible result to zero and calling it valid. Overlap beyond the numerical tolerance is invalid on the same face; tolerance-accepted shared coverage is unioned once and explained in the trace. An unknown window height allows floor totals but makes the affected net-wall result incomplete. Per-surface selection and partial completeness must propagate into exports and API responses. Consumer-ready estimating snapshots require confirmation of all dimensions on which selected outputs depend.
 
 ### Golden fixture Q-001 (engine acceptance, not a measured job)
 
@@ -146,7 +146,7 @@ Migration must be idempotent and produce before/after room/opening counts plus q
 
 ## 5. Milestones and release gates
 
-Sequence: **M1 → M2 → M3 → M4 → M5 → M6 → M7 → M8**. M6 contract examples may be drafted earlier, but implementation does not bypass M4 security/versioning. Material research is not a reason to delay the basic room tool. M1 is tracked in issue #2, M2A in issue #3 and M2B in issue #5. Create or reuse one owner-repo issue when each next task is assigned, rather than duplicating status across trackers.
+Sequence: **M1 → M2 → M3 → M4 → M5 → M6 → M7 → M8**. M6 contract examples may be drafted earlier, but implementation does not bypass M4 security/versioning. Material research is not a reason to delay the basic room tool. M1 is tracked in issue #2, M2A in issue #3, M2B in issue #5 and M2C in issue #6. Create or reuse one owner-repo issue when each next task is assigned, rather than duplicating status across trackers.
 
 ### M1 — Repair and establish evidence
 
@@ -168,7 +168,9 @@ M1A: establish compatible unit/component/browser test tooling and exact `check`/
 
 **M2A evidence:** [issue #3](https://github.com/armentrout1/ModernFloorPlanner/issues/3), [results and conversion contract](MFP_M2A_RESULTS.md). Shared v2 measurements/parsers and an additive legacy adapter are locally producer-verified. Existing editor/API payloads remain legacy; no database migration. The adapter uses clockwise wall starts and explicit center-anchored physical offsets, preserves original JSON, and reports conflicting widths without choosing a confirmed value. M2A remains locally producer-verified and not deployed.
 
-**M2B evidence:** [issue #5](https://github.com/armentrout1/ModernFloorPlanner/issues/5), [results and policy contract](MFP_M2B_RESULTS.md). Pure geometry-v1 validation, explicit timestamped confirmation/candidate/correction actions and rectangular-flat-v1 selected quantity policies are locally producer-verified. Numeric sufficiency, relevant geometry and confirmation are independent per output; unknowns and historical evidence remain explicit. Q-001 validation/readiness passes without calculating its M2C totals. All 120 unit/API and 19 browser cases pass; existing 61 unit/API cases, live editor/API payloads and preserved original JSON remain compatible. No deployment, database/runtime change or customer onboarding. M2C is eligible for a separately bounded assignment; it has not started.
+**M2B evidence:** [issue #5](https://github.com/armentrout1/ModernFloorPlanner/issues/5), [results and policy contract](MFP_M2B_RESULTS.md). Pure geometry-v1 validation, explicit timestamped confirmation/candidate/correction actions and rectangular-flat-v1 selected quantity policies are locally producer-verified. Numeric sufficiency, relevant geometry and confirmation are independent per output; unknowns and historical evidence remain explicit. Q-001 validation/readiness passes without calculating its M2C totals. All 120 unit/API and 19 browser cases pass; existing 61 unit/API cases, live editor/API payloads and preserved original JSON remain compatible. No deployment, database/runtime change or customer onboarding. Its subsequent M2C assignment is recorded below.
+
+**M2C evidence:** [issue #6](https://github.com/armentrout1/ModernFloorPlanner/issues/6), [results and snapshot contract](MFP_M2C_RESULTS.md). All ten rectangular-flat-v1 outputs use one pure shared engine with auditable gross/raw/effective/net quantities, waste once, explicit partial/provisional results, guarded arithmetic and detached immutable snapshots. Actual Node and browser runs independently verify Q-001, selected-face answers, the labeled 256 sq ft partial subtotal and exact SHA-256 parity. All 170 unit/API and 25 browser tests pass, retaining the original 120/19; typecheck and build pass. A demonstrated large-coordinate M2B comparison defect was tightened without relaxing its 0.01 mm policy. Live editor/API formats are unchanged. M2C is producer-verified locally and NOT DEPLOYED; M3A is eligible but unstarted.
 
 **Touchpoints:** `shared/domain`, `shared/quantities`, compatibility adapters, selected property editors and tests. Keep old plans loadable; no live bulk conversion.
 
@@ -287,8 +289,8 @@ A failed check is not completion. A committed document is not working software; 
 
 At publication: remote source/doc review and official-documentation research completed; issue #2 prepared. No application implementation, package installation, typecheck, build, full test suite, live security test, deployment verification or production data modification was performed by this review. Shell cloning was unavailable in the review environment, so source access used the connected GitHub interface; this does not prevent Codex from testing its verified existing checkout.
 
-M1 entry resolved local document preservation and observable writer checks; M2A and M2B reverified the existing checkout, archived original and retained stash. The owner confirms the app is not hosted yet. Remaining unresolved facts: first hosting/database/identity configuration; saved-plan inventory/ownership; pilot demand and operating costs. These are explicit discovery/release gates, not reasons to rebuild the stack or abandon the plan.
+M1 entry resolved local document preservation and observable writer checks; M2A, M2B and M2C reverified the existing checkout, archived original and retained stash. The owner confirms the app is not hosted yet. Remaining unresolved facts: first hosting/database/identity configuration; saved-plan inventory/ownership; pilot demand and operating costs. These are explicit discovery/release gates, not reasons to rebuild the stack or abandon the plan.
 
-Current state: M2A producer implementation is recorded under [issue #3](https://github.com/armentrout1/ModernFloorPlanner/issues/3); M2B producer implementation and checks are recorded under [issue #5](https://github.com/armentrout1/ModernFloorPlanner/issues/5). Both are complete locally and NOT DEPLOYED. M1 issue #2 remains open and explicitly unreleased. Next eligible build task: M2C immutable quantity results, pure aggregation and fixture/property/browser-server parity checks, on a separate bounded assignment. M2C has not started.
+Current state: M2A producer implementation is recorded under [issue #3](https://github.com/armentrout1/ModernFloorPlanner/issues/3), M2B under [issue #5](https://github.com/armentrout1/ModernFloorPlanner/issues/5), and M2C shared engine/snapshot/parity evidence under [issue #6](https://github.com/armentrout1/ModernFloorPlanner/issues/6). All are complete locally and NOT DEPLOYED. M1 issue #2 remains open and explicitly unreleased. Next eligible build task: M3A quick-room dimension entry, names, presets and safe duplication, on a separate bounded assignment. M3A has not started.
 
-Separate operational proposal: [hosting/runtime readiness, issue #4](https://github.com/armentrout1/ModernFloorPlanner/issues/4), status **PROPOSED**, not started. It covers Node 24 LTS compatibility/project pins and complete regressions, scoped dependency advisory review, Vercel frontend/Express/static/API/deep-link configuration, PostgreSQL selection and real persistence, server-only credentials/connection management, and protected owner-only early access. Verify current official documentation when activated. No public unscoped API or customer onboarding before M4 isolation. M2A and M2B do not change runtime pins, provision services, spend money or deploy.
+Separate operational proposal: [hosting/runtime readiness, issue #4](https://github.com/armentrout1/ModernFloorPlanner/issues/4), status **PROPOSED**, not started. It covers Node 24 LTS compatibility/project pins and complete regressions, scoped dependency advisory review, Vercel frontend/Express/static/API/deep-link configuration, PostgreSQL selection and real persistence, server-only credentials/connection management, and protected owner-only early access. Verify current official documentation when activated. No public unscoped API or customer onboarding before M4 isolation. M2A, M2B and M2C do not change runtime pins, provision services, spend money or deploy.

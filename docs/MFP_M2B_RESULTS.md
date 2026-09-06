@@ -22,7 +22,7 @@ no reset, database rollback or data migration is involved.
 
 ## Entry and preservation
 
-Verified the existing product root C:\Users\aaron\Documents\Codex\Modern Floor Planner,
+Verified the existing product checkout and actual repository root,
 origin https://github.com/armentrout1/ModernFloorPlanner.git, main tracking origin/main,
 reviewed HEAD and initially clean working tree. Safe fetch at entry and before
 committing found main unchanged at the baseline. The task inventory and repo-filtered
