@@ -14,10 +14,10 @@ Existing stack: React/TypeScript/Vite frontend; Express/PostgreSQL/Drizzle backe
 
 Modern Floor Planner owns geometry and quantities. FixDoneNow coordinates jobs; LedgerLine owns financial estimates; ProjectRoll owns media. Standalone use must remain independent.
 
-## Reproducible M1 checks
+## Reproducible checks
 
 Use Node **20.20.2** (`.nvmrc`; npm 10.8.2 used for verification). The historical
-Replit configuration specifies Node 20. Tests also run on Node 24.11.1.
+Replit configuration specifies Node 20. M1 also tested Node 24.11.1; M2A was verified on the existing Node 20 pin. Node 24 runtime modernization is separately proposed in issue #4.
 
 ```sh
 npm ci
@@ -28,7 +28,7 @@ npx playwright install chromium
 npm run test:browser
 ```
 
-`npm test` runs pure calculation/recovery and real HTTP route regression tests.
+`npm test` runs physical measurement/parser/adapter tests, pure calculation/recovery tests and real HTTP route regressions.
 `npm run test:browser` builds the app, starts a disposable server on
 `127.0.0.1:4173`, runs Chromium acceptance, and stops that server. It uses the
 real API handlers with in-memory storage; it never connects to a database.
@@ -44,3 +44,7 @@ workspace scope; **do not onboard customers or partners** until the M4 gate pass
 
 Read [M1 results and release limits](docs/MFP_M1_RESULTS.md) before interpreting
 local tests as deployment or real-database evidence.
+
+## Shared measurement boundary (M2A)
+
+The additive v2 schemas live in `shared/domain`; `shared/compatibility/legacyDocument.ts` converts supported legacy documents without changing live editor/save/API payloads. Read [M2A results, supported syntax and conversion rules](docs/MFP_M2A_RESULTS.md) before adopting this boundary. M2B policy validation and M2C quantities remain future work. No production deployment, PostgreSQL durability or tenant isolation is claimed.

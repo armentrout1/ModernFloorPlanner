@@ -3,7 +3,7 @@
 Version: 1.0 · 2026-09-06  
 Repository: `armentrout1/ModernFloorPlanner` · delivery branch: `main` (reverify before release)  
 Reviewed baseline: `876968e78d7070775e7924f33a3164ba20905d42`  
-Status: **M1 producer checks passed under issue #2; not deployed. See the evidence record. M2–M8 remain unstarted.**
+Status: **M1 and M2A producer checks passed locally; not deployed. M2A issue #3 implements the shared measurement boundary. M2B is eligible for a separate assignment; M2B–M8 remain unstarted.**
 First execution task: [MFP-M1 / issue #2](https://github.com/armentrout1/ModernFloorPlanner/issues/2).  
 Evidence and dated external research: [research and audit](RESEARCH_AND_AUDIT_2026-09-06.md).
 
@@ -15,7 +15,7 @@ This roadmap implements the owner's September 6 direction. During the explicitly
 
 `AGENTS.md` and the v1.1 My Way workflow control repository operations. This file controls this product's build sequence; `docs/ecosystem/PRODUCT_ROADMAP.md` maps it to ecosystem capabilities. Existing feature documents describe historical intent, not current runtime certification. Do not maintain another independently updated build roadmap in an outputs folder.
 
-The owner's current task explicitly activates M1 only; issue #2 was claimed before application writes. Later milestones require their entry gates and bounded execution assignments. No worker, deployment, charge or cross-repo change is started by this document.
+The owner's subsequent bounded assignment explicitly activates M2A only, accepting M1's local producer verification as sufficient entry evidence. [Issue #3](https://github.com/armentrout1/ModernFloorPlanner/issues/3) was claimed before application writes. Issue #2 remains open and unreleased. M2B and later milestones require their own assignments. No deployment, charge or cross-repo change is authorized by this document.
 
 ### Initial scope
 
@@ -146,7 +146,7 @@ Migration must be idempotent and produce before/after room/opening counts plus q
 
 ## 5. Milestones and release gates
 
-Sequence: **M1 → M2 → M3 → M4 → M5 → M6 → M7 → M8**. M6 contract examples may be drafted earlier, but implementation does not bypass M4 security/versioning. Material research is not a reason to delay the basic room tool. Only M1 has an execution issue at publication; create or reuse one owner-repo issue when each next milestone is assigned, rather than duplicating status across trackers.
+Sequence: **M1 → M2 → M3 → M4 → M5 → M6 → M7 → M8**. M6 contract examples may be drafted earlier, but implementation does not bypass M4 security/versioning. Material research is not a reason to delay the basic room tool. M1 is tracked in issue #2 and M2A in issue #3. Create or reuse one owner-repo issue when each next task is assigned, rather than duplicating status across trackers.
 
 ### M1 — Repair and establish evidence
 
@@ -165,6 +165,8 @@ M1A: establish compatible unit/component/browser test tooling and exact `check`/
 ### M2 — Build the authoritative measurement engine
 
 **Entry:** M1 evidence complete. M2A: shared v2 schemas, physical units, parsers and legacy adapter. M2B: height/opening validation, provenance and quantity policies. M2C: immutable quantity result contract, pure engine, fixture/property tests and browser/server parity.
+
+**M2A evidence:** [issue #3](https://github.com/armentrout1/ModernFloorPlanner/issues/3), [results and conversion contract](MFP_M2A_RESULTS.md). Shared v2 measurements/parsers and an additive legacy adapter are locally producer-verified. Existing editor/API payloads remain legacy; no database migration. The adapter uses clockwise wall starts and explicit center-anchored physical offsets, preserves original JSON, and reports conflicting widths without choosing a confirmed value. M2B is eligible for a separately bounded assignment; it has not started.
 
 **Touchpoints:** `shared/domain`, `shared/quantities`, compatibility adapters, selected property editors and tests. Keep old plans loadable; no live bulk conversion.
 
@@ -283,6 +285,8 @@ A failed check is not completion. A committed document is not working software; 
 
 At publication: remote source/doc review and official-documentation research completed; issue #2 prepared. No application implementation, package installation, typecheck, build, full test suite, live security test, deployment verification or production data modification was performed by this review. Shell cloning was unavailable in the review environment, so source access used the connected GitHub interface; this does not prevent Codex from testing its verified existing checkout.
 
-M1 entry resolved the local document, dirty-state preservation and observable writer checks. Remaining unresolved facts: actual current production host/database/identity provider; saved-plan inventory/ownership; pilot demand and operating costs. These are explicit discovery/release gates, not reasons to rebuild the stack or abandon the plan.
+M1 entry resolved local document preservation and observable writer checks; M2A reverified the existing checkout and retained stash. The owner confirms the app is not hosted yet. Remaining unresolved facts: first hosting/database/identity configuration; saved-plan inventory/ownership; pilot demand and operating costs. These are explicit discovery/release gates, not reasons to rebuild the stack or abandon the plan.
 
-Current action: execute claimed [issue #2](https://github.com/armentrout1/ModernFloorPlanner/issues/2), record M1 checks and release evidence, and resolve its remaining gates. Update this roadmap with evidence as gates pass; do not mark M2–M8 started by association.
+Current state: M2A producer implementation and checks are recorded under [issue #3](https://github.com/armentrout1/ModernFloorPlanner/issues/3). M1 issue #2 remains open and explicitly unreleased. Next eligible build task: M2B height/opening validation, provenance and quantity policies, on a separate bounded assignment.
+
+Separate operational proposal: [hosting/runtime readiness, issue #4](https://github.com/armentrout1/ModernFloorPlanner/issues/4), status **PROPOSED**, not started. It covers Node 24 LTS compatibility/project pins and complete regressions, scoped dependency advisory review, Vercel frontend/Express/static/API/deep-link configuration, PostgreSQL selection and real persistence, server-only credentials/connection management, and protected owner-only early access. Verify current official documentation when activated. No public unscoped API or customer onboarding before M4 isolation. M2A does not change runtime pins, provision services, spend money or deploy.
