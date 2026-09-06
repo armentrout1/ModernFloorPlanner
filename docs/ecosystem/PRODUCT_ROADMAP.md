@@ -6,9 +6,9 @@ Updated: 2026-09-06. Shared policy remains blueprint v1.1 / My Way. Selected rep
 
 The owner explicitly requested research, architecture and a committed executable roadmap for this product on September 6. Planning is active; the previous blanket documentation-only/selection-unverified description is superseded for this product-planning task. **This publication does not implement the drawing backlog, start Codex, verify a local checkout or authorize live billing/data migrations.**
 
-Authoritative build sequence: [BUILD_ROADMAP.md](../BUILD_ROADMAP.md). Evidence: [dated audit and research](../RESEARCH_AND_AUDIT_2026-09-06.md). First prepared task: [MFP-M1 / issue #2](https://github.com/armentrout1/ModernFloorPlanner/issues/2). M1 is ready for a bounded Codex handoff; M2–M8 remain planned behind their gates.
+Authoritative build sequence: [BUILD_ROADMAP.md](../BUILD_ROADMAP.md). Evidence: [dated audit and research](../RESEARCH_AND_AUDIT_2026-09-06.md). First prepared task: [MFP-M1 / issue #2](https://github.com/armentrout1/ModernFloorPlanner/issues/2). M1 was explicitly assigned and claimed in issue #2; its local producer checks passed (see the evidence record), and it is not deployed; M2–M8 remain planned behind their gates.
 
-The full local Codex output `Modern-Floor-Planner-Complete-Roadmap.md` was not read in this remote review. Reconcile it with the committed plan without losing unpublished changes. No machine-specific paths or private inventories belong in this public repository.
+The complete local Codex output and unpublished ecosystem roadmap were read, preserved and reconciled during the assigned M1 task; the output is archived. See [M1 evidence](../MFP_M1_RESULTS.md). No machine-specific paths or private inventories belong in this public repository.
 
 ## Owned responsibility
 
@@ -20,7 +20,7 @@ FixDoneNow owns CRM/job orchestration. LedgerLine owns authoritative financial e
 
 | Capability | Required result | Build milestone / status |
 | --- | --- | --- |
-| ECO-001 | Verify local root/remote/branch/HEAD/dirty state and reconcile Codex's local output. | M1 entry; remote repository verified, local state unresolved. |
+| ECO-001 | Verify local root/remote/branch/HEAD/dirty state and reconcile Codex's local output. | M1 entry verified; original local work preserved and reconciled. |
 | DR-001 | Standalone/workspace roles, tenant-safe access and explicit partner authority/consent. | M4 standalone gate; M6 partner provisioning/linking. Not implemented by this publication. |
 | DR-002 | Product-owned editor, physical quantity engine, measurement assumptions and versioned outputs. | M1 repairs; M2 engine; M3 quick-room UI; M4 revisions/exports; M6 hosted interface. |
 | ECO-002 | Cross-business denial, independent standalone operation, expired permission rejection and stable issued snapshots. | M4 producer tests and M6 originating-consumer verification. |

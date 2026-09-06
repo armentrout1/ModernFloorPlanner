@@ -3,7 +3,7 @@
 Version: 1.0 · 2026-09-06  
 Repository: `armentrout1/ModernFloorPlanner` · delivery branch: `main` (reverify before release)  
 Reviewed baseline: `876968e78d7070775e7924f33a3164ba20905d42`  
-Status: **Plan ready. Implementation milestones are not completed by this document.**  
+Status: **M1 producer checks passed under issue #2; not deployed. See the evidence record. M2–M8 remain unstarted.**
 First execution task: [MFP-M1 / issue #2](https://github.com/armentrout1/ModernFloorPlanner/issues/2).  
 Evidence and dated external research: [research and audit](RESEARCH_AND_AUDIT_2026-09-06.md).
 
@@ -11,11 +11,11 @@ Evidence and dated external research: [research and audit](RESEARCH_AND_AUDIT_20
 
 Build a **quick room measurement and quantity tool with a synchronized sketch**. A user enters length, width and ceiling height, adds openings, chooses the work, and receives explainable quantities. A single useful room must not require drawing an entire building. Keep standalone use and partner use on the same product-owned engine and editor.
 
-This roadmap implements the direction supplied by the owner in the September 6 Codex summary. The complete local file named `Modern-Floor-Planner-Complete-Roadmap.md` was not available in the reviewed GitHub main branch and was not read in this remote review. Codex must preserve that local file and reconcile any additional requirements before implementation; do not overwrite unpublished work or claim that its entire contents were audited.
+This roadmap implements the owner's September 6 direction. During the explicitly assigned M1 implementation, Codex read and reconciled the complete local `Modern-Floor-Planner-Complete-Roadmap.md` and the unpublished ecosystem roadmap. Both originals were preserved as local copies and the unpublished Git diff was retained in a named stash. The local output is now marked as an archived snapshot. This document remains the only active build roadmap. See [M1 evidence](MFP_M1_RESULTS.md) for the reconciliation and implementation status.
 
 `AGENTS.md` and the v1.1 My Way workflow control repository operations. This file controls this product's build sequence; `docs/ecosystem/PRODUCT_ROADMAP.md` maps it to ecosystem capabilities. Existing feature documents describe historical intent, not current runtime certification. Do not maintain another independently updated build roadmap in an outputs folder.
 
-The owner's current task activates research, planning and documentation publication. M1 is the prepared implementation handoff; an agent must explicitly claim it before working. Later milestones require their entry gates and bounded execution assignments. No worker, deployment, charge or cross-repo change is started by this document.
+The owner's current task explicitly activates M1 only; issue #2 was claimed before application writes. Later milestones require their entry gates and bounded execution assignments. No worker, deployment, charge or cross-repo change is started by this document.
 
 ### Initial scope
 
@@ -27,7 +27,7 @@ Do not market these quantities as surveyed building area, permit drawings, struc
 
 ### A1 — Improve the existing application; do not restart it
 
-Retain React, TypeScript, Vite, existing UI components, Express, PostgreSQL and Drizzle. Keep one repository and one deployable product, with internal modules rather than microservices. No compulsory Next.js migration, new umbrella repo, new database vendor or graphics-library replacement. Verify the actual production host/database/auth configuration during M1; historical Replit files do not prove the current live binding. Do not provision a paid service as part of this plan.
+Retain React, TypeScript, Vite, existing UI components, Express, PostgreSQL and Drizzle. Keep one repository and one deployable product, with internal modules rather than microservices. No compulsory Next.js migration, new umbrella repo, new database vendor or graphics-library replacement. M1 inventory found historical Replit configuration; the owner confirmed the app is not hosted yet and intends Vercel. First deployment needs a bounded setup and verified database/auth configuration; no current live binding is claimed. Do not provision a paid service as part of this plan.
 
 Proposed module boundaries (introduce incrementally, not as a mass file move):
 
@@ -156,6 +156,8 @@ M1A: establish compatible unit/component/browser test tooling and exact `check`/
 
 **Touchpoints:** `materialCalculator.ts`, relevant `canvas.ts` conversions, `FloorPlanner.tsx`, shared/route validation, focused test/config files. Read opening documentation before changes.
 
+**Evidence:** [M1 results](MFP_M1_RESULTS.md), implementation `f185174`; 24 unit/API and 19 browser cases pass. Owner confirms no current hosting. Issue #2 records unreleased status.
+
 **Exit:** supported legacy calculator and opening/delete flows pass regression tests; typecheck/build are green; exact results are recorded. An existing live access exposure, if safely confirmed, must be separately contained before public rollout. Do not claim runtime failures merely from the pasted summary.
 
 **Not included:** new renderer, new room schema backfill, subscriptions, partner integration or advanced drawing.
@@ -281,6 +283,6 @@ A failed check is not completion. A committed document is not working software; 
 
 At publication: remote source/doc review and official-documentation research completed; issue #2 prepared. No application implementation, package installation, typecheck, build, full test suite, live security test, deployment verification or production data modification was performed by this review. Shell cloning was unavailable in the review environment, so source access used the connected GitHub interface; this does not prevent Codex from testing its verified existing checkout.
 
-Unresolved facts: additional content in Codex's unpublished local MD; local dirty/active-writer state; actual current production host/database/identity provider; saved-plan inventory/ownership; pilot demand and operating costs. These are explicit discovery/release gates, not reasons to rebuild the stack or abandon the plan.
+M1 entry resolved the local document, dirty-state preservation and observable writer checks. Remaining unresolved facts: actual current production host/database/identity provider; saved-plan inventory/ownership; pilot demand and operating costs. These are explicit discovery/release gates, not reasons to rebuild the stack or abandon the plan.
 
-Next action: reconcile local documentation, claim [issue #2](https://github.com/armentrout1/ModernFloorPlanner/issues/2), and execute M1 only. Update this roadmap with evidence as gates pass; do not mark M2–M8 started by association.
+Current action: execute claimed [issue #2](https://github.com/armentrout1/ModernFloorPlanner/issues/2), record M1 checks and release evidence, and resolve its remaining gates. Update this roadmap with evidence as gates pass; do not mark M2–M8 started by association.
