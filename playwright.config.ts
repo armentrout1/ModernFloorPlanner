@@ -9,6 +9,8 @@ export default defineConfig({
   reporter: [['list'], ['html', { open: 'never' }]],
   use: { baseURL: 'http://127.0.0.1:4173', viewport: { width: 1600, height: 1000 },
     trace: 'retain-on-failure', screenshot: 'only-on-failure' },
-  webServer: { command: 'npx tsx tests/fixture-server.ts', url: 'http://127.0.0.1:4173',
+  webServer: [{ command: 'npx tsx tests/fixture-server.ts', url: 'http://127.0.0.1:4173',
     reuseExistingServer: false, timeout: 30_000 },
+    { command: 'npx tsx tests/parity-server.ts', url: 'http://127.0.0.1:4174/health',
+      reuseExistingServer: false, timeout: 30_000 }],
 });
