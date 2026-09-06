@@ -143,9 +143,14 @@ function adaptDocument(input: unknown): AdaptResult {
     schemaVersion: 2, id: legacy.id ?? null, ...(legacy.name !== undefined ? { name: legacy.name } : {}),
     revisionId: null, quantityPolicyVersion: null, rooms, openings, review,
     metadata: rest(legacy, ['schemaVersion', 'id', 'name', 'rooms']),
-    compatibility: { adapterVersion: 'legacy-pixels-v1', original, before: { ...counts }, after: { ...counts } },
+    compatibility: { adapterVersion: 'legacy-pixels-v1', original,
+      before: { rooms: legacy.rooms.length, openings: legacy.rooms.reduce((sum, room) => sum + (room.objects?.length ?? 0), 0) },
+      after: { ...counts } },
   };
-  const converted = physicalDocumentSchema.safeParse(document);
+  // The preserved source adds nesting. Apply the same JSON depth boundary to
+  // output so every successful conversion can be reprocessed as v2.
+  const preservedDocument = cloneJson(document);
+  const converted = physicalDocumentSchema.safeParse(preservedDocument);
   if (!converted.success) return { status: 'invalid', errors: converted.error.issues.map(({ path, message }) => ({ path, message })) };
-  return { status: review.length ? 'needs-review' : 'converted', document: document as PhysicalDocument };
+  return { status: review.length ? 'needs-review' : 'converted', document: preservedDocument as PhysicalDocument };
 }

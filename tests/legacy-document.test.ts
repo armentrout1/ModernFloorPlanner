@@ -288,3 +288,17 @@ test('conversion quantity comparison reuses the verified M1 calculator', () => {
   assert.deepEqual(after.doorSizes, before.doorSizes);
   assert.deepEqual(document.compatibility!.original, source);
 });
+
+
+test('JSON depth limits cannot produce a v2 document that fails on reprocessing', () => {
+  for (const depth of [95, 99]) {
+    let nested: unknown = {};
+    for (let index = 0; index < depth; index++) nested = { child: nested };
+    const result = adaptMeasurementDocument({ rooms: [], custom: nested });
+    if ('document' in result) {
+      assert.equal(adaptMeasurementDocument(result.document).status, 'already-v2');
+    } else {
+      assert.equal(result.status, 'invalid');
+    }
+  }
+});
