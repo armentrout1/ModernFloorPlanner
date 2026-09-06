@@ -11,3 +11,9 @@ Explicitly requested bounded fixes may proceed in the owning repository when its
 For authorized ordinary changes, deliver small compatible commits directly to the verified production branch, with applicable fast checks and production smoke. No mandatory staging or preview step. No force push, shared dirty checkout, unrelated migration, secret exposure or live money movement. Existing tool permissions and task-specific approvals remain binding. One writer/release owner per repo; other repos may progress concurrently.
 
 Record commit, deployment evidence and originating-consumer verification before closing an integration issue. Queued is not started; committed is not deployed; deployed is not integration-verified. Broad photo/drawing work stays parked unless a specific task is activated. Instructions and issues do not create a background runner or synchronize chats automatically.
+
+## Modern Floor Planner planning activation — 2026-09-06
+
+Read `docs/BUILD_ROADMAP.md` for the canonical product build sequence and `docs/RESEARCH_AND_AUDIT_2026-09-06.md` for baseline evidence. The owner's September 6 request activates researched roadmap publication and prepares M1 (issue #2); it does not implement or automatically start the full backlog. Follow each milestone's bounded assignment and gates.
+
+Before implementation, reconcile the owner's existing local `Modern-Floor-Planner-Complete-Roadmap.md` with the committed roadmap without discarding unpublished changes. Verify local writer availability; remote issue searches cannot prove an idle local checkout. Historical feature documents are references, not runtime certification. Keep physical units and quantity logic independent from pixels; preserve legacy plans and opening behaviors. Do not duplicate LedgerLine's financial engine or another product's data ownership.

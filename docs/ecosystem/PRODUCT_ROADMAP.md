@@ -1,29 +1,36 @@
-# Drawing and measurement product ecosystem roadmap
+# Modern Floor Planner — product ecosystem roadmap
 
-Blueprint version: 1.0. Repository candidate: `armentrout1/ModernFloorPlanner`. Initial source baseline: `5b1a92f5cc5972a2f23fa300395b283fc577847d`. Current activation: **DOCUMENTATION ONLY; drawing implementation parked.** Final drawing-product selection and local checkout remain unverified.
+Updated: 2026-09-06. Shared policy remains blueprint v1.1 / My Way. Selected repository: `armentrout1/ModernFloorPlanner`. Reviewed remote baseline: `876968e78d7070775e7924f33a3164ba20905d42` on `main`.
+
+## Current activation
+
+The owner explicitly requested research, architecture and a committed executable roadmap for this product on September 6. Planning is active; the previous blanket documentation-only/selection-unverified description is superseded for this product-planning task. **This publication does not implement the drawing backlog, start Codex, verify a local checkout or authorize live billing/data migrations.**
+
+Authoritative build sequence: [BUILD_ROADMAP.md](../BUILD_ROADMAP.md). Evidence: [dated audit and research](../RESEARCH_AND_AUDIT_2026-09-06.md). First prepared task: [MFP-M1 / issue #2](https://github.com/armentrout1/ModernFloorPlanner/issues/2). M1 is ready for a bounded Codex handoff; M2–M8 remain planned behind their gates.
+
+The full local Codex output `Modern-Floor-Planner-Complete-Roadmap.md` was not read in this remote review. Reconcile it with the committed plan without losing unpublished changes. No machine-specific paths or private inventories belong in this public repository.
 
 ## Owned responsibility
 
-The drawing product is independently usable and commercially separable. It owns drawing UI, geometry, dimensions, units, measurement provenance, takeoffs/quantity calculations, saved versions, exports and its tenant-scoped persistence and authorization. It exposes reusable interfaces to FixDoneNow and unrelated applications. FixDoneNow stores authorized drawing references, not the drawing engine or its canonical database.
+Modern Floor Planner independently owns drawings, editor, physical measurements and provenance, quantity calculations, saved geometry versions, exports and tenant-scoped authorization/persistence. It must work without FixDoneNow. Consumers store authorized versioned references; they do not duplicate the geometry engine or read its private database.
 
-## Source-supported starting point
+FixDoneNow owns CRM/job orchestration. LedgerLine owns authoritative financial estimates/totals/lifecycle. ProjectRoll owns media and photo-report composition. Advisory material costs are not a second financial engine. Shared policy and cross-product consumer roadmaps are not changed by this document.
 
-The reviewed documentation describes rooms, dimensions, openings, drawing interaction, material calculations, save/load and print-oriented preview. Some exports/versioning are future work. Reviewed route/storage methods retrieve and mutate floor plans by ID and do not demonstrate a business/organization authorization boundary. These are source observations, not a live vulnerability test or production certification.
+## Capability mapping and gates
 
-Evidence: [product documentation](../../MODERN_FLOOR_PLAN.md), [routes](../../server/routes.ts), [storage](../../server/storage.ts). Do not expose the existing methods as a multi-tenant integration without verifying and implementing the missing boundary in this product.
+| Capability | Required result | Build milestone / status |
+| --- | --- | --- |
+| ECO-001 | Verify local root/remote/branch/HEAD/dirty state and reconcile Codex's local output. | M1 entry; remote repository verified, local state unresolved. |
+| DR-001 | Standalone/workspace roles, tenant-safe access and explicit partner authority/consent. | M4 standalone gate; M6 partner provisioning/linking. Not implemented by this publication. |
+| DR-002 | Product-owned editor, physical quantity engine, measurement assumptions and versioned outputs. | M1 repairs; M2 engine; M3 quick-room UI; M4 revisions/exports; M6 hosted interface. |
+| ECO-002 | Cross-business denial, independent standalone operation, expired permission rejection and stable issued snapshots. | M4 producer tests and M6 originating-consumer verification. |
 
-## Parked producer requirements
+Roadmap order: repair foundation → measurement engine → quick-room workflow → secure saving/revisions/exports → paid-use pilot → FixDoneNow handoff → materials → suppliers/enterprise.
 
-1. **ECO-001: identity and workspace.** Confirm that this repository is the intended drawing product and locate its local checkout. Preserve any existing plans, local changes and deployments. Do not rename the product or relocate folders automatically.
-2. **DR-001: tenant foundation.** Define direct and enterprise customer modes, workspace membership, platform/app authority, authorized design/project ownership, idempotent creation and explicit consent for existing-workspace linking. Enforce isolation on list/get/write/export operations, not only in UI navigation.
-3. **DR-002: reusable editor and quantities.** Reuse existing drawing components through a supported hosted/module/package interface. Return a versioned drawing reference plus quantity records with units, source geometry version, calculation method, waste/rounding assumptions, confirmed dimensions and uncertainty. Quantities feed LedgerLine-owned estimate lines; they are not financial totals.
-4. **DR-002: export and version contract.** Specify supported image/vector/PDF output only after implementation proof. Define version snapshots, authorized download/share, expiry, callbacks and change notifications. ProjectRoll report composition receives drawing outputs through this interface, not direct database access.
-5. **ECO-002: qualification.** Prove two businesses cannot read or overwrite each other's drawings, standalone editing still works, expired permissions are rejected, and revised geometry does not silently rewrite an issued estimate or report.
+Do not expose reviewed unscoped `/api/floor-plans` methods as a multi-tenant integration. Historical source shows functionality, not customer-safe runtime proof. Read the audit before making claims.
 
-## Future domain AI
+## Cross-product execution
 
-Drawing assistance and geometric/measurement reasoning belong here. Label measured versus inferred dimensions. Require user confirmation for estimating quantities when measurements are uncertain. Host conversation may invoke drawing tools but must not maintain an independent geometry engine.
+Use owner-repository issues and existing capability IDs. Publish and verify compatible producer interfaces before consumer deployment. FixDoneNow and LedgerLine adapters receive separate bounded assignments; an issue in this repo does not grant access to or start work in another checkout. Future drawing AI belongs here and must label inferred versus confirmed measurements.
 
-## Boundaries
-
-No application changes, deployments, authentication bypasses, production data actions or drawing-feature build are authorized by this blueprint. This repository is public: keep machine-specific local paths and private inventories outside it. Do not change repository visibility. Photo/drawing work remains parked while the initial business/financial integration contract is established.
+Ordinary authorized delivery uses the verified production branch and normal deployment with appropriate checks; no compulsory staging or preview. Preserve existing plans, unrelated work, provider-managed backups and rollback references. Record commit, deployed version and originating workflow result separately. A roadmap, mock or successful GitHub commit is not end-to-end integration evidence.
