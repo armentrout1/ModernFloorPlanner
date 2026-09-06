@@ -1,0 +1,210 @@
+import { z } from 'zod';
+import { elevationSchema } from '../domain/measurements';
+import { QUANTITY_OUTPUTS } from '../domain/geometryValidation';
+import type { OutputReadiness } from './readiness';
+import { quantityRequestSchema } from './policy';
+
+export const RESULT_SCHEMA_VERSION = 'quantity-result-v1' as const;
+export const ENGINE_VERSION = 'rectangular-engine-v1' as const;
+// A supported decimal magnitude, not a promise of exact fixed-point arithmetic.
+export const MAX_QUANTITY_MAGNITUDE = Number.MAX_SAFE_INTEGER;
+const amount = z.number().finite().nonnegative().max(MAX_QUANTITY_MAGNITUDE);
+const id = z.string().min(1);
+const output = z.enum(QUANTITY_OUTPUTS);
+const path = z.array(z.union([z.string(), z.number().int().nonnegative()]));
+export const contractErrorSchema = z.object({ code: id, path, message: z.string(), id: id.optional() }).strict();
+export const measurementRefSchema = z.discriminatedUnion('entity', [
+  z.object({ entity: z.literal('room'), id, field: z.enum(['length', 'width', 'ceilingHeight']) }).strict(),
+  z.object({ entity: z.literal('opening'), id, field: z.enum(['width', 'height', 'sillHeight']) }).strict(),
+]);
+const locationShape = { roomIds: z.array(id), wallFaceIds: z.array(id), openingIds: z.array(id),
+  paths: z.array(path), scopes: z.array(output) };
+const finding = z.object({ ...locationShape, code: id,
+  category: z.enum(['invalid-geometry', 'missing-or-unresolved', 'unconfirmed-measurement', 'compatibility-info']),
+  message: z.string() }).strict();
+const geometryCheck = z.object({ ...locationShape,
+  code: z.enum(['HORIZONTAL_FIT', 'VERTICAL_FIT', 'FLOOR_LEVEL_SILL', 'OPENING_OVERLAP',
+    'SHARED_ATTACHMENT_ROOMS', 'FLOOR_RUN_OVERLAP', 'CROWN_GAP_FULL_HEIGHT']),
+  status: z.enum(['valid', 'invalid', 'undetermined']), message: z.string(),
+  dependencies: z.array(measurementRefSchema) }).strict();
+export const outputReadinessSchema: z.ZodType<OutputReadiness> = z.object({
+  ...locationShape, output, wasteFraction: z.number().finite().nonnegative().nullable(),
+  openingBases: z.array(z.object({ openingId: id, measureBasis: z.enum(['unknown', 'nominal', 'clear', 'finished', 'rough']) }).strict()),
+  numericBasis: z.object({ status: z.enum(['sufficient', 'insufficient']), dependencies: z.array(measurementRefSchema), findings: z.array(finding) }).strict(),
+  geometry: z.object({ status: z.enum(['valid', 'invalid', 'undetermined']), checks: z.array(geometryCheck), findings: z.array(finding) }).strict(),
+  confirmation: z.object({ status: z.enum(['confirmed', 'provisional', 'unresolved', 'not-required']),
+    dependencies: z.array(measurementRefSchema), findings: z.array(finding) }).strict(),
+}).strict();
+const coherent = (a: number, b: number) => Math.abs(a - b) <= Number.EPSILON * Math.max(1, Math.abs(a), Math.abs(b)) * 32;
+export const amountsSchema = z.object({
+  gross: amount, rawDeductions: amount, effectiveDeductions: amount, net: amount,
+  wasteFraction: amount.nullable(), allowance: amount, adjusted: amount,
+}).strict().superRefine((value, ctx) => {
+  if (value.net > value.gross || value.effectiveDeductions > value.rawDeductions
+      || !coherent(value.gross - value.effectiveDeductions, value.net)
+      || !coherent(value.net + value.allowance, value.adjusted)
+      || !coherent(value.net * (value.wasteFraction ?? 0), value.allowance)) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Amounts must reconcile gross, effective deductions, net and one waste allowance' });
+  }
+});
+export type Amounts = z.infer<typeof amountsSchema>;
+export const inventorySchema = z.object({
+  door: amount.int(), window: amount.int(), 'floor-level-opening': amount.int(),
+}).strict();
+const coordinate = z.number().finite().min(-MAX_QUANTITY_MAGNITUDE).max(MAX_QUANTITY_MAGNITUDE);
+const intervalSchema = z.object({ start: coordinate, end: coordinate }).strict();
+const boundsSchema = z.object({ x: intervalSchema, y: intervalSchema.nullable() }).strict();
+const traceSchema = z.object({
+  formula: z.string(),
+  basis: z.array(z.object({ ref: measurementRefSchema, valueMm: z.number().finite().nonnegative() }).strict()),
+  contributions: z.array(z.object({
+    openingId: id, wallFaceId: id, raw: amount, effectiveBeforeUnion: amount,
+    boundaryAdjustment: amount, roundoffAdjustment: coordinate, rawBounds: boundsSchema, effectiveBounds: boundsSchema,
+  }).strict()),
+  boundaryAdjustment: amount, overlapAdjustment: amount, roundoffAdjustment: coordinate,
+  adjustments: z.array(z.object({
+    code: z.enum(['BOUNDARY_INTERSECTION', 'COVERAGE_UNION', 'FLOATING_POINT_ROUNDOFF']),
+    message: z.string(), amount, unit: z.enum(['mm', 'mm2']),
+  }).strict()),
+}).strict();
+export type QuantityTrace = z.infer<typeof traceSchema>;
+export const quantityRecordSchema = z.object({
+  targetId: id, output, unit: z.enum(['mm', 'mm2', 'count']),
+  status: z.enum(['complete', 'provisional', 'blocked']),
+  readiness: outputReadinessSchema,
+  evidence: z.array(z.object({ ref: measurementRefSchema, measurement: elevationSchema }).strict()),
+  amounts: amountsSchema.nullable(), trace: traceSchema, errors: z.array(contractErrorSchema),
+  inventory: inventorySchema.nullable(),
+}).strict().superRefine((record, ctx) => {
+  if ((record.status === 'blocked') !== (record.amounts === null)) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['amounts'], message: 'Blocked records have unavailable amounts; usable records require amounts' });
+  }
+  if (record.output !== record.readiness.output) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['readiness', 'output'], message: 'Readiness belongs to this output' });
+  }
+  const expectedUnit = record.output === 'opening-inventory' ? 'count' : record.output.includes('area') ? 'mm2' : 'mm';
+  if (record.unit !== expectedUnit) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['unit'], message: 'Unit does not match output' });
+  if (record.status !== 'blocked' && (record.readiness.numericBasis.status !== 'sufficient' || record.readiness.geometry.status !== 'valid'
+      || record.readiness.confirmation.status === 'unresolved')) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['status'], message: 'Usable records require sufficient, valid, resolved readiness' });
+  }
+  if (record.status === 'complete' && !['confirmed', 'not-required'].includes(record.readiness.confirmation.status)) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['status'], message: 'Complete records require confirmed or not-required measurements' });
+  }
+  if (record.status === 'provisional' && record.readiness.confirmation.status !== 'provisional') {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['status'], message: 'Provisional records require provisional confirmation' });
+  }
+  if (record.amounts) {
+    if (record.output === 'opening-inventory') {
+      const value = record.amounts;
+      if (!record.inventory || value.wasteFraction !== null || value.allowance !== 0 || value.rawDeductions !== 0
+          || value.effectiveDeductions !== 0 || ![value.gross, value.net, value.adjusted].every(Number.isSafeInteger)
+          || Object.values(record.inventory).reduce((sum, count) => sum + count, 0) !== value.net) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['amounts'], message: 'Inventory is integral identity count by kind with no deductions or waste' });
+      }
+    } else if (record.inventory !== null || record.amounts.wasteFraction === null
+        || record.amounts.wasteFraction !== record.readiness.wasteFraction) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['amounts'], message: 'Measured quantities require the explicitly selected waste fraction' });
+    }
+  } else if (record.inventory !== null || !record.errors.length) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['errors'], message: 'Unavailable records require reasons and no usable inventory' });
+  }
+});
+export type QuantityRecord = z.infer<typeof quantityRecordSchema>;
+export const quantityAggregateSchema = z.object({
+  output, unit: z.enum(['mm', 'mm2', 'count']), status: z.enum(['complete', 'provisional', 'blocked']),
+  completeness: z.enum(['complete', 'partial', 'none']),
+  subtotalStatus: z.enum(['complete', 'provisional', 'unavailable']),
+  total: amountsSchema.nullable(), subtotal: amountsSchema.nullable(),
+  includedTargetIds: z.array(id), excludedTargetIds: z.array(id),
+  inventory: inventorySchema.nullable(), errors: z.array(contractErrorSchema),
+}).strict().superRefine((aggregate, ctx) => {
+  if ((aggregate.status === 'blocked') !== (aggregate.total === null)) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['total'], message: 'Blocked selected totals are unavailable' });
+  }
+  if (aggregate.completeness === 'partial' && (!aggregate.includedTargetIds.length || !aggregate.excludedTargetIds.length || !aggregate.subtotal)) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['completeness'], message: 'Partial subtotals identify included and excluded targets' });
+  }
+  if ((aggregate.subtotal === null) !== (aggregate.subtotalStatus === 'unavailable')
+      || (aggregate.status !== 'blocked' && aggregate.subtotalStatus !== aggregate.status)) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['subtotalStatus'], message: 'Subtotal availability and confirmation status must remain explicit' });
+  }
+  if (aggregate.completeness === 'none' && aggregate.subtotal !== null) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['subtotal'], message: 'No usable aggregate basis has no subtotal' });
+  }
+  const expectedUnit = aggregate.output === 'opening-inventory' ? 'count' : aggregate.output.includes('area') ? 'mm2' : 'mm';
+  if (aggregate.unit !== expectedUnit) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['unit'], message: 'Unit does not match output' });
+  const ids = [...aggregate.includedTargetIds, ...aggregate.excludedTargetIds];
+  if (new Set(ids).size !== ids.length) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['includedTargetIds'], message: 'Aggregate target sets must be distinct and disjoint' });
+  if (aggregate.completeness === 'complete' && (aggregate.status === 'blocked' || !aggregate.total || !aggregate.subtotal
+      || aggregate.excludedTargetIds.length || !aggregate.includedTargetIds.length || JSON.stringify(aggregate.total) !== JSON.stringify(aggregate.subtotal))) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['completeness'], message: 'Complete aggregate covers all targets with matching selected total and subtotal' });
+  }
+  if (aggregate.status !== 'blocked' && aggregate.completeness !== 'complete') {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['status'], message: 'Incomplete selected outputs remain blocked' });
+  }
+  for (const values of [aggregate.total, aggregate.subtotal]) if (values) {
+    if (aggregate.output === 'opening-inventory') {
+      if (!aggregate.inventory || values.wasteFraction !== null || values.allowance !== 0 || values.rawDeductions !== 0
+          || values.effectiveDeductions !== 0 || ![values.gross, values.net, values.adjusted].every(Number.isSafeInteger)
+          || Object.values(aggregate.inventory).reduce((sum, count) => sum + count, 0) !== values.net) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['inventory'], message: 'Inventory aggregates are integral counts with no waste' });
+      }
+    } else if (values.wasteFraction === null || aggregate.inventory !== null) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['total'], message: 'Measured output aggregate requires explicit waste and no inventory' });
+    }
+  }
+});
+export type QuantityAggregate = z.infer<typeof quantityAggregateSchema>;
+export const calculationSchema = z.object({
+  schemaVersion: z.literal(RESULT_SCHEMA_VERSION), engineVersion: z.literal(ENGINE_VERSION),
+  policyVersion: z.literal('rectangular-flat-v1'),
+  source: z.object({
+    documentId: z.union([id, z.number().int().positive().safe()]).nullable(),
+    revisionId: id.nullable(), revisionState: z.enum(['unsaved', 'identified']),
+  }).strict(),
+  request: quantityRequestSchema,
+  status: z.enum(['complete', 'provisional', 'blocked', 'empty']),
+  records: z.array(quantityRecordSchema), outputs: z.array(quantityAggregateSchema),
+}).strict().superRefine((calculation, ctx) => {
+  if ((calculation.source.revisionId === null) !== (calculation.source.revisionState === 'unsaved')) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['source'], message: 'Null revisions are explicitly unsaved' });
+  }
+  const expected = !calculation.records.length ? 'empty' : calculation.outputs.some(item => item.status === 'blocked') ? 'blocked'
+    : calculation.outputs.some(item => item.status === 'provisional') ? 'provisional' : 'complete';
+  if (calculation.status !== expected || (calculation.status === 'empty' && calculation.outputs.length)) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['status'], message: 'Calculation status must describe the selected outputs' });
+  }
+  const recordKeys = calculation.records.map(record => JSON.stringify([record.output, record.targetId]));
+  const outputKeys = calculation.outputs.map(aggregate => aggregate.output);
+  if (new Set(recordKeys).size !== recordKeys.length || new Set(outputKeys).size !== outputKeys.length) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['records'], message: 'Output targets and aggregate outputs must be distinct' });
+  }
+  if (new Set(calculation.records.map(record => record.output)).size !== outputKeys.length
+      || calculation.records.some(record => !outputKeys.includes(record.output))) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['outputs'], message: 'Every selected output requires exactly one compatible aggregate' });
+  }
+  for (const aggregate of calculation.outputs) {
+    const rows = calculation.records.filter(record => record.output === aggregate.output);
+    const included = rows.filter(row => row.amounts !== null).map(row => row.targetId).sort();
+    const excluded = rows.filter(row => row.amounts === null).map(row => row.targetId).sort();
+    if (!rows.length || JSON.stringify(included) !== JSON.stringify([...aggregate.includedTargetIds].sort())
+        || JSON.stringify(excluded) !== JSON.stringify([...aggregate.excludedTargetIds].sort())) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['outputs'], message: 'Aggregate membership must match compatible record availability' });
+    }
+    if (aggregate.status !== 'blocked' && aggregate.status !== (rows.some(row => row.status === 'provisional') ? 'provisional' : 'complete')) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['outputs'], message: 'Aggregate must retain provisional record status' });
+    }
+    const expectedSubtotal = aggregate.subtotal === null ? 'unavailable'
+      : rows.some(row => row.amounts !== null && row.status === 'provisional') ? 'provisional' : 'complete';
+    if (aggregate.subtotalStatus !== expectedSubtotal) ctx.addIssue({
+      code: z.ZodIssueCode.custom, path: ['outputs'], message: 'Subtotal retains the confirmation status of included rows' });
+    if (aggregate.subtotal) for (const field of ['gross', 'rawDeductions', 'effectiveDeductions', 'net', 'allowance', 'adjusted'] as const) {
+      const sum = rows.reduce((sum, row) => sum + (row.amounts?.[field] ?? 0), 0);
+      if (!coherent(sum, aggregate.subtotal[field])) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['outputs'], message: 'Aggregate subtotal must reconcile to included rows' });
+      }
+    }
+  }
+});
+export type Calculation = z.infer<typeof calculationSchema>;

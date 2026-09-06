@@ -29,10 +29,14 @@ export interface GeometryReport {
 export const FACE_OUTPUTS: readonly QuantityOutput[] = Object.freeze(['net-wall-area', 'baseboard', 'base-shoe', 'crown', 'door-casing', 'window-casing']);
 const unique = (values: string[]) => Array.from(new Set(values));
 
-// Roundoff allowance only for subtraction at a floating-point boundary. Neither
-// this nor the 0.01mm tolerance is a construction clearance or measurement accuracy.
+// Comparison roundoff is capped at 1e-9mm, independently of the 0.01mm policy
+// tolerance. Without the cap, large coordinates could allow physically invalid
+// overruns/overlaps of tenths of a millimeter. Neither allowance is construction
+// clearance or a claim of measurement accuracy.
+const MAX_COMPARISON_ROUNDOFF_MM = 1e-9;
 export const exceedsTolerance = (a: number, b: number) =>
-  a - b > T + Number.EPSILON * Math.max(1, Math.abs(a), Math.abs(b)) * 4;
+  a - b > T + Math.min(MAX_COMPARISON_ROUNDOFF_MM,
+    Number.EPSILON * Math.max(1, Math.abs(a), Math.abs(b)) * 4);
 export const atFloor = (sill: number) => !exceedsTolerance(sill, 0);
 
 export function roomRef(room: PhysicalRoom, field: 'length' | 'width' | 'ceilingHeight'): MeasurementRef {
