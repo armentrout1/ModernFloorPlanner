@@ -1,4 +1,4 @@
-import { expect, test, type Locator, type Page } from '@playwright/test';
+import { expect, test, type Locator, type Page, type CDPSession } from '@playwright/test';
 import type { Room } from '../../shared/schema';
 
 // Tests use only the existing disposable loopback fixture and the real legacy editor.
@@ -407,4 +407,209 @@ test('cancelled pan consumes its later release instead of placing the pending op
     await page.getByRole('button', { name: 'Select & Move', exact: true }).click();
   }
   expect((await save(page, saved.id)).rooms).toEqual(rooms);
+});
+
+
+// Zoom gestures use browser touch input, not synthetic DOM TouchEvents.
+
+type ZoomPoint = { x: number; y: number };
+const zoomTouch = (point: ZoomPoint, id: number) => ({ ...point, id, radiusX: 5, radiusY: 5, force: 1 });
+async function zoomBox(target: Locator) {
+  const box = await target.boundingBox();
+  expect(box).not.toBeNull();
+  return box!;
+}
+async function expectZoomAnchor(target: Locator, local: ZoomPoint, screen: ZoomPoint) {
+  await expect.poll(async () => {
+    const box = await zoomBox(target);
+    return Math.max(Math.abs(box.x + local.x * box.width - screen.x),
+      Math.abs(box.y + local.y * box.height - screen.y));
+  }, { message: 'The model point under the gesture anchor must stay at the same screen position' }).toBeLessThanOrEqual(2);
+}
+async function expectZoomBoxUnchanged(target: Locator, before: { x: number; y: number; width: number; height: number }) {
+  const box = await zoomBox(target);
+  expect(Math.max(Math.abs(box.x - before.x), Math.abs(box.y - before.y),
+    Math.abs(box.width - before.width), Math.abs(box.height - before.height))).toBeLessThanOrEqual(1);
+}
+async function dispatchZoomTouches(cdp: CDPSession, type: 'touchStart' | 'touchMove' | 'touchEnd' | 'touchCancel',
+  points: ReturnType<typeof zoomTouch>[]) {
+  await cdp.send('Input.dispatchTouchEvent', { type, touchPoints: points });
+}
+async function recordZoomTouchEnds(page: Page) {
+  await page.evaluate(() => {
+    const state = window as typeof window & { zoomTouchEnds?: number[]; zoomTouchRecorder?: boolean };
+    state.zoomTouchEnds = [];
+    if (!state.zoomTouchRecorder) {
+      window.addEventListener('touchend', event => state.zoomTouchEnds!.push(event.touches.length), true);
+      state.zoomTouchRecorder = true;
+    }
+  });
+}
+async function releaseOneZoomFinger(page: Page, cdp: CDPSession, ended: ReturnType<typeof zoomTouch>) {
+  // Chromium releases the supplied touch ID; the other ID remains active.
+  await dispatchZoomTouches(cdp, 'touchEnd', [ended]);
+  await expect.poll(() => page.evaluate(() =>
+    (window as typeof window & { zoomTouchEnds?: number[] }).zoomTouchEnds?.includes(1))).toBe(true);
+}
+
+test('Ctrl-wheel zoom anchors at the pointer in both directions while ordinary/outside wheel keeps its scope', async ({ page }) => {
+  await page.setViewportSize({ width: 1140, height: 900 });
+  const rooms = layout(0, 0), saved = await seedAndLoad(page, rooms);
+  await page.getByTitle('Fit to Screen', { exact: true }).click();
+  const marker = roomNode(page, rooms[0].id);
+  const before = await zoomBox(marker);
+  const local = { x: 0.4, y: 0.55 };
+  const anchor = { x: before.x + before.width * local.x, y: before.y + before.height * local.y };
+  await page.evaluate(() => {
+    const state = window as typeof window & { zoomWheelDefaults?: { event: WheelEvent; inside: boolean }[] };
+    state.zoomWheelDefaults = [];
+    window.addEventListener('wheel', event => {
+      const inside = !!(event.target as Element | null)?.closest('[data-testid="canvas-viewport"]');
+      state.zoomWheelDefaults!.push({ event, inside });
+    }, { capture: true, passive: true });
+  });
+  await page.mouse.move(anchor.x, anchor.y);
+  await page.keyboard.down('Control');
+  try {
+    await page.mouse.wheel(0, -120);
+    await expect.poll(async () => (await zoomBox(marker)).width).toBeGreaterThan(before.width);
+    await expectZoomAnchor(marker, local, anchor);
+    const enlarged = await zoomBox(marker);
+    await page.mouse.wheel(0, 120);
+    await expect.poll(async () => (await zoomBox(marker)).width).toBeLessThan(enlarged.width);
+    await expectZoomAnchor(marker, local, anchor);
+  } finally {
+    await page.keyboard.up('Control');
+  }
+  expect(await page.evaluate(() => {
+    const events = (window as typeof window & { zoomWheelDefaults?: { event: WheelEvent; inside: boolean }[] }).zoomWheelDefaults!;
+    const inside = events.filter(event => event.event.ctrlKey && event.inside);
+    return inside.length >= 2 && inside.every(event => event.event.defaultPrevented);
+  })).toBe(true);
+
+  const viewport = await visibleViewport(page);
+  await page.mouse.move(viewport.x + viewport.width / 2, viewport.y + viewport.height / 2);
+  const scrollBefore = await scrollPosition(page);
+  await page.mouse.wheel(0, 72);
+  await expect.poll(async () => (await scrollPosition(page)).y).toBeGreaterThan(scrollBefore.y);
+
+  const surface = page.getByTestId('canvas-surface');
+  const editorTransform = await surface.evaluate(node => getComputedStyle(node).transform);
+  const outside = await page.getByRole('button', { name: 'Load Sketch', exact: true }).boundingBox();
+  expect(outside).not.toBeNull();
+  await page.mouse.move(outside!.x + outside!.width / 2, outside!.y + outside!.height / 2);
+  await page.keyboard.down('Control');
+  try { await page.mouse.wheel(0, -120); } finally { await page.keyboard.up('Control'); }
+  await expect.poll(() => page.evaluate(() => {
+    const events = (window as typeof window & { zoomWheelDefaults?: { event: WheelEvent; inside: boolean }[] }).zoomWheelDefaults!;
+    return events.some(event => event.event.ctrlKey && !event.inside && !event.event.defaultPrevented);
+  })).toBe(true);
+  expect(await surface.evaluate(node => getComputedStyle(node).transform)).toBe(editorTransform);
+  expect((await save(page, saved.id)).rooms).toEqual(rooms);
+});
+
+test.describe('two-finger zoom through browser touch input', () => {
+  test.use({ hasTouch: true, viewport: { width: 820, height: 1000 } });
+
+  test('pinches over rooms and openings follow the distance ratio; one remaining finger cannot edit or pan', async ({ page }) => {
+    const rooms = layout(0, 0), saved = await seedAndLoad(page, rooms);
+    const cdp = await page.context().newCDPSession(page);
+    await cdp.send('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 5 });
+    try {
+      for (const [targetId, tool] of [
+        ['room-fit-bedroom', 'Select & Move'], ['opening-fit-door', 'Add Door'], ['opening-fit-window', 'Add Window'],
+      ]) {
+        await page.getByRole('button', { name: tool, exact: true }).click();
+        await page.getByTitle('Fit to Screen', { exact: true }).click();
+        await recordZoomTouchEnds(page);
+        const viewport = await visibleViewport(page);
+        const hit = await zoomBox(page.getByTestId(targetId));
+        const first = { x: hit.x + hit.width / 2, y: hit.y + hit.height / 2 };
+        const vector = { x: first.x > viewport.x + viewport.width / 2 ? -48 : 48,
+          y: first.y > viewport.y + viewport.height / 2 ? -32 : 32 };
+        const second = { x: first.x + vector.x, y: first.y + vector.y };
+        const midpoint = { x: (first.x + second.x) / 2, y: (first.y + second.y) / 2 };
+        const marker = roomNode(page, rooms[0].id), initial = await zoomBox(marker);
+        const local = { x: (midpoint.x - initial.x) / initial.width, y: (midpoint.y - initial.y) / initial.height };
+        const pointsAt = (ratio: number) => [
+          zoomTouch({ x: midpoint.x - vector.x * ratio / 2, y: midpoint.y - vector.y * ratio / 2 }, 1),
+          zoomTouch({ x: midpoint.x + vector.x * ratio / 2, y: midpoint.y + vector.y * ratio / 2 }, 2),
+        ];
+        await dispatchZoomTouches(cdp, 'touchStart', pointsAt(1));
+        for (const ratio of [1.08, 1.19, 1.35, 1.12, 0.97, 0.85]) {
+          await dispatchZoomTouches(cdp, 'touchMove', pointsAt(ratio));
+          await expect.poll(async () => Math.abs((await zoomBox(marker)).width - initial.width * ratio),
+            { message: 'Pinch must follow the actual finger-distance ratio, not fixed zoom steps' }).toBeLessThanOrEqual(2);
+          await expectZoomAnchor(marker, local, midpoint);
+        }
+        const remaining = pointsAt(0.85)[1];
+        await releaseOneZoomFinger(page, cdp, pointsAt(0.85)[0]);
+        const stopped = await zoomBox(marker);
+        await dispatchZoomTouches(cdp, 'touchMove', [{ ...remaining, x: remaining.x + 15, y: remaining.y + 10 }]);
+        await expectZoomBoxUnchanged(marker, stopped);
+        await dispatchZoomTouches(cdp, 'touchMove', [{ ...remaining, x: remaining.x - 7, y: remaining.y + 18 }]);
+        await expectZoomBoxUnchanged(marker, stopped);
+        await dispatchZoomTouches(cdp, 'touchEnd', []);
+        await expect(page.locator('.room-box')).toHaveCount(3);
+        await expect(page.locator('[data-testid^="opening-"]')).toHaveCount(2);
+        await page.getByRole('button', { name: 'Select & Move', exact: true }).click();
+        await expect(page.locator('[data-testid^="opening-"]')).toHaveCount(2);
+      }
+      expect((await save(page, saved.id)).rooms).toEqual(rooms);
+    } finally {
+      await dispatchZoomTouches(cdp, 'touchCancel', []).catch(() => {});
+      await cdp.detach();
+    }
+  });
+
+  test('a second finger cancels pending room drawing until all fingers are lifted and a fresh gesture starts', async ({ page }) => {
+    const rooms = layout(0, 0), saved = await seedAndLoad(page, rooms);
+    const cdp = await page.context().newCDPSession(page);
+    await cdp.send('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 5 });
+    try {
+      await page.getByTitle('Fit to Screen', { exact: true }).click();
+      await page.getByRole('button', { name: 'Draw Room', exact: true }).click();
+      await recordZoomTouchEnds(page);
+      const viewport = await visibleViewport(page);
+      const first = zoomTouch({ x: viewport.x + 24, y: viewport.y + 24 }, 1);
+      const second = zoomTouch({ x: viewport.x + 104, y: viewport.y + 24 }, 2);
+      expect(await page.evaluate(point => {
+        const hit = document.elementFromPoint(point.x, point.y);
+        return !!hit?.closest('[data-testid="canvas-viewport"]') && !hit.closest('.room-box');
+      }, first)).toBe(true);
+      await dispatchZoomTouches(cdp, 'touchStart', [first]);
+      await dispatchZoomTouches(cdp, 'touchStart', [first, second]);
+      const marker = roomNode(page, rooms[0].id), before = await zoomBox(marker);
+      const midpoint = { x: (first.x + second.x) / 2, y: first.y };
+      const local = { x: (midpoint.x - before.x) / before.width, y: (midpoint.y - before.y) / before.height };
+      const spread = [
+        { ...first, x: midpoint.x - 54 }, { ...second, x: midpoint.x + 54 },
+      ];
+      await dispatchZoomTouches(cdp, 'touchMove', spread);
+      await expect.poll(async () => Math.abs((await zoomBox(marker)).width - before.width * 1.35)).toBeLessThanOrEqual(2);
+      await expectZoomAnchor(marker, local, midpoint);
+      await releaseOneZoomFinger(page, cdp, spread[0]);
+      const stopped = await zoomBox(marker);
+      await dispatchZoomTouches(cdp, 'touchMove', [{ ...spread[1], x: spread[1].x + 60, y: spread[1].y + 85 }]);
+      await expectZoomBoxUnchanged(marker, stopped);
+      await dispatchZoomTouches(cdp, 'touchEnd', []);
+      await expect(page.locator('.room-box')).toHaveCount(3);
+      await expect(page.locator('[data-testid^="opening-"]')).toHaveCount(2);
+      // Assert full preservation before the deliberately new drawing gesture below.
+      expect((await save(page, saved.id)).rooms).toEqual(rooms);
+
+      await page.getByTitle('Fit to Screen', { exact: true }).click();
+      await page.getByRole('button', { name: 'Draw Room', exact: true }).click();
+      const freshView = await visibleViewport(page);
+      const fresh = zoomTouch({ x: freshView.x + 6, y: freshView.y + 6 }, 3);
+      await dispatchZoomTouches(cdp, 'touchStart', [fresh]);
+      await dispatchZoomTouches(cdp, 'touchMove', [{ ...fresh, x: freshView.x + 60, y: freshView.y + 58 }]);
+      await dispatchZoomTouches(cdp, 'touchEnd', []);
+      await expect(page.locator('.room-box')).toHaveCount(4);
+      await expect(page.locator('[data-testid^="opening-"]')).toHaveCount(2);
+    } finally {
+      await dispatchZoomTouches(cdp, 'touchCancel', []).catch(() => {});
+      await cdp.detach();
+    }
+  });
 });

@@ -30,6 +30,7 @@ interface RoomBoxProps {
   placingObjectType?: ObjectType | null;
   scale: number;
   isPartOfMultiSelection?: boolean; // New prop for multi-select
+  isCanvasPinching?: boolean;
 }
 
 const RoomBox: React.FC<RoomBoxProps> = ({
@@ -45,7 +46,8 @@ const RoomBox: React.FC<RoomBoxProps> = ({
   selectedObjectId,
   placingObjectType,
   scale,
-  isPartOfMultiSelection = false
+  isPartOfMultiSelection = false,
+  isCanvasPinching = false
 }) => {
   const [isEditingName, setIsEditingName] = useState(false);
   
@@ -259,10 +261,10 @@ const RoomBox: React.FC<RoomBoxProps> = ({
   return (
     <div 
       data-testid={`room-${room.id}`}
-      className={`room-box ${isTouching ? 'room-touching' : ''}`}
+      className={`room-box ${isTouching && !isCanvasPinching ? 'room-touching' : ''}`}
       style={{
         ...roomStyle,
-        transform: isTouching ? 'scale(0.98)' : 'scale(1)',
+        transform: isTouching && !isCanvasPinching ? 'scale(0.98)' : 'scale(1)',
         border: 'none', // Remove default border since we're drawing custom walls
       }}
       onClick={handleClick}

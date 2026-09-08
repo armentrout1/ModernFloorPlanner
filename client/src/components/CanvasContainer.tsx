@@ -16,6 +16,7 @@ import { shouldIgnoreEditorShortcut } from '@/utils/keyboard';
 import CanvasControls from './CanvasControls';
 import { useCanvasView } from '@/hooks/useCanvasView';
 import { useCanvasPan } from '@/hooks/useCanvasPan';
+import { useCanvasZoom } from '@/hooks/useCanvasZoom';
 import RoomBox from './RoomBox';
 import RoomObject from './RoomObject';
 import TotalAreaDisplay from './TotalAreaDisplay';
@@ -112,6 +113,18 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
   const pan = useCanvasPan(wrapperRef, active, activeTool === 'move',
     !state.isDrawing && !state.isDragging && !state.isResizing && !state.isSelecting && doorState.mode !== 'dragging',
     view.captureCenter);
+
+  const zoom = useCanvasZoom(stageRef, canvasRef, wrapperRef, active, state.scale,
+    (scale, center) => {
+      setState(previous => ({ ...previous, scale }));
+      view.centerOn(center);
+    }, () => {
+      setState(previous => ({ ...previous, isDrawing: false, isDragging: false,
+        isResizing: false, isSelecting: false, isPanning: false, drawStart: null,
+        drawEnd: null, selectStart: null, selectEnd: null, activeResizeHandle: null }));
+      setDoorState({ mode: 'idle', cursorPreview: null, draggedDoor: null,
+        previewPosition: null, targetWall: null });
+    });
 
   // Zoom functions
   const handleZoomIn = useCallback(() => {
@@ -645,7 +658,7 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
   };
   
   const handleCanvasMouseMove = (e: React.MouseEvent) => {
-    if (pan.ownedButton.current !== null) return;
+    if (pan.ownedButton.current !== null || zoom.touchOwned.current) return;
     const rect = canvasRef.current?.getBoundingClientRect();
     if (!rect) return;
     
@@ -777,7 +790,7 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
   };
   
   const handleCanvasMouseUp = (event?: React.MouseEvent) => {
-    if (pan.ownedButton.current !== null || (event?.type === 'mouseup' && event.button !== 0)) return;
+    if (pan.ownedButton.current !== null || zoom.touchOwned.current || (event?.type === 'mouseup' && event.button !== 0)) return;
     if (event?.type === 'mouseleave' && doorState.mode === 'placing') {
       // Leaving a hover preview is not a placement click (including after a pan).
       setDoorState(previous => ({ ...previous, mode: 'idle', cursorPreview: null }));
@@ -1036,21 +1049,10 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
     }));
   };
   
-  // Touch Handling
-  const [touchDistance, setTouchDistance] = useState<number | null>(null);
-  const [lastTouches, setLastTouches] = useState<React.Touch[]>([]);
-  
-  // Calculate distance between two touch points for pinch-to-zoom
-  const getTouchDistance = (touches: React.TouchList): number => {
-    if (touches.length < 2) return 0;
-    
-    const dx = touches[0].clientX - touches[1].clientX;
-    const dy = touches[0].clientY - touches[1].clientY;
-    return Math.sqrt(dx * dx + dy * dy);
-  };
-  
+  // Single-touch editing; two-finger gestures are owned by useCanvasZoom.
   // Handle touch start on canvas
   const handleCanvasTouchStart = (e: React.TouchEvent) => {
+    if (zoom.touchOwned.current) return;
     // Prevent default browser behavior like scrolling/zooming
     e.preventDefault();
     
@@ -1060,11 +1062,6 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
     const touch = e.touches[0];
     const x = (touch.clientX - rect.left) / state.scale;
     const y = (touch.clientY - rect.top) / state.scale;
-    
-    // Store touches for later reference
-    if (e.touches.length > 0) {
-      setLastTouches(Array.from(e.touches));
-    }
     
     // Check if touch is on a room or on the canvas itself
     if (e.target !== canvasRef.current && e.target !== stageRef.current) {
@@ -1094,16 +1091,11 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
         }
       }
     } 
-    // Multi-touch - handle pinch zoom
-    else if (e.touches.length === 2) {
-      // Store initial distance for pinch detection
-      const initialDistance = getTouchDistance(e.touches);
-      setTouchDistance(initialDistance);
-    }
   };
   
   // Handle touch move on canvas
   const handleCanvasTouchMove = (e: React.TouchEvent) => {
+    if (zoom.touchOwned.current) return;
     // Prevent default browser behavior
     e.preventDefault();
     
@@ -1137,31 +1129,12 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
         }));
       }
       
-      // Store current touches for later reference
-      setLastTouches(Array.from(e.touches));
-    } 
-    // Handle pinch gesture for zooming
-    else if (e.touches.length === 2 && touchDistance !== null) {
-      const currentDistance = getTouchDistance(e.touches);
-      const delta = currentDistance - touchDistance;
-      
-      // Threshold to prevent tiny movements from triggering zoom
-      if (Math.abs(delta) > 10) {
-        if (delta > 0) {
-          handleZoomIn();
-        } else {
-          handleZoomOut();
-        }
-        setTouchDistance(currentDistance);
-      }
-      
-      // Store current touches
-      setLastTouches(Array.from(e.touches));
     }
   };
   
   // Handle touch end on canvas
   const handleCanvasTouchEnd = (e: React.TouchEvent) => {
+    if (zoom.touchOwned.current) return;
     // Don't prevent default here to allow normal touch behavior after the interaction
     
     if (state.isDrawing && state.drawStart && state.drawEnd) {
@@ -1183,9 +1156,6 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
         onSelectRoom(newRoom.id);
       }
     }
-    
-    // Reset touch-specific states
-    setTouchDistance(null);
     
     // Reset all interaction states
     setState(prev => ({ 
@@ -1261,7 +1231,7 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
         ref={wrapperRef}
         data-testid="canvas-viewport"
         className="min-h-0 w-full flex-1 overflow-auto bg-white"
-        style={{ overflowAnchor: 'none' }}
+        style={{ overflowAnchor: 'none', touchAction: 'none' }}
       >
         <div
           ref={stageRef}
@@ -1286,6 +1256,7 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
           {rooms.map(room => (
             <RoomBox
               key={room.id}
+              isCanvasPinching={zoom.pinching}
               room={room}
               isSelected={room.id === selectedRoomId}
               isPartOfMultiSelection={state.selectedRoomIds.includes(room.id) && room.id !== selectedRoomId}

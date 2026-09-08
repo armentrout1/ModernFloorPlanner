@@ -32,6 +32,8 @@ const shortcuts: KeyboardShortcut[] = [
 
   // Navigation & View
   { keys: ['Mouse Wheel'], description: 'Scroll canvas', category: 'Navigation' },
+  { keys: ['Ctrl', 'Mouse Wheel'], description: 'Zoom at pointer', category: 'Navigation' },
+  { keys: ['Two fingers'], description: 'Pinch to zoom and move canvas', category: 'Navigation' },
   { keys: ['Middle Button', 'Drag'], description: 'Pan canvas (hold to drag)', category: 'Navigation' },
   { keys: ['Space', 'Drag'], description: 'Pan canvas', category: 'Navigation' },
   { keys: ['+', '='], description: 'Zoom in', category: 'Navigation' },
