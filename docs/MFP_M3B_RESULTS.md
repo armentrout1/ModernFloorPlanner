@@ -1,6 +1,89 @@
 # MFP-M3B implementation results
 
 Date: 2026-09-08 · [Issue #10](https://github.com/armentrout1/ModernFloorPlanner/issues/10)
+**Slice 3 COMPLETE locally. Slice 4 NEXT ELIGIBLE, NOT STARTED.** M3B as a whole remains in progress.
+Application/test commit: **77bb3b86c14dfb921186fe5db5b0244723581182**; entry main/origin/main: **96ceecfd48965d0ab3f630f62498e9c139c5e7cb**.
+**NOT DEPLOYED.** Production/database/authentication/partner smoke NOT VERIFIED. Issue #2 remains unreleased; hosting #4 remains PROPOSED. CRM proposal PR #11 remains separate and unmerged.
+
+## Slice 3 application result
+
+Inside **/physical-draft**, one validated `draft.request` now drives selected work, room/wall/opening-face targets, measurement basis and optional waste. Supported outputs are floor area, flat ceiling area, gross/net wall area, baseboard, base shoe, crown, door casing, window casing and physical opening inventory. Work starts with explicitly empty targets; “All current” captures current IDs once. Adding rooms never expands a custom selection or resets existing work/basis/waste. Empty work or targets means nothing selected, not a complete zero. Editing selection, displayed scope highlighting and camera/source focus stay separate from takeoff scope.
+
+The panel passes the full preview-masked physical document and saved request to the existing **rectangular-flat-v2 shared engine**, whose formulas/policy/readiness/snapshot implementation were unchanged. Gross, raw/effective deductions, net, optional allowance and adjusted quantity, units and source identities come from engine results. Numeric sufficiency, geometry, input confirmation and model applicability remain separate. A blocked selected target makes the full selected total unavailable; usable rows appear only as an explicitly partial subtotal with included/excluded targets and provisional status when applicable. Missing-input findings locate exact source measurements without changing scope or edit selection. Same-room informational floor/ceiling/gross summaries remain independent of the selected takeoff.
+
+Waste is an optional raw percentage on noninventory outputs: 10 becomes an engine fraction of 0.10. Complete finite nonnegative syntax is required. Invalid/unfinished text and unit-independent context survive switching views and recovery; pending waste hides old allowance/adjusted amounts while preserving measured net and unrelated outputs. The engine applies allowance once after net. Inventory counts each physical identity once and has no waste control. Casing is per selected opening face; shared openings retain one inventory ID and can expose both faces. Requested nominal/clear/finished/rough basis must match actual input; no relabeling or implicit conversion. Crown gaps require explicit attached-face choices and supported full-height geometry.
+
+Review dialogs identify the selected draft, target, field/value/unit/source and relevant reason. Only committed eligible known measurements can be explicitly confirmed. Candidate choice is explicit and remains unconfirmed until a separate confirmation; correction preserves prior/candidate evidence and clears only that field's confirmation. Captured draft revision and exact value/declaration snapshots reject stale reviews. Flat ceiling, uniform finished-wall height and rectangular horizontal crown-path declarations are reviewed independently. Unsupported geometry or applicability cannot be cleared merely by confirming a measurement. This is user input review, not professional verification, authentication or an estimate approval.
+
+Opening moves/deletion atomically prune unavailable selected face/identity references and show a notice; unaffected work, targets, basis, waste and raw edits remain. Bounded opening Undo restores its physical identity/data and prior target selection only if no later scope or raw-waste edit occurred, including an away-and-back scope change. Additive versioned recovery fields retain earlier supported envelopes, full source originals and action/model evidence; current confirmed state must match supported imported or retained action evidence. Corrupt/unsupported data, failed storage writes and stale operations preserve original bytes/newer memory. Recovery is local consistency, not authentication or durable saving. No cached totals or completeness flags are authoritative.
+
+## Actual fixture and acceptance evidence
+
+The visible UI and canonical local smoke used a 12 x 10 x 8 ft room; an explicit finished 3 x 7 ft door, sill 0, top-wall center 2.5 ft; and a finished 4 x 3 ft window, sill 3 ft, top-wall center 8 ft. Flat/uniform/rectangular model declarations remain explicit; initial quantities are provisional until required inputs/models are reviewed.
+
+| Selected output | Actual fixture result |
+| --- | --- |
+| Floor / flat ceiling | 120 sq ft each |
+| Gross walls | 352 sq ft |
+| Opening area deductions | Door 21 + window 12 = 33 sq ft |
+| Net walls | 319 sq ft |
+| Baseboard / base shoe | 41 ft each |
+| Crown | 44 ft |
+| Door casing, one face | 17 ft |
+| Window casing, one face | 14 ft |
+| Physical opening inventory | One door and one window |
+| Floor with explicit 10% waste | Net 120 + allowance 12 = adjusted 132 sq ft |
+| Top wall only | Gross 96 − deductions 33 = net 63 sq ft; baseboard 9 ft |
+
+Clearing the window height leaves floor and gross wall quantities usable, makes the full net wall total unavailable, and reports the other three walls as an explicitly **partial, provisional 256 sq ft subtotal**, excluding the top wall. Browser cases also exercise explicit review/candidates, basis mismatch, unsupported models, stale dialogs, scope/edit/camera independence, shared inventory versus face quantities, pending inputs/waste, recovery and original-source preservation without API writes.
+
+Added **34 unit cases** (24 scope/review/recovery commands and 10 read-model/source-location cases) and **9 browser cases**. All prior **316 unit** and **114 browser** cases remain in the final suite. One existing unit fixture now explicitly chooses its floor/ceiling/gross-wall work and all-current targets instead of relying on automatic `addRoom` scope; all its numerical, masking, evidence and recovery assertions remain. No existing browser test changed and no case was skipped.
+
+## Fresh final checks
+
+After the final application/test change, one complete sequence ran with Node 20.20.2, npm 10.8.2 and Playwright 1.55.1:
+
+| Command | Actual result | Duration |
+| --- | --- | --- |
+| `npm ci` | PASS, exit 0 | 11.25 s |
+| `npm test` | PASS, exit 0; **350/350** | 2.95 s |
+| `npm run check` | PASS, exit 0 | 5.66 s |
+| `npm run build` | PASS, exit 0 | 4.42 s |
+| `npx playwright test --reporter=line` | PASS, exit 0; **123/123**, zero retries/skips | 297.37 s |
+| `git diff --check` / `git diff --cached --check` | PASS for application and documentation; staged checks also passed | Not timed |
+
+[Source/check/log-hash manifest](evidence/MFP_M3B_SLICE3_2026-09-08.json) binds **all 223 frozen source files**, isolated final checks and canonical smoke to application commit `77bb3b86c14dfb921186fe5db5b0244723581182`. Existing 28 dependency advisories (4 low, 10 moderate, 14 high) and browser-data/chunk warnings remain; no dependency, lockfile or runtime upgrade was performed. The local smoke is additional acceptance evidence, not extra tests added to the 123-case total.
+
+Earlier focused results remain separate: the first new-browser run stopped after two exact-label Configure work selector timeouts, one interrupted case and six unrun cases; no case passed. Corrected role/name selectors produced 9/9 focused passes. A read-model presentation defect showed pending-waste text for inventory and was repaired. Visual review then exposed a roughly 40-pixel phone Configure work control; its full-row mobile layout was repaired and a minimum 160-pixel regression assertion added. The final full sequence also includes the added pending-room-dimension masking assertion. Independent review corrected stale rendered scope replacements to use captured revisions and made Locate source preserve edit selection. These fixes precede the source freeze and final full checks above.
+
+## Preservation and canonical local smoke
+
+Development and the clean-install/full-check sequence used an isolated tracked-source export without owner environment files, database/customer data or browser sessions. Canonical root/remote/main, writer inventory, stash, archived roadmap and source equality were rechecked before integration. The existing integration watcher PID 34792 was stopped before copying the final source; old review ports 5173/5176/5177 stay stopped. Owner tabs were not inspected, reloaded or operated on, and Git does not save live browser memory. Stash `779950aeaa1b81fc8955ad8f399ab87ae5e59063` and original-roadmap SHA-256 `4AA44769A3AF1CC8A4FE940B09E024109FEA19630F61181772B42F7EFDB7BCF1` remain unchanged.
+
+Safe review: **http://127.0.0.1:5178/physical-draft**, open in a new tab. A fresh disposable canonical browser context rebuilt the all-output fixture, checked gross/deductions/net and waste once, located the selected wall without changing scope, verified top-wall-only results, checked the 256 sq ft partial subtotal, explicitly reviewed floor inputs and recovered unfinished `10.` waste text with exact registry bytes/evidence. Zero page errors, console errors or API writes. That context closed; the separate review server remains available. This is **local smoke**, not hosting/deployment, production persistence, authorization or partner integration evidence.
+
+## Screenshots and three owner checks
+
+![Canonical selected-work takeoff](evidence/MFP_M3B_SLICE3_CANONICAL.png)
+
+[Desktop](evidence/MFP_M3B_SLICE3_DESKTOP.png) · [Tablet](evidence/MFP_M3B_SLICE3_TABLET.png) · [Phone](evidence/MFP_M3B_SLICE3_PHONE.png) · [Partial subtotal](evidence/MFP_M3B_SLICE3_CANONICAL_PARTIAL.png)
+
+1. Open port 5178 in a new tab, create a physical room and openings, then choose work and explicit targets. Check all-room versus one-wall quantities and Locate source without changing scope.
+2. Enter 10% floor waste; check net, allowance and adjusted values. Leave `10.` unfinished and verify adjusted quantity becomes unavailable. Clear the window height and check the labeled partial wall subtotal.
+3. Review a known measurement and a supported model separately; inspect a conflict's explicit candidate choices when present. Switch views/reload and verify scope, unfinished text and review evidence persist in this tab.
+
+## Limits and single next task
+
+No Slice 3 acceptance blocker remains after the recorded final checks and canonical smoke. Temporary recovery remains same-tab only; no accounts, database/cross-device saving, customer onboarding, hosted release or production auth binding was added. Source measurements and user review do not certify construction accuracy or a complete takeoff. Unsupported geometry/models remain blocked. Material recipes, coverage, packages, purchasing, pricing/tax/totals, billing and partner integration remain outside this slice. The separate CRM proposal #11 activates no Floor Planner implementation.
+
+**Next eligible task: M3B Slice 4 — integrated acceptance, bounded repair and M3B closeout. NOT STARTED; requires a separate assignment.** No automatic move to Slice 4, M3C general undo/responsive work, proposed M3D levels-before-stairs, kitchen/bath/trades, M4 durable saving/auth, M5–M8 or hosting #4 is authorized by this report. M3B remains in progress until its assigned closeout is completed.
+
+---
+
+# Historical Slice 2 results (superseded current status, preserved evidence)
+
+
+Date: 2026-09-08 · [Issue #10](https://github.com/armentrout1/ModernFloorPlanner/issues/10)
 **Slice 2 COMPLETE locally. Slice 3 eligible, NOT STARTED.** M3B as a whole remains in progress.
 Application/test commit: **0f56cbfb2cd5b27d647cececa0a3da7ac3327afc**; entry main/origin/main: d771406acbf65290b10bb538cdad2fe86e0d00b4.
 **NOT DEPLOYED.** Production/database/authentication/partner smoke NOT VERIFIED. Issue #2 remains unreleased; #4 remains PROPOSED.
