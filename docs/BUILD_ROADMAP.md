@@ -204,6 +204,8 @@ M1A: establish compatible unit/component/browser test tooling and exact `check`/
 
 **Owner-assigned panel-toggle repair:** issue #8 and [editor UX results](MFP_EDITOR_UX_RESULTS.md) record one fixed toggle per side, correct arrow directions, remembered resized widths, preserved inspector drafts and bounded Materials scrolling. Producer-verified locally with 34/34 focused browser checks, typecheck/build and inspected local screenshots. NOT DEPLOYED. No saved-model change or later milestone activation.
 
+**Owner-assigned window-size selectors:** the [editor UX report](MFP_EDITOR_UX_RESULTS.md) records separate common width/height presets, custom dimensions and exact legacy-height handling. Producer-verified locally: 222 automated checks, final 14 focused browser cases, typecheck/build and inspected desktop/narrow screenshots passed; earlier browser failures and their resolution are recorded. NOT DEPLOYED. No later milestone activated; issue #8 publication remains pending the earlier permission question.
+
 ### M4 — Make standalone use safe and dependable
 
 **Entry:** M1–M3; deployment binding verified; actual identity provider decision recorded. M4A: authentication, workspace/membership authorization and denied-access tests. M4B: explicit legacy ownership review, additive storage migrations, revisions, autosave/idempotency/conflicts and local recovery. M4C: project list, rename/duplicate/archive/restore; PDF/CSV and accessible print view from the same snapshot.
