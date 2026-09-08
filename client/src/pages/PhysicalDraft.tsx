@@ -1,9 +1,12 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'wouter';
 import { Button } from '@/components/ui/button';
 import { PhysicalDraftProvider, usePhysicalDraft } from '@/features/physical-draft/provider';
 import { RoomMeasurements } from '@/features/physical-draft/RoomMeasurements';
 import { PhysicalDrawing } from '@/features/physical-draft/PhysicalDrawing';
+import { OpeningList, OpeningMeasurements } from '@/features/physical-draft/OpeningMeasurements';
+import { deleteOpening, undoOpeningDelete } from '@/features/physical-draft/openingCommands';
+import { shouldIgnoreEditorShortcut } from '@/utils/keyboard';
 import { PhysicalQuantities } from '@/features/physical-draft/PhysicalQuantities';
 import { createDraft, insertDraft, selectDraft, selectedDraft, addRoom, switchUnit, previewDocument,
   type PhysicalDraft as Draft } from '@/features/physical-draft/state';
@@ -13,20 +16,44 @@ function DraftWorkspace() {
   const draft = selectedDraft(registry);
   const [view, setView] = useState<'rooms' | 'drawing'>('rooms');
   const [selected, setSelected] = useState<{ draftId: string; roomId: string } | null>(null);
-  const selectedRoomId = draft ? draft.document.rooms.find(room => selected?.draftId === draft.id && room.id === selected.roomId)?.id
-    ?? draft.document.rooms[0]?.id ?? null : null;
+  const [openingSelection, setOpeningSelection] = useState<{ draftId: string; openingId: string } | null>(null);
+  const selectedOpening = draft?.document.openings.find(item => openingSelection?.draftId === draft.id && item.id === openingSelection.openingId) ?? null;
+  const candidateRoom = draft?.document.rooms.find(room => selected?.draftId === draft.id && room.id === selected.roomId);
+  const selectedRoomId = selectedOpening && draft ?
+    (candidateRoom?.wallFaces.some(wall => selectedOpening.attachments.some(a => a.wallFaceId === wall.id)) ? candidateRoom.id :
+      draft.document.rooms.find(room => room.wallFaces.some(wall => selectedOpening.attachments.some(a => a.wallFaceId === wall.id)))?.id ?? null)
+    : candidateRoom?.id ?? draft?.document.rooms[0]?.id ?? null;
+  function selectRoom(roomId: string) {
+    if (!draft) return;
+    setSelected({ draftId: draft.id, roomId }); setOpeningSelection(null);
+  }
+  function selectOpening(openingId: string | null) {
+    if (draft) setOpeningSelection(openingId ? { draftId: draft.id, openingId } : null);
+  }
   const preview = useMemo(() => draft ? previewDocument(draft) : null, [draft]);
   const blocked = ['uninitialized', 'corrupt', 'unsupported'].includes(cache);
-  function update(change: (current: Draft) => Draft) {
-    if (draft) store.updateDraft(draft.id, draft.localEditRevision, change);
+  function update(change: (current: Draft) => Draft, expectedRevision?: number): boolean {
+    if (!draft) return false;
+    const latest = selectedDraft(store.getSnapshot().registry);
+    return store.updateDraft(draft.id, expectedRevision ?? latest?.localEditRevision ?? draft.localEditRevision, change);
   }
+  useEffect(() => {
+    if (!draft || !selectedOpening) return;
+    const remove = (event: KeyboardEvent) => {
+      if (!['Delete', 'Backspace'].includes(event.key) || shouldIgnoreEditorShortcut(event) || event.ctrlKey || event.metaKey || event.altKey) return;
+      event.preventDefault();
+      if (store.updateDraft(draft.id, draft.localEditRevision, current => deleteOpening(current, selectedOpening.id, new Date().toISOString()))) setOpeningSelection(null);
+    };
+    document.addEventListener('keydown', remove);
+    return () => document.removeEventListener('keydown', remove);
+  }, [draft, selectedOpening, store]);
   function create() {
     store.dispatch(current => insertDraft(current, createDraft(crypto.randomUUID(), 'Physical draft ' + (current.drafts.length + 1))));
   }
   function add() {
     if (!draft) return;
     const id = crypto.randomUUID();
-    if (store.updateDraft(draft.id, draft.localEditRevision, current => addRoom(current, id))) setSelected({ draftId: draft.id, roomId: id });
+    if (store.updateDraft(draft.id, draft.localEditRevision, current => addRoom(current, id))) selectRoom(id);
   }
   function downloadRecovery() {
     if (!rawRecovery) return;
@@ -74,23 +101,24 @@ function DraftWorkspace() {
             <Button role="tab" id="physical-rooms-tab" aria-controls="physical-panel" aria-selected={view === 'rooms'} variant={view === 'rooms' ? 'default' : 'outline'} onClick={() => setView('rooms')}>Quick Rooms</Button>
             <Button role="tab" id="physical-drawing-tab" aria-controls="physical-panel" aria-selected={view === 'drawing'} variant={view === 'drawing' ? 'default' : 'outline'} onClick={() => setView('drawing')}>Drawing</Button>
           </div>
-          <Button variant="outline" disabled={blocked} onClick={add}>Add room</Button>
+          <div className="flex flex-wrap gap-2">{draft.openingDeleteUndo ? <Button variant="outline" disabled={blocked} onClick={() => update(current => undoOpeningDelete(current, new Date().toISOString()))}>Undo opening delete</Button> : null}<Button variant="outline" disabled={blocked} onClick={add}>Add room</Button></div>
         </div>
         <div className="flex flex-wrap gap-2" aria-label="Rooms in selected draft">
           {draft.document.rooms.map(room => <Button size="sm" key={room.id} variant={selectedRoomId === room.id ? 'secondary' : 'outline'}
-            aria-pressed={selectedRoomId === room.id} onClick={() => setSelected({ draftId: draft.id, roomId: room.id })}>{room.name || 'Unnamed room'}</Button>)}
+            aria-pressed={selectedRoomId === room.id} onClick={() => selectRoom(room.id)}>{room.name || 'Unnamed room'}</Button>)}
         </div>
         <section role="tabpanel" id="physical-panel" aria-labelledby={view === 'rooms' ? 'physical-rooms-tab' : 'physical-drawing-tab'}>
           {selectedRoomId ? <div className={view === 'drawing' ? 'grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_350px]' : 'grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(340px,1fr)]'}>
             <div className="space-y-4">
-              {view === 'drawing' ? <PhysicalDrawing document={preview} selectedId={selectedRoomId} onSelect={id => setSelected({ draftId: draft.id, roomId: id })} /> :
+              {view === 'drawing' ? <PhysicalDrawing key={draft.id + view} document={preview} draft={draft} selectedId={selectedRoomId} onSelect={selectRoom} selectedOpeningId={selectedOpening?.id ?? null} onSelectOpening={selectOpening} update={update} /> :
                 <fieldset disabled={blocked} className="rounded-lg border bg-white p-5"><legend className="sr-only">Quick room measurements</legend><RoomMeasurements draft={draft} roomId={selectedRoomId} update={update} /></fieldset>}
               <PhysicalQuantities document={preview} roomId={selectedRoomId} unit={draft.displayUnit} />
+              <OpeningList draft={draft} roomId={selectedRoomId} selectedId={selectedOpening?.id ?? null} onSelect={selectOpening} update={update} />
             </div>
             {view === 'drawing' ? <aside className="rounded-lg border bg-white p-5" aria-label="Drawing inspector">
-              <h2 className="mb-4 font-semibold">Room inspector</h2><fieldset disabled={blocked}><legend className="sr-only">Inspector measurements</legend><RoomMeasurements draft={draft} roomId={selectedRoomId} update={update} /></fieldset>
-            </aside> : <div className="space-y-4"><PhysicalDrawing document={preview} selectedId={selectedRoomId} onSelect={id => setSelected({ draftId: draft.id, roomId: id })} />
-              <p className="text-sm leading-6 text-slate-600">The drawing is derived from these same physical measurements. Switch to Drawing to use the room inspector.</p></div>}
+              <fieldset disabled={blocked}><legend className="sr-only">Inspector measurements</legend>{selectedOpening ? <OpeningMeasurements key={selectedOpening.id} draft={draft} openingId={selectedOpening.id} update={update} commandError={error} onDeleted={() => selectOpening(null)} /> : <><h2 className="mb-4 font-semibold">Room inspector</h2><RoomMeasurements draft={draft} roomId={selectedRoomId} update={update} /></>}</fieldset>
+            </aside> : <div className="space-y-4"><PhysicalDrawing key={draft.id + view} document={preview} draft={draft} selectedId={selectedRoomId} onSelect={selectRoom} selectedOpeningId={selectedOpening?.id ?? null} onSelectOpening={selectOpening} update={update} />
+              {selectedOpening ? <aside className="min-w-0 rounded-lg border bg-white p-5" aria-label="Opening inspector"><OpeningMeasurements key={selectedOpening.id} draft={draft} openingId={selectedOpening.id} update={update} commandError={error} onDeleted={() => selectOpening(null)} /></aside> : <p className="text-sm leading-6 text-slate-600">The drawing uses these same measurements. Select a room or opening to edit it.</p>}</div>}
           </div> : <p className="rounded-lg border border-dashed p-8 text-center text-slate-600">Add a room, then enter its measured dimensions. Ceiling height begins unknown.</p>}
         </section>
         {draft.source.review.length ? <section className="rounded-lg border bg-white p-4 text-sm" aria-label="Source review">

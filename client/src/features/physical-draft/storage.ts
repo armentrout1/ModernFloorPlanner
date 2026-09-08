@@ -6,6 +6,7 @@ import { quantityRequestSchema, validateQuantityRequest, QUANTITY_POLICY_VERSION
 import { measurementEventCaptureSchema } from '@shared/quantities/snapshot';
 import { parseMeasurement } from '@shared/domain/parseMeasurement';
 import { committedFieldText, PhysicalDraftError, ROOM_FIELDS, type PhysicalDraftRegistry } from './state';
+import { openingFieldsSchema, openingEventSchema, openingDeleteUndoSchema, openingFieldsFor, OPENING_FIELDS } from './openingCommands';
 
 export const PHYSICAL_DRAFT_STORAGE_KEY = 'modern-floor-planner:editor-draft:v1';
 const id = z.string().refine(value => value.trim().length > 0 && !/[\u0000-\u001f\u007f]/.test(value));
@@ -19,6 +20,9 @@ const draft = z.object({ id, localEditRevision: revision, document: physicalDocu
   displayUnit: z.enum(['ft', 'm']),
   fields: z.record(z.object({ length: field, width: field, ceilingHeight: field }).strict()),
   events: z.array(measurementEventCaptureSchema), request: quantityRequestSchema, source,
+  openingFields: z.record(openingFieldsSchema).optional(),
+  openingEvents: z.array(openingEventSchema).optional(),
+  openingDeleteUndo: openingDeleteUndoSchema.optional(),
 }).strict();
 const registrySchema = z.object({ version: z.literal('mfp-editor-draft-v1'), localEditRevision: revision,
   selectedDraftId: id.nullable(), drafts: z.array(draft),
@@ -69,6 +73,31 @@ export function validateRegistry(input: unknown): RegistryReadResult {
       }
     }
     if (!validateQuantityRequest(item.document, item.request).ok) return corrupt('Stored calculation settings reference invalid physical content.');
+    const fieldOwners = Object.entries(item.openingFields ?? {}).map(([openingId, fields]) => ({
+      opening: item.document.openings.find(value => value.id === openingId), fields,
+    }));
+    if (item.openingDeleteUndo) fieldOwners.push({ opening: item.openingDeleteUndo.opening, fields: item.openingDeleteUndo.fields });
+    for (const { opening, fields } of fieldOwners) {
+      if (!opening) return corrupt('Stored opening fields reference an opening that is not present.');
+      for (const key of OPENING_FIELDS) {
+        const field = fields[key];
+        if (field.dirty) continue;
+        const expected = openingFieldsFor(opening, field.unit)[key].text;
+        const measurement = key === 'offset' ? { state: 'known', valueMm: opening.attachments[0].offsetMm } : opening[key];
+        if (measurement.state !== 'known') {
+          if (field.text.trim()) return corrupt('An unresolved opening measurement cannot have committed text.');
+        } else {
+          const parsedField = parseMeasurement(field.text, { selectedUnit: field.unit,
+            kind: key === 'sillHeight' || key === 'offset' ? 'elevation' : 'dimension' });
+          if (field.text !== expected && (!parsedField.ok || parsedField.measurement.valueMm !== measurement.valueMm)) {
+            return corrupt('Stored opening text disagrees with its committed physical value.');
+          }
+        }
+      }
+    }
+    if (item.openingDeleteUndo && item.document.openings.some(opening => opening.id === item.openingDeleteUndo!.opening.id)) {
+      return corrupt('Stored opening deletion recovery conflicts with an existing opening identity.');
+    }
     // Event captures are historical evidence. Their transitions are validated
     // above, but their former targets need not remain in the current document.
     const expectedOperation = item.source.kind === 'new' ? 'new-physical-draft-v1'

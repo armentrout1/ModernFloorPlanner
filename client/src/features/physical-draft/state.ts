@@ -10,6 +10,7 @@ import { assertSupportedPhysicalDocument, importLegacyPhysicalDraft, upgradePhys
   type PhysicalDraftSource } from '@shared/compatibility/physicalDraft';
 import { parseDraft as parseQuickDraft } from '../quick-room/storage';
 import type { QuickRoomDraft } from '../quick-room/state';
+import { openingFieldsFor, type OpeningFields, type OpeningEvent, type OpeningDeleteUndo } from './openingCommands';
 
 export const ROOM_FIELDS = ['length', 'width', 'ceilingHeight'] as const;
 export type RoomField = typeof ROOM_FIELDS[number];
@@ -25,6 +26,10 @@ export interface PhysicalDraft {
   events: CapturedMeasurementEvent[];
   request: QuantityRequest;
   source: PhysicalDraftSource;
+  // Additive editor fields: Slice 1 caches lacking them remain unchanged.
+  openingFields?: Record<string, OpeningFields>;
+  openingEvents?: OpeningEvent[];
+  openingDeleteUndo?: OpeningDeleteUndo;
 }
 export interface PhysicalDraftRegistry {
   version: 'mfp-editor-draft-v1';
@@ -44,6 +49,7 @@ const nextRevision = (revision: number) => {
   return revision + 1;
 };
 const changed = (draft: PhysicalDraft): PhysicalDraft => ({ ...copy(draft), localEditRevision: nextRevision(draft.localEditRevision) });
+export const copyDraftForEdit = changed;
 function roomIn(draft: PhysicalDraft, id: string): PhysicalRoom {
   const room = draft.document.rooms.find(value => value.id === id);
   if (!room || !Object.hasOwn(draft.fields, id)) throw new PhysicalDraftError('ROOM_NOT_FOUND', 'The selected room is no longer in this draft.');
@@ -195,6 +201,12 @@ export function switchUnit(draft: PhysicalDraft, unit: InputUnit): PhysicalDraft
   for (const room of next.document.rooms) for (const field of ROOM_FIELDS) {
     if (!next.fields[room.id][field].dirty) next.fields[room.id][field] = { text: committedFieldText(room[field], unit), unit, dirty: false };
   }
+  if (next.openingFields) for (const opening of next.document.openings) {
+    const fields = Object.hasOwn(next.openingFields, opening.id) ? next.openingFields[opening.id] : undefined;
+    if (!fields) continue;
+    const formatted = openingFieldsFor(opening, unit);
+    for (const field of ['width', 'height', 'sillHeight', 'offset'] as const) if (!fields[field].dirty) fields[field] = formatted[field];
+  }
   return next;
 }
 export function setApplicability(draft: PhysicalDraft, id: string, kind: keyof RoomApplicability, declaration: AppDeclaration): PhysicalDraft {
@@ -212,6 +224,16 @@ export function previewDocument(draft: PhysicalDraft): PhysicalDocument {
   const document = copy(draft.document);
   for (const room of document.rooms) for (const field of ROOM_FIELDS) {
     if (draft.fields[room.id][field].dirty) room[field] = unknownMeasurement('Finish editing ' + field + ' to calculate this quantity');
+  }
+  for (const opening of document.openings) {
+    const fields = draft.openingFields && Object.hasOwn(draft.openingFields, opening.id) ? draft.openingFields[opening.id] : undefined;
+    if (!fields) continue;
+    for (const field of ['width', 'height', 'sillHeight'] as const) if (fields[field].dirty) {
+      opening[field] = unknownMeasurement('Finish editing opening ' + field + ' to calculate its dependent quantity');
+    }
+    // Physical-v2 requires a numeric offset. Keep the attachment, but block
+    // dependent results until raw positioning is resolved; never invent zero.
+    if (fields.offset.dirty) opening.width = unknownMeasurement('Finish editing opening center position to calculate its dependent quantity');
   }
   return document;
 }

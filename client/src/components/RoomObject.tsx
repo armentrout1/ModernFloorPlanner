@@ -21,11 +21,13 @@ interface RoomObjectProps {
   isSelected: boolean;
   onSelect: (objectId: string) => void;
   preview?: boolean;
+  /** Render an explicit physical floor-level gap, with no window frame or door. */
+  floorLevelOpening?: boolean;
   onFlipHand?: (objectId: string) => void;
   onDragStart?: (objectId: string, clientX: number, clientY: number) => void;
 }
 
-const RoomObject = ({ room, object, scale, isSelected, onSelect, onDragStart, onFlipHand, preview = false }: RoomObjectProps) => {
+const RoomObject = ({ room, object, scale, isSelected, onSelect, onDragStart, onFlipHand, preview = false, floorLevelOpening = false }: RoomObjectProps) => {
   const openingRef = useRef<HTMLDivElement>(null);
   const selectOpening = () => {
     openingRef.current?.focus({ preventScroll: true });
@@ -103,9 +105,9 @@ const RoomObject = ({ room, object, scale, isSelected, onSelect, onDragStart, on
           }}
           ref={openingRef}
           data-testid={`${preview ? 'preview-opening' : 'opening'}-${object.id}`}
-          role={preview ? undefined : "button"} tabIndex={preview ? undefined : 0} aria-label={`Select ${object.type} on ${object.wallSide} wall`}
+          role={preview ? undefined : "button"} tabIndex={preview ? undefined : 0} aria-label={`Select ${floorLevelOpening ? 'opening' : object.type} on ${object.wallSide} wall`}
           aria-pressed={isSelected} onKeyDown={handleSelectionKey}
-          data-opening-type={object.type}
+          data-opening-type={floorLevelOpening ? 'floor-level-opening' : object.type}
           data-wall-side={object.wallSide}
           onClick={event => event.stopPropagation()}
           title={object.doorProperties && doorProps.style !== 'sliding' ? "Double-click to flip hand. Drag the wall opening to move the door." : undefined}
@@ -185,9 +187,9 @@ const RoomObject = ({ room, object, scale, isSelected, onSelect, onDragStart, on
           }}
           ref={openingRef}
           data-testid={`${preview ? 'preview-opening' : 'opening'}-${object.id}`}
-          role={preview ? undefined : "button"} tabIndex={preview ? undefined : 0} aria-label={`Select ${object.type} on ${object.wallSide} wall`}
+          role={preview ? undefined : "button"} tabIndex={preview ? undefined : 0} aria-label={`Select ${floorLevelOpening ? 'opening' : object.type} on ${object.wallSide} wall`}
           aria-pressed={isSelected} onKeyDown={handleSelectionKey}
-          data-opening-type={object.type}
+          data-opening-type={floorLevelOpening ? 'floor-level-opening' : object.type}
           data-wall-side={object.wallSide}
           onClick={event => event.stopPropagation()}
           onDoubleClick={event => event.stopPropagation()}
@@ -198,7 +200,7 @@ const RoomObject = ({ room, object, scale, isSelected, onSelect, onDragStart, on
         >{!preview && hitArea}</div>
         
         {/* Window frame lines - simple parallel lines */}
-        <svg
+        {!floorLevelOpening && <svg
           style={{
             position: 'absolute',
             pointerEvents: 'none',
@@ -249,7 +251,7 @@ const RoomObject = ({ room, object, scale, isSelected, onSelect, onDragStart, on
               <line x1="6" y1="0" x2="6" y2={windowSize} stroke="#000" strokeWidth="1" />
             </>
           )}
-        </svg>
+        </svg>}
       </div>
     );
   }

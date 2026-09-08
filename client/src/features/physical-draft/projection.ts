@@ -5,8 +5,10 @@ import { legacyRoomsSchema } from '@shared/legacyValidation';
 // This is a disposable view of millimeters using the existing renderer's scale.
 // Never write these pixels back to the document or to the legacy save endpoint.
 const pixels = (mm: number) => mm * 20 / 304.8;
-export function projectPhysicalRooms(document: PhysicalDocument): { rooms: Room[]; notices: string[] } {
+export interface FloorLevelOpeningView { id: string; wallSide: RoomObject['wallSide']; position: number; size: number }
+export function projectPhysicalRooms(document: PhysicalDocument): { rooms: Room[]; notices: string[]; floorLevelOpenings: Record<string, FloorLevelOpeningView[]> } {
   const rooms: Room[] = [], notices: string[] = [];
+  const floorLevelOpenings: Record<string, FloorLevelOpeningView[]> = Object.create(null);
   const legacy = legacyRoomsSchema.safeParse(document.compatibility?.original.rooms);
   const originalObjects = legacy.success ? legacy.data.flatMap(room => room.objects ?? []) : [];
   let nextX = 0;
@@ -18,7 +20,7 @@ export function projectPhysicalRooms(document: PhysicalDocument): { rooms: Room[
     const width = pixels(physical.length.valueMm), height = pixels(physical.width.valueMm);
     const x = physical.presentation ? pixels(physical.presentation.xMm) : nextX;
     const y = physical.presentation ? pixels(physical.presentation.yMm) : 0;
-    if ([width, height, Math.abs(x), Math.abs(y)].some(value => value > 1e7)) {
+    if ([width, height, Math.abs(x), Math.abs(y)].some(value => !Number.isFinite(value) || value > 1e7) || width <= 0 || height <= 0) {
       notices.push(`${physical.name || 'Room'} is outside the supported drawing range; its measurements are preserved.`);
       continue;
     }
@@ -32,7 +34,9 @@ export function projectPhysicalRooms(document: PhysicalDocument): { rooms: Room[
       const clockwise = attachment.offsetMm / wallMm;
       const position = (['bottom', 'left'].includes(wall.side) ? 1 - clockwise : clockwise) * 100;
       if (opening.kind === 'floor-level-opening') {
-        notices.push(`Opening ${opening.id}: its physical data is retained; this symbol is not supported yet.`);
+        if (opening.width.state === 'known') {
+          (floorLevelOpenings[physical.id] ??= []).push({ id: opening.id, wallSide: wall.side, position, size: pixels(opening.width.valueMm) });
+        } else notices.push(`Opening ${opening.id}: width is unresolved; its marker is not a measured wall gap.`);
         continue;
       }
       // Conflicting widths remain unresolved. Retain the source symbol as a view
@@ -63,5 +67,5 @@ export function projectPhysicalRooms(document: PhysicalDocument): { rooms: Room[
     rooms.push({ id: physical.id, name: physical.name, x, y, width, height,
       color: physical.presentation?.color, ...(group ? { groupId: group.id } : {}), objects });
   }
-  return { rooms, notices: Array.from(new Set(notices)) };
+  return { rooms, notices: Array.from(new Set(notices)), floorLevelOpenings };
 }

@@ -128,3 +128,47 @@ export default function OpeningSizeField({ label, visibleLabel, value, choices, 
     {error && <p id={id + '-error'} role="alert" className="text-xs text-red-700">{error}</p>}
   </div>;
 }
+
+/** The same compact common/custom control with raw text owned by a physical draft.
+ * Conversion, validation and persistence belong to its typed commands. */
+export function ControlledOpeningSizeField({ label, visibleLabel, text, choices = [], error, hint,
+  disabled, onChange, onCommit, onPreset }: {
+  label: string; visibleLabel: string; text: string; choices?: number[];
+  error?: string | null; hint?: string; disabled?: boolean;
+  onChange: (text: string) => void; onCommit: () => void; onPreset?: (inches: number) => void;
+}) {
+  const id = useId(), inputRef = useRef<HTMLInputElement>(null);
+  const composing = useRef(false), menuOpening = useRef(false);
+  return <div className="min-w-0 space-y-1">
+    <Label htmlFor={id} className="text-xs">{visibleLabel}</Label>
+    <div className="flex min-w-0">
+      <Input ref={inputRef} id={id} type="text" value={text} disabled={disabled}
+        placeholder="Not entered" autoComplete="off" spellCheck={false}
+        aria-label={label} aria-invalid={Boolean(error)} aria-describedby={id + '-help'}
+        className={'h-9 min-w-0 px-2 text-sm focus-visible:z-10' + (choices.length ? ' rounded-r-none' : '')}
+        onChange={event => onChange(event.target.value)}
+        onBlur={() => { if (!composing.current && !menuOpening.current) onCommit(); }}
+        onCompositionStart={() => { composing.current = true; }}
+        onCompositionEnd={event => { composing.current = false; if (document.activeElement !== event.currentTarget) onCommit(); }}
+        onKeyDown={event => {
+          if (composing.current || event.nativeEvent.isComposing || event.keyCode === 229 || event.repeat) return;
+          if (event.key === 'Enter') { event.preventDefault(); event.stopPropagation(); onCommit(); }
+        }} />
+      {choices.length && onPreset ? <DropdownMenu onOpenChange={open => { menuOpening.current = open; }}>
+        <DropdownMenuTrigger asChild>
+          <Button type="button" variant="outline" size="icon" disabled={disabled}
+            className="h-9 w-9 shrink-0 rounded-l-none border-l-0" aria-label={'Common ' + label.toLowerCase()}
+            onPointerDownCapture={event => { if (event.button === 0 && document.activeElement === inputRef.current) menuOpening.current = true; }}>
+            <ChevronDown className="h-4 w-4" aria-hidden="true" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          {choices.map(choice => <DropdownMenuItem key={choice} onSelect={() => onPreset(choice)}>{choice} in</DropdownMenuItem>)}
+        </DropdownMenuContent>
+      </DropdownMenu> : null}
+    </div>
+    <p id={id + '-help'} role={error ? 'alert' : undefined} className={'text-xs leading-4 ' + (error ? 'text-red-700' : 'text-slate-500')}>
+      {error || hint}
+    </p>
+  </div>;
+}

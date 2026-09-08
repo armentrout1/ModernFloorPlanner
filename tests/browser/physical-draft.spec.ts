@@ -229,7 +229,7 @@ async function outline(scope: Locator, id: string) {
   }));
 }
 
-test('legacy adoption preserves groups, recorded window height and door appearance; its read-only projection never edits the original', async ({ page }) => {
+test('legacy adoption preserves groups, recorded window height and door appearance; room-only gestures never edit the original', async ({ page }) => {
   const rooms = legacyRooms(), name = 'Physical adoption ' + test.info().testId;
   const response = await page.request.post('/api/floor-plans', { data: { name, rooms,
     createdAt: '2025-06-01T00:00:00.000Z', updatedAt: '2025-06-01T00:00:00.000Z' } });
@@ -261,8 +261,9 @@ test('legacy adoption preserves groups, recorded window height and door appearan
   await drawing.getByRole('button', { name: 'Fit drawing', exact: true }).click();
   expect(await outline(drawing, 'physical-legacy-door')).toEqual(originalOutline);
   for (const room of rooms) await expect(drawing.getByTestId('physical-room-' + room.id)).toHaveAttribute('data-group-id', 'old-group');
-  const door = drawing.getByTestId('opening-physical-legacy-door');
-  const box = (await door.boundingBox())!;
+  // Slice 2 enables opening gestures; room movement/resizing/group edits remain read-only.
+  const projectedRoom = drawing.getByTestId('physical-room-physical-legacy-a');
+  const box = (await projectedRoom.boundingBox())!;
   await page.mouse.dblclick(box.x + box.width / 2, box.y + box.height / 2);
   await page.keyboard.press('Delete');
   await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);

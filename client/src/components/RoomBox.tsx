@@ -33,6 +33,7 @@ interface RoomBoxProps {
   isCanvasPinching?: boolean;
   showRoomNames?: boolean;
   allowResize?: boolean;
+  floorLevelOpenings?: { id: string; wallSide: WallSide; position: number; size: number }[];
 }
 
 const RoomBox: React.FC<RoomBoxProps> = ({
@@ -49,7 +50,7 @@ const RoomBox: React.FC<RoomBoxProps> = ({
   placingObjectType,
   scale,
   isPartOfMultiSelection = false,
-  isCanvasPinching = false, showRoomNames = true, allowResize = true
+  isCanvasPinching = false, showRoomNames = true, allowResize = true, floorLevelOpenings = []
 }) => {
   const [isEditingName, setIsEditingName] = useState(false);
   
@@ -160,7 +161,8 @@ const RoomBox: React.FC<RoomBoxProps> = ({
   // Render walls with door openings
   const renderWallsWithOpenings = () => {
     const wallThickness = 2;
-    const doors = room.objects?.filter(obj => obj.type === 'door') || [];
+    const doors = [...(room.objects?.filter(obj => obj.type === 'door') || []),
+      ...floorLevelOpenings.map(object => ({ ...object, type: 'floor-level-opening' }))];
     
     return (
       <>
@@ -192,7 +194,7 @@ const RoomBox: React.FC<RoomBoxProps> = ({
     let lastEnd = 0;
 
     sortedDoors.forEach((door, index) => {
-      const doorWidth = door.doorProperties ? inchesToPixels(door.doorProperties.width) : 40;
+      const doorWidth = door.type === 'floor-level-opening' ? door.size : door.doorProperties ? inchesToPixels(door.doorProperties.width) : 40;
       const doorStart = (door.position / 100) * wallLength - doorWidth / 2;
       const doorEnd = doorStart + doorWidth;
 
@@ -314,6 +316,9 @@ const RoomBox: React.FC<RoomBoxProps> = ({
         );
       })}
       
+      {floorLevelOpenings.map(object => <RoomObject key={'floor-gap-' + object.id} room={room}
+        object={{ ...object, type: 'window' }} floorLevelOpening scale={scale}
+        isSelected={selectedObjectId === object.id} onSelect={onObjectSelect ?? (() => {})} />)}
       {/* Room objects (doors and windows) */}
       {room.objects && room.objects.map(object => (
         <RoomObject 

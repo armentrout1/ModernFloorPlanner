@@ -72,7 +72,7 @@ export function RoomMeasurements({ draft, roomId, update }: { draft: PhysicalDra
     </fieldset>
     {openings.length || group ? <div className="border-t pt-3 text-xs leading-5 text-slate-600">
       {group ? <p>Group preserved: {group.id} ({group.roomIds.length} rooms)</p> : null}
-      {openings.length ? <p>{openings.length} opening{openings.length === 1 ? '' : 's'} retained, including their sizes, appearance and source evidence. Opening editing is unavailable in this slice.</p> : null}
+      {openings.length ? <p>{openings.length} opening{openings.length === 1 ? '' : 's'} retained, including their sizes, appearance and source evidence. Choose an opening from the list or drawing to edit it.</p> : null}
     </div> : null}
   </div>;
 }
