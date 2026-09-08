@@ -57,9 +57,9 @@ Evidence is retained in the local task directory work/m3b-entry-gate/evidence-09
 | Slice | Scope from the selected entry design | Current state |
 | --- | --- | --- |
 | 1 | Shared physical draft bridge; synchronized room name, length, width and existing ceilingHeight; explicit supported adoption, versioned compatibility/applicability and full temporary recovery; derived physical sketch and quantities. | NOT STARTED; eligible next, not executed in this prerequisite-only assignment. |
-| 2 | Physical opening forms: wall/offset/width/height/elevation, explicit missing inputs and preserved supported appearance/IDs. | NOT STARTED; requires Slice 1. |
-| 3 | Selected work/surfaces and explainable shared-engine quantity breakdown. | NOT STARTED; follows supported document/opening flow. |
-| 4 | Supported writable physical-sketch commands, preserved movement groups and end-to-end shared workflow acceptance. | NOT STARTED; scoped command integration, not a renderer replacement. |
+| 2 | Synchronized physical opening forms AND drawing interactions: wall/center offset/width/height/elevation/basis, supported appearance/IDs, validated placement/movement, deletion/recovery and explicit shared-attachment protection. | NOT STARTED; requires Slice 1. |
+| 3 | Selected work/surfaces, explainable shared-engine quantities, partial/missing results and explicit measurement confirmation/correction review. | NOT STARTED; requires Slices 1 and 2. |
+| 4 | Integrated acceptance, bounded demonstrated-defect repair and M3B closeout; complete user journey, compatibility/recovery, populated viewport checks and current full-suite evidence. | NOT STARTED; requires Slices 1-3. No new feature-design task. |
 
 These partitions live under issue #10 and the sole [canonical roadmap](BUILD_ROADMAP.md). The selected design, source-draft preservation, versioned adapter/snapshot semantics, ceiling-shape applicability and M3B/M7/later-trade boundaries remain unchanged. General undo/responsive gaps remain M3C. No later slice is implicitly activated.
 
@@ -70,3 +70,13 @@ These partitions live under issue #10 and the sole [canonical roadmap](BUILD_ROA
 Quick Rooms and the legacy sketch still use separate drafts. None of the future Slice 1 synchronization, conversion, recovery or ceiling-height acceptance cases is claimed implemented by this test repair. Slice 2 is not eligible.
 
 No deployment, real PostgreSQL persistence, hosting/authentication validation or originating partner workflow was performed. Production remains NOT VERIFIED / NOT DEPLOYED; dependency advisory review and M4 isolation remain separate readiness gates. No customers were onboarded. Stop after publishing this prerequisite result, as required by the owner's failed-gate condition.
+
+## Subsequent owner briefs: Slice 4 entry remains blocked
+
+The owner supplied explicit Slice 2, Slice 3 and Slice 4 briefs after prerequisite clearance. Fresh fetch for the Slice 4 entry check verified main/origin/main at e663eb52bb5f940807ee7641a81719ae58bf00f8 with a clean working tree. The roadmap, issue and source still show no implemented shared-draft bridge or Slice 1-3 completion evidence. The independent Quick Rooms/legacy draft boundary remains unchanged.
+
+The slice table above now follows those briefs: opening drawing interactions belong to Slice 2; explicit measurement review belongs to Slice 3; Slice 4 verifies integrated acceptance and repairs demonstrated blockers only. The earlier generic assignment of new writable drawing commands to Slice 4 is superseded. No new physical room/group command program is authorized by its closeout brief; preserve supported earlier behavior and leave general undo/responsive gaps in M3C.
+
+**Slice 4: BLOCKED_DEPENDENCY, NOT STARTED.** Slices 1-3 are missing, so there is no unified user journey to certify. No Slice 4 test suite, populated screenshots or manual-acceptance success is claimed. This check only updates task boundaries; prior 234/234 unit and 96/96 browser results remain tied to prerequisite 09929dd, not new feature acceptance. Documentation whitespace/consistency checks are the only new checks.
+
+The single next implementation task remains Slice 1. Slice 2, Slice 3, Slice 4 and M3C are not eligible to start. The latest attachment says Slice 4 ONLY and requires completed Slices 1-3, so those requirements cannot be bypassed by treating the brief itself as completion evidence. Request owner direction to begin Slice 1. No owner-browser operation, source-module change, dependency reinstall, stash/archive change or database operation occurred. NOT DEPLOYED; issue #2 remains unreleased and #4 remains PROPOSED.
