@@ -468,6 +468,7 @@ const FloorPlanner: React.FC<{ active?: boolean }> = ({ active = true }) => {
               ) : (
                 <SelectionPanel rooms={rooms} selectedRoomIds={selectedRoomIds} selectedObjectId={selectedObjectId}
                   onSelectRoom={id => handleSelectRoom(id, true)} onSelectObject={handleSelectObject}
+                  onClearSelection={() => handleSelectRoom(null, true)}
                   onGroup={handleGroup} onUngroup={handleUngroup} onDelete={handleDeleteSelectedRoom}>
                 <PropertyPanel
                   selectedRoom={selectedRoomIds.length > 1 ? null : selectedRoom}

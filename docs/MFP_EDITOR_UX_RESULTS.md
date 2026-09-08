@@ -81,3 +81,42 @@ Checks for this follow-up:
 ![Selected door after double-click hand flip](evidence/editor-door-swing-hit.png)
 
 NOT DEPLOYED. Production smoke and deployment/database/auth binding remain unverified. No customer onboarding, schema migration, other-product work or later milestone activation. M3B remains next eligible only on a separate bounded assignment.
+
+
+## Contextual sidebar tabs follow-up — 2026-09-07
+
+The owner explicitly requested research and replacement of the confusing right-side room accordion. Baseline: clean, synchronized main `fff757de9e340cb07994c2534dd35a6cae097631`; this Floor Planner task remained the integration/release owner. Issue #8 records the bounded DR-002 assignment.
+
+Research findings:
+
+- [Floorplanner's official editor manual, pages 8–10](https://fpcdn.s3.us-east-1.amazonaws.com/static/brochures/Floorplanner-editor-manual-04-2025.pdf) exposes room options and items in that room, and shows an object's sidebar when selected.
+- [RoomSketcher's door guide](https://help.roomsketcher.com/hc/en-us/articles/360000808925-How-Do-I-Add-Doors-to-My-Project) shows door properties on the right after selecting the door. [SketchUp Entity Info](https://help.sketchup.com/en/sketchup-ipad/entity-info-panel) likewise shows attributes appropriate to the selected entity.
+- Our Room / Doors / Windows tabs are a product-specific simplification of these contextual inspectors, not a claim that those products use this exact layout. The existing Radix/shadcn primitive supplies the roles, relationships and keyboard behavior described in the [WAI-ARIA tabs pattern](https://www.w3.org/WAI/ARIA/apg/patterns/tabs/).
+
+Implemented behavior:
+
+- Selected-room name and top tabs remain visible while the properties scroll. Door/window counts stay visible in compact badges. Repeated Properties headings and the duplicate room-object summary were removed.
+- Doors and Windows list only the current room's items. Each button shows its per-type number, wall and width; selecting it highlights the exact opening and displays that same numbered item's existing properties. Door widths use the entered door width where available.
+- Clicking a room or opening on the canvas synchronizes the room context and tab. All rooms returns to a flat room list, with no details/summary accordion. Multi-selection keeps its Group/Ungroup/Delete controls; choosing one grouped room edits it individually without changing group membership.
+- Browsing an opening tab never chooses an item implicitly. It clears the editing selection while retaining the room context, so Delete/Backspace cannot remove a room merely because its empty Doors tab is open. A real new selection discards old browsing state rather than reviving an unrelated room after deselection.
+- Tab mouse presses commit valid focused size fields before Radix unmounts their panel; invalid edits remain unapplied. Arrow keys, Home/End and Enter work through the existing accessible tab primitive. Narrow tab labels and delete actions fit the panel instead of overlapping or clipping.
+- No geometry, storage schema, quantity engine, opening placement/dragging/swing logic or saved metadata was changed. This is the requested sidebar improvement, not the full M3C responsive-layout milestone.
+
+Actual checks:
+
+| Check | Result |
+| --- | --- |
+| `npm run check` | Passed, including after final layout classes changed. |
+| `npm run build` | Passed; 1,799 modules. Existing Browserslist age and bundle-size warnings remain nonblocking. |
+| `npx playwright test tests/browser/selection.spec.ts tests/browser/editor.spec.ts tests/browser/quick-room-navigation.spec.ts --workers=2` | 42/42 passed in 2.2 minutes, zero retries/skips. Includes five new sidebar cases, exact selection, keyboard navigation, empty-tab Delete protection, size blur commits, stale-context prevention, existing grouping/deletion/recovery, all-wall door/window placement, opening styles/swing/dragging, and route guards. |
+| Final layout follow-up: `npx playwright test tests/browser/selection.spec.ts --grep 'narrow sidebar'` | 1/1 passed in 11.3 seconds. Added after visual review found narrow tab-label/delete-button crowding; verifies text and action bounds at 820×900. Only layout classes changed after the 42-case run; that full set was not repeated. |
+| Local frontend smoke at `http://127.0.0.1:5173/` | Fresh isolated browser: scoped tabs, exact door/window selection, empty editing target before choosing an item, 1600×1000 and 820×900 screenshots, no page errors. Both final screenshots inspected. Mock plan responses were isolated; the owner's tab/drawing was not reloaded or altered. |
+| `git diff --check` | Passed. |
+
+Unit/API/quantity suites were not repeated for this sidebar-only change; no calculations or persisted model changed. This follow-up adds six meaningful browser cases rather than duplicating implementation in unit tests.
+
+![Room-scoped door tab and exact selection](evidence/editor-sidebar-tabs.png)
+
+![Readable sidebar tabs and window controls at narrow width](evidence/editor-sidebar-tabs-narrow.png)
+
+Producer-verified locally; NOT DEPLOYED. Production smoke and deployment/database/auth binding remain unverified. No customer onboarding, migration or other-product changes. No known blocker remains for this bounded sidebar acceptance. Full phone layout work remains separate; M3B is still next eligible on a separately authorized assignment.

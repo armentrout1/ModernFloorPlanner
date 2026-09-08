@@ -203,10 +203,7 @@ const PropertyPanel: React.FC<PropertyPanelProps> = ({
   const perimeter = selectedRoom ? calculateRoomPerimeter(selectedRoom) : 0;
   
   return (
-    <div className="flex flex-col overflow-y-auto h-full">
-      <div className="p-4 border-b border-slate-200">
-        <h2 className="text-lg font-medium">Properties</h2>
-      </div>
+    <div className="flex flex-col">
       
       {!selectedRoom ? (
         // No room selected
@@ -218,14 +215,14 @@ const PropertyPanel: React.FC<PropertyPanelProps> = ({
       ) : selectedObject ? (
         // Object properties section
         <div className="p-4 space-y-4">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="flex items-center space-x-2">
               {selectedObject.type === 'door' ? (
                 <DoorOpenIcon className="h-5 w-5 text-orange-500" />
               ) : (
                 <WindowIcon className="h-5 w-5 text-blue-500" />
               )}
-              <span className="font-medium capitalize">{selectedObject.type}</span>
+              <span className="font-medium capitalize">{selectedObject.type} {(selectedRoom.objects?.filter(object => object.type === selectedObject.type).findIndex(object => object.id === selectedObject.id) ?? 0) + 1}</span>
             </div>
             <Button 
               variant="outline" 
@@ -412,7 +409,7 @@ const PropertyPanel: React.FC<PropertyPanelProps> = ({
       ) : (
         // Room properties section
         <div className="p-4 space-y-4">
-          <div className="flex items-center justify-between mb-2">
+          <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
             <Label htmlFor="roomName" className="text-lg font-medium">{selectedRoom.name || 'Unnamed Room'}</Label>
             {onDeleteRoom && (
               <AlertDialog>
@@ -492,27 +489,7 @@ const PropertyPanel: React.FC<PropertyPanelProps> = ({
             </div>
           </div>
           
-          <div className="space-y-2">
-            <Label>Room Objects</Label>
-            <div className="flex flex-wrap gap-2">
-              {selectedRoom.objects?.length ? (
-                <div className="w-full grid grid-cols-2 gap-2">
-                  <div className="text-sm p-2 bg-slate-100 rounded flex items-center">
-                    <DoorOpenIcon className="h-4 w-4 mr-1 text-orange-500" />
-                    <span>{selectedRoom.objects.filter(obj => obj.type === 'door').length || 0} Doors</span>
-                  </div>
-                  <div className="text-sm p-2 bg-slate-100 rounded flex items-center">
-                    <WindowIcon className="h-4 w-4 mr-1 text-blue-500" />
-                    <span>{selectedRoom.objects.filter(obj => obj.type === 'window').length || 0} Windows</span>
-                  </div>
-                </div>
-              ) : (
-                <div className="text-sm p-2 bg-slate-100 rounded w-full">
-                  No objects added
-                </div>
-              )}
-            </div>
-          </div>
+
         </div>
       )}
     </div>

@@ -110,11 +110,12 @@ function expectRigidMove(before: SketchRoom[], after: SketchRoom[], movedIds: st
   });
 }
 async function openContentsRoom(page: Page, name: string) {
-  const details = page.getByRole('region', { name: 'Drawing contents', exact: true }).locator('details')
-    .filter({ has: page.locator('summary').filter({ hasText: name }) });
-  await expect(details).toHaveCount(1);
-  if (await details.getAttribute('open') === null) await details.locator('summary').click();
-  return details;
+  const inspector = page.getByTestId('selection-inspector');
+  const allRooms = inspector.getByRole('button', { name: 'All rooms', exact: true });
+  if (await allRooms.isVisible()) await allRooms.click();
+  await inspector.getByRole('button', { name: `Edit room ${name}`, exact: true }).click();
+  await expect(inspector.getByRole('tab', { name: 'Room', exact: true })).toHaveAttribute('aria-selected', 'true');
+  return inspector;
 }
 async function blurFocus(page: Page) {
   await page.evaluate(() => (document.activeElement as HTMLElement)?.blur());
@@ -200,11 +201,12 @@ test('room-name visibility toggles only presentation and keeps exact names and s
   expect((await save(page, plan.id)).rooms).toEqual(plan.rooms);
 });
 
-test('Drawing contents selects the exact opening; repeated Delete cannot remove its parent and Undo restores it', async ({ page }) => {
+test('Doors tab selects the exact opening; repeated Delete cannot remove its parent and Undo restores it', async ({ page }) => {
   const plan = await seedAndLoad(page);
   await page.getByRole('button', { name: 'Select all rooms', exact: true }).click();
   await expectSelected(page, plan.rooms.map(room => room.id));
   const contents = await openContentsRoom(page, 'Alpha');
+  await contents.getByRole('tab', { name: 'Doors (1)', exact: true }).click();
   await contents.getByRole('button', { name: 'Select door 1 in Alpha', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Delete door', exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Delete door', exact: true }).click();
@@ -224,8 +226,7 @@ test('Drawing contents selects the exact opening; repeated Delete cannot remove 
 
 test('Ctrl+A respects room-name input, open dialogs and inactive sketch, and selects all only in the active editor', async ({ page }) => {
   const plan = await seedAndLoad(page);
-  const contents = await openContentsRoom(page, 'Alpha');
-  await contents.getByRole('button', { name: 'Edit room Alpha', exact: true }).click();
+  await openContentsRoom(page, 'Alpha');
   await expectSelected(page, [plan.rooms[0].id]);
   const name = page.locator('#roomName');
   await name.focus();
@@ -263,8 +264,7 @@ test('individual room editing keeps grouped dragging together; deleting a group 
   await page.getByRole('button', { name: 'Select all rooms', exact: true }).click();
   await page.getByRole('button', { name: 'Group rooms', exact: true }).click();
   const grouped = (await save(page, plan.id)).rooms;
-  const details = await openContentsRoom(page, 'Alpha');
-  await details.getByRole('button', { name: 'Edit room Alpha', exact: true }).click();
+  await openContentsRoom(page, 'Alpha');
   await expectSelected(page, [plan.rooms[0].id]);
   await dragRoom(page, plan.rooms[0].id, 45, 50);
   await expectSelected(page, plan.rooms.map(room => room.id));
@@ -275,4 +275,181 @@ test('individual room editing keeps grouped dragging together; deleting a group 
   await expect(page.locator('.room-box')).toHaveCount(0);
   await page.getByRole('button', { name: 'Undo delete', exact: true }).click();
   expect((await save(page, plan.id)).rooms).toEqual(moved);
+});
+
+test('room tabs list only that room, number openings by type, and preserve geometry through a round trip', async ({ page }) => {
+  const rooms = fixture();
+  rooms[0].objects!.push(
+    { id: 'alpha-door-two', type: 'door', wallSide: 'left', position: 50, size: 140 / 3,
+      doorProperties: { width: 28, height: 80, style: 'single', swingDirection: 'inward', swingSide: 'left' } },
+    { id: 'alpha-window-two', type: 'window', wallSide: 'right', position: 75, size: 40,
+      windowProperties: { height: 42 } },
+  );
+  const plan = await seedAndLoad(page, rooms);
+  const inspector = await openContentsRoom(page, 'Alpha');
+  await expect(inspector.locator('details, summary')).toHaveCount(0);
+  await expect(inspector.getByRole('tab')).toHaveText(['Room', 'Doors 2', 'Windows 2']);
+  await expectSelected(page, ['selection-a']);
+
+  await inspector.getByRole('tab', { name: 'Doors (2)', exact: true }).click();
+  await expectSelected(page, []);
+  await expect(inspector.getByRole('button', { name: /^Select door / })).toHaveCount(2);
+  await expect(inspector.getByRole('button', { name: 'Select door 1 in Alpha', exact: true })).toBeVisible();
+  await expect(inspector.getByRole('button', { name: 'Select door 2 in Alpha', exact: true })).toBeVisible();
+  await expect(inspector.getByRole('button', { name: /^Select window / })).toHaveCount(0);
+  await expect(inspector.getByRole('button', { name: 'Select door 1 in Bravo', exact: true })).toHaveCount(0);
+  await expect(page.locator('[data-opening-type][aria-pressed="true"]')).toHaveCount(0);
+  await blurFocus(page);
+  await page.keyboard.press('Delete');
+  await page.keyboard.press('Backspace');
+  expect((await save(page, plan.id)).rooms).toEqual(rooms);
+
+  await inspector.getByRole('button', { name: 'Select door 2 in Alpha', exact: true }).click();
+  await expect(page.getByTestId('opening-alpha-door-two')).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByTestId('opening-selection-door-a')).toHaveAttribute('aria-pressed', 'false');
+  await expect(inspector.getByRole('spinbutton', { name: 'Door width', exact: true })).toHaveValue('28');
+  await inspector.getByRole('tab', { name: 'Windows (2)', exact: true }).click();
+  await expectSelected(page, []);
+  await expect(page.locator('[data-opening-type][aria-pressed="true"]')).toHaveCount(0);
+  await expect(inspector.getByRole('button', { name: /^Select door / })).toHaveCount(0);
+  await expect(inspector.getByRole('button', { name: /^Select window / })).toHaveCount(2);
+  await inspector.getByRole('button', { name: 'Select window 1 in Alpha', exact: true }).click();
+  await expect(page.getByTestId('opening-selection-window-a')).toHaveAttribute('aria-pressed', 'true');
+  await expect(inspector.getByRole('spinbutton', { name: 'Window width', exact: true })).toHaveValue('30');
+  await inspector.getByRole('button', { name: 'Select window 2 in Alpha', exact: true }).click();
+  await expect(page.getByTestId('opening-alpha-window-two')).toHaveAttribute('aria-pressed', 'true');
+  await expect(inspector.getByRole('spinbutton', { name: 'Window width', exact: true })).toHaveValue('24');
+  await expect(inspector.getByRole('spinbutton', { name: 'Window height', exact: true })).toHaveValue('42');
+
+  await inspector.getByRole('tab', { name: 'Room', exact: true }).click();
+  await expectSelected(page, ['selection-a']);
+  await expect(inspector.locator('#roomName')).toHaveValue('Alpha');
+  await inspector.getByRole('button', { name: 'All rooms', exact: true }).click();
+  await expectSelected(page, []);
+  await expect(inspector.getByRole('button', { name: /^Edit room / })).toHaveCount(3);
+  await expect(inspector.getByRole('tab')).toHaveCount(0);
+  await expect(inspector.locator('details, summary')).toHaveCount(0);
+  expect((await save(page, plan.id)).rooms).toEqual(rooms);
+});
+
+test('sidebar tabs support arrow, Home and End keyboard navigation without selecting a hidden item', async ({ page }) => {
+  const plan = await seedAndLoad(page);
+  const inspector = await openContentsRoom(page, 'Alpha');
+  const roomTab = inspector.getByRole('tab', { name: 'Room', exact: true });
+  const doorsTab = inspector.getByRole('tab', { name: 'Doors (1)', exact: true });
+  const windowsTab = inspector.getByRole('tab', { name: 'Windows (1)', exact: true });
+  await roomTab.focus();
+  for (const [from, key, to, roomIsSelected] of [
+    [roomTab, 'ArrowRight', doorsTab, false],
+    [doorsTab, 'ArrowRight', windowsTab, false],
+    [windowsTab, 'ArrowLeft', doorsTab, false],
+    [doorsTab, 'Home', roomTab, true],
+    [roomTab, 'End', windowsTab, false],
+  ] as const) {
+    await from.press(key);
+    await expect(to).toBeFocused();
+    // Both standard automatic activation and explicit Enter activation are supported.
+    await to.press('Enter');
+    await expect(to).toHaveAttribute('aria-selected', 'true');
+    await expect(to).toHaveAttribute('tabindex', '0');
+    await expect(inspector.locator('[role="tab"][aria-selected="false"][tabindex="-1"]')).toHaveCount(2);
+    await expectSelected(page, roomIsSelected ? ['selection-a'] : []);
+    await expect(page.locator('[data-opening-type][aria-pressed="true"]')).toHaveCount(0);
+  }
+  await blurFocus(page);
+  await page.keyboard.press('Delete');
+  expect((await save(page, plan.id)).rooms).toEqual(plan.rooms);
+});
+
+test('canvas selection opens the matching room tab and shows properties for the exact opening', async ({ page }) => {
+  const plan = await seedAndLoad(page);
+  const inspector = page.getByTestId('selection-inspector');
+  await page.getByTestId('opening-selection-door-a').click();
+  await expect(inspector.getByRole('tab', { name: 'Doors (1)', exact: true })).toHaveAttribute('aria-selected', 'true');
+  await expect(inspector.getByRole('spinbutton', { name: 'Door width', exact: true })).toHaveValue('32');
+  await expect(inspector.getByRole('button', { name: 'Select door 1 in Alpha', exact: true })).toBeVisible();
+  await page.getByTestId('opening-selection-window-a').click();
+  await expect(inspector.getByRole('tab', { name: 'Windows (1)', exact: true })).toHaveAttribute('aria-selected', 'true');
+  await expect(inspector.getByRole('spinbutton', { name: 'Window width', exact: true })).toHaveValue('30');
+  await expect(inspector.getByRole('button', { name: 'Select window 1 in Alpha', exact: true })).toBeVisible();
+  await page.getByTestId('opening-selection-door-b').click();
+  await expect(inspector.getByRole('tab', { name: 'Doors (1)', exact: true })).toHaveAttribute('aria-selected', 'true');
+  await expect(inspector.getByRole('tab', { name: 'Windows (0)', exact: true })).toBeVisible();
+  await expect(inspector.getByRole('button', { name: 'Select door 1 in Bravo', exact: true })).toBeVisible();
+  await expect(inspector.getByRole('button', { name: 'Select door 1 in Alpha', exact: true })).toHaveCount(0);
+  await expect(inspector.getByRole('spinbutton', { name: 'Door width', exact: true })).toHaveValue('36');
+  await clickRoom(page, 'selection-c');
+  await expect(inspector.getByRole('tab', { name: 'Room', exact: true })).toHaveAttribute('aria-selected', 'true');
+  await expect(inspector.locator('#roomName')).toHaveValue('Charlie');
+  await expectSelected(page, ['selection-c']);
+  expect((await save(page, plan.id)).rooms).toEqual(plan.rooms);
+});
+
+test('empty opening tabs remain usable and Delete cannot remove their room context', async ({ page }) => {
+  const emptyRoom = { ...fixture()[0], name: 'Empty room', objects: [] };
+  const plan = await seedAndLoad(page, [emptyRoom]);
+  const inspector = await openContentsRoom(page, 'Empty room');
+  await expect(inspector.getByRole('tab')).toHaveText(['Room', 'Doors 0', 'Windows 0']);
+  for (const tab of ['Doors (0)', 'Windows (0)']) {
+    await inspector.getByRole('tab', { name: tab, exact: true }).click();
+    await expect(inspector.getByRole('tab', { name: tab, exact: true })).toHaveAttribute('aria-selected', 'true');
+    await expectSelected(page, []);
+    await expect(inspector.getByRole('button', { name: /^Select (door|window) / })).toHaveCount(0);
+    await expect(inspector.getByRole('button', { name: 'Delete room', exact: true })).not.toBeVisible();
+    await blurFocus(page);
+    await page.keyboard.press('Delete');
+    await page.keyboard.press('Backspace');
+    await expect(roomNode(page, emptyRoom.id)).toBeVisible();
+    await expect(inspector.getByRole('button', { name: 'All rooms', exact: true })).toBeVisible();
+  }
+  await inspector.getByRole('tab', { name: 'Room', exact: true }).click();
+  await expectSelected(page, [emptyRoom.id]);
+  await expect(inspector.locator('#roomName')).toHaveValue('Empty room');
+  expect((await save(page, plan.id)).rooms).toEqual([emptyRoom]);
+});
+
+test('changing tabs commits valid size drafts and superseded room browsing cannot return', async ({ page }) => {
+  const plan = await seedAndLoad(page);
+  const inspector = page.getByTestId('selection-inspector');
+  await page.getByTestId('opening-selection-door-a').click();
+  await inspector.getByRole('spinbutton', { name: 'Door width', exact: true }).fill('30.5');
+  await inspector.getByRole('tab', { name: 'Windows (1)', exact: true }).click();
+  await inspector.getByRole('tab', { name: 'Doors (1)', exact: true }).click();
+  await inspector.getByRole('button', { name: 'Select door 1 in Alpha', exact: true }).click();
+  await expect(inspector.getByRole('spinbutton', { name: 'Door width', exact: true })).toHaveValue('30.5');
+  const expected = structuredClone(plan.rooms);
+  expected[0].objects![0].size = 30.5 * 20 / 12;
+  expected[0].objects![0].doorProperties!.width = 30.5;
+  expect((await save(page, plan.id)).rooms).toEqual(expected);
+  await inspector.getByRole('spinbutton', { name: 'Door width', exact: true }).fill('');
+  await inspector.getByRole('tab', { name: 'Windows (1)', exact: true }).click();
+  expect((await save(page, plan.id)).rooms).toEqual(expected);
+  // Real canvas selection supersedes Alpha's browse context, including after deselection.
+  await clickRoom(page, 'selection-b');
+  await expect(inspector.getByTestId('inspector-room-name')).toHaveText('Bravo');
+  await blurFocus(page); await page.keyboard.press('Escape');
+  await expect(inspector.getByRole('button', { name: 'Edit room Alpha', exact: true })).toBeVisible();
+  await expect(inspector.getByRole('tab')).toHaveCount(0);
+  expect((await save(page, plan.id)).rooms).toEqual(expected);
+});
+
+test('narrow sidebar keeps tab labels and selected-opening actions inside its bounds', async ({ page }) => {
+  await page.setViewportSize({ width: 820, height: 900 });
+  await seedAndLoad(page);
+  const inspector = await openContentsRoom(page, 'Alpha');
+  await inspector.getByRole('tab', { name: 'Windows (1)', exact: true }).click();
+  await inspector.getByRole('button', { name: 'Select window 1 in Alpha', exact: true }).click();
+  const bounds = (await inspector.boundingBox())!;
+  for (const tab of await inspector.getByRole('tab').all()) {
+    await expect(tab).toBeVisible();
+    const box = (await tab.boundingBox())!;
+    expect(box.x).toBeGreaterThanOrEqual(bounds.x);
+    expect(box.x + box.width).toBeLessThanOrEqual(bounds.x + bounds.width);
+    expect(await tab.evaluate(element => element.scrollWidth - element.clientWidth)).toBeLessThanOrEqual(1);
+  }
+  const remove = inspector.getByRole('button', { name: 'Delete window', exact: true });
+  await expect(remove).toBeVisible();
+  const removeBounds = (await remove.boundingBox())!;
+  expect(removeBounds.x + removeBounds.width).toBeLessThanOrEqual(bounds.x + bounds.width);
+  await expect(inspector.getByRole('spinbutton', { name: 'Window width', exact: true })).toBeVisible();
 });
