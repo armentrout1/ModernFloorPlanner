@@ -39,3 +39,10 @@ This verifies browser input dispatch and application behavior; it does not certi
 Deployment/production smoke: **NOT VERIFIED / NOT DEPLOYED**. The owner reports no hosting yet. No database/auth binding is certified or customer onboarding enabled.
 
 Assigned pan acceptance: **complete locally**, no known blocker for this bounded repair. Select All/group movement remain proposed in open issue #8. Next canonical build task remains M3B on a separate bounded assignment; it has not started. M1 #2 is unreleased and hosting/runtime #4 remains proposed.
+
+
+## Zoomed-out grid follow-up — 2026-09-07
+
+Separate bounded owner repair, baseline `2805e3049548696c4274fe263673b02ba3709f38`: remove the duplicate background from the transformed drawing plane. One grid now renders on the stage with the original zoomed spacing/origin and screen-pixel lines. This prevents the white rectangle/subpixel grid disappearance without changing geometry, event handlers or physical units.
+
+Actual checks: `npm run check` and `npm run build` passed; four existing browser cases (near/far/negative fit and scaled opening placement/save/resize) passed in 17.0 seconds. Fresh isolated local frontend captures at 100%, 48%, 23% and 11%; the 48%/11% screenshots were visually inspected and show a continuous grid. Room geometry unchanged, zero page errors. Existing full-suite results above belong to the prior pan repair; the full suite was not rerun for this rendering-only change. No new dependency or migration; retained work preserved. PRODUCER_VERIFIED locally / NOT DEPLOYED; issue #8's selection/group work remains proposed.

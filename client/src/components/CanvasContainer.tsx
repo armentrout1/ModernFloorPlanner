@@ -1230,7 +1230,13 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
     onSelectRoom(roomId);
   };
   
-  // Calculate canvas style based on scale
+  // Draw the grid once in screen space so its lines remain visible when zoomed out.
+  const gridBackground = `
+    linear-gradient(to right, rgba(209, 213, 219, 0.3) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(209, 213, 219, 0.3) 1px, transparent 1px)
+  `;
+
+  // The transparent drawing plane retains its original model/pointer coordinates.
   const canvasStyle: React.CSSProperties = {
     width: view.planeWidth,
     height: view.planeHeight,
@@ -1238,11 +1244,6 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
     top: view.origin.y,
     transformOrigin: '0 0',
     transform: `scale(${state.scale})`,
-    backgroundSize: `${GRID_SIZE}px ${GRID_SIZE}px`,
-    backgroundImage: `
-      linear-gradient(to right, rgba(209, 213, 219, 0.3) 1px, transparent 1px),
-      linear-gradient(to bottom, rgba(209, 213, 219, 0.3) 1px, transparent 1px)
-    `,
   };
   
   return (
@@ -1271,7 +1272,7 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
           style={{ width: view.width, height: view.height,
             backgroundSize: `${GRID_SIZE * state.scale}px ${GRID_SIZE * state.scale}px`,
             backgroundPosition: `${view.origin.x}px ${view.origin.y}px`,
-            backgroundImage: canvasStyle.backgroundImage }}
+            backgroundImage: gridBackground }}
           onMouseDown={handleCanvasMouseDown}
           onMouseMove={handleCanvasMouseMove}
           onMouseUp={handleCanvasMouseUp}
@@ -1281,7 +1282,7 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
           onTouchEnd={handleCanvasTouchEnd}
           onTouchCancel={handleCanvasTouchEnd}
         >
-        <div ref={canvasRef} data-testid="canvas-surface" className="absolute bg-white cursor-crosshair" style={canvasStyle}>
+        <div ref={canvasRef} data-testid="canvas-surface" className="absolute cursor-crosshair" style={canvasStyle}>
           {rooms.map(room => (
             <RoomBox
               key={room.id}
