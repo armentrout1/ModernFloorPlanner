@@ -31,7 +31,8 @@ const shortcuts: KeyboardShortcut[] = [
   { keys: ['Ctrl/Cmd', 'Z'], description: 'Undo last room or opening deletion in this sketch session', category: 'Edit' },
 
   // Navigation & View
-  { keys: ['Mouse Wheel'], description: 'Zoom in/out', category: 'Navigation' },
+  { keys: ['Mouse Wheel'], description: 'Scroll canvas', category: 'Navigation' },
+  { keys: ['Middle Button', 'Drag'], description: 'Pan canvas (hold to drag)', category: 'Navigation' },
   { keys: ['Space', 'Drag'], description: 'Pan canvas', category: 'Navigation' },
   { keys: ['+', '='], description: 'Zoom in', category: 'Navigation' },
   { keys: ['-'], description: 'Zoom out', category: 'Navigation' },

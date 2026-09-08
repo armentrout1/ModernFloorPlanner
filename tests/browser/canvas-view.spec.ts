@@ -210,3 +210,201 @@ test('opening placement after a scaled fit and later viewport resize uses the un
   await expect(page.getByTestId('opening-' + window.id)).toBeVisible();
   expect((await save(page, saved.id)).rooms).toEqual(placed.rooms);
 });
+
+
+async function scrollPosition(page: Page) {
+  return view(page).evaluate(node => ({ x: node.scrollLeft, y: node.scrollTop }));
+}
+async function expectScroll(page: Page, expected: { x: number; y: number }) {
+  await expect.poll(async () => {
+    const actual = await scrollPosition(page);
+    return Math.max(Math.abs(actual.x - expected.x), Math.abs(actual.y - expected.y));
+  }).toBeLessThanOrEqual(1);
+}
+async function panSequence(page: Page, start: { x: number; y: number }, button: 'middle' | 'left' = 'middle') {
+  await page.mouse.move(start.x, start.y);
+  const initial = await scrollPosition(page), room = await roomNode(page, 'fit-bedroom').boundingBox();
+  await page.mouse.down({ button });
+  for (const [dx, dy] of [[2, 3], [7, 4], [19, 11], [21, 13], [39, 17], [41, 19], [23, 8], [-5, -7], [-21, -13], [0, 0]]) {
+    await page.mouse.move(start.x + dx, start.y + dy);
+    await expectScroll(page, { x: initial.x - dx, y: initial.y - dy });
+    const moved = await roomNode(page, 'fit-bedroom').boundingBox();
+    expect(Math.abs(moved!.x - room!.x - dx)).toBeLessThanOrEqual(1);
+    expect(Math.abs(moved!.y - room!.y - dy)).toBeLessThanOrEqual(1);
+  }
+  await page.mouse.up({ button });
+  await page.mouse.move(start.x + 7, start.y + 5);
+  await expectScroll(page, initial);
+}
+async function centerOf(element: Locator) {
+  const box = await element.boundingBox();
+  expect(box).not.toBeNull();
+  return { x: box!.x + box!.width / 2, y: box!.y + box!.height / 2 };
+}
+
+for (const width of [1600, 820]) {
+  test('middle-button pan cancels native autoscroll and keeps steady screen pixels at width ' + width, async ({ page }) => {
+    await page.setViewportSize({ width, height: width === 820 ? 720 : 1000 });
+    const rooms = layout(0, 0), saved = await seedAndLoad(page, rooms);
+    await fit(page).click();
+    if (width === 820) expect((await roomNode(page, rooms[0].id).boundingBox())!.width / rooms[0].width).toBeLessThan(0.99);
+    await page.evaluate(() => {
+      (window as any).panDefaults = [];
+      window.addEventListener('mousedown', event => {
+        if (event.button === 1) (window as any).panDefaults.push(event);
+      }, true);
+    });
+    for (const tool of ['Draw Room', 'Select & Move', 'Add Door', 'Add Window']) {
+      await page.getByRole('button', { name: tool, exact: true }).click();
+      const viewport = await visibleViewport(page);
+      await panSequence(page, { x: viewport.x + 30, y: viewport.y + viewport.height / 2 });
+      for (const target of [roomNode(page, rooms[0].id), page.getByTestId('opening-fit-door'), page.getByTestId('opening-fit-window')]) {
+        await panSequence(page, await centerOf(target));
+      }
+    }
+    const defaults = await page.evaluate(() => ((window as any).panDefaults as MouseEvent[]).map(event => event.defaultPrevented));
+    expect(defaults).toHaveLength(16);
+    expect(defaults.every(Boolean)).toBe(true);
+    await page.getByRole('button', { name: 'Select & Move', exact: true }).click();
+    await roomNode(page, rooms[0].id).click();
+    await panSequence(page, await centerOf(page.getByTestId('resize-' + rooms[0].id + '-se')));
+    expect((await save(page, saved.id)).rooms).toEqual(rooms);
+  });
+}
+
+test('mouse pan continues outside the grid, stops on release and reverses immediately at scroll limits', async ({ page }) => {
+  const rooms = layout(0, 0), saved = await seedAndLoad(page, rooms);
+  await fit(page).click();
+  const viewport = await visibleViewport(page);
+  const start = { x: viewport.x + viewport.width - 6, y: viewport.y + viewport.height / 2 };
+  await page.mouse.move(start.x, start.y);
+  const initial = await scrollPosition(page);
+  await page.mouse.down({ button: 'middle' });
+  await page.mouse.move(start.x + 50, start.y + 12, { steps: 10 });
+  await expectScroll(page, { x: initial.x - 50, y: initial.y - 12 });
+  await page.mouse.up({ button: 'middle' });
+  await page.mouse.move(start.x - 30, start.y - 20);
+  await expectScroll(page, { x: initial.x - 50, y: initial.y - 12 });
+  const roomStart = await centerOf(roomNode(page, rooms[0].id));
+  await page.mouse.move(roomStart.x, roomStart.y);
+  const beforeChord = await scrollPosition(page);
+  await page.mouse.down({ button: 'middle' });
+  await page.mouse.down({ button: 'left' });
+  await page.mouse.move(roomStart.x - 12, roomStart.y - 8);
+  await expectScroll(page, { x: beforeChord.x + 12, y: beforeChord.y + 8 });
+  await page.mouse.up({ button: 'left' });
+  await page.mouse.move(roomStart.x - 14, roomStart.y - 10);
+  await expectScroll(page, { x: beforeChord.x + 14, y: beforeChord.y + 10 });
+  await page.mouse.up({ button: 'middle' });
+  await view(page).evaluate(node => node.scrollTo(0, 0));
+  await expectScroll(page, { x: 0, y: 0 });
+  const inside = { x: viewport.x + 80, y: viewport.y + 100 };
+  await page.mouse.move(inside.x, inside.y);
+  await page.mouse.down({ button: 'middle' });
+  await page.mouse.move(inside.x + 40, inside.y + 40, { steps: 10 });
+  await expectScroll(page, { x: 0, y: 0 });
+  await page.mouse.move(inside.x + 38, inside.y + 37);
+  await expectScroll(page, { x: 2, y: 3 });
+  await page.mouse.up({ button: 'middle' });
+  expect((await save(page, saved.id)).rooms).toEqual(rooms);
+});
+
+test('Hand and Space wait for a held drag and never draw, select or place an opening', async ({ page }) => {
+  const rooms = layout(0, 0), saved = await seedAndLoad(page, rooms);
+  await fit(page).click();
+  await page.getByRole('button', { name: 'Select & Move', exact: true }).click();
+  await roomNode(page, rooms[1].id).click();
+  for (const mode of ['Hand', 'Space']) {
+    await page.getByRole('button', { name: 'Add Door', exact: true }).click();
+    const viewport = await visibleViewport(page), initial = await scrollPosition(page);
+    await page.mouse.move(viewport.x + 30, viewport.y + 120);
+    if (mode === 'Hand') await page.getByTitle('Pan Mode (Hand Tool)').click();
+    else {
+      await page.evaluate(() => (document.activeElement as HTMLElement)?.blur());
+      await page.keyboard.down('Space');
+    }
+    await page.mouse.move(viewport.x + 60, viewport.y + 180);
+    await expectScroll(page, initial);
+    await panSequence(page, await centerOf(page.getByTestId('opening-fit-door')), 'left');
+    if (mode === 'Hand') await page.getByTitle('Pan Mode (Hand Tool)').click();
+    else await page.keyboard.up('Space');
+  }
+  await page.getByRole('button', { name: 'Select & Move', exact: true }).click();
+  await expect(page.getByTestId('resize-' + rooms[1].id + '-se')).toBeVisible();
+  expect((await save(page, saved.id)).rooms).toEqual(rooms);
+});
+
+test('blur, Escape, missing held button and inactive navigation cancel mouse pan; wheel scrolling remains available', async ({ page }) => {
+  const rooms = layout(0, 0), saved = await seedAndLoad(page, rooms);
+  await page.getByRole('link', { name: 'Quick Rooms', exact: true }).click();
+  await page.getByRole('link', { name: 'Sketch editor', exact: true }).click();
+  await fit(page).click();
+  const viewport = await visibleViewport(page);
+  const start = { x: viewport.x + 50, y: viewport.y + 120 };
+  for (const cancellation of ['blur', 'Escape', 'lost-button', 'navigate']) {
+    await page.mouse.move(start.x, start.y);
+    await page.mouse.down({ button: 'middle' });
+    await page.mouse.move(start.x - 10, start.y - 10);
+    const stopped = await scrollPosition(page);
+    if (cancellation === 'blur') await page.evaluate(() => window.dispatchEvent(new Event('blur')));
+    else if (cancellation === 'Escape') await page.keyboard.press('Escape');
+    else if (cancellation === 'lost-button') await page.evaluate(() => window.dispatchEvent(new MouseEvent('mousemove', { buttons: 0, bubbles: true })));
+    else {
+      await page.goBack();
+      await expect(page).toHaveURL(/quick-room$/);
+      await page.mouse.move(start.x + 10, start.y + 10);
+      await page.mouse.up({ button: 'middle' });
+      await page.goForward();
+      await expect(page).toHaveURL(/\/$/);
+    }
+    await page.mouse.move(start.x + 20, start.y + 20);
+    await page.mouse.up({ button: 'middle' });
+    await expectScroll(page, stopped);
+  }
+  await page.mouse.move(start.x, start.y);
+  const beforeWheel = await scrollPosition(page);
+  await page.mouse.wheel(0, 80);
+  await expect.poll(async () => (await scrollPosition(page)).y).toBeGreaterThan(beforeWheel.y);
+  expect((await save(page, saved.id)).rooms).toEqual(rooms);
+});
+
+
+test('cancelled pan consumes its later release instead of placing the pending opening', async ({ page }) => {
+  const rooms = layout(0, 0), saved = await seedAndLoad(page, rooms);
+  await fit(page).click();
+  for (const cancellation of ['Space', 'Escape', 'blur', 'lost-button']) {
+    await page.getByRole('button', { name: 'Add Door', exact: true }).click();
+    const box = await roomNode(page, rooms[2].id).boundingBox();
+    const wall = { x: box!.x + box!.width / 2, y: box!.y + 2 };
+    await page.mouse.move(wall.x, wall.y);
+    // Space+left panning owns the same mouseup that normally places an opening.
+    await page.evaluate(() => (document.activeElement as HTMLElement)?.blur());
+    await page.keyboard.down('Space');
+    await page.mouse.down();
+    await page.mouse.move(wall.x - 2, wall.y);
+    const stopped = await scrollPosition(page);
+    if (cancellation === 'Space') await page.keyboard.up('Space');
+    else if (cancellation === 'Escape') await page.keyboard.press('Escape');
+    else if (cancellation === 'blur') await page.evaluate(() => window.dispatchEvent(new Event('blur')));
+    else await page.evaluate(() => window.dispatchEvent(new MouseEvent('mousemove', { buttons: 0, bubbles: true })));
+    await page.mouse.move(wall.x - 3, wall.y);
+    await expectScroll(page, stopped);
+    await page.mouse.up();
+    await page.keyboard.up('Space');
+    await expect(page.locator('[data-testid^="opening-"]')).toHaveCount(2);
+    await page.getByRole('button', { name: 'Select & Move', exact: true }).click();
+    await expect(page.locator('[data-testid^="opening-"]')).toHaveCount(2);
+  }
+  for (const releaseOrder of [['middle', 'left'], ['left', 'middle']] as const) {
+    await page.getByRole('button', { name: 'Add Door', exact: true }).click();
+    const box = await roomNode(page, rooms[2].id).boundingBox();
+    await page.mouse.move(box!.x + box!.width / 2, box!.y + 2);
+    await page.mouse.down({ button: 'middle' });
+    await page.mouse.down({ button: 'left' });
+    await page.mouse.up({ button: releaseOrder[0] });
+    await page.mouse.up({ button: releaseOrder[1] });
+    await expect(page.locator('[data-testid^="opening-"]')).toHaveCount(2);
+    await page.getByRole('button', { name: 'Select & Move', exact: true }).click();
+  }
+  expect((await save(page, saved.id)).rooms).toEqual(rooms);
+});

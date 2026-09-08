@@ -15,6 +15,7 @@ import { Room, Position, ResizeHandle, CanvasState, ObjectType, WallSide } from 
 import { shouldIgnoreEditorShortcut } from '@/utils/keyboard';
 import CanvasControls from './CanvasControls';
 import { useCanvasView } from '@/hooks/useCanvasView';
+import { useCanvasPan } from '@/hooks/useCanvasPan';
 import RoomBox from './RoomBox';
 import RoomObject from './RoomObject';
 import TotalAreaDisplay from './TotalAreaDisplay';
@@ -108,6 +109,10 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
     targetWall: null,
   });
   
+  const pan = useCanvasPan(wrapperRef, active, activeTool === 'move',
+    !state.isDrawing && !state.isDragging && !state.isResizing && !state.isSelecting && doorState.mode !== 'dragging',
+    view.captureCenter);
+
   // Zoom functions
   const handleZoomIn = useCallback(() => {
     view.captureCenter();
@@ -183,15 +188,7 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
         return;
       }
 
-      if (e.key === ' ' && !state.isPanning) {
-        e.preventDefault();
-        // Space bar - toggle panning mode
-        setState(prev => ({ ...prev, isPanning: true }));
-        
-        if (canvasRef.current) {
-          canvasRef.current.style.cursor = 'grab';
-        }
-      } else if (e.key === '+' || e.key === '=') {
+      if (e.key === '+' || e.key === '=') {
         // Zoom in
         handleZoomIn();
       } else if (e.key === '-') {
@@ -206,23 +203,10 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
       }
     };
     
-    const handleKeyUp = (e: KeyboardEvent) => {
-      if (e.key === ' ') {
-        // Space bar released - exit panning mode
-        setState(prev => ({ ...prev, isPanning: false }));
-        
-        if (canvasRef.current) {
-          canvasRef.current.style.cursor = 'crosshair';
-        }
-      }
-    };
-    
     window.addEventListener('keydown', handleKeyDown);
-    window.addEventListener('keyup', handleKeyUp);
     
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
-      window.removeEventListener('keyup', handleKeyUp);
     };
   }, [active, state.isPanning, state.isPreviewMode, selectedRoomId, onRoomsChange, onSelectRoom, rooms, handleZoomIn, handleZoomOut]);
   
@@ -616,9 +600,9 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
     view.centerOn({ x: (minX + maxX) / 2, y: (minY + maxY) / 2 });
   };
 
-  // Handle spacebar + click for panning
+  // Editing only: mouse-pan gestures are captured before reaching this handler.
   const handleCanvasMouseDown = (e: React.MouseEvent) => {
-    if (e.target !== canvasRef.current && e.target !== stageRef.current) return;
+    if (e.button !== 0 || (e.target !== canvasRef.current && e.target !== stageRef.current)) return;
     
     const rect = canvasRef.current?.getBoundingClientRect();
     if (!rect) return;
@@ -626,19 +610,7 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
     const x = (e.clientX - rect.left) / state.scale;
     const y = (e.clientY - rect.top) / state.scale;
     
-    // Middle mouse button or Spacebar + left click enables panning
-    if (e.button === 1 || (e.button === 0 && activeTool === 'move' && e.ctrlKey)) {
-      setState(prev => ({
-        ...prev,
-        isPanning: true,
-        lastMouse: { x: e.clientX, y: e.clientY },
-      }));
-      
-      // Change cursor to grabbing
-      if (canvasRef.current) {
-        canvasRef.current.style.cursor = 'grabbing';
-      }
-    } else if (activeTool === 'room') {
+    if (activeTool === 'room') {
       setState(prev => ({
         ...prev,
         isDrawing: true,
@@ -673,6 +645,7 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
   };
   
   const handleCanvasMouseMove = (e: React.MouseEvent) => {
+    if (pan.ownedButton.current !== null) return;
     const rect = canvasRef.current?.getBoundingClientRect();
     if (!rect) return;
     
@@ -736,21 +709,7 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
       return; // Early return to prevent other interactions during door drag
     }
     
-    if (state.isPanning && wrapperRef.current) {
-      // Calculate the delta change since last mouse position for panning
-      const dx = e.clientX - state.lastMouse.x;
-      const dy = e.clientY - state.lastMouse.y;
-      
-      // Pan by updating scroll position
-      wrapperRef.current.scrollLeft -= dx;
-      wrapperRef.current.scrollTop -= dy;
-      
-      // Update last mouse position
-      setState(prev => ({
-        ...prev,
-        lastMouse: { x: e.clientX, y: e.clientY },
-      }));
-    } else if (state.isSelecting && state.selectStart) {
+    if (state.isSelecting && state.selectStart) {
       // Update selection rectangle
       setState(prev => ({
         ...prev,
@@ -817,7 +776,13 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
     }
   };
   
-  const handleCanvasMouseUp = () => {
+  const handleCanvasMouseUp = (event?: React.MouseEvent) => {
+    if (pan.ownedButton.current !== null || (event?.type === 'mouseup' && event.button !== 0)) return;
+    if (event?.type === 'mouseleave' && doorState.mode === 'placing') {
+      // Leaving a hover preview is not a placement click (including after a pan).
+      setDoorState(previous => ({ ...previous, mode: 'idle', cursorPreview: null }));
+      return;
+    }
     // Handle object placement from cursor preview (doors and windows)
     if (doorState.mode === 'placing' && doorState.cursorPreview?.targetWall && (placingObjectType === 'door' || placingObjectType === 'window')) {
       const { targetWall } = doorState.cursorPreview;
@@ -1287,8 +1252,8 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
         onZoomOut={handleZoomOut}
         onResetZoom={handleResetZoom}
         onFitToScreen={handleResetView}
-        onTogglePanMode={() => setState(previous => ({ ...previous, isPanning: !previous.isPanning }))}
-        isPanMode={state.isPanning}
+        onTogglePanMode={pan.toggleHand}
+        isPanMode={pan.ready || pan.dragging}
       />
       
       <div 
@@ -1299,7 +1264,10 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
       >
         <div
           ref={stageRef}
-          className="relative overflow-hidden bg-white cursor-crosshair"
+          className={`relative overflow-hidden bg-white cursor-crosshair ${pan.dragging ? '!cursor-grabbing [&_*]:!cursor-grabbing' : pan.ready ? '!cursor-grab [&_*]:!cursor-grab' : ''}`}
+          onMouseDownCapture={pan.onMouseDownCapture}
+          onClickCapture={pan.onClickCapture}
+          onAuxClickCapture={pan.onAuxClickCapture}
           style={{ width: view.width, height: view.height,
             backgroundSize: `${GRID_SIZE * state.scale}px ${GRID_SIZE * state.scale}px`,
             backgroundPosition: `${view.origin.x}px ${view.origin.y}px`,
