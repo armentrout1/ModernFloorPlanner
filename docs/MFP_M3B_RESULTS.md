@@ -1,5 +1,70 @@
 # MFP-M3B implementation results
 
+Date: 2026-09-08 · [Issue #10](https://github.com/armentrout1/ModernFloorPlanner/issues/10)
+**Slice 2 COMPLETE locally. Slice 3 eligible, NOT STARTED.** M3B as a whole remains in progress.
+Application/test commit: **0f56cbfb2cd5b27d647cececa0a3da7ac3327afc**; entry main/origin/main: d771406acbf65290b10bb538cdad2fe86e0d00b4.
+**NOT DEPLOYED.** Production/database/authentication/partner smoke NOT VERIFIED. Issue #2 remains unreleased; #4 remains PROPOSED.
+
+## Slice 2 application result
+
+Inside **/physical-draft**, door, window and floor-level opening forms and drawing actions edit the same physical opening ID and canonical document. The compact inspector exposes room, wall, width, height, sill/elevation, clockwise wall-start CENTER distance, measurement basis and applicable door style/hand/swing. Common sizes are editable proposals. Missing imported values and conflicting widths remain unresolved; appearance supplies no authoritative dimensions. Both supported views share this data; the original standalone /quick-room and / sketch drafts remain independent.
+
+Add Door/Add Window/Add Opening place on supported walls. List and drawing selection target the same ID. Single-face openings move along walls, between walls and between supported rooms using current viewport bounds, scroll, origin, zoom and displayed room position. Only physical attachment/offset is committed; display arrangements never become building coordinates. Floor-level openings render as gaps through a narrow extension of the existing renderer. Historical fallback symbols stay labeled.
+
+Each drag commits one guarded command; previews stay separate. Escape, pointer cancellation/lost capture, blur, view/draft change, stale revisions and modifier/pan changes cancel gestures. Fixed-height feedback prevents preview text from moving the canvas under the pointer. Fractional/custom raw text and its unit context survive; Enter plus blur applies once. Invalid bounds/overlap/above-ceiling edits retain raw text and explanations; incomplete geometry stays explicitly unverified. Pending inputs mask dependent quantities. Room measurement changes revalidate openings without shrinking/deleting them.
+
+Two-face openings retain one ID and ordered attachments; dimensions validate both faces. Uncoordinated moves/position changes are disabled with a reason. Exact opening deletion never deletes a room; text/dialog/menu/repeated/inactive keyboard guards remain. Bounded undo restores full data, order, raw fields and evidence while retaining unrelated later edits and rejecting stale parents, reused IDs or invalid restoration. Optional validated recovery fields preserve earlier envelopes, opening events and deletion records. No physical draft uses the legacy save API or stores authoritative totals.
+
+## Actual acceptance and final full sequence
+
+The required fixture was built through the new UI: 12 x 10 x 8 ft room, explicit flat/uniform declarations, finished 3 x 7 ft door (sill 0, top-wall center 2.5 ft) and finished 4 x 3 ft window (sill 3 ft, top-wall center 8 ft). Forms/document/drawing agreed. The actual shared engine returned **floor/ceiling 120 sq ft each, gross walls 352, net walls 319, baseboard/base shoe 41 ft each, one door and one window**. Browser and Node evaluations/fingerprints matched. The basic visible summary remains floor/ceiling/gross walls; Slice 3's full quantity panel was not built.
+
+Added **37 unit cases** (26 commands/recovery, 11 transforms/projection/gesture identity) and **9 browser cases**. They cover all four noncentral clockwise wall placements, actual along/cross-wall/cross-room moves, exact 32-inch and fractional/metric values, independent window height/sill, corner/overlap/ceiling errors, zoom/pan/reflow, cancellation/stale updates, door styles/handing, exact deletion/undo, shared protection and source/recovery preservation without API writes. Populated desktop 1600/tablet 820/phone 390 views were inspected.
+
+All prior 279 unit and 105 browser cases remain included. One Slice 1 no-edit gesture test now targets room interior because Slice 2 enables opening gestures. Its source-original, IDs/groups, window-height, appearance, document-equality, reload and no-API-write assertions remain. New cases verify opening operations positively. No skips.
+
+After the final application change, this fresh sequence ran with Node 20.20.2, npm 10.8.2 and Playwright 1.55.1:
+
+| Command | Actual result | Duration |
+| --- | --- | --- |
+| `npm ci` | PASS, exit 0 | 11.10 s |
+| `npm test` | PASS, exit 0; **316/316** | 2.21 s |
+| `npm run check` | PASS, exit 0 | 5.60 s |
+| `npm run build` | PASS, exit 0 | 4.62 s |
+| `npx playwright test --reporter=line` | PASS, exit 0; **114/114**, zero retries | 274.20 s |
+| `git diff --check` | PASS in canonical checkout; staged check also passed | Not timed |
+
+[Source/check/log-hash manifest](evidence/MFP_M3B_SLICE2_2026-09-08.json) binds the application commit to **213 frozen source files**. Existing npm advisories remain 28 (4 low/10 moderate/14 high), plus old browser-data and >500kB chunk warnings. No package/lock/runtime change or audit fix.
+
+Earlier focused failures remain recorded: initial 6/9, revised 8/9 and a failed diagnostic. Two test targets incorrectly excluded the same door's overlapping swing surface; real-pointer targeting corrected them. The remaining failure exposed real preview-feedback page reflow; fixed feedback height repaired it. Strict overlap/corner rejection, stable canvas bounds and unchanged document/history then passed in a fresh 9/9 focused run. That run is separate from the full 114/114 result above.
+
+## Preservation and canonical local smoke
+
+Development/clean install/full tests used an isolated tracked-source export without owner .env, customer data or browser sessions. Before integration, canonical root/remote/main, clean tree, writer inventory, stash and archive were rechecked. No canonical watcher or 5173/5176 listener existed. Sixteen application/test files were integrated and all 213 source hashes matched the tested source. Owner tabs were never inspected, operated on or reloaded; 5173/5176 stay stopped. Stash 779950aeaa1b81fc8955ad8f399ab87ae5e59063 and original-roadmap SHA256 4AA44769A3AF1CC8A4FE940B09E024109FEA19630F61181772B42F7EFDB7BCF1 remain unchanged. Git does not save live browser memory.
+
+Safe review: **http://127.0.0.1:5177/physical-draft**, in a new tab. A fresh isolated canonical smoke context built the fixture, checked 120/120/352, moved the same opening with one event and preserved dimensions, deleted/restored it, and recovered pending text/unit context with byte-identical recovery. Zero page errors/API writes. The context closed; the separate review server remains available. This is local smoke, not deployment. Docs-only CRM PR #11 stays separate/unmerged and activates no implementation.
+
+## Screenshots and three owner checks
+
+![Canonical physical opening editor](evidence/MFP_M3B_SLICE2_CANONICAL.png)
+
+[Desktop](evidence/MFP_M3B_SLICE2_DESKTOP.png) · [Tablet](evidence/MFP_M3B_SLICE2_TABLET.png) · [Phone](evidence/MFP_M3B_SLICE2_PHONE.png)
+
+1. Open 5177 in a new tab; create a physical draft and 12 x 10 x 8 ft room, explicitly choosing flat ceiling and uniform walls.
+2. Place a door/window in Drawing; edit width/height/sill/basis/center, select it from the list and drag it to another supported wall.
+3. Delete the selected opening and Undo opening delete. Enter unfinished text, switch views and return; check the same draft/text remain.
+
+## Limits and single next task
+
+Temporary recovery is same-tab only, not account/database/cross-device saving. Missing/unconfirmed inputs remain provisional. Shared-opening movement, room movement/resizing/group gestures, general undo and automatic topology are outside this slice. Unsupported ceiling/wall models block dependent quantities. Ceiling height is distinct from stair rise/rough framing height. Finish quantities are not a complete construction materials list; M7 adds recipes/coverage/accessories/waste, later trades need construction/routing models.
+
+**Next: M3B Slice 3 — selected work/surfaces, explainable shared-engine quantities with missing-input detail, and explicit measurement confirmation/correction review. Eligible, NOT STARTED.** Slice 4 closeout, M3C, proposed M3D levels-before-stairs, detailed kitchen/bath/trades, hosting and database work remain unstarted. No Slice 2 acceptance blocker remains after the recorded checks.
+
+---
+
+# Historical Slice 1 results (superseded status, preserved evidence)
+
+
 Date: 2026-09-08
 Requirement: DR-002 / [M3B issue #10](https://github.com/armentrout1/ModernFloorPlanner/issues/10)
 **Slice 1 COMPLETE locally; Slice 2 eligible, NOT STARTED.** M3B as a whole is still in progress.

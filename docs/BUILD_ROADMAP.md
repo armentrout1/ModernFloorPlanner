@@ -1,30 +1,28 @@
 # Modern Floor Planner — executable product and build roadmap
 
-Version: 1.5 — M3B Slice 1 implemented and verified, 2026-09-08
+Version: 1.6 — M3B Slice 2 implemented and verified, 2026-09-08
 Repository: `armentrout1/ModernFloorPlanner`; delivery branch: `main`.
-Original audit baseline: `876968e78d7070775e7924f33a3164ba20905d42`; current application/test commit: `5e67eaee84f50de16d3209881b2fc28e6fa934e8`.
-Status: **M3 in progress; NOT DEPLOYED. M3B Slice 1 complete locally. Single next task: Slice 2 physical opening forms and drawing interactions; eligible, not started.** Slices 3/4, remaining M3C, proposed M3D and M4–M8 remain unstarted. Issue #2 remains unreleased; hosting issue #4 remains PROPOSED.
+Original audit baseline: `876968e78d7070775e7924f33a3164ba20905d42`; current application/test commit: `0f56cbfb2cd5b27d647cececa0a3da7ac3327afc`.
+Status: **M3 in progress; NOT DEPLOYED. M3B Slices 1 and 2 complete locally. Single next task: Slice 3 selected work/surfaces, explainable quantities and explicit review; eligible, not started.** Slices 3/4, remaining M3C, proposed M3D and M4–M8 remain unstarted. Issue #2 remains unreleased; hosting issue #4 remains PROPOSED.
 
 Evidence and dated external research: [research and audit](RESEARCH_AND_AUDIT_2026-09-06.md).
 
 ## 0. Current M3B checkpoint — 2026-09-08
 
-The owner's explicit implementation assignment superseded the former failed-gate-only stopping instruction. Verified main/origin/main began clean at 77ac8c7. [Current results and exact checks](MFP_M3B_RESULTS.md) / [issue #10](https://github.com/armentrout1/ModernFloorPlanner/issues/10) record implementation of the [selected entry design](MFP_M3B_ENTRY_GATE.md), including [issue #9's ceiling/takeoff addition](https://github.com/armentrout1/ModernFloorPlanner/issues/9#issuecomment-5586261905). This remains the sole canonical roadmap.
+The explicit Slice 2 assignment implemented physical opening forms AND drawing interactions using the existing shared-document design. Entry main/origin/main was d771406; application/test commit: 0f56cbfb2cd5b27d647cececa0a3da7ac3327afc. [Actual results and exact source/check evidence](MFP_M3B_RESULTS.md) / [issue #10](https://github.com/armentrout1/ModernFloorPlanner/issues/10) record acceptance. This remains the sole canonical roadmap.
 
-At **/physical-draft**, an explicitly selected physical document owns room name/length/width/ceilingHeight for both Quick Rooms and the drawing inspector, a derived read-only sketch, and shared-engine floor/flat-ceiling/gross-wall quantities. Create empty or explicitly copy one standalone source. Originals are never automatically adopted/merged. The separate standalone /quick-room and / routes remain preserved workflows.
+At **/physical-draft**, both views share one selected physical document for room measurements/ceilingHeight, openings, drawing and quantities. Door/window/floor-level creation, exact selection, supported wall/cross-room moves, appearance, validated raw editing, exact deletion/bounded undo and full recovery are implemented. Two-face movement stays disabled; dimensions validate both faces. The original standalone /quick-room and / sketch workflows remain independent and preserved.
 
-Implemented compatibility includes opt-in legacy-pixels-v2 window heights/groups/door appearance, detached captured-v2 upgrade, typed applicability, compatible policy/engine/result/snapshot/fingerprint dispatch, and full versioned temporary recovery. Unknown/unsupported conditions block the relevant engine outputs; no invented heights, automatic confirmation or physical-v2 data through legacy save.
-
-**Fresh full sequence after final application changes:** npm ci; npm test **279/279**; npm run check; npm run build; npx playwright test --reporter=line **105/105**, zero retries; git diff --check — all pass. Earlier 104/105 full run and focused failures remain recorded as failures. Runtime and dependencies are unchanged. The original connected-client HMR rehearsal failed; integration instead required verified absence of a canonical watcher/listener, preserved the old loaded owner tab and kept 5173 stopped. A separate 5176 review server avoids reconnecting that tab. See results for exact preservation evidence and limitation.
+**Fresh final sequence:** npm ci; npm test **316/316**; npm run check; npm run build; npx playwright test --reporter=line **114/114**, zero retries; git diff --check — all pass. The actual UI fixture produces 120/120/352/319 sq ft, 41/41 ft trim and one door/window through the shared engine with browser/Node parity. Prior failures and the bounded preview-reflow repair are recorded separately. Safe review: **http://127.0.0.1:5177/physical-draft**; 5173/5176 stay stopped and owner tabs untouched. NOT DEPLOYED.
 
 | M3B slice | Current state |
 | --- | --- |
 | 1 — shared draft/room measurements/import/applicability/recovery | COMPLETE locally |
-| 2 — physical opening forms and drawing interactions | NEXT ELIGIBLE; NOT STARTED |
-| 3 — selected work/surfaces, explainable quantities and explicit review | NOT STARTED; requires 2 |
+| 2 — physical opening forms and drawing interactions | COMPLETE locally |
+| 3 — selected work/surfaces, explainable quantities and explicit review | NEXT ELIGIBLE; NOT STARTED |
 | 4 — integrated acceptance, bounded repair and M3B closeout | NOT STARTED; requires 1–3 |
 
-M3B supplies measured quantities and missing inputs. M7 adds specified material recipes, coverage, accessories, waste and purchasing quantities. Later bounded trades require construction/routing models. Levels-before-stairs, rooms/zones distinct from trade layers, proposed M3D and later kitchen/bath/trade work remain unchanged and unimplemented. No framework replacement, hosting, database migration, customer onboarding or cross-product build occurred.
+M3B supplies measured quantities/missing inputs. M7 adds specified recipes, coverage, accessories, waste and purchasing quantities. Later trades need construction/routing models. Levels before stairs, rooms/zones distinct from trade layers, proposed M3D and later kitchen/bath/trade boundaries remain unchanged. No framework, hosting, database, customer-onboarding or cross-product build occurred. Docs-only CRM PR #11 remains separate/unmerged and activates no implementation.
 
 ## 0.1. Prior build checkpoint - 6b8ef92
 
@@ -234,9 +232,9 @@ M1A: establish compatible unit/component/browser test tooling and exact `check`/
 
 **Entry:** M2 engine contract stable. M3A: room cards with length/width/ceiling height, names, presets and duplication with regenerated IDs. M3B: simple opening form (wall, offset, width, height, elevation), work/surface selection, live sketch and quantity breakdown. M3C: responsive docked layout, proper input focus, undo/redo and unobstructed controls.
 
-**M3B Slice 1 / issue #10: COMPLETE locally.** The shared selected physical draft, synchronized room measurements/ceilingHeight, read-only projection, basic quantities, typed applicability/version dispatch, source-preserving import and full recovery are implemented. [Results](MFP_M3B_RESULTS.md) record fresh 279/279 unit and 105/105 browser checks. M3B as a whole remains incomplete.
+**M3B Slices 1 and 2 / issue #10: COMPLETE locally.** Shared physical room/opening data, synchronized forms and supported drawing interactions, basic quantities, compatibility/applicability, deletion/recovery and source preservation are implemented. [Results](MFP_M3B_RESULTS.md) record fresh 316/316 unit and 114/114 browser checks. M3B as a whole remains incomplete.
 
-**Single next task: Slice 2 physical opening forms AND drawing interactions.** Preserve existing IDs/appearance/width conflict evidence, measured width/height/sill, clockwise-start center offsets and opening basis; validate placement/movement and deletion/recovery with explicit shared-attachment protection. Slice 3 supplies selected work/quantity breakdown and review; Slice 4 supplies integrated closeout. General undo stays M3C. No levels/stairs, hosting or database work is activated.
+**Single next task: Slice 3 selected work/surfaces, explainable quantities and explicit measurement confirmation/correction review.** Retain completed Slice 2 forms, placement/drag/appearance/identity/validation/recovery. Slice 4 supplies integrated closeout. General undo stays M3C. No levels/stairs, hosting or database work is activated.
 
 **M3A evidence:** [issue #7](https://github.com/armentrout1/ModernFloorPlanner/issues/7), [results, local command and screenshots](MFP_M3A_RESULTS.md). The real `/quick-room` route supports name-only presets, unknown/unconfirmed physical dimensions, safe raw editing and unit changes, independent duplication, protected removal, and engine-derived floor/flat-ceiling/gross-wall quantities. Separate sketch and Quick Rooms drafts survive navigation; validated temporary sessionStorage recovery never sends v2 data through the legacy save API. Inactive sketch portals/shortcuts/gestures are guarded, and mobile page scrolling is scoped correctly. All 201 unit/API and 43 browser tests pass, retaining original 170/25 and all six M2C parity cases; clean install, typecheck, build and whitespace checks pass. Desktop/tablet/phone viewport captures were inspected. M3A is complete locally and NOT DEPLOYED. M3 as a whole remains incomplete; current M3B Slice 1/2 status is recorded above.
 
@@ -383,6 +381,6 @@ At the original planning publication (historical): remote source/doc review and 
 
 M1 entry resolved local document preservation and observable writer checks; M2A, M2B, M2C and M3A reverified the existing checkout, archived original and retained stash. The owner confirms the app is not hosted yet. Remaining unresolved facts: first hosting/database/identity configuration; saved-plan inventory/ownership; pilot demand and operating costs. These are explicit discovery/release gates, not reasons to rebuild the stack or abandon the plan.
 
-Current state: M1, M2A/B/C, M3A and now **M3B Slice 1** are locally implemented and verified, NOT DEPLOYED. Current application/test commit: `5e67eaee84f50de16d3209881b2fc28e6fa934e8`. Issue #2 remains unreleased; #4 remains PROPOSED. **Next eligible task: M3B Slice 2**, not started. [Current results](MFP_M3B_RESULTS.md) bind the fresh 279/279 unit and 105/105 full browser sequence and preservation-safe integration. Historical gate failures and prior UI evidence remain historical, not current verification. Issue #9 remains reconciled into A8, proposed M3D and M7 boundaries; levels, stairs, detailed kitchen/bath/trade work remain unstarted.
+Current state: M1, M2A/B/C, M3A and **M3B Slices 1 and 2** are locally implemented and verified, NOT DEPLOYED. Application/test commit: `0f56cbfb2cd5b27d647cececa0a3da7ac3327afc`. Issue #2 remains unreleased; #4 remains PROPOSED. **Next eligible task: M3B Slice 3**, not started. [Current results](MFP_M3B_RESULTS.md) bind the fresh 316/316 unit and 114/114 browser sequence and safe integration. Prior failures/UI evidence remain historical. Issue #9 remains reconciled into A8, proposed M3D and M7; levels, stairs, detailed kitchen/bath/trade work remain unstarted.
 
 Separate operational proposal: [hosting/runtime readiness, issue #4](https://github.com/armentrout1/ModernFloorPlanner/issues/4), status **PROPOSED**, not started. It covers Node 24 LTS compatibility/project pins and complete regressions, scoped dependency advisory review, Vercel frontend/Express/static/API/deep-link configuration, PostgreSQL selection and real persistence, server-only credentials/connection management, and protected owner-only early access. Verify current official documentation when activated. No public unscoped API or customer onboarding before M4 isolation. M2A, M2B, M2C and M3A do not change runtime pins, provision services, spend money or deploy.
