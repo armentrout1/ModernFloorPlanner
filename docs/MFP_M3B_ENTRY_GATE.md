@@ -3,11 +3,12 @@
 Date: 2026-09-08
 Requirement: DR-002 / MFP-M3B
 Issue: [MFP-M3B / issue #10](https://github.com/armentrout1/ModernFloorPlanner/issues/10)
-Gate: **BLOCKED - fresh full browser baseline is 95/96. Design review complete; feature implementation must wait.**
+Original gate: **BLOCKED - initial full browser baseline was 95/96.**
+Current gate: **CLEARED locally by test-only prerequisite 09929dd and fresh 234/234 unit, 96/96 browser checks.** See [M3B follow-up results](MFP_M3B_RESULTS.md). Slice 1 remains NOT STARTED.
 Implementation: NOT STARTED. This assignment changes documentation only.
 Canonical sequence: [BUILD_ROADMAP.md](BUILD_ROADMAP.md); this is its design/evidence record, not another roadmap.
 
-## 1. Verified baseline and preservation
+## 1. Original entry baseline and preservation (historical failure)
 
 The existing Modern Floor Planner checkout is on main, tracking origin/main, with origin armentrout1/ModernFloorPlanner. Entry HEAD was documentation-only checkpoint `6b8ef92d2ea4347918a95b7c5502f603d78820d8`; origin/main was `91402e8ced8b0121b12d1f53e54714d14fe5f173`. The checkpoint changed only BUILD_ROADMAP.md, was the sole unpublished commit, and was safely fast-forward pushed after fetching and checking divergence. The fresh integration source is therefore 6b8ef92; application code is unchanged from 91402e8. No reset, force push, stash operation or application edit was performed.
 
@@ -142,7 +143,7 @@ Levels before stairs, rooms/zones distinct from trade views, proposed M3D and la
 
 ## 6. First bounded implementation slice and gate disposition
 
-**Gate result: BLOCKED on one existing browser regression.** The documentation/design entry work is complete, but M3B feature implementation is not eligible until the bounded test-coordinate correction and fresh full baseline pass. The single next implementation task is that regression repair under the M3B entry issue. Do not begin a UI redesign or the bridge while treating 95/96 as green.
+**Original gate result: BLOCKED on one existing browser regression.** That 95/96 run remains failed evidence. The subsequent prerequisite-only assignment repaired the test in 09929dd and passed a new 96/96 full run; [M3B results](MFP_M3B_RESULTS.md) records clearance and all current checks. The single next implementation task is now Slice 1 below. No bridge feature was started during either gate assignment; the selected design remains unchanged.
 
 **First M3B feature slice: shared selected physical draft and ceiling-height round trip.** Implement the selected provider/registry, explicit single-source adoption and versioned import/recovery foundation above; connect existing Quick Rooms measurement actions, one selected room's inspector and a read-only physical drawing projection. Show shared floor/flat-ceiling/gross-wall quantities and typed applicability/missing-input states. Add the narrowly versioned policy/snapshot dispatch required to make those states authoritative. Preserve originals and the standalone legacy editor. This slice is specified here, not started.
 

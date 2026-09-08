@@ -1,0 +1,181 @@
+{
+  "record": "MFP-M3B prerequisite repair fresh baseline",
+  "date": "2026-09-08",
+  "gate": "CLEARED_LOCALLY",
+  "slice1": "NOT_STARTED",
+  "slice2": "NOT_ELIGIBLE",
+  "sourceCommit": "09929ddc9723e5340b911bc1a30e7373c96dfc18",
+  "applicationCommit": "91402e8ced8b0121b12d1f53e54714d14fe5f173",
+  "sourceTree": "b2a0e3f27d033524d4767b403de19952e8f388f7",
+  "sourceLockBlob": "7dabd1bea25ea1f9bbf87189f07ac71711fc4e62",
+  "snapshotCleanFilteredLockBlob": "7dabd1bea25ea1f9bbf87189f07ac71711fc4e62",
+  "archiveSha256": "756343E0B8DB349FED9CAE99607426027D5F83829BCFCC1149850C29A0A4C31B",
+  "runtime": {
+    "node": "20.20.2",
+    "npm": "10.8.2",
+    "playwright": "1.55.1",
+    "chromium": "140.0.7339.186",
+    "chromiumBuild": 1193
+  },
+  "sourceVerification": {
+    "trackedFiles": 234,
+    "byteIdentical": 48,
+    "crlfOnly": 186,
+    "mismatches": 0,
+    "verifiedBeforeAndAfter": true
+  },
+  "commands": [
+    {
+      "stage": "ci",
+      "command": "npm ci",
+      "startedAtUtc": "2026-09-08T14:21:44.295Z",
+      "finishedAtUtc": "2026-09-08T14:21:51.956Z",
+      "durationSeconds": 7.660631599999999,
+      "exitCode": 0
+    },
+    {
+      "stage": "test",
+      "command": "npm test",
+      "startedAtUtc": "2026-09-08T14:22:28.665Z",
+      "finishedAtUtc": "2026-09-08T14:22:30.643Z",
+      "durationSeconds": 1.9778616,
+      "exitCode": 0
+    },
+    {
+      "stage": "check",
+      "command": "npm run check",
+      "startedAtUtc": "2026-09-08T14:22:53.536Z",
+      "finishedAtUtc": "2026-09-08T14:22:58.443Z",
+      "durationSeconds": 4.9068695,
+      "exitCode": 0
+    },
+    {
+      "stage": "build",
+      "command": "npm run build",
+      "startedAtUtc": "2026-09-08T14:23:12.146Z",
+      "finishedAtUtc": "2026-09-08T14:23:16.359Z",
+      "durationSeconds": 4.212489400000001,
+      "exitCode": 0
+    },
+    {
+      "stage": "focused",
+      "command": "npx playwright test tests/browser/canvas-view.spec.ts --grep \"opening placement after a scaled fit\" --reporter=line",
+      "startedAtUtc": "2026-09-08T14:23:29.656Z",
+      "finishedAtUtc": "2026-09-08T14:23:36.012Z",
+      "durationSeconds": 6.356458900000001,
+      "exitCode": 1
+    },
+    {
+      "stage": "browser",
+      "command": "npx playwright test --reporter=line",
+      "startedAtUtc": "2026-09-08T14:24:07.651Z",
+      "finishedAtUtc": "2026-09-08T14:28:20.963Z",
+      "durationSeconds": 253.3123749,
+      "exitCode": 0
+    },
+    {
+      "stage": "focused-corrected",
+      "command": "npx playwright test tests/browser/canvas-view.spec.ts --grep \"opening placement after a scaled fit\" --reporter=line",
+      "startedAtUtc": "2026-09-08T14:28:49.224Z",
+      "finishedAtUtc": "2026-09-08T14:28:58.573Z",
+      "durationSeconds": 9.3481637,
+      "exitCode": 0
+    },
+    {
+      "command": "git diff --check",
+      "location": "actual checkout; staged/final documentation checked",
+      "exitCode": 0,
+      "timed": false
+    }
+  ],
+  "unitTests": {
+    "passed": 234,
+    "failed": 0,
+    "skipped": 0,
+    "cancelled": 0
+  },
+  "browserTests": {
+    "total": 96,
+    "passed": 96,
+    "failed": 0,
+    "workers": 1,
+    "retries": 0,
+    "fullRun": true,
+    "fullRuns": 1
+  },
+  "focusedInvocation": {
+    "initial": {
+      "exitCode": 1,
+      "testsExecuted": 0,
+      "reason": "Windows command harness split quoted grep phrase incorrectly"
+    },
+    "corrected": {
+      "exitCode": 0,
+      "passed": 1,
+      "failed": 0
+    }
+  },
+  "buildArtifacts": [
+    {
+      "path": "index.js",
+      "bytes": 15209,
+      "sha256": "2E2D8B1EDE9B1BD57B54D03952B5C4456A937945B1DA84CB70DA67F09FF8DA8C",
+      "previousBaselineSha256": "2E2D8B1EDE9B1BD57B54D03952B5C4456A937945B1DA84CB70DA67F09FF8DA8C",
+      "identicalToPreviousBaseline": true
+    },
+    {
+      "path": "public\\index.html",
+      "bytes": 1814,
+      "sha256": "0A71C83B344FCCE3C482FEB39AD219B66D3BAF348556E2C6A74843587D0F6F5D",
+      "previousBaselineSha256": "0A71C83B344FCCE3C482FEB39AD219B66D3BAF348556E2C6A74843587D0F6F5D",
+      "identicalToPreviousBaseline": true
+    },
+    {
+      "path": "public\\assets\\index-BxzilseV.css",
+      "bytes": 68530,
+      "sha256": "B347E75859167706D7D755E31D0E27BB87C43C51EEC1D3AD5FFACF98D6083FF9",
+      "previousBaselineSha256": "B347E75859167706D7D755E31D0E27BB87C43C51EEC1D3AD5FFACF98D6083FF9",
+      "identicalToPreviousBaseline": true
+    },
+    {
+      "path": "public\\assets\\index-m7jPjUKF.js",
+      "bytes": 519853,
+      "sha256": "FEB3F26C032F4C5C472FD3954AEC6282CF3DD7ECC1DA78B32782DA53643B6293",
+      "previousBaselineSha256": "FEB3F26C032F4C5C472FD3954AEC6282CF3DD7ECC1DA78B32782DA53643B6293",
+      "identicalToPreviousBaseline": true
+    },
+    {
+      "path": "public\\assets\\QuickRooms-fKAkNUct.js",
+      "bytes": 137245,
+      "sha256": "5DFAE6A98CE8DEB52679F365560DDBCE0B9D67F0D4F071836E7C43234FBBC900",
+      "previousBaselineSha256": "5DFAE6A98CE8DEB52679F365560DDBCE0B9D67F0D4F071836E7C43234FBBC900",
+      "identicalToPreviousBaseline": true
+    }
+  ],
+  "npmAdvisories": {
+    "total": 28,
+    "low": 4,
+    "moderate": 10,
+    "high": 14,
+    "remediated": false
+  },
+  "fixturePorts": [
+    4173,
+    4174
+  ],
+  "fixturePortsStoppedAfterRun": true,
+  "ownerBrowserInteractedWith": false,
+  "deployment": "NOT VERIFIED / NOT DEPLOYED",
+  "evidenceHashes": {
+    "ci.log": "15f0ae2a1a43af033e5972bc26748f4854791169aa02085b3901380fc9c3612e",
+    "test.log": "abe25f28015dbf4f81b830f5979af0d798685d262f0df3c0b7fc9e03d9d3e718",
+    "check.log": "a3524d5e43d767e9b4be9b919cafac7158a8650a095963e00ef859ff7f4eaf27",
+    "build.log": "5ffb5461ccef17ba297b39504327e7b5ec97ac7cb65c3e1e21c78ba4fd6006e8",
+    "focused.log": "f9bcbbe66963e40cb7f916b0666a4f63fbaa5ed1790d4a2b897675e9d5674715",
+    "focused-corrected.log": "8ef1d8af1b4eb081dda5f09593c7f74d67bb22c3486d957d1c856dbbe3f4a9d8",
+    "browser.log": "79d008a5ff28b438cacce62ad4c0b14441fddee38a90b008e748a57b5ca6fee8",
+    "tracked-source-hashes-postrun.json": "a426d3d4b1876e4cee3e3fdceb5f31c98d8a0978792f1638cc6fb9f1a197c382",
+    "build-artifacts-sha256.json": "d4aef27bf10e933fa4dba44723c4d0aed2523661583ca74ca07ae4062688fcb3",
+    "focused-quoting-diagnostic.json": "a4b04456783ad806159947f727d717463744c9e41fae7d76a532c772eeaaf281"
+  }
+}
