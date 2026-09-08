@@ -77,6 +77,7 @@ export const roomObjectSchema = z.object({
   position: z.number(), // Percentage along the wall (0-100)
   size: z.number(), // Size in pixels
   doorProperties: doorPropertiesSchema.optional(),
+  windowProperties: z.object({ height: z.number().finite().positive() }).optional(),
 });
 export type RoomObject = z.infer<typeof roomObjectSchema>;
 
@@ -88,6 +89,7 @@ export const roomSchema = z.object({
   height: z.number(),
   name: z.string().optional(),
   color: z.string().optional(),
+  groupId: z.string().min(1).max(128).optional(),
   objects: z.array(roomObjectSchema).optional(),
 });
 

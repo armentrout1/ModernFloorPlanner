@@ -23,6 +23,7 @@ import TotalAreaDisplay from './TotalAreaDisplay';
 import PreviewMode from './PreviewMode';
 import { MoveHorizontal, MoveVertical, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { expandRoomGroups, translateRooms, roomBounds } from '@/utils/roomSelection';
 import { useToast } from '@/hooks/use-toast';
 import { 
   GRID_SIZE, 
@@ -45,11 +46,12 @@ interface CanvasContainerProps {
   selectedRoomId: string | null;
   selectedObjectId: string | null;
   onRoomsChange: (rooms: Room[]) => void;
-  onSelectRoom: (roomId: string | null) => void;
+  onSelectRoom: (roomId: string | null, individual?: boolean) => void;
   onSelectObject: (objectId: string | null) => void;
   onUpdateRoom: (roomId: string, updates: Partial<Room>) => void;
-  selectedRoomIds?: string[]; // New prop for multi-select
-  onMultiSelectRooms?: (roomIds: string[]) => void; // New callback for multi-select
+  selectedRoomIds: string[];
+  onMultiSelectRooms: (roomIds: string[]) => void;
+  showRoomNames?: boolean;
   onObjectPlaced?: () => void; // Callback when an object is placed
 }
 
@@ -64,15 +66,16 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
   onSelectRoom,
   onSelectObject,
   onUpdateRoom,
-  onObjectPlaced,
+  onObjectPlaced, selectedRoomIds, onMultiSelectRooms, showRoomNames = true,
 }) => {
   const canvasRef = useRef<HTMLDivElement>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
+  const marqueeBase = useRef<string[]>([]);
+  const roomDrag = useRef<{ ids: string[]; anchorId: string; rooms: Room[]; x: number; y: number; moved: boolean } | null>(null);
   
   const [state, setState] = useState<CanvasState>({
     rooms: [],
-    selectedRoomIds: [], // New array for multi-selection
     selectedRoomId: null,
     selectedObjectId: null,
     activeTool: activeTool,
@@ -92,6 +95,24 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
     activeResizeHandle: null,
     isPreviewMode: false, // For quick preview
   });
+
+  useEffect(() => {
+    if (!selectedRoomId || !rooms.some(room => room.id === selectedRoomId)) {
+      roomDrag.current = null;
+      setState(previous => previous.isDragging ? { ...previous, isDragging: false } : previous);
+    }
+  }, [selectedRoomId, rooms]);
+
+  useEffect(() => {
+    const cancel = () => {
+      roomDrag.current = null;
+      setDoorState({ mode: 'idle', cursorPreview: null, draggedDoor: null, previewPosition: null, targetWall: null });
+      setState(previous => ({ ...previous, isDrawing: false, isDragging: false, isSelecting: false, isResizing: false,
+        selectStart: null, selectEnd: null }));
+    };
+    window.addEventListener('blur', cancel);
+    return () => window.removeEventListener('blur', cancel);
+  }, []);
 
   const view = useCanvasView(wrapperRef, rooms, state.scale);
 
@@ -119,6 +140,7 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
       setState(previous => ({ ...previous, scale }));
       view.centerOn(center);
     }, () => {
+      roomDrag.current = null;
       setState(previous => ({ ...previous, isDrawing: false, isDragging: false,
         isResizing: false, isSelecting: false, isPanning: false, drawStart: null,
         drawEnd: null, selectStart: null, selectEnd: null, activeResizeHandle: null }));
@@ -158,7 +180,6 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
       ...prev,
       rooms,
       selectedRoomId,
-      selectedRoomIds: prev.selectedRoomIds, // Keep the multi-select state
       selectedObjectId,
       activeTool,
       placingObjectType,
@@ -187,6 +208,7 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
   // Add keyboard shortcuts only while the sketch route is active.
   useEffect(() => {
     if (!active) {
+      roomDrag.current = null;
       // Cancel only unfinished gestures. Committed rooms, selection and zoom stay.
       setState(previous => ({ ...previous, isPanning: false, isDrawing: false,
         isDragging: false, isResizing: false, isSelecting: false, selectStart: null,
@@ -210,21 +232,25 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
       } else if (e.key === 'p' || e.key === 'P') {
         // Toggle preview mode
         setState(prev => ({ ...prev, isPreviewMode: !prev.isPreviewMode }));
-      } else if (e.key === 'Escape' && state.isPreviewMode) {
+      } else if (e.key === 'Escape') {
+        roomDrag.current = null;
+        setDoorState({ mode: 'idle', cursorPreview: null, draggedDoor: null, previewPosition: null, targetWall: null });
+        setState(prev => ({ ...prev, isDragging: false, isSelecting: false, isResizing: false, isDrawing: false, selectStart: null, selectEnd: null }));
         // Exit preview mode
         setState(prev => ({ ...prev, isPreviewMode: false }));
       }
     };
     
-    window.addEventListener('keydown', handleKeyDown);
+    // Cancel the gesture before the parent's Escape deselection replaces this listener.
+    window.addEventListener('keydown', handleKeyDown, true);
     
     return () => {
-      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keydown', handleKeyDown, true);
     };
   }, [active, state.isPanning, state.isPreviewMode, selectedRoomId, onRoomsChange, onSelectRoom, rooms, handleZoomIn, handleZoomOut]);
   
   // Check for rooms that are close to each other for snapping
-  const checkRoomProximity = (testRoom: Room): Room => {
+  const checkRoomProximity = (testRoom: Room, excluded: string[] = [testRoom.id]): Room => {
     const snapThreshold = GRID_SIZE * 0.75; // Slightly less than 1 foot in pixels for better feel
     let snappedRoom = { ...testRoom };
     
@@ -232,7 +258,7 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
     if (rooms.length <= 1) return snappedRoom;
     
     // Skip the room we're currently checking
-    const otherRooms = rooms.filter(r => r.id !== testRoom.id);
+    const otherRooms = rooms.filter(r => !excluded.includes(r.id));
     
     let minDistanceX = Infinity;
     let minDistanceY = Infinity;
@@ -365,13 +391,11 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
   };
 
   // Check if placing a room would conflict with existing windows
-  const wouldRoomPlacementConflictWithWindows = (newRoom: { x: number; y: number; width: number; height: number }): boolean => {
+  const wouldRoomPlacementConflictWithWindows = (newRoom: { id?: string; x: number; y: number; width: number; height: number }, candidates = rooms): boolean => {
     const tolerance = 10;
-    console.log('Checking room placement conflict for:', newRoom);
-    console.log('Existing rooms:', rooms);
     
-    for (const existingRoom of rooms) {
-      console.log('Checking existing room:', existingRoom);
+    for (const existingRoom of candidates) {
+      if (existingRoom.id === newRoom.id) continue;
       if (!existingRoom.objects) continue;
       
       // Check if rooms would be adjacent
@@ -397,7 +421,6 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
          newRoom.x + newRoom.width > existingRoom.x - tolerance)
       );
       
-      console.log('Rooms adjacent check:', roomsAdjacent);
       
       if (roomsAdjacent) {
         // Check if any windows would be on the shared wall
@@ -630,7 +653,8 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
         drawStart: { x, y },
         drawEnd: { x, y },
       }));
-    } else if (activeTool === 'move' && e.button === 0) {
+    } else if ((activeTool === 'move' || activeTool === 'select') && e.button === 0) {
+      marqueeBase.current = e.shiftKey ? selectedRoomIds : [];
       // Start selection rectangle
       setState(prev => ({
         ...prev,
@@ -638,7 +662,6 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
         selectStart: { x, y },
         selectEnd: { x, y },
         // Keep the current selection if Shift key is pressed, otherwise clear it
-        selectedRoomIds: e.shiftKey ? prev.selectedRoomIds : [],
       }));
       
       // If not multi-selecting with shift, deselect current selection
@@ -650,10 +673,7 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
       // Deselect when clicking on empty canvas
       onSelectRoom(null);
       onSelectObject(null);
-      setState(prev => ({
-        ...prev,
-        selectedRoomIds: [],
-      }));
+
     }
   };
   
@@ -733,40 +753,8 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
         ...prev,
         drawEnd: { x, y },
       }));
-    } else if (state.isDragging && selectedRoomId) {
-      // Calculate the delta change since last mouse position
-      const dx = (e.clientX - state.lastMouse.x) / state.scale;
-      const dy = (e.clientY - state.lastMouse.y) / state.scale;
-      
-      const selectedRoom = rooms.find(room => room.id === selectedRoomId);
-      if (!selectedRoom) return;
-      
-      // Move room directly with mouse movement - much smoother feel
-      // Don't snap to grid during the drag for better experience
-      let updatedRoom = {
-        ...selectedRoom,
-        x: selectedRoom.x + dx,
-        y: selectedRoom.y + dy
-      };
-      
-      // Check if this position would conflict with existing windows
-      const wouldConflict = wouldRoomPlacementConflictWithWindows(updatedRoom);
-      
-      if (!wouldConflict) {
-        // Update all rooms, replacing the one being moved
-        const updatedRooms = rooms.map(room => 
-          room.id === selectedRoomId ? updatedRoom : room
-        );
-        
-        onRoomsChange(updatedRooms);
-      }
-      // If there's a conflict, simply don't update the room position (blocking the movement)
-      
-      // Always update the last mouse position
-      setState(prev => ({
-        ...prev,
-        lastMouse: { x: e.clientX, y: e.clientY },
-      }));
+    } else if (state.isDragging && roomDrag.current) {
+      moveRoomSelection(e.clientX, e.clientY);
     } else if (state.isResizing && selectedRoomId && state.activeResizeHandle) {
       const selectedRoom = rooms.find(room => room.id === selectedRoomId);
       if (!selectedRoom) return;
@@ -930,28 +918,22 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
       return; // Early return to prevent other actions
     }
     
-    if (state.isDragging && selectedRoomId) {
-      // Apply grid snapping and proximity checks on mouse up
-      const selectedRoom = rooms.find(room => room.id === selectedRoomId);
-      if (selectedRoom) {
-        let snappedRoom = {
-          ...selectedRoom, 
-          x: snapToGrid(selectedRoom.x),
-          y: snapToGrid(selectedRoom.y)
-        };
-        
-        // Apply room proximity snapping
-        snappedRoom = checkRoomProximity(snappedRoom);
-        
-        // Update the room with snapped position
-        const updatedRooms = rooms.map(room => 
-          room.id === selectedRoomId ? snappedRoom : room
-        );
-        
-        onRoomsChange(updatedRooms);
+    if (state.isDragging && roomDrag.current) {
+      const drag = roomDrag.current;
+      if (drag.moved) {
+        const anchor = rooms.find(room => room.id === drag.anchorId);
+        if (anchor) {
+          const snapped = checkRoomProximity({ ...anchor, x: snapToGrid(anchor.x), y: snapToGrid(anchor.y) }, drag.ids);
+          const candidate = translateRooms(rooms, drag.ids, snapped.x - anchor.x, snapped.y - anchor.y);
+          if (canMoveSelection(candidate, drag.ids)) onRoomsChange(candidate);
+        }
+      } else {
+        // A click selects one room/group; a drag keeps the whole existing selection.
+        onSelectRoom(drag.anchorId);
       }
+      roomDrag.current = null;
     }
-    
+
     if (state.isSelecting && state.selectStart && state.selectEnd) {
       // Process the selection rectangle to find rooms within it
       const { x: x1, y: y1 } = state.selectStart;
@@ -984,26 +966,9 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
         })
         .map(room => room.id);
       
-      if (selectedRoomIds.length > 0) {
-        // Set the primary selected room (for property panel)
-        onSelectRoom(selectedRoomIds[0]);
-        
-        // Update selected room IDs - use concat and filter for uniqueness
-        setState(prev => ({
-          ...prev,
-          selectedRoomIds: Array.from(
-            new Set(prev.selectedRoomIds.concat(selectedRoomIds))
-          )
-        }));
-        
-        // For future expansion, we'll add multi-select support to the parent component
-        // Currently we only use the local selectedRoomIds state
-        // if (onMultiSelectRooms) {
-        //   onMultiSelectRooms(selectedRoomIds);
-        // }
-      }
+      onMultiSelectRooms(expandRoomGroups(rooms, [...marqueeBase.current, ...selectedRoomIds]));
     }
-    
+
     if (state.isDrawing && state.drawStart && state.drawEnd) {
       const { x: x1, y: y1 } = state.drawStart;
       const { x: x2, y: y2 } = state.drawEnd;
@@ -1054,7 +1019,6 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
   const handleCanvasTouchStart = (e: React.TouchEvent) => {
     if (zoom.touchOwned.current) return;
     // Prevent default browser behavior like scrolling/zooming
-    e.preventDefault();
     
     const rect = canvasRef.current?.getBoundingClientRect();
     if (!rect || e.touches.length === 0) return;
@@ -1097,7 +1061,6 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
   const handleCanvasTouchMove = (e: React.TouchEvent) => {
     if (zoom.touchOwned.current) return;
     // Prevent default browser behavior
-    e.preventDefault();
     
     const rect = canvasRef.current?.getBoundingClientRect();
     if (!rect || e.touches.length === 0) return;
@@ -1108,7 +1071,9 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
       const x = (touch.clientX - rect.left) / state.scale;
       const y = (touch.clientY - rect.top) / state.scale;
       
-      if (state.isPanning && wrapperRef.current) {
+      if (state.isDragging || state.isResizing) {
+        handleCanvasMouseMove({ clientX: touch.clientX, clientY: touch.clientY } as React.MouseEvent);
+      } else if (state.isPanning && wrapperRef.current) {
         // Calculate the delta change for panning
         const dx = touch.clientX - state.lastMouse.x;
         const dy = touch.clientY - state.lastMouse.y;
@@ -1135,6 +1100,10 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
   // Handle touch end on canvas
   const handleCanvasTouchEnd = (e: React.TouchEvent) => {
     if (zoom.touchOwned.current) return;
+    if (state.isDragging || state.isResizing) {
+      handleCanvasMouseUp({} as React.MouseEvent);
+      return;
+    }
     // Don't prevent default here to allow normal touch behavior after the interaction
     
     if (state.isDrawing && state.drawStart && state.drawEnd) {
@@ -1178,19 +1147,40 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
     }
   };
   
-  const handleRoomSelect = (roomId: string) => {
-    onSelectRoom(roomId);
+  const canMoveSelection = (candidate: Room[], ids: string[]) => {
+    const moving = candidate.filter(room => ids.includes(room.id));
+    const stationary = candidate.filter(room => !ids.includes(room.id));
+    // Compare against the proposed layout, never a moving peer's old location.
+    return !moving.some(room => wouldRoomPlacementConflictWithWindows(room, stationary)) &&
+      !stationary.some(room => wouldRoomPlacementConflictWithWindows(room, moving));
   };
-  
-  const handleRoomMoveStart = (roomId: string, clientX: number, clientY: number) => {
-    setState(prev => ({
-      ...prev,
-      isDragging: true,
-      lastMouse: { x: clientX, y: clientY },
-    }));
-    onSelectRoom(roomId);
+
+  const moveRoomSelection = (clientX: number, clientY: number) => {
+    const drag = roomDrag.current;
+    if (!drag) return;
+    const dx = clientX - drag.x, dy = clientY - drag.y;
+    if (!drag.moved && Math.hypot(dx, dy) < 3) return;
+    const candidate = translateRooms(drag.rooms, drag.ids, dx / state.scale, dy / state.scale);
+    if (canMoveSelection(candidate, drag.ids)) { drag.moved = true; onRoomsChange(candidate); }
   };
-  
+
+  const handleRoomSelect = (roomId: string, individual = false) => {
+    onSelectRoom(roomId, individual);
+  };
+
+  const handleRoomMoveStart = (roomId: string, clientX: number, clientY: number, additive = false) => {
+    const group = expandRoomGroups(rooms, [roomId]);
+    if (additive) {
+      const remove = group.every(id => selectedRoomIds.includes(id));
+      onMultiSelectRooms(remove ? selectedRoomIds.filter(id => !group.includes(id)) : Array.from(new Set([...selectedRoomIds, ...group])));
+      return;
+    }
+    const ids = selectedRoomIds.includes(roomId) ? expandRoomGroups(rooms, selectedRoomIds) : group;
+    onMultiSelectRooms(ids);
+    roomDrag.current = { ids, anchorId: roomId, rooms, x: clientX, y: clientY, moved: false };
+    setState(prev => ({ ...prev, isDragging: true, lastMouse: { x: clientX, y: clientY } }));
+  };
+
   const handleRoomResizeStart = (roomId: string, handle: ResizeHandle) => {
     setState(prev => ({
       ...prev,
@@ -1250,7 +1240,12 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
           onTouchStart={handleCanvasTouchStart}
           onTouchMove={handleCanvasTouchMove}
           onTouchEnd={handleCanvasTouchEnd}
-          onTouchCancel={handleCanvasTouchEnd}
+          onTouchCancel={() => {
+            roomDrag.current = null;
+            setDoorState({ mode: 'idle', cursorPreview: null, draggedDoor: null, previewPosition: null, targetWall: null });
+            setState(previous => ({ ...previous, isDragging: false, isResizing: false, isDrawing: false, isPanning: false, isSelecting: false,
+              drawStart: null, drawEnd: null, selectStart: null, selectEnd: null }));
+          }}
         >
         <div ref={canvasRef} data-testid="canvas-surface" className="absolute cursor-crosshair" style={canvasStyle}>
           {rooms.map(room => (
@@ -1258,8 +1253,10 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
               key={room.id}
               isCanvasPinching={zoom.pinching}
               room={room}
-              isSelected={room.id === selectedRoomId}
-              isPartOfMultiSelection={state.selectedRoomIds.includes(room.id) && room.id !== selectedRoomId}
+              isSelected={!selectedObjectId && selectedRoomIds.includes(room.id)}
+              isPartOfMultiSelection={selectedRoomIds.length > 1 && selectedRoomIds.includes(room.id)}
+              allowResize={selectedRoomIds.length === 1 && !selectedObjectId}
+              showRoomNames={showRoomNames}
               onSelect={handleRoomSelect}
               onMoveStart={handleRoomMoveStart}
               onResizeStart={handleRoomResizeStart}
@@ -1273,6 +1270,11 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
             />
           ))}
           
+          {selectedRoomIds.length > 1 && (() => {
+            const bounds = roomBounds(rooms.filter(room => selectedRoomIds.includes(room.id)));
+            return bounds && <div data-testid="selection-bounds" className="absolute border-2 border-dashed border-blue-600 pointer-events-none z-20" style={{ left: bounds.x - 5 / state.scale, top: bounds.y - 5 / state.scale,
+              width: bounds.width + 10 / state.scale, height: bounds.height + 10 / state.scale }} />;
+          })()}
           {/* Preview box when drawing */}
           {state.isDrawing && state.drawStart && state.drawEnd && (
             <div

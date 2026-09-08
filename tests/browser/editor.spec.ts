@@ -122,7 +122,7 @@ for (const type of ['door', 'window'] as const) {
     let saved = await save(page, plan.id);
     expect(saved.rooms[0].objects![0]).toEqual({ ...original, wallSide: 'bottom', position: 50 });
     await dragOpening(page, original.id, 'room-b', 'left');
-    await expect(page.getByRole('button', { name: 'Delete opening', exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: /^Delete (door|window)$/ })).toBeVisible();
     await expect(page.getByRole('spinbutton').first()).toBeEnabled();
     saved = await save(page, plan.id);
     expect(saved.rooms[0].objects).toEqual([]);
@@ -156,7 +156,7 @@ test('32-inch width, all door styles and swing properties remain editable and pe
     expect(saved.rooms[0].objects![0].doorProperties).toMatchObject({ width: 32, height: 84, style: value });
   }
   await page.getByRole('combobox').nth(1).click();
-  await page.getByRole('option').filter({ hasText: '32" ×' }).click();
+  await page.getByRole('option', { name: '32"', exact: true }).click();
   await page.getByRole('radio', { name: 'Inward', exact: true }).check();
   await page.getByRole('radio', { name: 'Right Hand (RH)', exact: true }).check();
   const saved = await save(page, plan.id);
@@ -173,13 +173,13 @@ test('window width updates retain its legacy attachment and persist', async ({ p
   const plan = await seedAndLoad(page, [room([original])]);
   await page.getByTestId('room-room-a').click();
   await page.getByTestId('opening-opening-a').click();
-  await page.getByRole('spinbutton').fill('48');
+  await page.getByRole('spinbutton', { name: 'Window width', exact: true }).fill('48');
   let saved = await save(page, plan.id);
   expect(saved.rooms[0].objects).toEqual([{ ...original, size: 80 }]);
   await page.getByRole('combobox').click();
   await page.getByRole('option', { name: '30" × 36"', exact: true }).click();
   saved = await save(page, plan.id);
-  expect(saved.rooms[0].objects).toEqual([{ ...original, size: 50 }]);
+  expect(saved.rooms[0].objects).toEqual([{ ...original, size: 50, windowProperties: { height: 36 } }]);
 });
 test('Delete targets the selected opening before its room, and Undo delete restores all properties', async ({ page }) => {
   const original = room([opening()]);
@@ -193,7 +193,7 @@ test('Delete targets the selected opening before its room, and Undo delete resto
   await expect(page.getByTestId('opening-opening-a')).toBeVisible();
   expect((await save(page, plan.id)).rooms).toEqual([original]);
   await page.getByTestId('opening-opening-a').click();
-  await page.getByRole('button', { name: 'Delete opening', exact: true }).click();
+  await page.getByRole('button', { name: /^Delete (door|window)$/ }).click();
   await expect(page.getByTestId('opening-opening-a')).toHaveCount(0);
   await expect(page.getByTestId('room-room-a')).toBeVisible();
   await page.getByRole('button', { name: 'Undo delete', exact: true }).click();
@@ -372,4 +372,82 @@ test('tooltip timers cannot dismiss a save dialog or erase its draft', async ({ 
   await expect(dialog).toBeVisible();
   await expect(dialog.getByLabel('Sketch Name')).toHaveValue(draftName);
   await expect(page.getByTestId('opening-opening-a')).toBeVisible();
+});
+
+for (const side of ['top', 'right', 'bottom', 'left'] as const) {
+  test(`door hinge and swing visibly flip on ${side} without moving attachment`, async ({ page }) => {
+    const original = { ...opening(), wallSide: side };
+    const plan = await seedAndLoad(page, [room([original])]);
+    await page.getByTestId('opening-opening-a').click();
+    const path = page.getByTestId('door-swing-opening-a').locator('path');
+    const before = await path.getAttribute('d');
+    await page.getByRole('button', { name: 'Flip hinge', exact: true }).click();
+    await expect(path).not.toHaveAttribute('d', before!);
+    const flipped = await path.getAttribute('d');
+    await page.getByRole('button', { name: 'Reverse swing', exact: true }).click();
+    await expect(path).not.toHaveAttribute('d', flipped!);
+    const saved = await save(page, plan.id);
+    expect(saved.rooms[0].objects).toEqual([{ ...original, doorProperties: {
+      ...original.doorProperties!, swingSide: 'right', swingDirection: 'inward' } }]);
+  });
+}
+
+test('custom opening dimensions preserve fractions, reject empty/overlap, and keep unknown window height until chosen', async ({ page }) => {
+  const original = room([opening(), { id: 'window-b', type: 'window', wallSide: 'top', position: 80, size: 40 }]);
+  const plan = await seedAndLoad(page, [original]);
+  await page.getByTestId('opening-opening-a').click();
+  const width = page.getByRole('spinbutton', { name: 'Door width', exact: true });
+  await width.fill(''); await width.press('Tab');
+  await expect(page.getByText('Enter a positive size in inches. This edit has not been applied.')).toBeVisible();
+  expect((await save(page, plan.id)).rooms).toEqual([original]);
+  await width.fill('200'); await width.press('Tab');
+  await expect(page.getByText('This width overlaps another opening. Choose a smaller width or move the opening first.').first()).toBeVisible();
+  expect((await save(page, plan.id)).rooms).toEqual([original]);
+  await width.fill('30.5'); await width.press('Enter');
+  expect((await save(page, plan.id)).rooms[0].objects![0].doorProperties!.width).toBe(30.5);
+  await page.getByTestId('opening-window-b').click();
+  await expect(page.getByRole('spinbutton', { name: 'Window height', exact: true })).toHaveValue('');
+  await page.getByRole('combobox').click();
+  await page.getByRole('option', { name: '36" × 48"', exact: true }).click();
+  const saved = await save(page, plan.id);
+  expect(saved.rooms[0].objects![1]).toEqual({ ...original.objects![1], size: 60, windowProperties: { height: 48 } });
+});
+
+test.describe('opening touch ownership', () => {
+  test.use({ hasTouch: true });
+  test('touch drag releases on a new wall and touchcancel/Escape/blur discard pending opening moves', async ({ page }) => {
+    const touchErrors: string[] = [];
+    page.on('console', message => { if (/passive event|cancel a touchcancel/.test(message.text())) touchErrors.push(message.text()); });
+    const original = opening();
+    const plan = await seedAndLoad(page, [room([original])]);
+    const session = await page.context().newCDPSession(page);
+    const start = async () => {
+      const bounds = (await page.getByTestId('opening-opening-a').boundingBox())!;
+      await session.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ id: 1, x: bounds.x + bounds.width / 2, y: bounds.y + bounds.height / 2 }] });
+    };
+    const move = async (side: WallSide) => {
+      const target = await wallPoint(page.getByTestId('room-room-a'), side);
+      await session.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ id: 1, x: target.x, y: target.y }] });
+    };
+    await start(); await move('bottom');
+    await session.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+    await expect(page.getByTestId('opening-opening-a')).toHaveAttribute('data-wall-side', 'bottom');
+    const moved = { ...original, wallSide: 'bottom', position: 50 };
+    expect((await save(page, plan.id)).rooms[0].objects).toEqual([moved]);
+    await start(); await move('right');
+    await session.send('Input.dispatchTouchEvent', { type: 'touchCancel', touchPoints: [] });
+    await page.mouse.move(700, 500);
+    expect((await save(page, plan.id)).rooms[0].objects).toEqual([moved]);
+    for (const cancel of ['Escape', 'blur']) {
+      const bounds = (await page.getByTestId('opening-opening-a').boundingBox())!;
+      const target = await wallPoint(page.getByTestId('room-room-a'), 'right');
+      await page.mouse.move(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2);
+      await page.mouse.down(); await page.mouse.move(target.x, target.y, { steps: 6 });
+      if (cancel === 'Escape') await page.keyboard.press('Escape');
+      else await page.evaluate(() => window.dispatchEvent(new Event('blur')));
+      await page.mouse.up();
+      expect((await save(page, plan.id)).rooms[0].objects).toEqual([moved]);
+    }
+    expect(touchErrors).toEqual([]);
+  });
 });

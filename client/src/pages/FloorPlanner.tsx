@@ -11,6 +11,8 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { expandRoomGroups } from '@/utils/roomSelection';
+import SelectionPanel from '@/components/SelectionPanel';
 import { deleteSelection, restoreDeletion, type DeletedItem } from '@/utils/editorCommands';
 import { shouldIgnoreEditorShortcut } from '@/utils/keyboard';
 import AppHeader from '@/components/AppHeader';
@@ -37,6 +39,8 @@ const FloorPlanner: React.FC<{ active?: boolean }> = ({ active = true }) => {
   const [rooms, setRooms] = useState<Room[]>([]);
   const [deletions, setDeletions] = useState<DeletedItem[]>([]);
   const [roomSelectionId, setSelectedRoomId] = useState<string | null>(null);
+  const [selectedRoomIds, setSelectedRoomIds] = useState<string[]>([]);
+  const [showRoomNames, setShowRoomNames] = useState(true);
   const [selectedObjectId, setSelectedObjectId] = useState<string | null>(null);
   // An opening's current parent remains authoritative after a cross-room drag.
   const selectedRoomId = selectedObjectId
@@ -55,6 +59,7 @@ const FloorPlanner: React.FC<{ active?: boolean }> = ({ active = true }) => {
   const handleNewSketch = () => {
     if (rooms.length === 0 || window.confirm('This will clear your current sketch. Continue?')) {
       setRooms([]);
+      setSelectedRoomIds([]);
       setDeletions([]);
       setSelectedRoomId(null);
       setSelectedObjectId(null);
@@ -79,10 +84,19 @@ const FloorPlanner: React.FC<{ active?: boolean }> = ({ active = true }) => {
   const handleObjectPlaced = () => {
     // Reset tool after object placement to prevent accidental multiple placements
     setPlacingObjectType(null);
-    setActiveTool('select');
+    setActiveTool('move');
   };
 
   const handleApplyAction = (action: string) => {
+    if (['auto-align', 'distribute-horizontal', 'distribute-vertical'].includes(action) && rooms.some(room => room.groupId)) {
+      toast({ title: 'Rooms are grouped', description: 'Ungroup rooms before rearranging the layout.' });
+      return;
+    }
+    if (['mirror-horizontal', 'mirror-vertical', 'center-room'].includes(action) &&
+        (selectedRoomIds.length !== 1 || rooms.find(room => room.id === selectedRoomId)?.groupId)) {
+      toast({ title: 'Select one ungrouped room', description: 'These transforms change one room. Use Group and drag to move a house together.' });
+      return;
+    }
     switch (action) {
       case 'auto-align':
         if (rooms.length > 1) {
@@ -204,15 +218,51 @@ const FloorPlanner: React.FC<{ active?: boolean }> = ({ active = true }) => {
     setRooms(updatedRooms);
   };
 
-  const handleSelectRoom = (roomId: string | null) => {
-    setSelectedRoomId(roomId);
-    setSelectedObjectId(null); // Clear object selection when selecting a room
+  const handleMultiSelectRooms = (ids: string[]) => {
+    const valid = Array.from(new Set(ids));
+    if (valid.length) setShowMaterialPanel(false);
+    setSelectedRoomIds(valid);
+    setSelectedRoomId(valid[0] ?? null);
+    setSelectedObjectId(null);
   };
-  
+
+  const handleSelectRoom = (roomId: string | null, individual = false) => {
+    handleMultiSelectRooms(roomId ? (individual || !rooms.some(room => room.id === roomId) ? [roomId] : expandRoomGroups(rooms, [roomId])) : []);
+    setShowMaterialPanel(false);
+  };
+
   const handleSelectObject = (objectId: string | null) => {
     setSelectedObjectId(objectId);
-    const parent = rooms.find(room => room.objects?.some(object => object.id === objectId));
-    if (parent) setSelectedRoomId(parent.id);
+    if (objectId) {
+      setSelectedRoomIds([]);
+      const parent = rooms.find(room => room.objects?.some(object => object.id === objectId));
+      setSelectedRoomId(parent?.id ?? null);
+      setShowMaterialPanel(false);
+    }
+  };
+
+  const handleSelectAll = () => {
+    handleSelectTool('move');
+    handleMultiSelectRooms(rooms.map(room => room.id));
+    setShowMaterialPanel(false);
+  };
+
+  const handleGroup = () => {
+    const ids = expandRoomGroups(rooms, selectedRoomIds);
+    if (ids.length < 2) return;
+    const groupId = crypto.randomUUID();
+    setRooms(rooms.map(room => ids.includes(room.id) ? { ...room, groupId } : room));
+    handleMultiSelectRooms(ids);
+  };
+
+  const handleUngroup = () => {
+    const ids = expandRoomGroups(rooms, selectedRoomIds);
+    setRooms(rooms.map(room => {
+      if (!ids.includes(room.id)) return room;
+      const { groupId, ...ungrouped } = room;
+      return ungrouped;
+    }));
+    handleMultiSelectRooms(ids);
   };
 
   const handleUpdateRoom = (roomId: string, updates: Partial<Room>) => {
@@ -252,6 +302,7 @@ const FloorPlanner: React.FC<{ active?: boolean }> = ({ active = true }) => {
     
     // Load the new sketch data
     setRooms(sketch.rooms);
+    setSelectedRoomIds([]);
     setCurrentSketchId(sketch.id);
     setCurrentSketchName(sketch.name);
     
@@ -262,12 +313,21 @@ const FloorPlanner: React.FC<{ active?: boolean }> = ({ active = true }) => {
   };
   
   const handleDeleteSelectedRoom = () => {
+    // Never fall back from a deleted opening to deleting its parent on a second keypress.
+    if (!selectedObjectId && selectedRoomIds.length > 1) {
+      const items = rooms.map((room, index) => ({ room, index })).filter(item => selectedRoomIds.includes(item.room.id));
+      if (!window.confirm(`Delete ${items.length} selected rooms and all their doors/windows?`)) return;
+      setRooms(rooms.filter(room => !selectedRoomIds.includes(room.id)));
+      setDeletions(previous => [...previous.slice(-19), { kind: 'rooms', items }]);
+      handleMultiSelectRooms([]);
+      toast({ title: `${items.length} rooms deleted`, description: 'Undo delete restores the entire selection.' });
+      return;
+    }
     const result = deleteSelection(rooms, selectedRoomId, selectedObjectId);
     if (!result) return;
     setRooms(result.rooms);
     setDeletions(previous => [...previous.slice(-19), result.deleted]);
-    setSelectedObjectId(null);
-    setSelectedRoomId(result.deleted.kind === 'room' ? null : result.deleted.roomId);
+    handleMultiSelectRooms([]);
     toast({ title: result.deleted.kind === 'room' ? 'Room deleted' : 'Opening deleted',
       description: 'Use Undo delete to restore it during this sketch session.' });
   };
@@ -279,7 +339,10 @@ const FloorPlanner: React.FC<{ active?: boolean }> = ({ active = true }) => {
     if (!restored) return;
     setRooms(restored);
     setDeletions(previous => previous.slice(0, -1));
-    setSelectedRoomId(deleted.kind === 'room' ? deleted.room.id : deleted.roomId);
+    const ids = deleted.kind === 'rooms' ? deleted.items.map(item => item.room.id)
+      : deleted.kind === 'room' ? [deleted.room.id] : [];
+    setSelectedRoomIds(ids);
+    setSelectedRoomId(deleted.kind === 'opening' ? deleted.roomId : ids[0] ?? null);
     setSelectedObjectId(deleted.kind === 'opening' ? deleted.object.id : null);
   };
 
@@ -288,7 +351,11 @@ const FloorPlanner: React.FC<{ active?: boolean }> = ({ active = true }) => {
     if (!active) return;
     const handleKeyDown = (event: KeyboardEvent) => {
       if (shouldIgnoreEditorShortcut(event) || isSaveModalOpen || isLoadDialogOpen || showKeyboardShortcuts) return;
-      if ((event.ctrlKey || event.metaKey) && !event.altKey && !event.shiftKey && event.key.toLowerCase() === 'z') {
+      if ((event.ctrlKey || event.metaKey) && !event.altKey && !event.shiftKey && event.key.toLowerCase() === 'a') {
+        event.preventDefault(); handleSelectAll();
+      } else if (event.key === 'Escape') {
+        handleMultiSelectRooms([]);
+      } else if ((event.ctrlKey || event.metaKey) && !event.altKey && !event.shiftKey && event.key.toLowerCase() === 'z') {
         if (deletions.length) { event.preventDefault(); handleUndoDelete(); }
       } else if (!event.ctrlKey && !event.metaKey && !event.altKey &&
                  (event.key === 'Delete' || event.key === 'Backspace') && (selectedRoomId || selectedObjectId)) {
@@ -298,7 +365,7 @@ const FloorPlanner: React.FC<{ active?: boolean }> = ({ active = true }) => {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [active, rooms, deletions, selectedRoomId, selectedObjectId, isSaveModalOpen, isLoadDialogOpen, showKeyboardShortcuts]);
+  }, [active, rooms, deletions, selectedRoomIds, selectedRoomId, selectedObjectId, isSaveModalOpen, isLoadDialogOpen, showKeyboardShortcuts]);
 
   const selectedRoom = (selectedObjectId
     ? rooms.find(room => room.objects?.some(object => object.id === selectedObjectId))
@@ -367,6 +434,10 @@ const FloorPlanner: React.FC<{ active?: boolean }> = ({ active = true }) => {
                 activeTool={activeTool} 
                 onSelectTool={handleSelectTool} 
                 onApplyAction={handleApplyAction}
+                onSelectAll={handleSelectAll}
+                roomCount={rooms.length}
+                showRoomNames={showRoomNames}
+                onToggleRoomNames={() => setShowRoomNames(value => !value)}
               />
             </div>
           ) : null}
@@ -378,6 +449,9 @@ const FloorPlanner: React.FC<{ active?: boolean }> = ({ active = true }) => {
               rooms={rooms}
               selectedRoomId={selectedRoom?.id ?? null}
               selectedObjectId={selectedObjectId}
+              selectedRoomIds={selectedRoomIds}
+              onMultiSelectRooms={handleMultiSelectRooms}
+              showRoomNames={showRoomNames}
               onRoomsChange={handleRoomsChange}
               onSelectRoom={handleSelectRoom}
               onSelectObject={handleSelectObject}
@@ -392,12 +466,16 @@ const FloorPlanner: React.FC<{ active?: boolean }> = ({ active = true }) => {
                   rooms={rooms}
                 />
               ) : (
+                <SelectionPanel rooms={rooms} selectedRoomIds={selectedRoomIds} selectedObjectId={selectedObjectId}
+                  onSelectRoom={id => handleSelectRoom(id, true)} onSelectObject={handleSelectObject}
+                  onGroup={handleGroup} onUngroup={handleUngroup} onDelete={handleDeleteSelectedRoom}>
                 <PropertyPanel
-                  selectedRoom={selectedRoom}
+                  selectedRoom={selectedRoomIds.length > 1 ? null : selectedRoom}
                   selectedObject={selectedObject}
                   onUpdateRoom={handleUpdateRoom}
                   onDeleteRoom={handleDeleteSelectedRoom}
                 />
+                </SelectionPanel>
               )}
             </div>
           ) : null}

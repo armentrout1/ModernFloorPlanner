@@ -44,12 +44,16 @@ interface SidebarProps {
   activeTool: string;
   onSelectTool: (tool: string) => void;
   onApplyAction: (action: string) => void;
+  onSelectAll: () => void;
+  roomCount: number;
+  showRoomNames: boolean;
+  onToggleRoomNames: () => void;
 }
 
 const Sidebar: React.FC<SidebarProps> = ({
   activeTool,
   onSelectTool,
-  onApplyAction,
+  onApplyAction, onSelectAll, roomCount, showRoomNames, onToggleRoomNames,
 }) => {
   return (
     <TooltipProvider>
@@ -59,7 +63,7 @@ const Sidebar: React.FC<SidebarProps> = ({
         </div>
         
         <div className="p-3 pb-4 flex-grow">
-          <Accordion type="multiple" defaultValue={['drawing', 'objects', 'align']}>
+          <Accordion type="multiple" defaultValue={['drawing', 'objects']}>
             <AccordionItem value="drawing">
               <AccordionTrigger className="px-2 py-2 text-sm">Drawing Tools</AccordionTrigger>
               <AccordionContent className="pt-2 pb-2">
@@ -101,6 +105,11 @@ const Sidebar: React.FC<SidebarProps> = ({
               </AccordionContent>
             </AccordionItem>
             
+            <div className="py-3 space-y-2 border-b">
+              <Button variant="outline" size="sm" className="w-full justify-start" onClick={onSelectAll} disabled={!roomCount}>Select all rooms</Button>
+              <Button variant="outline" size="sm" className="w-full justify-start" aria-pressed={showRoomNames} onClick={onToggleRoomNames}>{showRoomNames ? 'Hide room names' : 'Show room names'}</Button>
+              <p className="text-xs text-slate-500">Select &amp; Move: drag on empty grid to select rooms. Shift-click adds or removes rooms.</p>
+            </div>
             <AccordionItem value="objects">
               <AccordionTrigger className="px-2 py-2 text-sm">Room Objects</AccordionTrigger>
               <AccordionContent className="pt-2 pb-2">
@@ -247,11 +256,11 @@ const Sidebar: React.FC<SidebarProps> = ({
                         onClick={() => onApplyAction('center-room')}
                       >
                         <LayoutGrid className="h-4 w-4 mr-2 flex-shrink-0" />
-                        <span className="truncate">Center Room</span>
+                        <span className="truncate">Reposition Room</span>
                       </Button>
                     </TooltipTrigger>
                     <CenteredTooltipContent>
-                      <p>Center selected room in viewport</p>
+                      <p>Move one ungrouped room; use Fit drawing to center the view</p>
                     </CenteredTooltipContent>
                   </Tooltip>
                 </div>

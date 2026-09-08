@@ -24,18 +24,21 @@ interface RoomObjectProps {
 }
 
 const RoomObject = ({ room, object, scale, isSelected, onSelect, onDragStart }: RoomObjectProps) => {
-  const handleMouseDown = (e: React.MouseEvent) => {
+  const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (e.button !== 0) return;
     e.preventDefault();
     e.stopPropagation();
+    e.currentTarget.focus({ preventScroll: true });
     onSelect(object.id);
     if (onDragStart) {
       onDragStart(object.id, e.clientX, e.clientY);
     }
   };
 
-  const handleTouchStart = (e: React.TouchEvent) => {
-    e.preventDefault();
+  const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (e.touches.length !== 1) return;
     e.stopPropagation();
+    e.currentTarget.focus({ preventScroll: true });
     onSelect(object.id);
     if (onDragStart && e.touches[0]) {
       onDragStart(object.id, e.touches[0].clientX, e.touches[0].clientY);
@@ -43,51 +46,22 @@ const RoomObject = ({ room, object, scale, isSelected, onSelect, onDragStart }: 
   };
 
   const handleTouchEnd = (e: React.TouchEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
+    if (e.cancelable) e.preventDefault();
+    // Bubble release/cancel to the canvas owner; touch stays targeted at its origin.
   };
 
-  // Calculate object position and size
-  const getObjectStyles = () => {
-    const size = object.type === 'door' 
-      ? (object.doorProperties ? inchesToPixels(object.doorProperties.width) : 40)
-      : 30;
-    
-    let styles: React.CSSProperties = {
-      position: 'absolute',
-      cursor: 'pointer',
-      zIndex: isSelected ? 30 : 20,
-    };
-
-    // Position based on wall side
-    switch (object.wallSide) {
-      case 'top':
-        styles.left = `${(room.width * object.position / 100) - size / 2}px`;
-        styles.top = '0px';
-        styles.width = `${size}px`;
-        styles.height = '6px';
-        break;
-      case 'right':
-        styles.left = `${room.width - 6}px`;
-        styles.top = `${(room.height * object.position / 100) - size / 2}px`;
-        styles.width = '6px';
-        styles.height = `${size}px`;
-        break;
-      case 'bottom':
-        styles.left = `${(room.width * object.position / 100) - size / 2}px`;
-        styles.top = `${room.height - 6}px`;
-        styles.width = `${size}px`;
-        styles.height = '6px';
-        break;
-      case 'left':
-        styles.left = '0px';
-        styles.top = `${(room.height * object.position / 100) - size / 2}px`;
-        styles.width = '6px';
-        styles.height = `${size}px`;
-        break;
+  const horizontal = object.wallSide === 'top' || object.wallSide === 'bottom';
+  // A narrow screen-sized strip around the existing wall bar, not the swing arc.
+  // Preserve the bar's model dimensions/test bounds and avoid widening along the wall.
+  const hitThickness = Math.max(8, 18 / Math.max(scale, 0.05));
+  const hitArea = <span aria-hidden="true" style={{ position: 'absolute', display: 'block',
+    left: '50%', top: '50%', transform: 'translate(-50%, -50%)',
+    width: horizontal ? '100%' : hitThickness, height: horizontal ? hitThickness : '100%',
+    background: 'transparent', cursor: 'pointer' }} />;
+  const handleSelectionKey = (event: React.KeyboardEvent) => {
+    if ((event.key === 'Enter' || event.key === ' ') && !event.nativeEvent.isComposing) {
+      event.preventDefault(); event.stopPropagation(); onSelect(object.id);
     }
-
-    return styles;
   };
 
   // Render door with swing arc
@@ -103,6 +77,19 @@ const RoomObject = ({ room, object, scale, isSelected, onSelect, onDragStart }: 
     const doorSize = inchesToPixels(doorProps.width);
     const isInward = doorProps.swingDirection === 'inward';
     const isRightSwing = doorProps.swingSide === 'right';
+    // Local u follows the wall clockwise; local v points into this room.
+    // Left/right is viewed facing the wall from inside, consistently on all walls.
+    const wallStart = object.wallSide === 'top'
+      ? { x: room.width * object.position / 100 - doorSize / 2, y: 4, tx: 1, ty: 0 }
+      : object.wallSide === 'right'
+        ? { x: room.width - 4, y: room.height * object.position / 100 - doorSize / 2, tx: 0, ty: 1 }
+        : object.wallSide === 'bottom'
+          ? { x: room.width * object.position / 100 + doorSize / 2, y: room.height - 4, tx: -1, ty: 0 }
+          : { x: 4, y: room.height * object.position / 100 + doorSize / 2, tx: 0, ty: -1 };
+    const hinge = isRightSwing ? doorSize : 0;
+    const closedTip = isRightSwing ? 0 : doorSize;
+    const openDepth = isInward ? doorSize : -doorSize;
+    const sweep = isRightSwing === isInward ? 0 : 1;
 
     return (
       <div style={{ position: 'absolute' }}>
@@ -150,6 +137,8 @@ const RoomObject = ({ room, object, scale, isSelected, onSelect, onDragStart }: 
             })())
           }}
           data-testid={`opening-${object.id}`}
+          role="button" tabIndex={0} aria-label={`Select ${object.type} on ${object.wallSide} wall`}
+          aria-pressed={isSelected} onKeyDown={handleSelectionKey}
           data-opening-type={object.type}
           data-wall-side={object.wallSide}
           onClick={event => event.stopPropagation()}
@@ -157,65 +146,18 @@ const RoomObject = ({ room, object, scale, isSelected, onSelect, onDragStart }: 
           onTouchStart={handleTouchStart}
           onTouchEnd={handleTouchEnd}
           onTouchCancel={handleTouchEnd}
-        />
+        >{hitArea}</div>
         
-        {/* Door swing - using same logic as preview */}
+        {/* Swing is view-only: stored style, center, attachment and size stay unchanged. */}
         {doorProps.style !== 'sliding' && (
-          <svg
-            style={{
-              position: 'absolute',
-              width: `${doorSize}px`,
-              height: `${doorSize}px`,
-              pointerEvents: 'none',
-              zIndex: 15,
-              opacity: 0.7,
-              ...((() => {
-                const svgStyle: React.CSSProperties = {};
-                
-                switch (object.wallSide) {
-                  case 'top':
-                    svgStyle.left = `${(room.width * object.position / 100) - doorSize / 2}px`;
-                    svgStyle.top = `6px`;
-                    break;
-                  case 'right':
-                    svgStyle.left = `${room.width - 6 - doorSize}px`;
-                    svgStyle.top = `${(room.height * object.position / 100) - doorSize / 2}px`;
-                    break;
-                  case 'bottom':
-                    svgStyle.left = `${(room.width * object.position / 100) - doorSize / 2}px`;
-                    svgStyle.top = `${room.height - 6 - doorSize}px`;
-                    break;
-                  case 'left':
-                    svgStyle.left = `6px`;
-                    svgStyle.top = `${(room.height * object.position / 100) - doorSize / 2}px`;
-                    break;
-                }
-                
-                return svgStyle;
-              })())
-            }}
-          >
-            <path
-              d={(() => {
-                // Use exact same logic as preview
-                switch (object.wallSide) {
-                  case 'top':
-                    return `M 0 0 L ${doorSize} 0 A ${doorSize} ${doorSize} 0 0 1 0 ${doorSize} Z`;
-                  case 'right':
-                    return `M ${doorSize} 0 L ${doorSize} ${doorSize} A ${doorSize} ${doorSize} 0 0 1 0 0 Z`;
-                  case 'bottom':
-                    return `M ${doorSize} ${doorSize} L 0 ${doorSize} A ${doorSize} ${doorSize} 0 0 1 ${doorSize} 0 Z`;
-                  case 'left':
-                    return `M 0 ${doorSize} L 0 0 A ${doorSize} ${doorSize} 0 0 1 ${doorSize} ${doorSize} Z`;
-                  default:
-                    return `M 0 0 L ${doorSize} 0 A ${doorSize} ${doorSize} 0 0 1 0 ${doorSize} Z`;
-                }
-              })()}
-              fill="none"
-              stroke="#FF6B35"
-              strokeWidth="1.5"
-              strokeDasharray="4,2"
-            />
+          <svg data-testid={`door-swing-${object.id}`} data-door-hinge={doorProps.swingSide}
+            data-door-direction={doorProps.swingDirection} data-door-style={doorProps.style}
+            aria-hidden="true" style={{ position: 'absolute', left: wallStart.x, top: wallStart.y,
+              width: doorSize, height: doorSize, overflow: 'visible', pointerEvents: 'none', zIndex: 15, opacity: 0.8 }}>
+            <g transform={`matrix(${wallStart.tx} ${wallStart.ty} ${-wallStart.ty} ${wallStart.tx} 0 0)`}>
+              <path d={`M ${hinge} 0 L ${hinge} ${openDepth} M ${closedTip} 0 A ${doorSize} ${doorSize} 0 0 ${sweep} ${hinge} ${openDepth}`}
+                fill="none" stroke="#FF6B35" strokeWidth="1.5" strokeDasharray="4,2" />
+            </g>
           </svg>
         )}
       </div>
@@ -269,6 +211,8 @@ const RoomObject = ({ room, object, scale, isSelected, onSelect, onDragStart }: 
             })())
           }}
           data-testid={`opening-${object.id}`}
+          role="button" tabIndex={0} aria-label={`Select ${object.type} on ${object.wallSide} wall`}
+          aria-pressed={isSelected} onKeyDown={handleSelectionKey}
           data-opening-type={object.type}
           data-wall-side={object.wallSide}
           onClick={event => event.stopPropagation()}
@@ -276,7 +220,7 @@ const RoomObject = ({ room, object, scale, isSelected, onSelect, onDragStart }: 
           onTouchStart={handleTouchStart}
           onTouchEnd={handleTouchEnd}
           onTouchCancel={handleTouchEnd}
-        />
+        >{hitArea}</div>
         
         {/* Window frame lines - simple parallel lines */}
         <svg

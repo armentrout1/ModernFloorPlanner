@@ -26,6 +26,8 @@ const shortcuts: KeyboardShortcut[] = [
   { keys: ['Delete'], description: 'Remove selected room or object', category: 'Edit' },
   { keys: ['Backspace'], description: 'Remove selected room or object', category: 'Edit' },
   { keys: ['Escape'], description: 'Deselect all items / Exit preview mode', category: 'Edit' },
+  { keys: ['Ctrl/Cmd', 'A'], description: 'Select all rooms', category: 'Edit' },
+  { keys: ['Double-click'], description: 'Edit one room inside a group', category: 'Edit' },
   { keys: ['Shift', 'Click'], description: 'Multi-select rooms', category: 'Edit' },
   
   { keys: ['Ctrl/Cmd', 'Z'], description: 'Undo last room or opening deletion in this sketch session', category: 'Edit' },

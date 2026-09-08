@@ -1,6 +1,7 @@
 import type { Room, RoomObject } from './types';
 
 export type DeletedItem =
+  | { kind: 'rooms'; items: { room: Room; index: number }[] }
   | { kind: 'room'; room: Room; index: number }
   | { kind: 'opening'; roomId: string; object: RoomObject; index: number };
 
@@ -22,6 +23,12 @@ export function deleteSelection(rooms: Room[], roomId: string | null, objectId: 
 
 // Restore only what was deleted so subsequent edits to other rooms survive undo.
 export function restoreDeletion(rooms: Room[], deleted: DeletedItem): Room[] | null {
+  if (deleted.kind === 'rooms') {
+    if (deleted.items.some(item => rooms.some(room => room.id === item.room.id))) return null;
+    const restored = [...rooms];
+    for (const item of deleted.items) restored.splice(item.index, 0, item.room);
+    return restored;
+  }
   if (deleted.kind === 'room') {
     if (rooms.some(room => room.id === deleted.room.id)) return null;
     const restored = [...rooms];

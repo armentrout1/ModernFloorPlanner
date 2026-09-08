@@ -6,6 +6,7 @@ export interface Room {
   height: number;
   name?: string;
   color?: string;
+  groupId?: string; // Explicit move-together group, not physical wall connectivity.
   objects?: RoomObject[];
 }
 
@@ -42,11 +43,11 @@ export interface RoomObject {
   position: number; // Percentage along the wall (0-100)
   size: number; // Size in pixels
   doorProperties?: DoorProperties; // Only present when type is 'door'
+  windowProperties?: { height: number }; // Entered inches; unknown legacy height stays absent.
 }
 
 export interface CanvasState {
   rooms: Room[];
-  selectedRoomIds: string[]; // Changed from selectedRoomId for multi-select support
   selectedRoomId: string | null; // Kept for backward compatibility
   selectedObjectId: string | null;
   scale: number;

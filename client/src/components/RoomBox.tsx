@@ -19,9 +19,9 @@ import RoomObject from './RoomObject';
 interface RoomBoxProps {
   room: Room;
   isSelected: boolean;
-  onSelect: (roomId: string) => void;
+  onSelect: (roomId: string, individual?: boolean) => void;
   onResizeStart: (roomId: string, handle: ResizeHandle) => void;
-  onMoveStart: (roomId: string, clientX: number, clientY: number) => void;
+  onMoveStart: (roomId: string, clientX: number, clientY: number, additive?: boolean) => void;
   onUpdateRoom: (roomId: string, updates: Partial<Room>) => void;
   onWallClick?: (roomId: string, position: Position) => void;
   onObjectSelect?: (objectId: string) => void;
@@ -31,6 +31,8 @@ interface RoomBoxProps {
   scale: number;
   isPartOfMultiSelection?: boolean; // New prop for multi-select
   isCanvasPinching?: boolean;
+  showRoomNames?: boolean;
+  allowResize?: boolean;
 }
 
 const RoomBox: React.FC<RoomBoxProps> = ({
@@ -47,7 +49,7 @@ const RoomBox: React.FC<RoomBoxProps> = ({
   placingObjectType,
   scale,
   isPartOfMultiSelection = false,
-  isCanvasPinching = false
+  isCanvasPinching = false, showRoomNames = true, allowResize = true
 }) => {
   const [isEditingName, setIsEditingName] = useState(false);
   
@@ -67,7 +69,7 @@ const RoomBox: React.FC<RoomBoxProps> = ({
       return;
     }
     
-    onSelect(room.id);
+    // Selection is handled once on press; click must not collapse a multi-selection.
   };
   
   const handleMouseDown = (e: React.MouseEvent) => {
@@ -79,8 +81,7 @@ const RoomBox: React.FC<RoomBoxProps> = ({
     // Only handle left clicks for dragging
     if (e.button !== 0) return;
     
-    onSelect(room.id);
-    onMoveStart(room.id, e.clientX, e.clientY);
+    onMoveStart(room.id, e.clientX, e.clientY, e.shiftKey);
   };
   
   // Track touch interactions
@@ -88,7 +89,6 @@ const RoomBox: React.FC<RoomBoxProps> = ({
   
   const handleTouchStart = (e: React.TouchEvent) => {
     e.stopPropagation();
-    e.preventDefault(); // Prevent default to avoid scrolling
     
     // Ignore if in object placement mode
     if (placingObjectType) return;
@@ -99,21 +99,17 @@ const RoomBox: React.FC<RoomBoxProps> = ({
     // Immediately select the room and start moving
     if (e.touches.length === 1) {
       const touch = e.touches[0];
-      onSelect(room.id);
       onMoveStart(room.id, touch.clientX, touch.clientY);
     }
   };
   
   const handleTouchMove = (e: React.TouchEvent) => {
-    e.stopPropagation();
-    e.preventDefault();
     
-    // No extra handling needed - parent component will handle the movement
-    // since onMoveStart was called in handleTouchStart
+    // Continue through the parent canvas touch handler.
+
   };
   
   const handleTouchEnd = (e: React.TouchEvent) => {
-    e.stopPropagation();
     
     // Remove touching state
     setIsTouching(false);
@@ -126,7 +122,6 @@ const RoomBox: React.FC<RoomBoxProps> = ({
   
   const handleResizeTouchStart = (e: React.TouchEvent, handle: ResizeHandle) => {
     e.stopPropagation();
-    e.preventDefault();
     onResizeStart(room.id, handle);
   };
   
@@ -267,7 +262,9 @@ const RoomBox: React.FC<RoomBoxProps> = ({
         transform: isTouching && !isCanvasPinching ? 'scale(0.98)' : 'scale(1)',
         border: 'none', // Remove default border since we're drawing custom walls
       }}
+      data-selected={isSelected || isPartOfMultiSelection}
       onClick={handleClick}
+      onDoubleClick={e => { if (!placingObjectType) { e.stopPropagation(); onSelect(room.id, true); } }}
       onMouseDown={handleMouseDown}
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
@@ -282,17 +279,17 @@ const RoomBox: React.FC<RoomBoxProps> = ({
       </div>
       
       {/* Room name */}
-      <div className="absolute top-1 left-1 right-1 flex justify-center">
+      {showRoomNames && <div data-testid={`room-name-${room.id}`} className="absolute top-1 left-1 right-1 flex justify-center" onMouseDown={e => e.stopPropagation()} onTouchStart={e => e.stopPropagation()}>
         <RoomLabel
           name={room.name || 'Room'}
           isEditing={isEditingName}
           onStartEdit={handleStartEditName}
           onSave={handleSaveName}
         />
-      </div>
+      </div>}
       
       {/* Resize handles - shown only when selected */}
-      {isSelected && !placingObjectType && resizeHandles.map(handle => {
+      {isSelected && allowResize && !placingObjectType && resizeHandles.map(handle => {
         const position = getResizeHandlePosition(room, handle);
         return (
           <div

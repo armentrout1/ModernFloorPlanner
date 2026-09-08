@@ -16,6 +16,7 @@ export const legacyOpeningSchema = z.object({
   wallSide: z.enum(["top", "right", "bottom", "left"]),
   position: finiteNumber.min(0).max(100),
   size: positiveDimension,
+  windowProperties: z.object({ height: positiveDimension }).passthrough().optional(),
   doorProperties: z.object({
     style: z.enum(["single", "double", "sliding", "bifold"]),
     swingDirection: z.enum(["inward", "outward"]),
@@ -33,6 +34,7 @@ export const legacyRoomSchema = z.object({
   height: positiveDimension,
   name: z.string().optional(),
   color: z.string().optional(),
+  groupId: legacyId.pipe(z.string().max(128)).optional(),
   objects: z.array(legacyOpeningSchema).optional(),
 }).passthrough();
 
