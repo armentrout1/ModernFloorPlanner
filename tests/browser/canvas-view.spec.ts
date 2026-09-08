@@ -185,13 +185,16 @@ test('opening placement after a scaled fit and later viewport resize uses the un
   await fit(page).click();
   await expectCenteredAndVisible(page, rooms);
   const target = roomNode(page, rooms[0].id);
-  const before = await target.boundingBox();
-  expect(before).not.toBeNull();
-  const scale = before!.width / rooms[0].width;
-  expect(scale, 'the placement regression must exercise a non-1 drawing scale').toBeLessThan(0.99);
   await target.click();
   await page.getByRole('button', { name: 'Add Window', exact: true }).click();
-  const point = { x: before!.x + before!.width * 0.65, y: before!.y + before!.height - 4 * scale };
+  // Selection can wrap the footer and resize/recenter the fitted canvas.
+  await expectCenteredAndVisible(page, rooms);
+  const placementBounds = await target.boundingBox();
+  expect(placementBounds).not.toBeNull();
+  const scale = placementBounds!.width / rooms[0].width;
+  expect(scale, 'the placement regression must exercise a non-1 drawing scale').toBeLessThan(0.99);
+  const point = { x: placementBounds!.x + placementBounds!.width * 0.65,
+    y: placementBounds!.y + placementBounds!.height - 4 * scale };
   await page.mouse.move(point.x, point.y, { steps: 4 });
   await page.mouse.click(point.x, point.y);
   await expect(page.locator('[data-testid^="opening-"]')).toHaveCount(3);
