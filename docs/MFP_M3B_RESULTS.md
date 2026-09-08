@@ -1,6 +1,107 @@
 # MFP-M3B implementation results
 
 Date: 2026-09-08 · [Issue #10](https://github.com/armentrout1/ModernFloorPlanner/issues/10)
+**M3B Slices 1–4 COMPLETE / PRODUCER_VERIFIED locally; NOT DEPLOYED.** M3 as a whole remains in progress.
+Entry main/origin/main: **bfcf4b8a1e787a4a58d813973e64d840690b4a90**. Delivered application/test commit: **c0f0b832537d2e7ac5a3c24786c1b6fd6d99a907**; prior application: **77bb3b86c14dfb921186fe5db5b0244723581182**.
+Demonstrated M3B review-focus, invalid-input blur and narrow-screen label defects were repaired; no geometry, shared engine, config/dependency or persistence change was needed. Issue #10 remains a release tracker with local completion separated from deployment. Issue #2 remains unreleased; hosting #4 stays PROPOSED; CRM PR #11 stays separate/unmerged.
+
+## Slice 4 integrated acceptance and bounded repair
+
+The compiled **/physical-draft** application passed one A–J journey in a single disposable synthetic tab. Setup and all state changes used public UI actions; registry/sessionStorage inspection was read-only. The new test explicitly built a standalone Quick Rooms source, opened a physical copy, edited that copy to the 12 × 10 × 8 ft fixture, and retained the original source bytes separately. It did not inject a completed draft or call internal commands to substitute for the workflow.
+
+The journey identified the same draft/room through Quick Rooms and Drawing, changed ceiling height 8 → 9 → 8 ft, created and selected a door/window from implemented controls, and moved an opening with the same ID and one committed action. It selected all ten work outputs and explicit targets, inspected source deductions and optional waste, focused the selected top wall without changing edit selection/scope/geometry, and hid/shown scope marks independently. Clearing then restoring window height produced the correct blocked/partial/available transitions. Explicit input/model review followed by a dimension correction reset only the relevant confirmation. Opening deletion/Undo retained newer unrelated scope and unfinished raw waste. View/route navigation and same-tab reload recovered the exact document, request, pending text and review evidence while the standalone source stayed byte-identical.
+
+The second new case exercised populated long room labels, opening/ceiling fields, work selectors, detailed quantities, review dialogs and visible errors at desktop, tablet and phone widths. Keyboard entry/Tab stayed inside the dialog; Escape returned focus to the invoking control. An invalid window-height edit preserved the committed measurement and raw error while masking the dependent wall total. Screenshots are real rendered synthetic states, not mockups. Viewport emulation is not physical-device certification.
+
+The initial focused run had two failures: a new test assumed the wrong source-row identifier, and the controlled review dialog did not return focus to its opener on Escape. The locator was corrected to the existing visible source-row heading. The review defect was repaired narrowly in `ReviewPanel.tsx` by retaining the opener and restoring focus on close, with a safe fallback when needed. A subsequent focused run exposed two real UI defects: blurring invalid waste inserted a duplicate global error and shifted Undo between pointer down/up, so the Undo action never fired; and a long room label caused phone overflow. `TakeoffPanel.tsx` now retains malformed waste text/error inline without attempting an invalid commit, and `PhysicalDraft.tsx` wraps the room label. Once Undo passed, the journey exposed the same displaced-click failure when leaving malformed opening text; `OpeningMeasurements.tsx` now uses the same current-raw inline guard. Rejected geometry with valid syntax still uses command validation and visible feedback. The state command and recovery data were not at fault. Geometry, stored inputs, scope, calculations and old editor behavior are unaffected. All existing tests remain; only two cross-feature browser cases were added. No count inflation or duplicate unit cases were introduced.
+
+## Independent fixture results
+
+The fixture uses explicit supported flat ceiling/uniform walls/horizontal crown models, a finished top-wall 3 × 7 ft door (sill 0, center 2.5 ft) and 4 × 3 ft window (sill 3 ft, center 8 ft).
+
+| Check | Actual visible result |
+| --- | --- |
+| Floor / flat ceiling | 120 sq ft each |
+| Ceiling-height round trip | 8 → 9 → 8 ft; gross walls 352 → 396 → 352 sq ft; floor/ceiling stay 120 |
+| Gross walls / deductions / net walls | 352 − (door 21 + window 12) = 319 sq ft |
+| Baseboard / base shoe / crown | 41 / 41 / 44 ft |
+| One-face door / window casing | 17 / 14 ft |
+| Inventory | One physical door and one window |
+| Floor with 10% waste | Net 120 + allowance 12 = adjusted 132 sq ft |
+| Top wall only | Gross 96 − deductions 33 = net 63 sq ft; baseboard 9 ft |
+| Cleared window height | Full net-wall total unavailable; other three walls explicitly partial/provisional 256 sq ft, top excluded |
+| Restored window height | Numeric fixture basis restored; no lost opening identity or source evidence |
+
+These literal known answers supplement the retained independent real-browser/Node engine and historical snapshot verification cases. The shared engine still receives the full physical document plus explicit request; two UI panels agreeing is not the sole evidence. Optional measured-quantity waste is implemented. Material recipes, coverage/accessories, material-specific package waste and purchasing remain M7 scope.
+
+## Fresh final full sequence
+
+After the bounded UI repairs and final test edits, one fresh full sequence ran with Node 20.20.2, npm 10.8.2 and Playwright 1.55.1. All prior **350 unit** and **123 browser** cases remain, with **two new browser journeys** and no new unit cases.
+
+| Command | Actual result | Duration |
+| --- | --- | --- |
+| `npm ci` | PASS, exit 0 | 10.14 s |
+| `npm test` | PASS, exit 0; **350/350** | 3.04 s |
+| `npm run check` | PASS, exit 0 | 5.39 s |
+| `npm run build` | PASS, exit 0 | 4.28 s |
+| `npx playwright test --reporter=line` | PASS, exit 0; **125/125**, zero retries/skips | 319.00 s |
+| `git diff --check` / `git diff --cached --check` | PASS for application/tests and documentation | Not timed |
+
+[Source/check/log-hash manifest](evidence/MFP_M3B_SLICE4_2026-09-08.json) binds all **224 frozen source files** to delivered commit `c0f0b832537d2e7ac5a3c24786c1b6fd6d99a907` and the final run. The only changed application paths are the four bounded UI repairs listed above; the only changed test path is `physical-journey.spec.ts`. Package/lock/config, shared engine, physical schemas, legacy editor and persistence source remain unchanged. Existing advisory/browser-data/chunk warnings were not hidden or “fixed” through an unrelated upgrade.
+
+Earlier focused runs are recorded separately and are not combined into the fresh full-suite count:
+
+| Evidence | Actual outcome | Duration |
+| --- | --- | --- |
+| `slice4-final-focused-browser.result.json` | Exit 1; 1 passed, 1 failed | 30.35 s |
+| `slice4-initial-browser.result.json` | Exit 1; 2 failed | 106.86 s |
+| `slice4-opening-blur-browser.result.json` | Exit 0; 2 passed | 25.07 s |
+| `slice4-revised-browser.result.json` | Exit 1; 2 failed | 24.89 s |
+
+## Compatibility, recovery, scope and review closeout
+
+Retained coverage verifies stable room/wall/opening identity, groups, door styles/handing, recorded window heights, unresolved/candidate measurements and full original JSON; frozen historical snapshot verification; physical copies separate from standalone originals; supported single-face movement and protected shared operations; atomic target pruning with notice; bounded Undo that cannot replace newer scope/raw waste; invalid raw masking; stale review rejection; and independent geometry/model/confirmation outcomes. Corrupt/unsupported recovery, denied/quota storage, stale writes and malformed cached totals preserve recoverable bytes/newer memory. Physical drafts never use a lossy legacy save payload.
+
+The local review record and recovery schema provide consistency checks, not professional verification, authorization, code compliance or database persistence. Shared-opening movement, room/group manipulation, comprehensive undo/redo and unsupported ceiling/construction/trade models were not silently added. No M3B data-loss/calculation blocker remains after the recorded acceptance; unassigned capabilities remain limited as documented.
+
+## Owner preservation and local review
+
+Tests ran only in isolated source/install copies and disposable compiled-app fixtures on ports 4173/4174. The owner's 5178 tab was not inspected, reloaded, operated on or used as a fixture. Its verified watcher PID 22352 remained protected while checks ran, then was stopped immediately before integrating the necessary application repair to avoid hot reloading the owner's unsaved state. Old ports 5173/5176/5177/5178 remain stopped. The previous loaded browser memory was not converted into a Git save or transferred to another origin.
+
+The actual repair made a separate safe review origin necessary: **http://127.0.0.1:5179/physical-draft**, verified listener PID **23996**, on the exact delivered source. Open it in a new tab with a disposable draft; it does not automatically contain the previous tab's draft. No additional origin was created merely to label the milestone. A fresh disposable context also passed the same A–J journey against the separately recorded canonical local origin. Its test assertions cover zero page errors and non-read API writes; console-error capture is not claimed.
+
+Stash `779950aeaa1b81fc8955ad8f399ab87ae5e59063` and original-roadmap SHA-256 `4AA44769A3AF1CC8A4FE940B09E024109FEA19630F61181772B42F7EFDB7BCF1` remain unchanged. No deployment, hosting setup, database migration, account/auth change, customer onboarding, partner integration, billing, cross-repository edit or CRM merge occurred. Production/database/auth/partner smoke is **NOT VERIFIED**.
+
+## Rendered evidence
+
+![Complete integrated takeoff](evidence/MFP_M3B_SLICE4_COMPLETE.png)
+
+[Partial takeoff](evidence/MFP_M3B_SLICE4_PARTIAL.png) · [Desktop](evidence/MFP_M3B_SLICE4_DESKTOP.png) · [Tablet](evidence/MFP_M3B_SLICE4_TABLET.png) · [Phone](evidence/MFP_M3B_SLICE4_PHONE.png) · [Phone review dialog](evidence/MFP_M3B_SLICE4_REVIEW_PHONE.png) · [Phone invalid input](evidence/MFP_M3B_SLICE4_PHONE_PARTIAL_ERROR.png)
+
+## Exactly five owner checks
+
+Use a new disposable test draft, not your only unsaved drawing.
+
+1. Open port 5179 in a new tab and create a disposable 12 × 10 × 8 ft physical draft. Choose Flat ceiling, Uniform vertical walls and Rectangular horizontal path. In Drawing, change height to 9 ft and back: gross walls should go 352 → 396 → 352 sq ft.
+2. Add finished top-wall openings: a 3 × 7 ft door (sill 0, center 2.5 ft) and 4 × 3 ft window (sill 3 ft, center 8 ft). Select, move and return the same opening.
+3. Choose work and explicit targets: net walls should be 319 sq ft; floor with 10% waste should be 132 sq ft. Select only the top wall for 63 sq ft, then Locate source without changing scope. Restore all-wall targets.
+4. Clear window height: the full net-wall total should be unavailable, with a labeled 256 sq ft partial subtotal. Restore 3 ft, review inputs/models, then correct a reviewed dimension and check Provisional.
+5. Delete an opening, change another scope or leave waste as 10., then Undo. Reload this same disposable tab and check preserved identity, scope, unfinished text and review evidence.
+
+## One next bounded M3C task — not started
+
+**Revert one unapplied physical-draft input to its retained committed state.** Current reproduction: commit 12 ft length, replace it with `12 ft -`, then press Escape/blur. The unapplied text remains safely preserved and dependent quantities stay unavailable; the user must manually retype a valid value. This is a nonblocking input-recovery convenience gap, not data loss or a calculation error. A separate fresh-context UI probe on the delivered commit reproduced this sequence, verified the unchanged committed document and missing Revert control, then restored 120 sq ft by retyping 12 ft; its actual result is included in the source/check manifest.
+
+The next task should expose a field-level Revert action for pending room dimensions, opening dimensions/offset and waste. It must restore only that raw field from its retained committed value, use the active display unit, leave other pending text/physical values/confirmations/evidence/scope untouched, guard stale actions and IME/dialog Escape, preserve recovery, and respect scope revision protection. It must retain the standalone legacy field's existing Escape behavior. This is **NEXT ELIGIBLE, NOT STARTED**, not comprehensive undo/redo, room/group movement, another theme/layout redesign or redoing completed issue #8 work.
+
+M3B closes locally here. M3C as a whole, proposed M3D levels-before-stairs, later kitchen/bath/trade work, M4 secure durable saving, M5–M8 and hosting remain unstarted. Pilot speed and real-device certification remain unmeasured. Issue #10 retains local completion and pending release separately; #2 is unreleased, #4 PROPOSED and CRM #11 separate/unmerged.
+
+---
+
+# Historical Slice 3 results (superseded current status, preserved evidence)
+
+
+Date: 2026-09-08 · [Issue #10](https://github.com/armentrout1/ModernFloorPlanner/issues/10)
 **Slice 3 COMPLETE locally. Slice 4 NEXT ELIGIBLE, NOT STARTED.** M3B as a whole remains in progress.
 Application/test commit: **77bb3b86c14dfb921186fe5db5b0244723581182**; entry main/origin/main: **96ceecfd48965d0ab3f630f62498e9c139c5e7cb**.
 **NOT DEPLOYED.** Production/database/authentication/partner smoke NOT VERIFIED. Issue #2 remains unreleased; hosting #4 remains PROPOSED. CRM proposal PR #11 remains separate and unmerged.
