@@ -1,0 +1,110 @@
+{
+  "record": "MFP-M3B fresh entry baseline",
+  "date": "2026-09-08",
+  "gate": "BLOCKED",
+  "sourceCommit": "6b8ef92d2ea4347918a95b7c5502f603d78820d8",
+  "applicationCommit": "91402e8ced8b0121b12d1f53e54714d14fe5f173",
+  "sourceTree": "b0898571850d88b23f9d2d089907ecf3d039fad6",
+  "sourceLockBlob": "7dabd1bea25ea1f9bbf87189f07ac71711fc4e62",
+  "snapshotCleanFilteredLockBlob": "7dabd1bea25ea1f9bbf87189f07ac71711fc4e62",
+  "archiveSha256": "CE3DB3EFF869CEF8696A86EAFAAB067CE0ABDEFE6D211A848A0E6A1C83643235",
+  "sourceVerification": {
+    "trackedFiles": 232,
+    "byteIdentical": 48,
+    "crlfOnly": 184,
+    "mismatches": 0,
+    "verifiedBeforeAndAfter": true
+  },
+  "runtime": {
+    "node": "20.20.2",
+    "npm": "10.8.2",
+    "playwright": "1.55.1",
+    "chromium": "140.0.7339.186",
+    "chromiumBuild": 1193
+  },
+  "commands": [
+    {
+      "command": "npm ci",
+      "startedAtUtc": "2026-09-08T14:02:40.832Z",
+      "finishedAtUtc": "2026-09-08T14:02:49.454Z",
+      "durationSeconds": 8.6217275,
+      "exitCode": 0
+    },
+    {
+      "command": "npm test",
+      "startedAtUtc": "2026-09-08T14:03:02.401Z",
+      "finishedAtUtc": "2026-09-08T14:03:04.330Z",
+      "durationSeconds": 1.9292384,
+      "exitCode": 0
+    },
+    {
+      "command": "npm run check",
+      "startedAtUtc": "2026-09-08T14:03:16.487Z",
+      "finishedAtUtc": "2026-09-08T14:03:22.173Z",
+      "durationSeconds": 5.6852106000000004,
+      "exitCode": 0
+    },
+    {
+      "command": "npm run build",
+      "startedAtUtc": "2026-09-08T14:03:57.198Z",
+      "finishedAtUtc": "2026-09-08T14:04:01.788Z",
+      "durationSeconds": 4.589566800000001,
+      "exitCode": 0
+    },
+    {
+      "command": "npx playwright test --reporter=line",
+      "startedAtUtc": "2026-09-08T14:04:12.356Z",
+      "finishedAtUtc": "2026-09-08T14:08:33.913Z",
+      "durationSeconds": 261.5571316,
+      "exitCode": 1
+    },
+    {
+      "command": "git diff --check",
+      "location": "actual source checkout",
+      "exitCode": 0,
+      "timed": false
+    }
+  ],
+  "unitTests": {
+    "passed": 234,
+    "failed": 0,
+    "skipped": 0,
+    "cancelled": 0
+  },
+  "browserTests": {
+    "total": 96,
+    "passed": 95,
+    "failed": 1,
+    "workers": 1,
+    "retries": 0,
+    "fullRun": true,
+    "rerun": false,
+    "failedCase": "tests/browser/canvas-view.spec.ts:182",
+    "assertionLine": 199,
+    "name": "opening placement after a scaled fit and later viewport resize uses the unchanged room coordinate system",
+    "diagnosis": "Target screen bounds captured before selection/tool activation; toolbar wrapping changes viewport fit, leaving a stale click on a different room."
+  },
+  "npmAdvisories": {
+    "total": 28,
+    "low": 4,
+    "moderate": 10,
+    "high": 14,
+    "critical": 0,
+    "remediated": false
+  },
+  "deployment": "NOT VERIFIED / NOT DEPLOYED",
+  "ownerBrowserInteractedWith": false,
+  "fixturePorts": [
+    4173,
+    4174
+  ],
+  "fixturePortsStoppedAfterRun": true,
+  "evidenceHashes": {
+    "ci.log": "38a56ceb7a69d4199e1c2cd2e9a2bbc545430be7e549857a58269c0f44ca037c",
+    "test.log": "4525c7f1eb792393445d4f0ab8194d0b588a88ac3ba483cb14f476c675f956b4",
+    "check.log": "a3524d5e43d767e9b4be9b919cafac7158a8650a095963e00ef859ff7f4eaf27",
+    "build.log": "b73bb25331fa8c500a1a0153bd1892a5cc60b051eff5b409ffea2649d2905b69",
+    "browser.log": "5dfe9554b085019a71f05064f0b5e76133b3da3ae42174ec187e649e99d055d8",
+    "tracked-source-hashes-postrun.json": "827fe3b5adeec73080ca9f37f9eefd414a678e364b3f4ecdd7c4173291f1c197"
+  }
+}
