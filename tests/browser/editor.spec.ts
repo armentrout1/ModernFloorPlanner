@@ -77,6 +77,17 @@ async function dragOpening(page: Page, objectId: string, roomId: string, side: W
   await expect(page.getByTestId(`room-${roomId}`).getByTestId(`opening-${objectId}`)).toBeVisible();
 }
 
+async function expectDropAtWallMidpoint(page: Page, actual: RoomObject, original: RoomObject, roomId: string, side: WallSide) {
+  expect(actual).toEqual({ ...original, wallSide: side, position: actual.position });
+  const bounds = (await page.getByTestId(`room-${roomId}`).boundingBox())!;
+  const wallPixels = side === 'top' || side === 'bottom' ? bounds.width : bounds.height;
+  // Panel widths may place the canvas at fractional CSS coordinates, while
+  // legacy MouseEvent clientX/clientY are integer pixels. Allow only that input
+  // quantization for a new drop; every other opening field remains exact.
+  expect(Math.abs(actual.position - 50) / 100 * wallPixels, 'drop is within one screen pixel of the wall midpoint')
+    .toBeLessThanOrEqual(1);
+}
+
 async function doorPoint(page: Page, objectId: string, x: number, y: number) {
   // Use the browser's actual SVG transform; do not reproduce the wall renderer.
   return page.getByTestId(`door-hit-${objectId}`).evaluate((node, point) => {
@@ -155,13 +166,14 @@ for (const type of ['door', 'window'] as const) {
     const plan = await seedAndLoad(page, [room([original]), second]);
     await dragOpening(page, original.id, 'room-a', 'bottom');
     let saved = await save(page, plan.id);
-    expect(saved.rooms[0].objects![0]).toEqual({ ...original, wallSide: 'bottom', position: 50 });
+    await expectDropAtWallMidpoint(page, saved.rooms[0].objects![0], original, 'room-a', 'bottom');
     await dragOpening(page, original.id, 'room-b', 'left');
     await expect(page.getByRole('button', { name: /^Delete (door|window)$/ })).toBeVisible();
     await expect(page.getByRole('spinbutton').first()).toBeEnabled();
     saved = await save(page, plan.id);
     expect(saved.rooms[0].objects).toEqual([]);
-    expect(saved.rooms[1].objects![0]).toEqual({ ...original, wallSide: 'left', position: 50 });
+    const acceptedDrop = saved.rooms[1].objects![0];
+    await expectDropAtWallMidpoint(page, acceptedDrop, original, 'room-b', 'left');
     await page.getByTestId('room-room-b').click();
     const handle = page.getByTestId('resize-room-b-se');
     const bounds = await handle.boundingBox();
@@ -173,7 +185,8 @@ for (const type of ['door', 'window'] as const) {
     saved = await save(page, plan.id);
     expect(saved.rooms[1].width).toBeGreaterThan(second.width);
     expect(saved.rooms[1].height).toBeGreaterThan(second.height);
-    expect(saved.rooms[1].objects![0]).toEqual({ ...original, wallSide: 'left', position: 50 });
+    // Resize must retain the exact accepted drop percentage, with no further rounding.
+    expect(saved.rooms[1].objects![0]).toEqual(acceptedDrop);
     expect(saved.createdAt).toBe('2025-06-01T00:00:00.000Z');
   });
 }
@@ -211,8 +224,16 @@ test('window width updates retain its legacy attachment and persist', async ({ p
   await page.getByRole('spinbutton', { name: 'Window width', exact: true }).fill('48');
   let saved = await save(page, plan.id);
   expect(saved.rooms[0].objects).toEqual([{ ...original, size: 80 }]);
-  await page.getByRole('combobox').click();
-  await page.getByRole('option', { name: '30" × 36"', exact: true }).click();
+  const commonWidth = page.getByRole('combobox', { name: 'Common window width', exact: true });
+  const commonHeight = page.getByRole('combobox', { name: 'Common window height', exact: true });
+  await commonWidth.click();
+  await page.getByRole('option', { name: '30 in', exact: true }).click();
+  await expect(page.getByRole('spinbutton', { name: 'Window height', exact: true })).toHaveValue('');
+  saved = await save(page, plan.id);
+  expect(saved.rooms[0].objects).toEqual([{ ...original, size: 50 }]);
+  expect(Object.hasOwn(saved.rooms[0].objects![0], 'windowProperties')).toBe(false);
+  await commonHeight.click();
+  await page.getByRole('option', { name: '36 in', exact: true }).click();
   saved = await save(page, plan.id);
   expect(saved.rooms[0].objects).toEqual([{ ...original, size: 50, windowProperties: { height: 36 } }]);
 });
@@ -510,8 +531,11 @@ test('custom opening dimensions preserve fractions, reject empty/overlap, and ke
   expect((await save(page, plan.id)).rooms[0].objects![0].doorProperties!.width).toBe(30.5);
   await page.getByTestId('opening-window-b').click();
   await expect(page.getByRole('spinbutton', { name: 'Window height', exact: true })).toHaveValue('');
-  await page.getByRole('combobox').click();
-  await page.getByRole('option', { name: '36" × 48"', exact: true }).click();
+  await page.getByRole('combobox', { name: 'Common window width', exact: true }).click();
+  await page.getByRole('option', { name: '36 in', exact: true }).click();
+  await expect(page.getByRole('spinbutton', { name: 'Window height', exact: true })).toHaveValue('');
+  await page.getByRole('combobox', { name: 'Common window height', exact: true }).click();
+  await page.getByRole('option', { name: '48 in', exact: true }).click();
   const saved = await save(page, plan.id);
   expect(saved.rooms[0].objects![1]).toEqual({ ...original.objects![1], size: 60, windowProperties: { height: 48 } });
 });
@@ -576,4 +600,107 @@ test('pan-owned double-clicks and subthreshold presses never flip or relocate a 
   await page.mouse.move(box.x + box.width / 2 + 2, box.y + box.height / 2);
   await page.mouse.up();
   expect((await save(page, plan.id)).rooms).toEqual([original]);
+});
+
+test('window height presets and custom height preserve exact legacy width, attachment and metadata despite existing overlap', async ({ page }) => {
+  const original = { ...opening('window'), position: 52.125, size: 60.123456789,
+    legacyMeta: { source: 'Imported measured window', values: [1, 2, 3] },
+    windowProperties: { height: 37.625, finish: 'Keep existing frame finish' } };
+  // This legacy sketch already overlaps. A height-only edit must not revalidate,
+  // round, relocate or otherwise rewrite its existing plan-view width.
+  const neighbor = { ...opening(), id: 'overlapping-legacy-door', position: 57.5 };
+  const originalRoom = room([original, neighbor]);
+  const plan = await seedAndLoad(page, [originalRoom]);
+  await page.getByTestId('room-room-a').click();
+  await page.getByRole('tab', { name: 'Windows (1)', exact: true }).click();
+  await page.getByRole('button', { name: 'Select window 1 in Legacy room', exact: true }).click();
+  const commonWidth = page.getByRole('combobox', { name: 'Common window width', exact: true });
+  const commonHeight = page.getByRole('combobox', { name: 'Common window height', exact: true });
+  await expect(commonWidth).toContainText('Custom');
+  await commonHeight.click();
+  await page.getByRole('option', { name: '48 in', exact: true }).click();
+  await expect(page.getByRole('spinbutton', { name: 'Window height', exact: true })).toHaveValue('48');
+  await expect(page.getByText('This width overlaps another opening. Choose a smaller width or move the opening first.')).toHaveCount(0);
+  expect((await save(page, plan.id)).rooms).toEqual([{ ...originalRoom, objects: [
+    { ...original, windowProperties: { ...original.windowProperties, height: 48 } }, neighbor,
+  ] }]);
+  const height = page.getByRole('spinbutton', { name: 'Window height', exact: true });
+  await height.fill('37.625');
+  await height.press('Enter');
+  await expect(commonHeight).toContainText('Custom');
+  await expect(commonWidth).toContainText('Custom');
+  expect((await save(page, plan.id)).rooms).toEqual([originalRoom]);
+});
+
+test('rejected window width preset preserves both dimensions and custom fractional dimensions remain independent', async ({ page }) => {
+  const original = { ...opening('window'), position: 50, size: 50,
+    legacyMeta: { note: 'Preserve measured opening metadata' },
+    windowProperties: { height: 42.25, finish: 'Keep painted frame' } };
+  const neighbor = { ...opening(), id: 'nearby-door', position: 68 };
+  const originalRoom = room([original, neighbor]);
+  const plan = await seedAndLoad(page, [originalRoom]);
+  await page.getByTestId('opening-opening-a').click();
+  const commonWidth = page.getByRole('combobox', { name: 'Common window width', exact: true });
+  const commonHeight = page.getByRole('combobox', { name: 'Common window height', exact: true });
+  await commonWidth.click();
+  await page.getByRole('option', { name: '72 in', exact: true }).click();
+  await expect(page.getByText('This width overlaps another opening. Choose a smaller width or move the opening first.').first()).toBeVisible();
+  await expect(page.getByRole('spinbutton', { name: 'Window width', exact: true })).toHaveValue('30');
+  await expect(page.getByRole('spinbutton', { name: 'Window height', exact: true })).toHaveValue('42.25');
+  expect((await save(page, plan.id)).rooms).toEqual([originalRoom]);
+
+  const width = page.getByRole('spinbutton', { name: 'Window width', exact: true });
+  await width.fill('29.25');
+  await width.press('Enter');
+  await expect(commonWidth).toContainText('Custom');
+  await expect(page.getByRole('spinbutton', { name: 'Window height', exact: true })).toHaveValue('42.25');
+  expect((await save(page, plan.id)).rooms).toEqual([{ ...originalRoom, objects: [
+    { ...original, size: 48.75 }, neighbor,
+  ] }]);
+
+  const height = page.getByRole('spinbutton', { name: 'Window height', exact: true });
+  await height.fill('41.125');
+  await height.press('Enter');
+  await expect(commonHeight).toContainText('Custom');
+  await expect(commonWidth).toContainText('Custom');
+  await expect(width).toHaveValue('29.25');
+  expect((await save(page, plan.id)).rooms).toEqual([{ ...originalRoom, objects: [
+    { ...original, size: 48.75, windowProperties: { ...original.windowProperties, height: 41.125 } }, neighbor,
+  ] }]);
+});
+
+test('reselecting the current window preset clears only that dimension invalid draft', async ({ page }) => {
+  const original = { ...opening('window'), size: 60, windowProperties: { height: 48 } };
+  const originalRoom = room([original]);
+  const plan = await seedAndLoad(page, [originalRoom]);
+  await page.getByTestId('opening-opening-a').click();
+  const width = page.getByRole('spinbutton', { name: 'Window width', exact: true });
+  const height = page.getByRole('spinbutton', { name: 'Window height', exact: true });
+  const commonWidth = page.getByRole('combobox', { name: 'Common window width', exact: true });
+  const commonHeight = page.getByRole('combobox', { name: 'Common window height', exact: true });
+  await width.fill('');
+  await width.press('Tab');
+  await expect(width).toHaveAttribute('aria-invalid', 'true');
+  await commonWidth.click();
+  await page.getByRole('option', { name: '36 in', exact: true }).click();
+  await expect(width).toHaveValue('36');
+  await expect(width).toHaveAttribute('aria-invalid', 'false');
+  await expect(height).toHaveValue('48');
+  expect((await save(page, plan.id)).rooms).toEqual([originalRoom]);
+
+  // Both fields now have invalid raw drafts. Restoring height must leave the
+  // unrelated width draft intact even when the chosen height equals its saved value.
+  await width.fill('');
+  await width.press('Tab');
+  await height.fill('');
+  await height.press('Tab');
+  await expect(width).toHaveAttribute('aria-invalid', 'true');
+  await expect(height).toHaveAttribute('aria-invalid', 'true');
+  await commonHeight.click();
+  await page.getByRole('option', { name: '48 in', exact: true }).click();
+  await expect(height).toHaveValue('48');
+  await expect(height).toHaveAttribute('aria-invalid', 'false');
+  await expect(width).toHaveValue('');
+  await expect(width).toHaveAttribute('aria-invalid', 'true');
+  expect((await save(page, plan.id)).rooms).toEqual([originalRoom]);
 });

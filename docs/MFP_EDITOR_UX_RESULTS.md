@@ -142,3 +142,29 @@ Actual final checks:
 ![Left reopen toggle stays at the left edge](evidence/editor-left-panel-closed.png)
 
 This bounded panel acceptance is complete locally, with no known blocker. NOT DEPLOYED; production smoke and deployment/database/auth binding remain unverified. No customer onboarding, migration or other-product changes. Issue #8 remains open pending release/integration evidence. M3B remains next eligible only on a separate bounded assignment; full phone layout remains separate.
+
+
+## Independent window-size selectors — 2026-09-08
+
+Owner explicitly requested standard window width and height selectors. Verified existing checkout, remote, clean main at `0e4885f4f73a662dd267efe5a44a70c01abef5a2`, upstream, safe fetch and local task availability before edits. This Floor Planner task owns the bounded DR-002 follow-up to issue #8. The previous issue-body publication permission question remains pending; no new issue mutation was attempted. This local report records the current assignment and result.
+
+The old paired-size menu is replaced by separate Common width and Common height selectors. Width choices: 24, 30, 36, 48, 60, 72 inches. Height choices: 24, 36, 48, 60, 72 inches. Exact custom fields remain alongside them. A pending custom draft displays Custom; explicitly choosing the saved preset restores that field even if its numeric value did not change, without clearing the other dimension's draft.
+
+These are convenient common examples, not a product catalog or universal sizing standard. [Pella's sizing guide](https://www.pella.com/ideas/windows/standard-window-sizes/) distinguishes sizes by window type and cautions that notation can describe either the unit or rough opening. The UI retains a short reminder to confirm actual dimensions before ordering.
+
+Width uses the existing wall-fit/overlap guard and preserves optional height. Unknown legacy heights stay unentered until explicitly chosen. Height changes only height metadata: no width conversion, position change, new width validation or comparison with floor-plan room depth. Saved fractional widths, attachment, IDs and extra metadata remain exact. Opening placement/rendering, door styles and quantity calculations are unchanged.
+
+Actual verification:
+
+- `npm test`: 222/222 passed, no failures/skips. Includes existing quantity/API compatibility checks; run before the final UI-only draft reset adjustment.
+- `npm run check` and `npm run build`: passed, including after the final UI adjustment. Existing Browserslist age and bundle-size warnings only.
+- Initial `npx playwright test tests/browser/editor.spec.ts tests/browser/selection.spec.ts`: 41 passed, two drag assertions failed. Traces showed the new panel offset was fractional but the mouse event coordinate was integer, placing the drop 0.40625 screen pixels from the requested midpoint. No opening properties were lost. Tests now allow at most one rendered screen pixel for a new drop, compare all other metadata exactly, and require the accepted position to remain exact through later resize. Product geometry was not snapped to satisfy a test.
+- Final `npx playwright test tests/browser/editor.spec.ts tests/browser/selection.spec.ts --grep 'window|dragging between|custom opening|changing tabs|narrow sidebar|width, all door'`: **14/14 passed in 55.4 seconds**, zero retries/skips. Includes all-wall window placement/save/reload, both opening drag/resize cases, door styles, independent presets, unknown height, overlapping legacy width with height-only changes, exact custom fractions, rejected widths, same-preset draft recovery, tab commits and narrow layout. Three new browser cases added; the whole broad set was not repeated after the draft-only adjustment.
+- Fresh isolated local frontend smoke at `http://127.0.0.1:5173/`: width/height selection updates custom fields, narrow controls stay within the panel, and no page errors. Final 1600×1000 and 820×900 screenshots inspected below. Plan responses were mocked in that browser only; the owner's tab and saved drawing were not operated on.
+- `git diff --check`: passed.
+
+![Independent window width and height selectors](evidence/editor-window-presets.png)
+
+![Window selectors at narrow width](evidence/editor-window-presets-narrow.png)
+
+Bounded window-selector acceptance complete locally. NOT DEPLOYED; production smoke and hosting/database/auth binding remain unverified. No migrations, customer onboarding or other-product changes. Issue publication remains pending the earlier approval; the implementation itself has no known blocker. M3B remains next eligible only on a separate assignment.

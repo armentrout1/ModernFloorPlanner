@@ -39,16 +39,35 @@ import {
 } from '@/utils/canvas';
 import { calculateRoomPerimeter } from '@/utils/materialCalculator';
 
-const COMMON_WINDOW_SIZES = [
-  { width: 24, height: 36 }, { width: 30, height: 36 }, { width: 36, height: 48 },
-  { width: 48, height: 48 }, { width: 60, height: 48 }, { width: 72, height: 48 },
-];
+const COMMON_WINDOW_WIDTHS = [24, 30, 36, 48, 60, 72];
+const COMMON_WINDOW_HEIGHTS = [24, 36, 48, 60, 72];
+
+function WindowPresetSelect({ dimension, value, choices, onChoose, custom = false }: {
+  dimension: 'width' | 'height'; value: number | undefined; choices: number[]; custom?: boolean;
+  onChoose: (size: number) => void;
+}) {
+  const id = useId();
+  return <div className="min-w-0 space-y-1">
+    <Label htmlFor={id} className="text-xs">Common {dimension}</Label>
+    <Select value={custom ? 'custom' : value === undefined ? '' : choices.includes(value) ? String(value) : 'custom'}
+      onValueChange={choice => { if (choices.includes(Number(choice))) onChoose(Number(choice)); }}>
+      <SelectTrigger id={id} aria-label={'Common window ' + dimension} className="text-sm">
+        <SelectValue placeholder="Not entered" />
+      </SelectTrigger>
+      <SelectContent>
+        {choices.map(size => <SelectItem key={size} value={String(size)}>{size} in</SelectItem>)}
+        <SelectItem value="custom" disabled>Custom</SelectItem>
+      </SelectContent>
+    </Select>
+  </div>;
+}
 
 /** Raw text belongs to the form until a valid blur/Enter commit. Never replace
  * an empty field with a guessed 24/80-inch dimension or truncate a decimal.
  */
-function OpeningNumberField({ label, value, onCommit }: {
+function OpeningNumberField({ label, value, onCommit, onDraftChange }: {
   label: string; value: number | undefined; onCommit: (value: number) => string | null | void;
+  onDraftChange?: (dirty: boolean) => void;
 }) {
   const id = useId();
   const [text, setText] = useState(value === undefined ? '' : String(value));
@@ -59,7 +78,8 @@ function OpeningNumberField({ label, value, onCommit }: {
     setText(value === undefined ? '' : String(value));
     dirty.current = false;
     setError(null);
-  }, [value]);
+    onDraftChange?.(false);
+  }, [value, onDraftChange]);
   const commit = () => {
     if (!dirty.current) return;
     const number = Number(text);
@@ -72,13 +92,14 @@ function OpeningNumberField({ label, value, onCommit }: {
     if (message) { setError(message); return; }
     dirty.current = false;
     setError(null);
+    onDraftChange?.(false);
   };
   return <div className="space-y-1">
     <Label htmlFor={id} className="text-xs">{label}</Label>
     <Input id={id} type="number" step="any" min="0" value={text}
       placeholder="Not entered" className="text-sm" aria-invalid={Boolean(error)}
       aria-describedby={error ? id + '-error' : undefined}
-      onChange={event => { setText(event.target.value); dirty.current = true; setError(null); }}
+      onChange={event => { setText(event.target.value); dirty.current = true; setError(null); onDraftChange?.(true); }}
       onBlur={commit}
       onKeyDown={event => {
         if (event.key === 'Enter' && !event.nativeEvent.isComposing && event.nativeEvent.keyCode !== 229) {
@@ -86,6 +107,26 @@ function OpeningNumberField({ label, value, onCommit }: {
         }
       }} />
     {error && <p id={id + '-error'} role="alert" className="text-xs text-red-700">{error}</p>}
+  </div>;
+}
+
+function WindowSizeField({ dimension, value, choices, onCommit }: {
+  dimension: 'width' | 'height'; value: number | undefined; choices: number[];
+  onCommit: (size: number) => string | null;
+}) {
+  const [dirty, setDirty] = useState(false);
+  const [presetVersion, setPresetVersion] = useState(0);
+  return <div className="min-w-0 space-y-3">
+    <WindowPresetSelect dimension={dimension} value={value} choices={choices} custom={dirty}
+      onChoose={size => {
+        if (!onCommit(size)) {
+          // Re-selecting the saved size also replaces an unapplied custom draft.
+          setDirty(false);
+          setPresetVersion(version => version + 1);
+        }
+      }} />
+    <OpeningNumberField key={presetVersion} label={'Window ' + dimension} value={value}
+      onCommit={onCommit} onDraftChange={setDirty} />
   </div>;
 }
 
@@ -183,15 +224,23 @@ const PropertyPanel: React.FC<PropertyPanelProps> = ({
     return null;
   };
 
-  const handleWindowSizeChange = (width: number, height?: number): string | null => {
+  const handleWindowWidthChange = (width: number): string | null => {
     const error = widthError(width);
     setSizeError(error);
     if (error) return error;
     if (selectedRoom && selectedObject?.type === 'window' && selectedRoom.objects) {
       onUpdateRoom(selectedRoom.id, { objects: selectedRoom.objects.map(object => object.id === selectedObject.id
-        ? { ...object, size: inchesToPixels(width), ...(height === undefined ? {} : {
-          windowProperties: { ...object.windowProperties, height },
-        }) } : object) });
+        ? { ...object, size: inchesToPixels(width) } : object) });
+    }
+    return null;
+  };
+
+  const handleWindowHeightChange = (height: number): string | null => {
+    if (!Number.isFinite(height) || height <= 0 || height > Number.MAX_SAFE_INTEGER) return 'Enter a positive size in inches.';
+    if (selectedRoom && selectedObject?.type === 'window' && selectedRoom.objects) {
+      // Height does not alter the plan-view opening or revalidate its legacy width.
+      onUpdateRoom(selectedRoom.id, { objects: selectedRoom.objects.map(object => object.id === selectedObject.id
+        ? { ...object, windowProperties: { ...object.windowProperties, height } } : object) });
     }
     return null;
   };
@@ -359,32 +408,16 @@ const PropertyPanel: React.FC<PropertyPanelProps> = ({
               chosen nominal example adds the optional height. */}
           {selectedObject.type === 'window' && (
             <>
-              <div className="space-y-2">
-                <Label>Common window sizes (inches)</Label>
-                <Select value={COMMON_WINDOW_SIZES.some(size => size.width === pixelsToInches(selectedObject.size)
-                    && size.height === selectedObject.windowProperties?.height)
-                    ? pixelsToInches(selectedObject.size) + 'x' + selectedObject.windowProperties!.height : ''}
-                  onValueChange={value => {
-                    const chosen = COMMON_WINDOW_SIZES.find(size => size.width + 'x' + size.height === value);
-                    if (chosen) handleWindowSizeChange(chosen.width, chosen.height);
-                  }}>
-                  <SelectTrigger><SelectValue placeholder="Choose a size or enter custom" /></SelectTrigger>
-                  <SelectContent>
-                    {COMMON_WINDOW_SIZES.map(size => <SelectItem key={size.width + 'x' + size.height} value={size.width + 'x' + size.height}>
-                      {size.width}" × {size.height}"
-                    </SelectItem>)}
-                  </SelectContent>
-                </Select>
-                <p className="text-xs text-slate-500">Common nominal examples, not universal standards. Selecting one explicitly sets both width and height.</p>
-              </div>
+              <p className="text-xs text-slate-500">Sizes are in inches. Choose each dimension separately, or enter a custom size.</p>
               <div className="grid grid-cols-2 gap-2">
-                <OpeningNumberField key={selectedObject.id + ':window-width'} label="Window width"
-                  value={pixelsToInches(selectedObject.size)} onCommit={width => handleWindowSizeChange(width)} />
-                <OpeningNumberField key={selectedObject.id + ':window-height'} label="Window height"
-                  value={selectedObject.windowProperties?.height}
-                  onCommit={height => handleWindowSizeChange(pixelsToInches(selectedObject.size), height)} />
+                <WindowSizeField key={selectedObject.id + ':window-width'} dimension="width"
+                  value={pixelsToInches(selectedObject.size)} choices={COMMON_WINDOW_WIDTHS}
+                  onCommit={handleWindowWidthChange} />
+                <WindowSizeField key={selectedObject.id + ':window-height'} dimension="height"
+                  value={selectedObject.windowProperties?.height} choices={COMMON_WINDOW_HEIGHTS}
+                  onCommit={handleWindowHeightChange} />
               </div>
-              <p className="text-xs text-slate-500">Width: {pixelsToInches(selectedObject.size)} inches. Height: {selectedObject.windowProperties?.height === undefined ? 'not entered' : selectedObject.windowProperties.height + ' inches'}. Changes apply on Enter or leaving the field.</p>
+              <p className="text-xs text-slate-500">Custom sizes apply on Enter or leaving the field. Common sizes vary by window style and manufacturer; confirm the actual dimensions before ordering.</p>
             </>
           )}
 
