@@ -2,12 +2,12 @@ import { adaptMeasurementDocument } from '../compatibility/legacyDocument';
 import type { PhysicalDocument, PhysicalOpening } from '../domain/document';
 import { atFloor, measurementAt, wallIndex, type QuantityOutput, type MeasurementRef } from '../domain/geometryValidation';
 import { evaluateQuantityReadiness, type OutputReadiness } from './readiness';
-import { validateQuantityRequest, QUANTITY_POLICY_VERSION, type ContractError, type QuantityRequest } from './policy';
+import { validateQuantityRequest, QUANTITY_POLICY_VERSION_V2, type ContractError, type QuantityRequest } from './policy';
 import { ownFrozen, type DeepReadonly } from './immutability';
 import { copyJson } from './canonicalJson';
 import { add, subtract, multiply, sum, checked, nonnegative, limited, interval, elevatedInterval, intersect, span, unionLength, unionArea,
   ArithmeticFailure, type Interval, type Rectangle } from './arithmetic';
-import { RESULT_SCHEMA_VERSION, ENGINE_VERSION, calculationSchema,
+import { RESULT_SCHEMA_VERSION, ENGINE_VERSION, RESULT_SCHEMA_VERSION_V2, ENGINE_VERSION_V2, calculationSchema,
   type Calculation, type Amounts, type QuantityRecord, type QuantityAggregate, type QuantityTrace } from './result';
 
 export type CalculationResult = { ok: true; calculation: DeepReadonly<Calculation> } | { ok: false; errors: ContractError[] };
@@ -29,6 +29,10 @@ function amounts(gross: number, rawDeductions: number, effectiveDeductions: numb
 }
 function blockedReasons(readiness: OutputReadiness): ContractError[] {
   const errors: ContractError[] = [];
+  if (readiness.applicability?.status === 'unknown' || readiness.applicability?.status === 'unsupported') {
+    errors.push(...readiness.applicability.findings.filter(finding => finding.code !== 'APPLICABILITY_UNCONFIRMED')
+      .map(finding => ({ code: finding.code, path: finding.paths[0] ?? [], message: finding.message })));
+  }
   if (readiness.numericBasis.status !== 'sufficient') errors.push({
     code: 'NUMERIC_BASIS_INSUFFICIENT', path: [], message: 'Required numeric basis is missing or unresolved' });
   if (readiness.geometry.status !== 'valid') errors.push({
@@ -66,7 +70,9 @@ export function calculateQuantities(input: unknown, requested: unknown): Calcula
   const outputs = Array.from(new Set(records.map(record => record.output))).sort(compare)
     .map(output => aggregate(output, records.filter(record => record.output === output)));
   const calculation: Calculation = {
-    schemaVersion: RESULT_SCHEMA_VERSION, engineVersion: ENGINE_VERSION, policyVersion: QUANTITY_POLICY_VERSION,
+    schemaVersion: contract.request.policy.version === QUANTITY_POLICY_VERSION_V2 ? RESULT_SCHEMA_VERSION_V2 : RESULT_SCHEMA_VERSION,
+    engineVersion: contract.request.policy.version === QUANTITY_POLICY_VERSION_V2 ? ENGINE_VERSION_V2 : ENGINE_VERSION,
+    policyVersion: contract.request.policy.version,
     source: { documentId: document.id, revisionId: document.revisionId,
       revisionState: document.revisionId === null ? 'unsaved' : 'identified' },
     request: contract.request,

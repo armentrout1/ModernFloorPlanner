@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { FileIcon, SaveIcon, FolderOpenIcon, CalculatorIcon, Keyboard } from 'lucide-react';
 
 interface AppHeaderProps {
+  onOpenPhysicalCopy: () => void;
   onUndoDelete: () => void;
   canUndoDelete: boolean;
   onNewSketch: () => void;
@@ -16,6 +17,7 @@ interface AppHeaderProps {
 }
 
 const AppHeader: React.FC<AppHeaderProps> = ({ 
+  onOpenPhysicalCopy,
   onUndoDelete,
   canUndoDelete,
   onNewSketch, 
@@ -31,6 +33,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({
       <div className="flex flex-wrap items-center gap-4">
         <h1 className="text-xl font-bold text-primary">Modern Floor Planner</h1>
         <Button asChild variant="outline"><Link href="/quick-room">Quick Rooms</Link></Button>
+        <Button variant="outline" onClick={onOpenPhysicalCopy} disabled={!canSave}>Open a physical copy</Button>
       </div>
       <div className="flex flex-wrap items-center gap-3">
         <Button onClick={onUndoDelete} disabled={!canUndoDelete} variant="outline" title="Restore the last deletion (Ctrl/Cmd+Z)">Undo delete</Button>

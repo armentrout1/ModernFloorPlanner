@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type ComponentProps, type KeyboardEvent } from 'react';
 import { Link } from 'wouter';
+import { openQuickPhysicalCopy } from '@/features/physical-draft/adoption';
 import { Plus, Copy, Trash2, ArrowLeft, Ruler, Layers, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -97,7 +98,11 @@ export default function QuickRooms({ active = true }: { active?: boolean }) {
       <header className="border-b border-slate-200 bg-white">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-4 sm:px-6 lg:px-8">
           <span className="font-semibold tracking-tight text-primary">Modern Floor Planner</span>
-          <Button variant="outline" size="sm" asChild><Link href="/"><ArrowLeft className="mr-2 h-4 w-4" />Sketch editor</Link></Button>
+          <div className="flex flex-wrap gap-2">
+            <Button variant="outline" size="sm" disabled={blocked} onClick={() => openQuickPhysicalCopy(draft)}>Open a physical copy</Button>
+            <Button variant="outline" size="sm" asChild><Link href="/physical-draft">Physical drafts</Link></Button>
+            <Button variant="outline" size="sm" asChild><Link href="/"><ArrowLeft className="mr-2 h-4 w-4" />Sketch editor</Link></Button>
+          </div>
         </div>
       </header>
       <main aria-labelledby="quick-rooms-title" className="mx-auto max-w-7xl px-4 py-7 sm:px-6 sm:py-10 lg:px-8">

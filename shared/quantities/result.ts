@@ -3,9 +3,12 @@ import { elevationSchema } from '../domain/measurements';
 import { QUANTITY_OUTPUTS } from '../domain/geometryValidation';
 import type { OutputReadiness } from './readiness';
 import { quantityRequestSchema } from './policy';
+import { roomApplicabilitySchema } from '../domain/applicability';
 
 export const RESULT_SCHEMA_VERSION = 'quantity-result-v1' as const;
 export const ENGINE_VERSION = 'rectangular-engine-v1' as const;
+export const RESULT_SCHEMA_VERSION_V2 = 'quantity-result-v2' as const;
+export const ENGINE_VERSION_V2 = 'rectangular-engine-v2' as const;
 // A supported decimal magnitude, not a promise of exact fixed-point arithmetic.
 export const MAX_QUANTITY_MAGNITUDE = Number.MAX_SAFE_INTEGER;
 const amount = z.number().finite().nonnegative().max(MAX_QUANTITY_MAGNITUDE);
@@ -27,7 +30,25 @@ const geometryCheck = z.object({ ...locationShape,
     'SHARED_ATTACHMENT_ROOMS', 'FLOOR_RUN_OVERLAP', 'CROWN_GAP_FULL_HEIGHT']),
   status: z.enum(['valid', 'invalid', 'undetermined']), message: z.string(),
   dependencies: z.array(measurementRefSchema) }).strict();
+const applicabilityReadinessSchema = z.object({
+  status: z.enum(['supported', 'provisional', 'unknown', 'unsupported']),
+  dependencies: z.array(z.discriminatedUnion('field', [
+    z.object({ roomId: id, field: z.literal('ceiling'), declaration: roomApplicabilitySchema.shape.ceiling }).strict(),
+    z.object({ roomId: id, field: z.literal('walls'), declaration: roomApplicabilitySchema.shape.walls }).strict(),
+    z.object({ roomId: id, field: z.literal('crownPath'), declaration: roomApplicabilitySchema.shape.crownPath }).strict(),
+  ])), findings: z.array(finding),
+}).strict().superRefine((value, context) => {
+  const expected = value.dependencies.some(ref => ref.declaration.value === 'unsupported') ? 'unsupported'
+    : value.dependencies.some(ref => ref.declaration.value === 'unknown') ? 'unknown'
+    : value.dependencies.some(ref => ref.declaration.confirmation.status !== 'confirmed') ? 'provisional' : 'supported';
+  if (value.status !== expected) context.addIssue({ code: z.ZodIssueCode.custom,
+    path: ['status'], message: 'Applicability status must describe its declarations' });
+  const keys = value.dependencies.map(ref => JSON.stringify([ref.roomId, ref.field]));
+  if (new Set(keys).size !== keys.length) context.addIssue({ code: z.ZodIssueCode.custom,
+    path: ['dependencies'], message: 'Applicability dependencies must be distinct' });
+});
 export const outputReadinessSchema: z.ZodType<OutputReadiness> = z.object({
+  applicability: applicabilityReadinessSchema.optional(),
   ...locationShape, output, wasteFraction: z.number().finite().nonnegative().nullable(),
   openingBases: z.array(z.object({ openingId: id, measureBasis: z.enum(['unknown', 'nominal', 'clear', 'finished', 'rough']) }).strict()),
   numericBasis: z.object({ status: z.enum(['sufficient', 'insufficient']), dependencies: z.array(measurementRefSchema), findings: z.array(finding) }).strict(),
@@ -78,6 +99,11 @@ export const quantityRecordSchema = z.object({
 }).strict().superRefine((record, ctx) => {
   if ((record.status === 'blocked') !== (record.amounts === null)) {
     ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['amounts'], message: 'Blocked records have unavailable amounts; usable records require amounts' });
+  }
+  const applicability = record.readiness.applicability;
+  if (applicability && ((['unknown', 'unsupported'].includes(applicability.status) && record.status !== 'blocked')
+      || (applicability.status === 'provisional' && record.status === 'complete'))) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['status'], message: 'Result must retain unsupported, unknown or provisional applicability' });
   }
   if (record.output !== record.readiness.output) {
     ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['readiness', 'output'], message: 'Readiness belongs to this output' });
@@ -157,8 +183,8 @@ export const quantityAggregateSchema = z.object({
 });
 export type QuantityAggregate = z.infer<typeof quantityAggregateSchema>;
 export const calculationSchema = z.object({
-  schemaVersion: z.literal(RESULT_SCHEMA_VERSION), engineVersion: z.literal(ENGINE_VERSION),
-  policyVersion: z.literal('rectangular-flat-v1'),
+  schemaVersion: z.enum([RESULT_SCHEMA_VERSION, RESULT_SCHEMA_VERSION_V2]), engineVersion: z.enum([ENGINE_VERSION, ENGINE_VERSION_V2]),
+  policyVersion: z.enum(['rectangular-flat-v1', 'rectangular-flat-v2']),
   source: z.object({
     documentId: z.union([id, z.number().int().positive().safe()]).nullable(),
     revisionId: id.nullable(), revisionState: z.enum(['unsaved', 'identified']),
@@ -167,6 +193,13 @@ export const calculationSchema = z.object({
   status: z.enum(['complete', 'provisional', 'blocked', 'empty']),
   records: z.array(quantityRecordSchema), outputs: z.array(quantityAggregateSchema),
 }).strict().superRefine((calculation, ctx) => {
+  const v2 = calculation.policyVersion === 'rectangular-flat-v2';
+  if (calculation.schemaVersion !== (v2 ? RESULT_SCHEMA_VERSION_V2 : RESULT_SCHEMA_VERSION)
+      || calculation.engineVersion !== (v2 ? ENGINE_VERSION_V2 : ENGINE_VERSION)
+      || calculation.request.policy.version !== calculation.policyVersion
+      || calculation.records.some(record => Boolean(record.readiness.applicability) !== v2)) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['schemaVersion'], message: 'Result, engine, policy and applicability versions must agree' });
+  }
   if ((calculation.source.revisionId === null) !== (calculation.source.revisionState === 'unsaved')) {
     ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['source'], message: 'Null revisions are explicitly unsaved' });
   }

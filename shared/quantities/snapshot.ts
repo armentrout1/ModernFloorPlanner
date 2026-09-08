@@ -12,10 +12,16 @@ import type { ContractError } from './policy';
 const hash = z.string().regex(/^[0-9a-f]{64}$/);
 export const fingerprintsSchema = z.object({
   algorithm: z.literal('SHA-256'), serialization: z.literal('mfp-json-v1'),
-  geometryScope: z.literal('physical-geometry-v1'), contentScope: z.literal('calculation-content-v1'),
+  geometryScope: z.enum(['physical-geometry-v1', 'physical-geometry-v2']), contentScope: z.enum(['calculation-content-v1', 'calculation-content-v2']),
   geometry: hash, content: hash,
 }).strict();
-export const evaluationSchema = z.object({ calculation: calculationSchema, fingerprints: fingerprintsSchema }).strict();
+export const evaluationSchema = z.object({ calculation: calculationSchema, fingerprints: fingerprintsSchema }).strict().superRefine((value, context) => {
+  const v2 = value.calculation.policyVersion === 'rectangular-flat-v2';
+  if (value.fingerprints.geometryScope !== (v2 ? 'physical-geometry-v2' : 'physical-geometry-v1')
+      || value.fingerprints.contentScope !== (v2 ? 'calculation-content-v2' : 'calculation-content-v1')) {
+    context.addIssue({ code: z.ZodIssueCode.custom, path: ['fingerprints'], message: 'Fingerprint scopes must match calculation semantics' });
+  }
+});
 export type Evaluation = z.infer<typeof evaluationSchema>;
 const target = z.discriminatedUnion('entity', [
   z.object({ entity: z.literal('room'), id: z.string().min(1), field: z.enum(['length', 'width', 'ceilingHeight']) }).strict(),
@@ -49,13 +55,20 @@ export const snapshotMetadataSchema = z.object({
   createdAt: z.string().datetime({ offset: true }), kind: z.enum(['evaluation', 'confirmed']),
 }).strict();
 export const quantitySnapshotSchema = z.object({
-  snapshotSchemaVersion: z.literal('quantity-snapshot-v1'),
+  snapshotSchemaVersion: z.enum(['quantity-snapshot-v1', 'quantity-snapshot-v2']),
   instance: snapshotMetadataSchema,
   sourceDocument: physicalDocumentSchema,
   measurementEvents: z.array(measurementEventCaptureSchema),
   evaluation: evaluationSchema,
   captureFingerprint: hash,
 }).strict().superRefine((snapshot, context) => {
+  const v2 = snapshot.evaluation.calculation.policyVersion === 'rectangular-flat-v2';
+  if (snapshot.snapshotSchemaVersion !== (v2 ? 'quantity-snapshot-v2' : 'quantity-snapshot-v1')
+      || (v2 ? snapshot.sourceDocument.quantityPolicyVersion !== 'rectangular-flat-v2' || !snapshot.sourceDocument.calculationContract
+        : Boolean(snapshot.sourceDocument.calculationContract)
+          || (snapshot.sourceDocument.quantityPolicyVersion !== null && snapshot.sourceDocument.quantityPolicyVersion !== 'rectangular-flat-v1'))) {
+    context.addIssue({ code: z.ZodIssueCode.custom, path: ['snapshotSchemaVersion'], message: 'Snapshot, source contract and calculation versions must agree' });
+  }
   if (snapshot.instance.kind === 'confirmed' && snapshot.evaluation.calculation.status !== 'complete') {
     context.addIssue({ code: z.ZodIssueCode.custom, path: ['instance', 'kind'], message: 'Confirmed snapshot requires nonempty complete selected outputs' });
   }
@@ -78,6 +91,12 @@ const numericMeasurement = (measurement: Dimension) => measurement.state === 'kn
 function geometryBasis(document: PhysicalDocument) {
   return {
     schemaVersion: document.schemaVersion,
+    ...(document.calculationContract ? { applicability: {
+      version: document.calculationContract.version,
+      rooms: Object.fromEntries(Object.entries(document.calculationContract.rooms).map(([id, profile]) => [id, {
+        ceiling: profile.ceiling.value, walls: profile.walls.value, crownPath: profile.crownPath.value,
+      }])),
+    } } : {}),
     rooms: document.rooms.map(room => ({
       id: room.id, length: numericMeasurement(room.length), width: numericMeasurement(room.width),
       ceilingHeight: numericMeasurement(room.ceilingHeight), wallFaces: room.wallFaces,
@@ -91,6 +110,7 @@ function geometryBasis(document: PhysicalDocument) {
 }
 function evidenceBasis(document: PhysicalDocument) {
   return {
+    ...(document.calculationContract ? { applicability: document.calculationContract } : {}),
     rooms: document.rooms.map(room => ({ id: room.id, length: room.length, width: room.width, ceilingHeight: room.ceilingHeight })),
     openings: document.openings.map(opening => ({ id: opening.id, width: opening.width, height: opening.height, sillHeight: opening.sillHeight })),
   };
@@ -100,13 +120,16 @@ async function evaluateOwned(document: PhysicalDocument, requested: unknown): Pr
   const result = calculateQuantities(document, requested);
   if (!result.ok) return result;
   const geometry = geometryBasis(document), calculation = result.calculation;
+  const v2 = calculation.policyVersion === 'rectangular-flat-v2';
+  const geometryScope = v2 ? 'physical-geometry-v2' as const : 'physical-geometry-v1' as const;
+  const contentScope = v2 ? 'calculation-content-v2' as const : 'calculation-content-v1' as const;
   const [geometryHash, contentHash] = await Promise.all([
-    sha256Canonical({ scope: 'physical-geometry-v1', geometry }),
-    sha256Canonical({ scope: 'calculation-content-v1', geometry, evidence: evidenceBasis(document), calculation }),
+    sha256Canonical({ scope: geometryScope, geometry }),
+    sha256Canonical({ scope: contentScope, geometry, evidence: evidenceBasis(document), calculation }),
   ]);
   const evaluation = {
     calculation, fingerprints: { algorithm: 'SHA-256' as const, serialization: 'mfp-json-v1' as const,
-      geometryScope: 'physical-geometry-v1' as const, contentScope: 'calculation-content-v1' as const,
+      geometryScope, contentScope,
       geometry: geometryHash, content: contentHash },
   };
   const parsed = evaluationSchema.safeParse(evaluation);
@@ -147,7 +170,8 @@ export async function createQuantitySnapshot(documentInput: unknown, requestInpu
       return failure('CONFIRMED_SNAPSHOT_UNAVAILABLE', 'Every selected output must be complete with required measurements confirmed; empty is not confirmed');
     }
     const capture = {
-      snapshotSchemaVersion: 'quantity-snapshot-v1' as const, instance: instance.data,
+      snapshotSchemaVersion: result.evaluation.calculation.policyVersion === 'rectangular-flat-v2'
+        ? 'quantity-snapshot-v2' as const : 'quantity-snapshot-v1' as const, instance: instance.data,
       sourceDocument: document as PhysicalDocument,
       measurementEvents: events as z.infer<typeof measurementEventCaptureSchema>[],
       evaluation: result.evaluation,

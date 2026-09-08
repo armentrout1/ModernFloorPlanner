@@ -3,6 +3,8 @@ import type { PhysicalDocument } from '../domain/document';
 import { wallIndex, type QuantityOutput } from '../domain/geometryValidation';
 
 export const QUANTITY_POLICY_VERSION = 'rectangular-flat-v1' as const;
+export const QUANTITY_POLICY_VERSION_V2 = 'rectangular-flat-v2' as const;
+export type QuantityPolicyVersion = typeof QUANTITY_POLICY_VERSION | typeof QUANTITY_POLICY_VERSION_V2;
 const id = z.string().refine(value => value.trim().length > 0 && !/[\u0000-\u001f\u007f]/.test(value), 'Invalid ID');
 const ids = z.array(id);
 const face = z.object({ wallFaceId: id, openingId: id }).strict();
@@ -22,7 +24,7 @@ const selection = z.discriminatedUnion('output', [
 ]);
 export const quantityRequestSchema = z.object({
   policy: z.object({
-    version: z.literal(QUANTITY_POLICY_VERSION),
+    version: z.enum([QUANTITY_POLICY_VERSION, QUANTITY_POLICY_VERSION_V2]),
     openingMeasureBasis: z.enum(['nominal', 'clear', 'finished', 'rough']),
     crownFullHeightGaps: z.array(face),
   }).strict(),
@@ -52,11 +54,22 @@ export const QUANTITY_POLICY_RULES = Object.freeze({
 
 export function validateQuantityRequest(doc: PhysicalDocument, input: unknown): RequestResult {
   const suppliedVersion = (input as { policy?: { version?: unknown } } | null)?.policy?.version;
-  if (suppliedVersion !== QUANTITY_POLICY_VERSION) return { ok: false, errors: [{
+  if (suppliedVersion !== QUANTITY_POLICY_VERSION && suppliedVersion !== QUANTITY_POLICY_VERSION_V2) return { ok: false, errors: [{
     code: 'UNSUPPORTED_POLICY_VERSION', path: ['policy', 'version'], message: 'Explicit supported policy version is required',
   }] };
-  if (doc.quantityPolicyVersion !== null && doc.quantityPolicyVersion !== QUANTITY_POLICY_VERSION) return { ok: false, errors: [{
+  if (suppliedVersion === QUANTITY_POLICY_VERSION_V2 && doc.quantityPolicyVersion !== QUANTITY_POLICY_VERSION_V2
+      && doc.calculationContract === undefined) return { ok: false, errors: [{
+    code: 'UNSUPPORTED_POLICY_VERSION', path: ['policy', 'version'], message: 'This historical document has not explicitly adopted the v2 applicability policy',
+  }] };
+  if (doc.quantityPolicyVersion !== null && doc.quantityPolicyVersion !== suppliedVersion) return { ok: false, errors: [{
     code: 'DOCUMENT_POLICY_VERSION_MISMATCH', path: ['quantityPolicyVersion'], message: 'Do not overwrite document policy history with another version',
+  }] };
+  if (suppliedVersion === QUANTITY_POLICY_VERSION && doc.calculationContract !== undefined) return { ok: false, errors: [{
+    code: 'APPLICABILITY_POLICY_MISMATCH', path: ['calculationContract'], message: 'Versioned room applicability requires rectangular-flat-v2; never evaluate it with historical v1 semantics',
+  }] };
+  if (suppliedVersion === QUANTITY_POLICY_VERSION_V2
+      && (doc.quantityPolicyVersion !== QUANTITY_POLICY_VERSION_V2 || !doc.calculationContract)) return { ok: false, errors: [{
+    code: 'APPLICABILITY_CONTRACT_REQUIRED', path: ['calculationContract'], message: 'Explicit v2 policy and room-applicability-v1 contract are required; adopt or upgrade the source deliberately',
   }] };
   const parsed = quantityRequestSchema.safeParse(input);
   if (!parsed.success) return { ok: false, errors: parsed.error.issues.map(issue => ({

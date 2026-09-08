@@ -1,12 +1,20 @@
 import type { PhysicalDocument, PhysicalOpening } from '../domain/document';
+import type { AppDeclaration, ApplicabilityField } from '../domain/applicability';
 import {
   validateGeometry, wallIndex, roomRef, openingRef, measurementAt, measurementPath,
   measurementFinding, checkFinding, atFloor, exceedsTolerance,
   type MeasurementRef, type GeometryCheck, type GeometryReport, type Finding, type Location, type QuantityOutput,
 } from '../domain/geometryValidation';
-import { validateQuantityRequest, QUANTITY_POLICY_VERSION, type ContractError } from './policy';
+import { validateQuantityRequest, QUANTITY_POLICY_VERSION_V2, type QuantityPolicyVersion, type ContractError } from './policy';
 
+export interface ApplicabilityReadiness {
+  status: 'supported' | 'provisional' | 'unknown' | 'unsupported';
+  dependencies: { roomId: string; field: ApplicabilityField; declaration: AppDeclaration }[];
+  findings: Finding[];
+}
 export interface OutputReadiness extends Location {
+  /** Present only in v2 results; omitted from historical v1 content/hashes. */
+  applicability?: ApplicabilityReadiness;
   output: QuantityOutput;
   wasteFraction: number | null;
   openingBases: { openingId: string; measureBasis: PhysicalOpening['measureBasis'] }[];
@@ -15,7 +23,7 @@ export interface OutputReadiness extends Location {
   confirmation: { status: 'confirmed' | 'provisional' | 'unresolved' | 'not-required'; dependencies: MeasurementRef[]; findings: Finding[] };
 }
 export type ReadinessResult = {
-  ok: true; policyVersion: typeof QUANTITY_POLICY_VERSION; selectionState: 'empty' | 'selected';
+  ok: true; policyVersion: QuantityPolicyVersion; selectionState: 'empty' | 'selected';
   outputs: OutputReadiness[]; validation: GeometryReport;
 } | { ok: false; errors: ContractError[]; validation: GeometryReport };
 const uniqueRefs = (refs: MeasurementRef[]) => Array.from(new Map(refs.map(ref => [JSON.stringify(ref), ref])).values());
@@ -59,13 +67,53 @@ export function evaluateQuantityReadiness(input: unknown, requested: unknown): R
       const measurement = measurementAt(doc, ref);
       return measurement.state !== 'known' || measurement.provenance.confirmation.status === 'needs-review';
     }) || basisFindings.length > 0;
+    let applicability: ApplicabilityReadiness | undefined;
+    if (request.policy.version === QUANTITY_POLICY_VERSION_V2) {
+      const refs: { roomId: string; field: ApplicabilityField }[] = [];
+      const add = (roomId: string, field: ApplicabilityField) => {
+        if (!refs.some(ref => ref.roomId === roomId && ref.field === field)) refs.push({ roomId, field });
+      };
+      for (const roomId of location.roomIds) {
+        if (output === 'ceiling-area') add(roomId, 'ceiling');
+        if (output === 'gross-wall-area' || output === 'net-wall-area') add(roomId, 'walls');
+        if (output === 'crown') add(roomId, 'crownPath');
+      }
+      // Vertical attachment fit and full-height crown gaps need the supported
+      // uniform wall-height model, even when ceiling finish itself is unsupported.
+      if (output === 'crown' || output === 'door-casing' || output === 'window-casing') {
+        for (const check of checks) for (const ref of check.dependencies) {
+          if (ref.entity === 'room' && ref.field === 'ceilingHeight') add(ref.id, 'walls');
+        }
+      }
+      const appDependencies = refs.map(ref => {
+        const value = doc.calculationContract!.rooms[ref.roomId][ref.field];
+        return { ...ref, declaration: { ...value, confirmation: { ...value.confirmation } } };
+      });
+      const appFindings: Finding[] = appDependencies.flatMap(ref => {
+        const { declaration } = ref;
+        if (declaration.value !== 'unknown' && declaration.value !== 'unsupported' && declaration.confirmation.status === 'confirmed') return [];
+        const unknown = declaration.value === 'unknown', unsupported = declaration.value === 'unsupported';
+        return [{ ...location, roomIds: [ref.roomId],
+          code: unsupported ? 'APPLICABILITY_UNSUPPORTED' : unknown ? 'APPLICABILITY_UNKNOWN' : 'APPLICABILITY_UNCONFIRMED',
+          category: unknown || unsupported ? 'missing-or-unresolved' as const : 'unconfirmed-measurement' as const,
+          paths: [['calculationContract', 'rooms', ref.roomId, ref.field]],
+          message: ref.field + ': ' + (declaration.detail ?? 'The proposed finish model has not been explicitly confirmed'),
+        }];
+      });
+      applicability = { dependencies: appDependencies, findings: appFindings,
+        status: appDependencies.some(ref => ref.declaration.value === 'unsupported') ? 'unsupported'
+          : appDependencies.some(ref => ref.declaration.value === 'unknown') ? 'unknown'
+          : appFindings.length ? 'provisional' : 'supported' };
+    }
+    const appBlocked = applicability?.status === 'unknown' || applicability?.status === 'unsupported';
     outputs.push({ ...location, output, wasteFraction,
+      ...(applicability ? { applicability } : {}),
       openingBases: basisOpenings.map(opening => ({ openingId: opening.id, measureBasis: opening.measureBasis })),
       numericBasis: { status: missing.length || basisFindings.length ? 'insufficient' : 'sufficient',
         dependencies: numeric, findings: [...missing, ...basisFindings] },
       geometry: { status: geometryStatus, checks, findings: [...geometricFindings, ...missing] },
-      confirmation: { status: unresolved ? 'unresolved' : confirmationFindings.length ? 'provisional'
-        : dependencies.length ? 'confirmed' : 'not-required', dependencies, findings: [...confirmationFindings, ...basisFindings] },
+      confirmation: { status: unresolved || appBlocked ? 'unresolved' : confirmationFindings.length || applicability?.status === 'provisional' ? 'provisional'
+        : dependencies.length ? 'confirmed' : 'not-required', dependencies, findings: [...confirmationFindings, ...basisFindings, ...(applicability?.findings ?? [])] },
     });
   }
   const loc = (output: QuantityOutput, roomIds: string[], wallFaceIds: string[], openingIds: string[]): Location =>
@@ -163,6 +211,6 @@ export function evaluateQuantityReadiness(input: unknown, requested: unknown): R
       }
     }
   }
-  return { ok: true, policyVersion: QUANTITY_POLICY_VERSION,
+  return { ok: true, policyVersion: request.policy.version,
     selectionState: outputs.length ? 'selected' : 'empty', outputs, validation };
 }

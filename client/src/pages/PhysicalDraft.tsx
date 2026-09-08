@@ -1,0 +1,106 @@
+import { useMemo, useState } from 'react';
+import { Link } from 'wouter';
+import { Button } from '@/components/ui/button';
+import { PhysicalDraftProvider, usePhysicalDraft } from '@/features/physical-draft/provider';
+import { RoomMeasurements } from '@/features/physical-draft/RoomMeasurements';
+import { PhysicalDrawing } from '@/features/physical-draft/PhysicalDrawing';
+import { PhysicalQuantities } from '@/features/physical-draft/PhysicalQuantities';
+import { createDraft, insertDraft, selectDraft, selectedDraft, addRoom, switchUnit, previewDocument,
+  type PhysicalDraft as Draft } from '@/features/physical-draft/state';
+
+function DraftWorkspace() {
+  const { registry, cache, message, error, rawRecovery, store } = usePhysicalDraft();
+  const draft = selectedDraft(registry);
+  const [view, setView] = useState<'rooms' | 'drawing'>('rooms');
+  const [selected, setSelected] = useState<{ draftId: string; roomId: string } | null>(null);
+  const selectedRoomId = draft ? draft.document.rooms.find(room => selected?.draftId === draft.id && room.id === selected.roomId)?.id
+    ?? draft.document.rooms[0]?.id ?? null : null;
+  const preview = useMemo(() => draft ? previewDocument(draft) : null, [draft]);
+  const blocked = ['uninitialized', 'corrupt', 'unsupported'].includes(cache);
+  function update(change: (current: Draft) => Draft) {
+    if (draft) store.updateDraft(draft.id, draft.localEditRevision, change);
+  }
+  function create() {
+    store.dispatch(current => insertDraft(current, createDraft(crypto.randomUUID(), 'Physical draft ' + (current.drafts.length + 1))));
+  }
+  function add() {
+    if (!draft) return;
+    const id = crypto.randomUUID();
+    if (store.updateDraft(draft.id, draft.localEditRevision, current => addRoom(current, id))) setSelected({ draftId: draft.id, roomId: id });
+  }
+  function downloadRecovery() {
+    if (!rawRecovery) return;
+    const url = URL.createObjectURL(new Blob([rawRecovery], { type: 'application/json' }));
+    const anchor = document.createElement('a'); anchor.href = url; anchor.download = 'physical-draft-recovery-original.json'; anchor.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+  return <main data-testid="physical-view" className="min-h-screen bg-slate-50 text-slate-900">
+    <header className="border-b bg-white px-5 py-4">
+      <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3">
+        <div><p className="font-semibold text-primary">Modern Floor Planner</p><h1 className="mt-1 text-xl font-semibold">Unified physical draft</h1></div>
+        <nav aria-label="Other workflows" className="flex flex-wrap gap-2">
+          <Button asChild size="sm" variant="outline"><Link href="/">Standalone sketch</Link></Button>
+          <Button asChild size="sm" variant="outline"><Link href="/quick-room">Standalone Quick Rooms</Link></Button>
+        </nav>
+      </div>
+    </header>
+    <div className="mx-auto max-w-7xl space-y-4 p-4 sm:p-6">
+      <div className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm leading-6 text-blue-950">
+        One selected physical document powers both views below. Original standalone drafts remain separate.
+        <p className="text-xs">Temporary recovery in this browser tab only. No account saving, cross-device recovery or database persistence.</p>
+      </div>
+      {message || error ? <div role={error || blocked ? 'alert' : 'status'} className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm">
+        {error || message}{rawRecovery ? <Button className="ml-3" size="sm" variant="outline" onClick={downloadRecovery}>Download original recovery data</Button> : null}
+      </div> : null}
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        {registry.drafts.length ? <label className="grid min-w-60 gap-1 text-sm font-medium">Selected physical draft
+          <select className="h-10 rounded-md border bg-white px-3" value={registry.selectedDraftId ?? ''} disabled={blocked}
+            onChange={event => store.dispatch(current => selectDraft(current, event.target.value))}>
+            {registry.drafts.map(item => <option key={item.id} value={item.id}>{item.document.name || 'Physical draft'} · {item.id.slice(0, 8)}</option>)}
+          </select></label> : <p className="max-w-2xl text-sm text-slate-600">Start empty, or open a preserved standalone workflow and choose “Open a physical copy” to explicitly adopt its current draft.</p>}
+        <Button onClick={create} disabled={blocked}>New physical draft</Button>
+      </div>
+      {draft && preview ? <>
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b pb-3">
+          <div><h2 className="text-lg font-semibold">{draft.document.name || 'Physical draft'}</h2>
+            <p className="text-xs text-slate-500">Draft <span data-testid="physical-draft-id">{draft.id}</span> · local edit {draft.localEditRevision} · source: {draft.source.kind}</p></div>
+          <div className="flex gap-1" role="group" aria-label="Display units">
+            <Button size="sm" disabled={blocked} variant={draft.displayUnit === 'ft' ? 'default' : 'outline'} aria-pressed={draft.displayUnit === 'ft'} onClick={() => update(current => switchUnit(current, 'ft'))}>Feet / inches</Button>
+            <Button size="sm" disabled={blocked} variant={draft.displayUnit === 'm' ? 'default' : 'outline'} aria-pressed={draft.displayUnit === 'm'} onClick={() => update(current => switchUnit(current, 'm'))}>Meters</Button>
+          </div>
+        </div>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex gap-1" role="tablist" aria-label="Physical draft views">
+            <Button role="tab" id="physical-rooms-tab" aria-controls="physical-panel" aria-selected={view === 'rooms'} variant={view === 'rooms' ? 'default' : 'outline'} onClick={() => setView('rooms')}>Quick Rooms</Button>
+            <Button role="tab" id="physical-drawing-tab" aria-controls="physical-panel" aria-selected={view === 'drawing'} variant={view === 'drawing' ? 'default' : 'outline'} onClick={() => setView('drawing')}>Drawing</Button>
+          </div>
+          <Button variant="outline" disabled={blocked} onClick={add}>Add room</Button>
+        </div>
+        <div className="flex flex-wrap gap-2" aria-label="Rooms in selected draft">
+          {draft.document.rooms.map(room => <Button size="sm" key={room.id} variant={selectedRoomId === room.id ? 'secondary' : 'outline'}
+            aria-pressed={selectedRoomId === room.id} onClick={() => setSelected({ draftId: draft.id, roomId: room.id })}>{room.name || 'Unnamed room'}</Button>)}
+        </div>
+        <section role="tabpanel" id="physical-panel" aria-labelledby={view === 'rooms' ? 'physical-rooms-tab' : 'physical-drawing-tab'}>
+          {selectedRoomId ? <div className={view === 'drawing' ? 'grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_350px]' : 'grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(340px,1fr)]'}>
+            <div className="space-y-4">
+              {view === 'drawing' ? <PhysicalDrawing document={preview} selectedId={selectedRoomId} onSelect={id => setSelected({ draftId: draft.id, roomId: id })} /> :
+                <fieldset disabled={blocked} className="rounded-lg border bg-white p-5"><legend className="sr-only">Quick room measurements</legend><RoomMeasurements draft={draft} roomId={selectedRoomId} update={update} /></fieldset>}
+              <PhysicalQuantities document={preview} roomId={selectedRoomId} unit={draft.displayUnit} />
+            </div>
+            {view === 'drawing' ? <aside className="rounded-lg border bg-white p-5" aria-label="Drawing inspector">
+              <h2 className="mb-4 font-semibold">Room inspector</h2><fieldset disabled={blocked}><legend className="sr-only">Inspector measurements</legend><RoomMeasurements draft={draft} roomId={selectedRoomId} update={update} /></fieldset>
+            </aside> : <div className="space-y-4"><PhysicalDrawing document={preview} selectedId={selectedRoomId} onSelect={id => setSelected({ draftId: draft.id, roomId: id })} />
+              <p className="text-sm leading-6 text-slate-600">The drawing is derived from these same physical measurements. Switch to Drawing to use the room inspector.</p></div>}
+          </div> : <p className="rounded-lg border border-dashed p-8 text-center text-slate-600">Add a room, then enter its measured dimensions. Ceiling height begins unknown.</p>}
+        </section>
+        {draft.source.review.length ? <section className="rounded-lg border bg-white p-4 text-sm" aria-label="Source review">
+          <h2 className="font-semibold">Copied source review</h2><ul className="mt-2 list-disc space-y-1 pl-5 text-slate-600">{draft.source.review.map((note, index) => <li key={index}>{note}</li>)}</ul>
+        </section> : null}
+      </> : null}
+    </div>
+  </main>;
+}
+
+export default function PhysicalDraftPage() {
+  return <PhysicalDraftProvider><DraftWorkspace /></PhysicalDraftProvider>;
+}

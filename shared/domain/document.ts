@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { dimensionSchema, elevationSchema } from './measurements';
 import { elevationMmSchema, mmSchema } from './units';
+import { calculationContractSchema } from './applicability';
 
 export const wallSideSchema = z.enum(['top', 'right', 'bottom', 'left']);
 export type WallSide = z.infer<typeof wallSideSchema>;
@@ -51,11 +52,37 @@ export const physicalDocumentSchema = z.object({
   revisionId: idSchema.nullable(), quantityPolicyVersion: idSchema.nullable(),
   rooms: z.array(physicalRoomSchema), openings: z.array(physicalOpeningSchema),
   review: z.array(reviewItemSchema), metadata: metadataSchema,
+  calculationContract: calculationContractSchema.optional(),
+  editorContract: z.object({ version: z.literal('sketch-editor-v1'),
+    groups: z.array(z.object({ id: idSchema, roomIds: z.array(idSchema).min(1) }).strict()),
+  }).strict().optional(),
   compatibility: z.object({
-    adapterVersion: z.literal('legacy-pixels-v1'), original: metadataSchema,
+    adapterVersion: z.enum(['legacy-pixels-v1', 'legacy-pixels-v2']), original: metadataSchema,
     before: countsSchema, after: countsSchema,
   }).strict().optional(),
 }).passthrough().superRefine((document, ctx) => {
+  const roomIds = new Set(document.rooms.map(room => room.id));
+  if (document.calculationContract) {
+    const profiles = Object.keys(document.calculationContract.rooms);
+    if (profiles.length !== roomIds.size || profiles.some(id => !roomIds.has(id))
+        || Array.from(roomIds).some(id => !Object.hasOwn(document.calculationContract!.rooms, id))) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['calculationContract', 'rooms'],
+        message: 'Exactly one applicability profile is required for each existing room' });
+    }
+  }
+  if (document.editorContract) {
+    const groups = new Set<string>(), members = new Set<string>();
+    document.editorContract.groups.forEach((group, index) => {
+      if (groups.has(group.id)) ctx.addIssue({ code: z.ZodIssueCode.custom,
+        path: ['editorContract', 'groups', index, 'id'], message: 'Group IDs must be distinct' });
+      groups.add(group.id);
+      group.roomIds.forEach((roomId, member) => {
+        if (!roomIds.has(roomId) || members.has(roomId)) ctx.addIssue({ code: z.ZodIssueCode.custom,
+          path: ['editorContract', 'groups', index, 'roomIds', member], message: 'Each grouped room must exist and have one membership' });
+        members.add(roomId);
+      });
+    });
+  }
   const ids = new Set<string>();
   const walls = new Set<string>();
   const unique = (id: string, path: (string | number)[]) => {

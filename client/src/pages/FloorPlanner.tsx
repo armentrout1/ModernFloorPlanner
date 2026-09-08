@@ -16,6 +16,7 @@ import SelectionPanel from '@/components/SelectionPanel';
 import { deleteSelection, restoreDeletion, type DeletedItem } from '@/utils/editorCommands';
 import { shouldIgnoreEditorShortcut } from '@/utils/keyboard';
 import AppHeader from '@/components/AppHeader';
+import { openLegacyPhysicalCopy } from '@/features/physical-draft/adoption';
 import Sidebar from '@/components/Sidebar';
 import CanvasContainer from '@/components/CanvasContainer';
 import PropertyPanel from '@/components/PropertyPanel';
@@ -387,6 +388,10 @@ const FloorPlanner: React.FC<{ active?: boolean }> = ({ active = true }) => {
   return (
     <div className="bg-slate-50 text-slate-800 h-screen flex flex-col">
       <AppHeader 
+        onOpenPhysicalCopy={() => openLegacyPhysicalCopy({
+          schemaVersion: 1, ...(currentSketchId ? { id: currentSketchId } : {}),
+          name: currentSketchName || "Sketch physical copy", rooms,
+        })}
         onUndoDelete={handleUndoDelete}
         canUndoDelete={deletions.length > 0}
         onNewSketch={handleNewSketch} 
