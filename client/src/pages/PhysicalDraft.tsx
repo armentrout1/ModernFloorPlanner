@@ -122,7 +122,7 @@ function DraftWorkspace() {
           <div className="flex flex-wrap gap-2">{draft.openingDeleteUndo ? <Button variant="outline" disabled={blocked} onClick={() => update(current => undoOpeningDelete(current, new Date().toISOString()))}>Undo opening delete</Button> : null}<Button variant="outline" disabled={blocked} onClick={add}>Add room</Button></div>
         </div>
         <div className="flex flex-wrap gap-2" aria-label="Rooms in selected draft">
-          {draft.document.rooms.map(room => <Button size="sm" key={room.id} variant={selectedRoomId === room.id ? 'secondary' : 'outline'}
+          {draft.document.rooms.map(room => <Button size="sm" className="h-auto max-w-full whitespace-normal break-words text-left" key={room.id} variant={selectedRoomId === room.id ? 'secondary' : 'outline'}
             aria-pressed={selectedRoomId === room.id} onClick={() => selectRoom(room.id)}>{room.name || 'Unnamed room'}</Button>)}
         </div>
         <section role="tabpanel" id="physical-panel" aria-labelledby={view === 'rooms' ? 'physical-rooms-tab' : 'physical-drawing-tab'}>

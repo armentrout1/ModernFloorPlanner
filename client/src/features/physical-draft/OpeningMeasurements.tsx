@@ -76,7 +76,13 @@ export function OpeningMeasurements({ draft, openingId, update, onDeleted, comma
       error={input.dirty ? commands.openingFieldError(input, field) : null}
       hint={input.dirty ? 'Unapplied edit' + (input.unit !== draft.displayUnit ? ' · original unit context' : '') : value && value.state !== 'known' ? 'Not measured / needs review' : undefined}
       onChange={text => update(current => commands.editOpeningField(current, openingId, field, text))}
-      onCommit={() => update(current => commands.commitOpeningField(current, openingId, field, new Date().toISOString()))}
+      onCommit={() => update(current => {
+        // Keep unfinished text and its inline error without moving navigation
+        // controls through a second, page-level error during input blur.
+        const pending = commands.getOpeningFields(current, openingId)[field];
+        return commands.openingFieldError(pending, field) ? current :
+          commands.commitOpeningField(current, openingId, field, new Date().toISOString());
+      })}
       onPreset={inches => update(current => commands.applyOpeningPreset(current, openingId, field, inches + ' in', new Date().toISOString()))} />;
   }
   return <div className="min-w-0 space-y-4" data-testid="physical-opening-inspector" data-opening-id={openingId}>

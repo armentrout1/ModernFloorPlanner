@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { measurementAt, type MeasurementRef } from '@shared/domain/geometryValidation';
@@ -31,18 +31,20 @@ export function ReviewPanel({ draft, update, onFocus, commandError }: { draft: P
       const room = draft.document.rooms.find(room => room.wallFaces.some(wall => opening.attachments.some(face => face.wallFaceId === wall.id)));
       return { key: 'opening:' + opening.id, entity: 'opening' as const, id: opening.id, label: kind + ' ' + index + ' · ' + (room?.name || 'Room') };
     })];
+  const reviewTrigger = useRef<HTMLButtonElement | null>(null);
+  const reviewTarget = useRef<HTMLSelectElement | null>(null);
   const [selected, setSelected] = useState(''), [session, setSession] = useState<Session | null>(null);
   const [candidate, setCandidate] = useState(''), [message, setMessage] = useState('');
   const target = options.find(option => option.key === selected) ?? options[0];
   const stale = Boolean(session && (session.draftId !== draft.id || session.revision !== draft.localEditRevision));
-  function openMeasurement(ref: MeasurementRef, label: string) {
-    try { const token = captureMeasurementReview(draft, ref); setCandidate(''); setMessage('');
+  function openMeasurement(ref: MeasurementRef, label: string, trigger: HTMLButtonElement) {
+    try { const token = captureMeasurementReview(draft, ref); reviewTrigger.current = trigger; setCandidate(''); setMessage('');
       setSession({ kind: 'measurement', token, target: ref, before: structuredClone(measurementAt(draft.document, ref)), label,
         draftId: draft.id, revision: draft.localEditRevision, unit: draft.displayUnit });
     } catch (error) { setMessage(error instanceof Error ? error.message : 'Finish this measurement before reviewing it.'); }
   }
-  function openModel(roomId: string, field: ApplicabilityField, label: string) {
-    try { const token = captureApplicabilityReview(draft, roomId, field); setMessage('');
+  function openModel(roomId: string, field: ApplicabilityField, label: string, trigger: HTMLButtonElement) {
+    try { const token = captureApplicabilityReview(draft, roomId, field); reviewTrigger.current = trigger; setMessage('');
       setSession({ kind: 'model', token, roomId, field, before: structuredClone(draft.document.calculationContract!.rooms[roomId][field]), label,
         draftId: draft.id, revision: draft.localEditRevision, unit: draft.displayUnit });
     } catch (error) { setMessage(error instanceof Error ? error.message : 'Review this room model again.'); }
@@ -67,7 +69,7 @@ export function ReviewPanel({ draft, update, onFocus, commandError }: { draft: P
   return <section aria-label="Input review" data-testid="takeoff-review" className="space-y-4 rounded-lg border bg-slate-50 p-4">
     <div><h3 className="font-semibold">Review committed inputs</h3><p className="mt-1 text-xs leading-5 text-slate-600">Draft: {draft.document.name || 'Physical draft'} · {draft.id}. Confirm only values and room models you have reviewed. This records input review, not professional verification or code compliance.</p></div>
     {target ? <><div className="flex flex-wrap items-end gap-3"><label className="grid min-w-0 basis-full gap-1 text-sm font-medium sm:flex-1">Review target
-      <select className="h-10 w-full rounded-md border bg-white px-2" value={target.key} onChange={event => setSelected(event.target.value)}>{options.map(option => <option key={option.key} value={option.key}>{option.label}</option>)}</select></label>
+      <select ref={reviewTarget} className="h-10 w-full rounded-md border bg-white px-2" value={target.key} onChange={event => setSelected(event.target.value)}>{options.map(option => <option key={option.key} value={option.key}>{option.label}</option>)}</select></label>
       <Button size="sm" variant="outline" onClick={editTarget}>Edit in inspector</Button></div>
       <div className="grid gap-3 md:grid-cols-3">{(target.entity === 'room' ? roomFields : openingFields).map(item => {
         const ref = { entity: target.entity, id: target.id, field: item.field } as MeasurementRef;
@@ -77,7 +79,7 @@ export function ReviewPanel({ draft, update, onFocus, commandError }: { draft: P
           <h4 className="text-sm font-semibold">{item.label}</h4><p className="mt-2 text-sm tabular-nums">{valueText(measurement, draft.displayUnit)}</p>
           <p className="mt-1 break-words text-xs leading-5 text-slate-600">{measurement.state === 'known' ? 'Source: ' + measurement.provenance.source + ' · entered ' + (measurement.provenance.input ?? 'original input unavailable') + ' (' + measurement.provenance.unit + ')' : measurement.reason}</p>
           <p className="mt-1 text-xs text-amber-900">{raw.dirty ? 'Finish editing before review. Current text: ' + raw.text : measurement.state === 'known' ? measurement.provenance.confirmation.status === 'confirmed' ? 'Confirmed input' : 'Unconfirmed input' : 'Unresolved input'}</p>
-          <Button className="mt-3" size="sm" variant="outline" disabled={raw.dirty} onClick={() => openMeasurement(ref, target.label + ' · ' + item.label)}>Review {item.label}</Button>
+          <Button className="mt-3" size="sm" variant="outline" disabled={raw.dirty} onClick={event => openMeasurement(ref, target.label + ' · ' + item.label, event.currentTarget)}>Review {item.label}</Button>
         </article>;
       })}</div>
       {target.entity === 'room' ? <div className="grid gap-3 md:grid-cols-3">{models.map(item => {
@@ -85,12 +87,17 @@ export function ReviewPanel({ draft, update, onFocus, commandError }: { draft: P
         return <article key={item.field} className="rounded-md border bg-white p-3" data-testid={'review-model-' + target.id + '-' + item.field}>
           <h4 className="text-sm font-semibold">{item.label}</h4><p className="mt-2 text-sm">{declaration.value.replaceAll('-', ' ')}</p>
           <p className="mt-1 text-xs leading-5 text-slate-600">Source: {declaration.source} · {declaration.confirmation.status}{declaration.detail ? ' · ' + declaration.detail : ''}</p>
-          <Button className="mt-3" size="sm" variant="outline" onClick={() => openModel(target.id, item.field, target.label + ' · ' + item.label)}>Review {item.label}</Button>
+          <Button className="mt-3" size="sm" variant="outline" onClick={event => openModel(target.id, item.field, target.label + ' · ' + item.label, event.currentTarget)}>Review {item.label}</Button>
         </article>;
       })}</div> : null}
     </> : <p className="text-sm">Add a room before reviewing inputs.</p>}
     {message ? <p role="status" className="text-sm text-amber-900">{message}</p> : null}
-    <Dialog open={Boolean(session)} onOpenChange={open => { if (!open) setSession(null); }}><DialogContent className="max-h-[85vh] overflow-y-auto">
+    <Dialog open={Boolean(session)} onOpenChange={open => { if (!open) setSession(null); }}><DialogContent className="max-h-[85vh] overflow-y-auto" onCloseAutoFocus={event => {
+      event.preventDefault();
+      const trigger = reviewTrigger.current;
+      if (trigger?.isConnected && !trigger.disabled) trigger.focus();
+      else reviewTarget.current?.focus();
+    }}>
       <DialogHeader><DialogTitle>{session?.kind === 'model' ? 'Review room model' : 'Review measurement'}</DialogTitle>
         <DialogDescription>Confirm the displayed input only. Geometry, completeness and supported room models remain independent checks.</DialogDescription></DialogHeader>
       {session ? <div className="space-y-4">

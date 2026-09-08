@@ -56,6 +56,11 @@ export function TakeoffPanel({ draft, update, onFocus, review, showScope, onShow
   const selectedKeys = new Set(chosen.map(keyOf));
   const waste = output && output !== 'opening-inventory' ? getWasteField(draft, output) : null;
   const error = waste?.dirty ? wasteError(waste) : null;
+  function applyWaste(output: QuantityOutput) {
+    // Invalid text already has an inline error. Keep it pending without inserting
+    // a page-level alert during blur, which can move the next click's target.
+    update(current => wasteError(getWasteField(current, output)) ? current : commitWaste(current, output));
+  }
   function toggleTarget(choice: Choice, include: boolean) {
     if (!output || !selection) return;
     const values = include ? [...chosen, choice.value] : chosen.filter(value => keyOf(value) !== choice.key);
@@ -95,9 +100,9 @@ export function TakeoffPanel({ draft, update, onFocus, review, showScope, onShow
       {waste ? <div className="mt-4 max-w-xs"><label className="text-sm font-medium" htmlFor="takeoff-waste">Waste percentage</label>
         <Input id="takeoff-waste" type="text" className="mt-1 bg-white" value={waste.text} aria-invalid={Boolean(error)} aria-describedby="takeoff-waste-help"
           onChange={event => { const text = event.target.value; update(current => editWaste(current, output, text)); }}
-          onBlur={event => { if (!composing.current) update(current => commitWaste(current, output)); }}
-          onCompositionStart={() => { composing.current = true; }} onCompositionEnd={event => { composing.current = false; if (document.activeElement !== event.currentTarget) update(current => commitWaste(current, output)); }}
-          onKeyDown={event => { if (event.key === 'Enter' && !composing.current && !event.nativeEvent.isComposing && !event.repeat) { event.preventDefault(); update(current => commitWaste(current, output)); } }} />
+          onBlur={event => { if (!composing.current) applyWaste(output); }}
+          onCompositionStart={() => { composing.current = true; }} onCompositionEnd={event => { composing.current = false; if (document.activeElement !== event.currentTarget) applyWaste(output); }}
+          onKeyDown={event => { if (event.key === 'Enter' && !composing.current && !event.nativeEvent.isComposing && !event.repeat) { event.preventDefault(); applyWaste(output); } }} />
         <p id="takeoff-waste-help" className={'mt-1 text-xs leading-5 ' + (error ? 'text-red-700' : 'text-slate-600')}>{error || '0% by default. 10% means 0.10, applied once to the net measured quantity.'}</p>
       </div> : <p className="mt-3 text-xs text-slate-600">Inventory counts physical identities; no waste is applied.</p>}
       {output === 'crown' ? <fieldset className="mt-4 border-t pt-3"><legend className="text-sm font-medium">Explicit full-height gaps</legend>
