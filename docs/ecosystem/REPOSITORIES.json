@@ -1,13 +1,13 @@
 {
-  "blueprint_package": "1.1",
+  "blueprint_package": "1.2",
   "canonical_policy_repo": "armentrout1/fixdonenow",
   "local_map_filename": ".ecosystem.local.json",
   "control_folder": null,
   "repositories": [
-    {"product": "fixdonenow", "repository": "armentrout1/fixdonenow", "delivery_branch": "main", "owns": ["CRM", "jobs", "marketplace", "host workflow", "integration adapters"]},
-    {"product": "ledgerline", "repository": "armentrout1/ledgerline", "delivery_branch": "main", "owns": ["estimates", "invoices", "financial UI", "accounting"]},
-    {"product": "projectroll", "repository": "armentrout1/projectroll", "delivery_branch": "main", "owns": ["photos", "annotations", "media storage", "photo reports"], "broad_build_status": "parked_until_activated"},
-    {"product": "drawing", "repository": "armentrout1/ModernFloorPlanner", "delivery_branch": "main", "selection": "provisional", "owns": ["geometry", "measurements", "takeoffs", "drawing UI"], "broad_build_status": "parked_until_activated"}
+    {"product": "fixdonenow", "repository": "armentrout1/fixdonenow", "delivery_branch": "main", "owns": ["CRM", "customers and contacts", "properties and jobs", "marketplace", "host workflow", "bundle subscription", "integration adapters"]},
+    {"product": "ledgerline", "repository": "armentrout1/ledgerline", "delivery_branch": "main", "owns": ["billing customers", "estimates", "invoices", "financial UI", "accounting"]},
+    {"product": "projectroll", "repository": "armentrout1/projectroll", "delivery_branch": "main", "owns": ["photos", "annotations", "media storage", "photo reports"], "broad_build_status": "follow_current_product_roadmap_and_bounded_assignment"},
+    {"product": "drawing", "repository": "armentrout1/ModernFloorPlanner", "delivery_branch": "main", "selection": "identified_product_with_separately_gated_partner_integration", "owns": ["geometry", "measurements", "takeoffs", "drawing UI"], "broad_build_status": "follow_current_product_roadmap_and_bounded_assignment"}
   ],
-  "note": "Delivery branches are repository targets, not evidence of successful deployments. Verify deployment bindings before releasing application changes. Local roots require local verification."
+  "note": "Delivery branches are repository targets, not deployment evidence or automatic authorization. Current product roadmaps and explicit bounded assignments govern execution. Pending mirror branches are not main adoption. Verify local roots and deployment bindings before application releases."
 }
