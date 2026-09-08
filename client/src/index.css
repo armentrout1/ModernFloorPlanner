@@ -110,7 +110,7 @@
   }
   
   /* Prevent iOS overscroll */
-  html, body {
+  html:not(.quick-room-active), html:not(.quick-room-active) body {
     overscroll-behavior-y: none;
     position: fixed;
     overflow: hidden;

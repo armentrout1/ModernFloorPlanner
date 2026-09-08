@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'wouter';
 import { Button } from '@/components/ui/button';
 import { FileIcon, SaveIcon, FolderOpenIcon, CalculatorIcon, Keyboard } from 'lucide-react';
 
@@ -26,11 +27,12 @@ const AppHeader: React.FC<AppHeaderProps> = ({
   onShowKeyboardShortcuts
 }) => {
   return (
-    <header className="bg-white shadow-sm border-b border-slate-200 px-4 py-3 flex justify-between items-center">
-      <div className="flex items-center">
+    <header className="bg-white shadow-sm border-b border-slate-200 px-4 py-3 flex flex-wrap gap-3 justify-between items-center">
+      <div className="flex flex-wrap items-center gap-4">
         <h1 className="text-xl font-bold text-primary">Modern Floor Planner</h1>
+        <Button asChild variant="outline"><Link href="/quick-room">Quick Rooms</Link></Button>
       </div>
-      <div className="flex items-center space-x-3">
+      <div className="flex flex-wrap items-center gap-3">
         <Button onClick={onUndoDelete} disabled={!canUndoDelete} variant="outline" title="Restore the last deletion (Ctrl/Cmd+Z)">Undo delete</Button>
         <Button 
           onClick={onShowKeyboardShortcuts}

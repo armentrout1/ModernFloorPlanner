@@ -35,6 +35,7 @@ import {
 } from '@/utils/canvas';
 
 interface CanvasContainerProps {
+  active?: boolean;
   activeTool: string;
   placingObjectType: ObjectType | null;
   rooms: Room[];
@@ -50,6 +51,7 @@ interface CanvasContainerProps {
 }
 
 const CanvasContainer: React.FC<CanvasContainerProps> = ({
+  active = true,
   activeTool,
   placingObjectType,
   rooms,
@@ -161,8 +163,17 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
     }
   }, [rooms, selectedRoomId, selectedObjectId, activeTool, placingObjectType]);
   
-  // Add keyboard shortcuts for canvas controls
+  // Add keyboard shortcuts only while the sketch route is active.
   useEffect(() => {
+    if (!active) {
+      // Cancel only unfinished gestures. Committed rooms, selection and zoom stay.
+      setState(previous => ({ ...previous, isPanning: false, isDrawing: false,
+        isDragging: false, isResizing: false, isSelecting: false, selectStart: null,
+        selectEnd: null, drawStart: null, drawEnd: null, activeResizeHandle: null }));
+      setDoorState({ mode: 'idle', cursorPreview: null, draggedDoor: null,
+        previewPosition: null, targetWall: null });
+      return;
+    }
     const handleKeyDown = (e: KeyboardEvent) => {
       if (shouldIgnoreEditorShortcut(e) || e.ctrlKey || e.metaKey || e.altKey) {
         // Don't capture keyboard events when typing in form fields
@@ -210,7 +221,7 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
     };
-  }, [state.isPanning, state.isPreviewMode, selectedRoomId, onRoomsChange, onSelectRoom, rooms, handleZoomIn, handleZoomOut]);
+  }, [active, state.isPanning, state.isPreviewMode, selectedRoomId, onRoomsChange, onSelectRoom, rooms, handleZoomIn, handleZoomOut]);
   
   // Check for rooms that are close to each other for snapping
   const checkRoomProximity = (testRoom: Room): Room => {

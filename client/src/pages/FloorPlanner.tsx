@@ -33,7 +33,7 @@ import {
   centerRoomInViewport
 } from '@/utils/canvas';
 
-const FloorPlanner: React.FC = () => {
+const FloorPlanner: React.FC<{ active?: boolean }> = ({ active = true }) => {
   const [rooms, setRooms] = useState<Room[]>([]);
   const [deletions, setDeletions] = useState<DeletedItem[]>([]);
   const [roomSelectionId, setSelectedRoomId] = useState<string | null>(null);
@@ -285,6 +285,7 @@ const FloorPlanner: React.FC = () => {
 
   // One owner for deletion prevents a second listener from deleting the parent room.
   useEffect(() => {
+    if (!active) return;
     const handleKeyDown = (event: KeyboardEvent) => {
       if (shouldIgnoreEditorShortcut(event) || isSaveModalOpen || isLoadDialogOpen || showKeyboardShortcuts) return;
       if ((event.ctrlKey || event.metaKey) && !event.altKey && !event.shiftKey && event.key.toLowerCase() === 'z') {
@@ -297,7 +298,7 @@ const FloorPlanner: React.FC = () => {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [rooms, deletions, selectedRoomId, selectedObjectId, isSaveModalOpen, isLoadDialogOpen, showKeyboardShortcuts]);
+  }, [active, rooms, deletions, selectedRoomId, selectedObjectId, isSaveModalOpen, isLoadDialogOpen, showKeyboardShortcuts]);
 
   const selectedRoom = (selectedObjectId
     ? rooms.find(room => room.objects?.some(object => object.id === selectedObjectId))
@@ -360,7 +361,7 @@ const FloorPlanner: React.FC = () => {
           rightCollapsed={rightCollapsed}
           onLeftCollapsedChange={handleToggleLeftPanel}
           onRightCollapsedChange={handleToggleRightPanel}
-          leftPanel={
+          leftPanel={active ? (
             <div className="h-full">
               <Sidebar 
                 activeTool={activeTool} 
@@ -368,9 +369,10 @@ const FloorPlanner: React.FC = () => {
                 onApplyAction={handleApplyAction}
               />
             </div>
-          }
+          ) : null}
           centerPanel={
             <CanvasContainer
+              active={active}
               activeTool={activeTool}
               placingObjectType={placingObjectType}
               rooms={rooms}
@@ -383,7 +385,7 @@ const FloorPlanner: React.FC = () => {
               onObjectPlaced={handleObjectPlaced}
             />
           }
-          rightPanel={
+          rightPanel={active ? (
             <div className="h-full">
               {showMaterialPanel ? (
                 <MaterialCalculationPanel
@@ -398,13 +400,13 @@ const FloorPlanner: React.FC = () => {
                 />
               )}
             </div>
-          }
+          ) : null}
         />
       </div>
 
       {/* Save Sketch Modal */}
       <SaveSketchModal
-        open={isSaveModalOpen}
+        open={active && isSaveModalOpen}
         onOpenChange={setIsSaveModalOpen}
         rooms={rooms}
         currentSketchId={currentSketchId}
@@ -414,14 +416,14 @@ const FloorPlanner: React.FC = () => {
 
       {/* Load Sketch Dialog */}
       <LoadSketchDialog
-        open={isLoadDialogOpen}
+        open={active && isLoadDialogOpen}
         onOpenChange={setIsLoadDialogOpen}
         onLoadSketch={handleLoadSketch}
       />
 
       {/* Keyboard Shortcuts Dialog */}
       <KeyboardShortcutsDialog
-        open={showKeyboardShortcuts}
+        open={active && showKeyboardShortcuts}
         onOpenChange={setShowKeyboardShortcuts}
       />
     </div>
