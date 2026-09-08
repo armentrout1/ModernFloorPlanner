@@ -23,6 +23,7 @@ import TotalAreaDisplay from './TotalAreaDisplay';
 import PreviewMode from './PreviewMode';
 import { MoveHorizontal, MoveVertical, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogTrigger } from '@/components/ui/dialog';
 import { expandRoomGroups, translateRooms, roomBounds } from '@/utils/roomSelection';
 import { useToast } from '@/hooks/use-toast';
 import { 
@@ -130,11 +131,19 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
     targetWall: null,
   });
   
-  const pan = useCanvasPan(wrapperRef, active, activeTool === 'move',
+  const setPreviewOpen = useCallback((open: boolean) => {
+    roomDrag.current = null;
+    setDoorState({ mode: 'idle', cursorPreview: null, draggedDoor: null, previewPosition: null, targetWall: null });
+    setState(previous => ({ ...previous, isPreviewMode: open, isDrawing: false, isDragging: false,
+      isResizing: false, isSelecting: false, isPanning: false, drawStart: null, drawEnd: null,
+      selectStart: null, selectEnd: null, activeResizeHandle: null }));
+  }, []);
+
+  const pan = useCanvasPan(wrapperRef, active && !state.isPreviewMode, activeTool === 'move',
     !state.isDrawing && !state.isDragging && !state.isResizing && !state.isSelecting && doorState.mode !== 'dragging',
     view.captureCenter);
 
-  const zoom = useCanvasZoom(stageRef, canvasRef, wrapperRef, active, state.scale,
+  const zoom = useCanvasZoom(stageRef, canvasRef, wrapperRef, active && !state.isPreviewMode, state.scale,
     (scale, center) => {
       setState(previous => ({ ...previous, scale }));
       view.centerOn(center);
@@ -209,7 +218,7 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
     if (!active) {
       roomDrag.current = null;
       // Cancel only unfinished gestures. Committed rooms, selection and zoom stay.
-      setState(previous => ({ ...previous, isPanning: false, isDrawing: false,
+      setState(previous => ({ ...previous, isPreviewMode: false, isPanning: false, isDrawing: false,
         isDragging: false, isResizing: false, isSelecting: false, selectStart: null,
         selectEnd: null, drawStart: null, drawEnd: null, activeResizeHandle: null }));
       setDoorState({ mode: 'idle', cursorPreview: null, draggedDoor: null,
@@ -230,7 +239,7 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
         handleZoomOut();
       } else if (e.key === 'p' || e.key === 'P') {
         // Toggle preview mode
-        setState(prev => ({ ...prev, isPreviewMode: !prev.isPreviewMode }));
+        setPreviewOpen(!state.isPreviewMode);
       } else if (e.key === 'Escape') {
         roomDrag.current = null;
         setDoorState({ mode: 'idle', cursorPreview: null, draggedDoor: null, previewPosition: null, targetWall: null });
@@ -246,7 +255,7 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
     return () => {
       window.removeEventListener('keydown', handleKeyDown, true);
     };
-  }, [active, state.isPanning, state.isPreviewMode, selectedRoomId, onRoomsChange, onSelectRoom, rooms, handleZoomIn, handleZoomOut]);
+  }, [active, state.isPanning, state.isPreviewMode, selectedRoomId, onRoomsChange, onSelectRoom, rooms, handleZoomIn, handleZoomOut, setPreviewOpen]);
   
   // Check for rooms that are close to each other for snapping
   const checkRoomProximity = (testRoom: Room, excluded: string[] = [testRoom.id]): Room => {
@@ -1208,6 +1217,7 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
   };
   
   return (
+    <Dialog open={active && state.isPreviewMode} onOpenChange={setPreviewOpen}>
     <main className="relative flex h-full min-h-0 min-w-0 flex-col overflow-hidden">
       <CanvasControls
         onZoomIn={handleZoomIn}
@@ -1389,10 +1399,6 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
             </>
           )}
           
-          {/* Preview mode - simplified view of the floor plan */}
-          {state.isPreviewMode && (
-            <PreviewMode rooms={rooms} scale={state.scale} />
-          )}
         </div>
         </div>
       </div>
@@ -1424,12 +1430,19 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
           )}
 
           {/* Preview Mode Toggle */}
+          <DialogTrigger asChild>
           <Button
             variant={state.isPreviewMode ? "default" : "outline"}
-            size="icon"
-            className="h-8 w-8 rounded-full"
-            onClick={() => setState(prev => ({ ...prev, isPreviewMode: !prev.isPreviewMode }))}
+            size="sm"
+            className="h-8 gap-1.5"
             title="Toggle Preview Mode"
+            aria-label="Floor Plan Preview"
+            onKeyDown={event => {
+              if (event.key.toLowerCase() === 'p' && !event.ctrlKey && !event.metaKey && !event.altKey
+                  && !event.repeat && !event.nativeEvent.isComposing) {
+                event.preventDefault(); setPreviewOpen(true);
+              }
+            }}
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -1444,7 +1457,9 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
               <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
               <circle cx="12" cy="12" r="3" />
             </svg>
+            Preview
           </Button>
+          </DialogTrigger>
 
           <div className="text-xs bg-slate-100 px-2 py-1 rounded">
             {Math.round(state.scale * 100)}%
@@ -1453,6 +1468,8 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
 
       </div>
     </main>
+    {active && state.isPreviewMode && <PreviewMode rooms={rooms} showRoomNames={showRoomNames} onClose={() => setPreviewOpen(false)} />}
+    </Dialog>
   );
 };
 

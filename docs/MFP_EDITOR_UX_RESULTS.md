@@ -168,3 +168,24 @@ Actual verification:
 ![Window selectors at narrow width](evidence/editor-window-presets-narrow.png)
 
 Bounded window-selector acceptance complete locally. NOT DEPLOYED; production smoke and hosting/database/auth binding remain unverified. No migrations, customer onboarding or other-product changes. Issue publication remains pending the earlier approval; the implementation itself has no known blocker. M3B remains next eligible only on a separate assignment.
+
+## Floor Plan Preview follow-up - 2026-09-08
+
+Owner requested correction of Plan Preview. This bounded DR-002 follow-up repairs the eye-button Floor Plan Preview. Baseline: clean synchronized main `b5827c1b59f781fbd1bf52281dc83e051d8e4dc3`; repository, remote, upstream, safe fetch and local writer availability verified. Original roadmap archive and stash remain preserved. Issue #8 publication remains pending the earlier permission question; no issue mutation was attempted.
+
+Preview opens in a bounded read-only dialog outside the scaled editor plane. It centers the complete drawing independently of editor zoom and room origin, including outward swings and actual window widths. The shared opening renderer preserves saved styles and geometry. Room names and dimensions have preview-local visibility controls. A visible Preview button replaces the icon-only trigger. Escape, P, Close preview and the standard close button dismiss it and restore trigger focus. Editor shortcuts and pending gestures cannot change the sketch while preview is open. Browser navigation removes the dialog. Empty plans show an explicit message. Measurement follows the mounted dialog; preview-only animation/transition is disabled to keep controls within narrow screens.
+
+Actual checks:
+
+- `npm test`: **234/234 passed**, including 12 new bounds cases for negative/far origins, all outward swing walls/hinges, sliding/legacy geometry, real window widths and immutable inputs. Run before final UI-only keyboard/resize adjustments; the bounds utility was unchanged afterward.
+- `npm run check` and `npm run build`: passed after the final changes. Existing Browserslist age and bundle-size warnings remain nonblocking.
+- Final `npx playwright test tests/browser/plan-preview.spec.ts tests/browser/quick-room-navigation.spec.ts tests/browser/canvas-view.spec.ts --grep 'preview|Preview|browser Back|canvas and its top/bottom'`: **10/10 passed in 27.9 seconds**, zero retries/skips. Six new preview cases plus existing small-screen controls/navigation guards cover far/negative layouts, zoom independence, room proportions/colors, unequal window widths, four door outlines, labels, nonmutating input, focus/close, empty state, resize and Back/Forward.
+- Initial browser iterations exposed focused-trigger P handling and transient offscreen resizing; both were fixed. Bounds assertions now measure native transformed DOM rectangles because Playwright's SVG bounding box added conservative stroke/miter padding; the original two-pixel tolerance remains. An empty-plan test was corrected to assert the existing disabled Save behavior. Final results supersede those failed iterations; the entire browser suite was not rerun.
+- Fresh isolated browser at `http://127.0.0.1:5173/`: far-origin sample fits, shared openings are visible, Delete is guarded, phone close stays visible, focus returns and no page errors occur. Desktop 1600x1000 and phone 390x844 evidence appears below. Mock data stayed in that browser; the owner's tab and sketch were not operated on.
+- `git diff --check`: passed.
+
+![Corrected desktop Floor Plan Preview](evidence/editor-plan-preview.png)
+
+![Floor Plan Preview on a phone viewport](evidence/editor-plan-preview-phone.png)
+
+Bounded Plan Preview acceptance complete locally, with no known implementation blocker. NOT DEPLOYED; production smoke and hosting/database/auth binding remain unverified. No saved-model, quantity-engine, API, migration, customer-onboarding or other-product changes. Saved-sketch thumbnails and export features were outside this repair. M3B remains next eligible only on a separate bounded assignment.
