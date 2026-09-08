@@ -1,3 +1,4 @@
+import { getDoorHand, getStoredHinge } from "@/utils/doorGeometry";
 /**
  * CRITICAL: DOORS & WINDOWS FUNCTIONALITY
  * 
@@ -314,7 +315,7 @@ const PropertyPanel: React.FC<PropertyPanelProps> = ({
                       <RotateCcw className="mr-1.5 h-4 w-4" />Reverse swing
                     </Button>
                   </div>
-                  <p className="text-xs text-slate-600">Facing this wall from inside the room: hinge on the {selectedObject.doorProperties.swingSide}; opens {selectedObject.doorProperties.swingDirection === 'inward' ? 'into' : 'out of'} the room.</p>
+                  <p className="text-xs text-slate-600">Opens {selectedObject.doorProperties.swingDirection === 'inward' ? 'into' : 'out of'} the room.</p>
                   <div className="space-y-2">
                     <Label>Swing Direction</Label>
                     <RadioGroup
@@ -335,8 +336,8 @@ const PropertyPanel: React.FC<PropertyPanelProps> = ({
                   <div className="space-y-2">
                     <Label>Door Hand</Label>
                     <RadioGroup
-                      value={selectedObject.doorProperties.swingSide}
-                      onValueChange={(value: SwingSide) => handleDoorPropertyChange('swingSide', value)}
+                      value={getDoorHand(selectedObject.doorProperties.swingSide, selectedObject.doorProperties.swingDirection)}
+                      onValueChange={(value: SwingSide) => handleDoorPropertyChange('swingSide', getStoredHinge(value, selectedObject.doorProperties!.swingDirection))}
                     >
                       <div className="flex items-center space-x-2">
                         <RadioGroupItem value="left" id="lh" />
@@ -348,10 +349,8 @@ const PropertyPanel: React.FC<PropertyPanelProps> = ({
                       </div>
                     </RadioGroup>
                     <div className="text-xs text-slate-500">
-                      {selectedObject.doorProperties.swingSide === 'left' ? 
-                        'Left edge when facing the wall from inside this room' :
-                        'Right edge when facing the wall from inside this room'
-                      }
+                      Stand with your back against the hinge jamb, facing the latch. The arm that follows the opening swing is the hand.
+                      {' '}Double-click the door or its swing area to flip the hand.
                     </div>
                   </div>
                 </>

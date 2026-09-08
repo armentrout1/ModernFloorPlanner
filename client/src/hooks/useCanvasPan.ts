@@ -14,6 +14,7 @@ export function useCanvasPan(viewportRef: RefObject<HTMLDivElement>, active: boo
   const space = useRef(false);
   const hand = useRef(false);
   const suppressClick = useRef(false);
+  const suppressDoubleClick = useRef(false);
   const latest = useRef({ captureCenter });
   latest.current = { captureCenter };
   const [dragging, setDragging] = useState(false);
@@ -34,6 +35,7 @@ export function useCanvasPan(viewportRef: RefObject<HTMLDivElement>, active: boo
       space.current = false;
       hand.current = false;
       suppressClick.current = false;
+      suppressDoubleClick.current = false;
       ownedButton.current = null;
       pressedButtons.current.clear();
       updateReady();
@@ -105,11 +107,12 @@ export function useCanvasPan(viewportRef: RefObject<HTMLDivElement>, active: boo
   }, [active, viewportRef]);
 
   function onMouseDownCapture(event: ReactMouseEvent) {
+    if (event.button === 0 && event.detail < 2) suppressDoubleClick.current = false;
     const held = ownedButton.current;
     if (held !== null && (gesture.current || Array.from(pressedButtons.current).some(button => button !== event.button && (event.buttons & buttonMask(button))))) {
       // Consume the entire button chord, regardless of which button is released first.
       pressedButtons.current.add(event.button);
-      if (event.button === 0) suppressClick.current = true;
+      if (event.button === 0) { suppressClick.current = true; suppressDoubleClick.current = true; }
       event.preventDefault();
       event.stopPropagation();
       return;
@@ -132,6 +135,7 @@ export function useCanvasPan(viewportRef: RefObject<HTMLDivElement>, active: boo
     pressedButtons.current.add(event.button);
     gesture.current = { x: event.clientX, y: event.clientY, button: event.button, source };
     suppressClick.current = event.button === 0;
+    if (event.button === 0) suppressDoubleClick.current = true;
     setDragging(true);
   }
   function onClickCapture(event: ReactMouseEvent) {
@@ -139,6 +143,11 @@ export function useCanvasPan(viewportRef: RefObject<HTMLDivElement>, active: boo
     suppressClick.current = false;
     event.preventDefault();
     event.stopPropagation();
+  }
+  function onDoubleClickCapture(event: ReactMouseEvent) {
+    if (!suppressDoubleClick.current) return;
+    suppressDoubleClick.current = false;
+    event.preventDefault(); event.stopPropagation();
   }
   function onAuxClickCapture(event: ReactMouseEvent) {
     if (event.button !== 1) return;
@@ -150,5 +159,5 @@ export function useCanvasPan(viewportRef: RefObject<HTMLDivElement>, active: boo
     hand.current = !hand.current;
     updateReady();
   }
-  return { ownedButton, dragging, ready, toggleHand, onMouseDownCapture, onClickCapture, onAuxClickCapture };
+  return { ownedButton, dragging, ready, toggleHand, onMouseDownCapture, onClickCapture, onDoubleClickCapture, onAuxClickCapture };
 }

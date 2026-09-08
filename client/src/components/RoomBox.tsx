@@ -151,7 +151,8 @@ const RoomBox: React.FC<RoomBoxProps> = ({
         : '0 1px 3px rgba(0, 0, 0, 0.1)',
     cursor: placingObjectType ? 'crosshair' : 'move',
     userSelect: 'none',
-    zIndex: isSelected || isPartOfMultiSelection ? 10 : 1,
+    // Opening symbols share the canvas stacking order, including outward swings over neighbors.
+    zIndex: 'auto',
     // Add a subtle transition for visual feedback on touch
     transition: 'box-shadow 0.15s ease, transform 0.05s ease',
   };
@@ -259,7 +260,7 @@ const RoomBox: React.FC<RoomBoxProps> = ({
       className={`room-box ${isTouching && !isCanvasPinching ? 'room-touching' : ''}`}
       style={{
         ...roomStyle,
-        transform: isTouching && !isCanvasPinching ? 'scale(0.98)' : 'scale(1)',
+        transform: 'none',
         border: 'none', // Remove default border since we're drawing custom walls
       }}
       data-selected={isSelected || isPartOfMultiSelection}
@@ -323,6 +324,11 @@ const RoomBox: React.FC<RoomBoxProps> = ({
           isSelected={selectedObjectId === object.id}
           onSelect={onObjectSelect || (() => {})}
           onDragStart={onObjectDragStart}
+          onFlipHand={id => onUpdateRoom(room.id, { objects: room.objects?.map(item =>
+            item.id === id && item.doorProperties && item.doorProperties.style !== 'sliding'
+              ? { ...item, doorProperties: { ...item.doorProperties,
+                  swingSide: item.doorProperties.swingSide === 'left' ? 'right' : 'left' } }
+              : item) })}
         />
       ))}
     </div>

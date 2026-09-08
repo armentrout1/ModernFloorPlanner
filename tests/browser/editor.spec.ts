@@ -77,6 +77,22 @@ async function dragOpening(page: Page, objectId: string, roomId: string, side: W
   await expect(page.getByTestId(`room-${roomId}`).getByTestId(`opening-${objectId}`)).toBeVisible();
 }
 
+async function doorPoint(page: Page, objectId: string, x: number, y: number) {
+  // Use the browser's actual SVG transform; do not reproduce the wall renderer.
+  return page.getByTestId(`door-hit-${objectId}`).evaluate((node, point) => {
+    const matrix = (node as SVGGraphicsElement).getScreenCTM();
+    if (!matrix) throw new Error('The door hit sector has no screen transform');
+    const screen = new DOMPoint(point.x, point.y).matrixTransform(matrix);
+    return { x: screen.x, y: screen.y };
+  }, { x, y });
+}
+
+async function doorOutline(page: Page, objectId: string) {
+  return page.getByTestId(`door-swing-${objectId}`).locator('[data-door-outline]').evaluate(node => ({
+    path: node.getAttribute('d'), transform: node.parentElement?.getAttribute('transform'),
+  }));
+}
+
 test.beforeEach(async ({ page }) => {
   const errors: string[] = [];
   page.on('pageerror', error => errors.push(error.message));
@@ -95,6 +111,12 @@ for (const type of ['door', 'window'] as const) {
       await page.getByRole('button', { name: type === 'door' ? 'Add Door' : 'Add Window', exact: true }).click();
       const target = await wallPoint(page.getByTestId('room-room-a'), side, 0.35);
       await page.mouse.move(target.x, target.y, { steps: 5 });
+      const previewBar = page.locator('[data-testid="preview-opening-placement-preview"][data-opening-type="door"]');
+      const preview = type === 'door' ? {
+        outline: await doorOutline(page, 'placement-preview'),
+        bounds: await previewBar.boundingBox(),
+      } : null;
+      if (preview) expect(preview.bounds).not.toBeNull();
       await page.mouse.click(target.x, target.y);
       await expect(page.locator('[data-testid^="opening-"]')).toHaveCount(1);
       const saved = await save(page, plan.id);
@@ -103,6 +125,19 @@ for (const type of ['door', 'window'] as const) {
       expect(saved.rooms[0].objects![0]).toMatchObject({ type, wallSide: side });
       expect(saved.rooms[0].objects![0].position).toBeGreaterThan(10);
       expect(saved.rooms[0].objects![0].position).toBeLessThan(90);
+      if (preview) {
+        const placed = saved.rooms[0].objects![0];
+        expect(placed).toMatchObject({ size: 60, doorProperties: { width: 36 } });
+        expect(await doorOutline(page, placed.id)).toEqual(preview.outline);
+        const bounds = (await page.getByTestId(`opening-${placed.id}`).boundingBox())!;
+        const roomBounds = (await page.getByTestId('room-room-a').boundingBox())!;
+        const scale = roomBounds.width / saved.rooms[0].width;
+        expect((side === 'top' || side === 'bottom' ? bounds.width : bounds.height) / scale).toBeCloseTo(60, 5);
+        for (const key of ['x', 'y', 'width', 'height'] as const) {
+          expect(Math.abs(bounds[key] - preview.bounds![key]), `preview and placed bar ${key}`).toBeLessThan(0.5);
+        }
+        await expect(page.getByTestId('door-swing-placement-preview')).toHaveCount(0);
+      }
       await page.reload();
       await page.getByRole('button', { name: 'Load Sketch', exact: true }).click();
       const dialog = page.getByRole('dialog', { name: 'Load Sketch', exact: true });
@@ -162,7 +197,7 @@ test('32-inch width, all door styles and swing properties remain editable and pe
   const saved = await save(page, plan.id);
   expect(saved.rooms[0].objects![0]).toMatchObject({
     size: 160 / 3,
-    doorProperties: { width: 32, height: 84, style: 'bifold', swingDirection: 'inward', swingSide: 'right' },
+    doorProperties: { width: 32, height: 84, style: 'bifold', swingDirection: 'inward', swingSide: 'left' },
   });
   await page.getByRole('button', { name: 'Materials', exact: true }).click();
   await expect(page.getByRole('cell', { name: '32 in', exact: true })).toBeVisible();
@@ -375,22 +410,90 @@ test('tooltip timers cannot dismiss a save dialog or erase its draft', async ({ 
 });
 
 for (const side of ['top', 'right', 'bottom', 'left'] as const) {
-  test(`door hinge and swing visibly flip on ${side} without moving attachment`, async ({ page }) => {
-    const original = { ...opening(), wallSide: side };
-    const plan = await seedAndLoad(page, [room([original])]);
-    await page.getByTestId('opening-opening-a').click();
-    const path = page.getByTestId('door-swing-opening-a').locator('path');
-    const before = await path.getAttribute('d');
-    await page.getByRole('button', { name: 'Flip hinge', exact: true }).click();
-    await expect(path).not.toHaveAttribute('d', before!);
-    const flipped = await path.getAttribute('d');
-    await page.getByRole('button', { name: 'Reverse swing', exact: true }).click();
-    await expect(path).not.toHaveAttribute('d', flipped!);
-    const saved = await save(page, plan.id);
-    expect(saved.rooms[0].objects).toEqual([{ ...original, doorProperties: {
-      ...original.doorProperties!, swingSide: 'right', swingDirection: 'inward' } }]);
+  test(`door sector selects and double-click flips both swing directions on ${side} without moving attachment`, async ({ page }) => {
+    for (const direction of ['inward', 'outward'] as const) {
+      const original = { ...opening(), wallSide: side, doorProperties: {
+        ...opening().doorProperties!, swingDirection: direction,
+      } };
+      const originalRoom = room([original]);
+      const plan = await seedAndLoad(page, [originalRoom]);
+      // A 32-inch leaf is 53 1/3 drawing pixels. This point lies well inside its swept sector.
+      const point = await doorPoint(page, original.id, 18, direction === 'inward' ? 18 : -18);
+      const bar = page.getByTestId('opening-opening-a');
+      const path = page.getByTestId('door-swing-opening-a').locator('[data-door-outline]');
+      const before = await path.getAttribute('d');
+      await page.mouse.click(point.x, point.y);
+      await expect(bar).toHaveAttribute('aria-pressed', 'true');
+      await expect(page.getByRole('radio', { name: direction === 'inward' ? 'Right Hand (RH)' : 'Left Hand (LH)', exact: true })).toBeChecked();
+      expect((await save(page, plan.id)).rooms).toEqual([originalRoom]);
+
+      await page.mouse.dblclick(point.x, point.y);
+      await expect(path).not.toHaveAttribute('d', before!);
+      await expect(page.getByRole('radio', { name: direction === 'inward' ? 'Left Hand (LH)' : 'Right Hand (RH)', exact: true })).toBeChecked();
+      const flipped = { ...original, doorProperties: { ...original.doorProperties, swingSide: 'right' as const } };
+      expect((await save(page, plan.id)).rooms).toEqual([{ ...originalRoom, objects: [flipped] }]);
+
+      const flippedPath = await path.getAttribute('d');
+      await page.getByRole('button', { name: 'Flip hinge', exact: true }).click();
+      await expect(path).toHaveAttribute('d', before!);
+      await page.getByRole('button', { name: 'Reverse swing', exact: true }).click();
+      await expect(path).not.toHaveAttribute('d', before!);
+      await expect(path).not.toHaveAttribute('d', flippedPath!);
+      await expect(page.getByRole('radio', { name: direction === 'inward' ? 'Left Hand (LH)' : 'Right Hand (RH)', exact: true })).toBeChecked();
+      expect((await save(page, plan.id)).rooms).toEqual([{ ...originalRoom, objects: [{ ...original, doorProperties: {
+        ...original.doorProperties, swingDirection: direction === 'inward' ? 'outward' : 'inward',
+      } }] }]);
+    }
   });
 }
+
+test('door leaf and arc select, outside the swept quarter-circle does not, and bar double-click flips once', async ({ page }) => {
+  const original = { ...opening(), doorProperties: { ...opening().doorProperties!, style: 'single' as const, swingDirection: 'inward' as const } };
+  const originalRoom = room([original]);
+  const plan = await seedAndLoad(page, [originalRoom]);
+  const bar = page.getByTestId('opening-opening-a');
+  // Independent points on a 32-inch leaf and its 90-degree arc, then a point
+  // inside the SVG square bounds but outside the physical swept sector.
+  for (const [label, x, y] of [['leaf', 0, 35], ['arc', 37.7123616633, 37.7123616633]] as const) {
+    await page.getByTestId('room-room-a').click({ position: { x: 200, y: 160 } });
+    await expect(bar).toHaveAttribute('aria-pressed', 'false');
+    const point = await doorPoint(page, original.id, x, y);
+    await page.mouse.click(point.x, point.y);
+    await expect(bar, `${label} selects this door`).toHaveAttribute('aria-pressed', 'true');
+  }
+  await page.getByTestId('room-room-a').click({ position: { x: 200, y: 160 } });
+  const outside = await doorPoint(page, original.id, 48, 48);
+  await page.mouse.click(outside.x, outside.y);
+  await expect(bar).toHaveAttribute('aria-pressed', 'false');
+  expect((await save(page, plan.id)).rooms).toEqual([originalRoom]);
+  await bar.dblclick();
+  await expect(bar).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByRole('radio', { name: 'Left Hand (LH)', exact: true })).toBeChecked();
+  expect((await save(page, plan.id)).rooms).toEqual([{ ...originalRoom, objects: [{ ...original, doorProperties: {
+    ...original.doorProperties, swingSide: 'right',
+  } }] }]);
+});
+
+test('an outward door sector over an adjoining grouped room selects and flips only its own door', async ({ page }) => {
+  const original = { ...opening(), wallSide: 'right' as const };
+  const neighbor = { ...room(), id: 'room-b', name: 'Adjoining room', x: 480,
+    objects: [{ ...opening('window'), id: 'neighbor-window' }] };
+  const plan = await seedAndLoad(page, [room([original]), neighbor]);
+  await page.getByRole('button', { name: 'Select all rooms', exact: true }).click();
+  await page.getByRole('button', { name: 'Group rooms', exact: true }).click();
+  const grouped = await save(page, plan.id);
+  const point = await doorPoint(page, original.id, 18, -18);
+  await page.mouse.click(point.x, point.y);
+  await expect(page.getByTestId('opening-opening-a')).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByTestId('opening-neighbor-window')).toHaveAttribute('aria-pressed', 'false');
+  await expect(page.getByRole('radio', { name: 'Left Hand (LH)', exact: true })).toBeChecked();
+  expect((await save(page, plan.id)).rooms).toEqual(grouped.rooms);
+  await page.mouse.dblclick(point.x, point.y);
+  await expect(page.getByRole('radio', { name: 'Right Hand (RH)', exact: true })).toBeChecked();
+  expect((await save(page, plan.id)).rooms).toEqual(grouped.rooms.map(item => item.id === 'room-a' ? {
+    ...item, objects: [{ ...original, doorProperties: { ...original.doorProperties!, swingSide: 'right' } }],
+  } : item));
+});
 
 test('custom opening dimensions preserve fractions, reject empty/overlap, and keep unknown window height until chosen', async ({ page }) => {
   const original = room([opening(), { id: 'window-b', type: 'window', wallSide: 'top', position: 80, size: 40 }]);
@@ -450,4 +553,27 @@ test.describe('opening touch ownership', () => {
     }
     expect(touchErrors).toEqual([]);
   });
+});
+
+
+test('pan-owned double-clicks and subthreshold presses never flip or relocate a door', async ({ page }) => {
+  const original = room([opening()]);
+  const plan = await seedAndLoad(page, [original]);
+  const bar = page.getByTestId('opening-opening-a');
+  for (const modifier of ['Control', 'Space'] as const) {
+    await page.keyboard.down(modifier);
+    await bar.dblclick();
+    await page.keyboard.up(modifier);
+    expect((await save(page, plan.id)).rooms).toEqual([original]);
+  }
+  await page.getByTitle('Pan Mode (Hand Tool)', { exact: true }).click();
+  await bar.dblclick();
+  await page.getByTitle('Pan Mode (Hand Tool)', { exact: true }).click();
+  expect((await save(page, plan.id)).rooms).toEqual([original]);
+  const box = (await bar.boundingBox())!;
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(box.x + box.width / 2 + 2, box.y + box.height / 2);
+  await page.mouse.up();
+  expect((await save(page, plan.id)).rooms).toEqual([original]);
 });

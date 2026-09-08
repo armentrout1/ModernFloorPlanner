@@ -34,8 +34,7 @@ import {
   getResizedRoom,
   detectWallClick,
   createRoomObject,
-  centerRoomInViewport,
-  inchesToPixels
+  centerRoomInViewport
 } from '@/utils/canvas';
 
 interface CanvasContainerProps {
@@ -714,6 +713,8 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
 
     // Handle door dragging
     if (doorState.mode === 'dragging' && doorState.draggedDoor) {
+      // A press selects. Require deliberate screen-pixel movement before relocating.
+      if (!doorState.previewPosition && Math.hypot(e.clientX - state.lastMouse.x, e.clientY - state.lastMouse.y) < 4) return;
       const targetWall = findWallAtPosition(x, y);
       
       // Validate dragging target location
@@ -1229,6 +1230,7 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
           onMouseDownCapture={pan.onMouseDownCapture}
           onClickCapture={pan.onClickCapture}
           onAuxClickCapture={pan.onAuxClickCapture}
+        onDoubleClickCapture={pan.onDoubleClickCapture}
           style={{ width: view.width, height: view.height,
             backgroundSize: `${GRID_SIZE * state.scale}px ${GRID_SIZE * state.scale}px`,
             backgroundPosition: `${view.origin.x}px ${view.origin.y}px`,
@@ -1311,113 +1313,11 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
                   const targetRoom = rooms.find(r => r.id === targetWall.roomId);
                   if (!targetRoom) return null;
 
-                  const objectSize = placingObjectType === 'door' ? inchesToPixels(36) : 48;
-
-                  return (
-                    <div key="object-cursor-preview">
-                      {/* Object line preview */}
-                      <div
-                        className="absolute pointer-events-none"
-                        style={{
-                          backgroundColor: doorState.cursorPreview?.targetWall ? 
-                            (placingObjectType === 'door' ? '#FF6B35' : '#4A90E2') : 
-                            '#FF4444', // Red for invalid placement
-                          opacity: 0.6,
-                          zIndex: 50,
-                          ...((() => {
-                            const baseStyle: React.CSSProperties = {};
-                            switch (targetWall.wallSide) {
-                              case 'top':
-                                baseStyle.left = `${targetRoom.x + (targetRoom.width * targetWall.position / 100) - objectSize / 2}px`;
-                                baseStyle.top = `${targetRoom.y}px`;
-                                baseStyle.width = `${objectSize}px`;
-                                baseStyle.height = '6px';
-                                break;
-                              case 'right':
-                                baseStyle.left = `${targetRoom.x + targetRoom.width - 6}px`;
-                                baseStyle.top = `${targetRoom.y + (targetRoom.height * targetWall.position / 100) - objectSize / 2}px`;
-                                baseStyle.width = '6px';
-                                baseStyle.height = `${objectSize}px`;
-                                break;
-                              case 'bottom':
-                                baseStyle.left = `${targetRoom.x + (targetRoom.width * targetWall.position / 100) - objectSize / 2}px`;
-                                baseStyle.top = `${targetRoom.y + targetRoom.height - 6}px`;
-                                baseStyle.width = `${objectSize}px`;
-                                baseStyle.height = '6px';
-                                break;
-                              case 'left':
-                                baseStyle.left = `${targetRoom.x}px`;
-                                baseStyle.top = `${targetRoom.y + (targetRoom.height * targetWall.position / 100) - objectSize / 2}px`;
-                                baseStyle.width = '6px';
-                                baseStyle.height = `${objectSize}px`;
-                                break;
-                            }
-                            return baseStyle;
-                          })())
-                        }}
-                      />
-                      
-                      {/* Object swing arc preview (only for doors) */}
-                      {placingObjectType === 'door' && (
-                        <svg
-                          className="absolute pointer-events-none"
-                          style={{
-                            opacity: 0.4,
-                            zIndex: 45,
-                            ...((() => {
-                              const svgStyle: React.CSSProperties = {
-                                width: `${objectSize}px`,
-                                height: `${objectSize}px`,
-                              };
-                              
-                              switch (targetWall.wallSide) {
-                                case 'top':
-                                  svgStyle.left = `${targetRoom.x + (targetRoom.width * targetWall.position / 100) - objectSize / 2}px`;
-                                  svgStyle.top = `${targetRoom.y + 6}px`;
-                                  break;
-                                case 'right':
-                                  svgStyle.left = `${targetRoom.x + targetRoom.width - 6 - objectSize}px`;
-                                  svgStyle.top = `${targetRoom.y + (targetRoom.height * targetWall.position / 100) - objectSize / 2}px`;
-                                  break;
-                                case 'bottom':
-                                  svgStyle.left = `${targetRoom.x + (targetRoom.width * targetWall.position / 100) - objectSize / 2}px`;
-                                  svgStyle.top = `${targetRoom.y + targetRoom.height - 6 - objectSize}px`;
-                                  break;
-                                case 'left':
-                                  svgStyle.left = `${targetRoom.x + 6}px`;
-                                  svgStyle.top = `${targetRoom.y + (targetRoom.height * targetWall.position / 100) - objectSize / 2}px`;
-                                  break;
-                              }
-                              
-                              return svgStyle;
-                            })())
-                          }}
-                        >
-                          <path
-                            d={(() => {
-                              // Create the proper door swing arc based on wall side
-                              switch (targetWall.wallSide) {
-                                case 'top':
-                                  return `M 0 0 L ${objectSize} 0 A ${objectSize} ${objectSize} 0 0 1 0 ${objectSize} Z`;
-                                case 'right':
-                                  return `M ${objectSize} 0 L ${objectSize} ${objectSize} A ${objectSize} ${objectSize} 0 0 1 0 0 Z`;
-                                case 'bottom':
-                                  return `M ${objectSize} ${objectSize} L 0 ${objectSize} A ${objectSize} ${objectSize} 0 0 1 ${objectSize} 0 Z`;
-                                case 'left':
-                                  return `M 0 ${objectSize} L 0 0 A ${objectSize} ${objectSize} 0 0 1 ${objectSize} ${objectSize} Z`;
-                                default:
-                                  return `M 0 0 L ${objectSize} 0 A ${objectSize} ${objectSize} 0 0 1 0 ${objectSize} Z`;
-                              }
-                            })()}
-                            fill="none"
-                            stroke="#FF6B35"
-                            strokeWidth="1.5"
-                            strokeDasharray="4,2"
-                          />
-                        </svg>
-                      )}
-                    </div>
-                  );
+                  if (!placingObjectType) return null;
+                  const previewObject = createRoomObject(placingObjectType, targetWall.wallSide, targetWall.position, 48, 'placement-preview');
+                  return <div style={{ position: 'absolute', left: targetRoom.x, top: targetRoom.y, opacity: 0.6, pointerEvents: 'none', zIndex: 50 }}>
+                    <RoomObject room={targetRoom} object={previewObject} scale={state.scale} isSelected={false} preview onSelect={() => {}} />
+                  </div>;
                 })()
               )}
 
@@ -1478,46 +1378,10 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
                       const targetRoom = rooms.find(r => r.id === targetWall.roomId);
                       if (!targetRoom) return null;
 
-                      const doorSize = draggedDoor.object.doorProperties 
-                        ? inchesToPixels(draggedDoor.object.doorProperties.width) 
-                        : inchesToPixels(36);
-
-                      let previewStyle: React.CSSProperties = {
-                        position: 'absolute',
-                        backgroundColor: '#FF6B35',
-                        opacity: 0.7,
-                        pointerEvents: 'none',
-                        zIndex: 50,
-                      };
-
-                      switch (targetWall.wallSide) {
-                        case 'top':
-                          previewStyle.left = `${targetRoom.x + (targetRoom.width * targetWall.position / 100) - doorSize / 2}px`;
-                          previewStyle.top = `${targetRoom.y}px`;
-                          previewStyle.width = `${doorSize}px`;
-                          previewStyle.height = '6px';
-                          break;
-                        case 'right':
-                          previewStyle.left = `${targetRoom.x + targetRoom.width - 6}px`;
-                          previewStyle.top = `${targetRoom.y + (targetRoom.height * targetWall.position / 100) - doorSize / 2}px`;
-                          previewStyle.width = '6px';
-                          previewStyle.height = `${doorSize}px`;
-                          break;
-                        case 'bottom':
-                          previewStyle.left = `${targetRoom.x + (targetRoom.width * targetWall.position / 100) - doorSize / 2}px`;
-                          previewStyle.top = `${targetRoom.y + targetRoom.height - 6}px`;
-                          previewStyle.width = `${doorSize}px`;
-                          previewStyle.height = '6px';
-                          break;
-                        case 'left':
-                          previewStyle.left = `${targetRoom.x}px`;
-                          previewStyle.top = `${targetRoom.y + (targetRoom.height * targetWall.position / 100) - doorSize / 2}px`;
-                          previewStyle.width = '6px';
-                          previewStyle.height = `${doorSize}px`;
-                          break;
-                      }
-
-                      return <div key="dragged-door-preview" style={previewStyle} />;
+                      const previewObject = { ...draggedDoor.object, id: 'drag-preview', wallSide: targetWall.wallSide, position: targetWall.position };
+                      return <div style={{ position: 'absolute', left: targetRoom.x, top: targetRoom.y, opacity: 0.6, pointerEvents: 'none', zIndex: 50 }}>
+                        <RoomObject room={targetRoom} object={previewObject} scale={state.scale} isSelected={false} preview onSelect={() => {}} />
+                      </div>;
                     })()
                   )}
                 </>

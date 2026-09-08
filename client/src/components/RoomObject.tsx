@@ -10,9 +10,9 @@
  * Last verified: June 1, 2025
  */
 
-import { Square } from "lucide-react";
-import { Room, RoomObject as RoomObjectType, WallSide, DoorStyle, SwingDirection, SwingSide } from "@shared/schema";
-import { inchesToPixels } from "@/utils/canvas";
+import { useRef } from "react";
+import { getDoorGeometry } from "@/utils/doorGeometry";
+import { Room, RoomObject as RoomObjectType } from "@shared/schema";
 
 interface RoomObjectProps {
   room: Room;
@@ -20,16 +20,36 @@ interface RoomObjectProps {
   scale: number;
   isSelected: boolean;
   onSelect: (objectId: string) => void;
+  preview?: boolean;
+  onFlipHand?: (objectId: string) => void;
   onDragStart?: (objectId: string, clientX: number, clientY: number) => void;
 }
 
-const RoomObject = ({ room, object, scale, isSelected, onSelect, onDragStart }: RoomObjectProps) => {
+const RoomObject = ({ room, object, scale, isSelected, onSelect, onDragStart, onFlipHand, preview = false }: RoomObjectProps) => {
+  const openingRef = useRef<HTMLDivElement>(null);
+  const selectOpening = () => {
+    openingRef.current?.focus({ preventScroll: true });
+    onSelect(object.id);
+  };
+  const handleFlip = (event: React.MouseEvent) => {
+    event.preventDefault(); event.stopPropagation();
+    if (!preview && object.type === 'door' && object.doorProperties && object.doorProperties.style !== 'sliding') {
+      selectOpening(); onFlipHand?.(object.id);
+    }
+  };
+  const handleSwingPress = (event: React.MouseEvent) => {
+    if (event.button !== 0 || preview) return;
+    event.preventDefault(); event.stopPropagation(); selectOpening();
+  };
+  const handleSwingTouch = (event: React.TouchEvent) => {
+    if (event.touches.length !== 1 || preview) return;
+    event.stopPropagation(); selectOpening();
+  };
   const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
     if (e.button !== 0) return;
     e.preventDefault();
     e.stopPropagation();
-    e.currentTarget.focus({ preventScroll: true });
-    onSelect(object.id);
+    selectOpening();
     if (onDragStart) {
       onDragStart(object.id, e.clientX, e.clientY);
     }
@@ -38,8 +58,7 @@ const RoomObject = ({ room, object, scale, isSelected, onSelect, onDragStart }: 
   const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
     if (e.touches.length !== 1) return;
     e.stopPropagation();
-    e.currentTarget.focus({ preventScroll: true });
-    onSelect(object.id);
+    selectOpening();
     if (onDragStart && e.touches[0]) {
       onDragStart(object.id, e.touches[0].clientX, e.touches[0].clientY);
     }
@@ -51,7 +70,7 @@ const RoomObject = ({ room, object, scale, isSelected, onSelect, onDragStart }: 
   };
 
   const horizontal = object.wallSide === 'top' || object.wallSide === 'bottom';
-  // A narrow screen-sized strip around the existing wall bar, not the swing arc.
+  // The wall bar keeps a narrow screen-sized drag target; the swing selects separately.
   // Preserve the bar's model dimensions/test bounds and avoid widening along the wall.
   const hitThickness = Math.max(8, 18 / Math.max(scale, 0.05));
   const hitArea = <span aria-hidden="true" style={{ position: 'absolute', display: 'block',
@@ -66,33 +85,10 @@ const RoomObject = ({ room, object, scale, isSelected, onSelect, onDragStart }: 
 
   // Render door with swing arc
   if (object.type === 'door') {
-    const doorProps = object.doorProperties || {
-      style: 'single' as DoorStyle,
-      swingDirection: 'inward' as SwingDirection,
-      swingSide: 'right' as SwingSide,
-      width: 36,
-      height: 80
-    };
-
-    const doorSize = inchesToPixels(doorProps.width);
-    const isInward = doorProps.swingDirection === 'inward';
-    const isRightSwing = doorProps.swingSide === 'right';
-    // Local u follows the wall clockwise; local v points into this room.
-    // Left/right is viewed facing the wall from inside, consistently on all walls.
-    const wallStart = object.wallSide === 'top'
-      ? { x: room.width * object.position / 100 - doorSize / 2, y: 4, tx: 1, ty: 0 }
-      : object.wallSide === 'right'
-        ? { x: room.width - 4, y: room.height * object.position / 100 - doorSize / 2, tx: 0, ty: 1 }
-        : object.wallSide === 'bottom'
-          ? { x: room.width * object.position / 100 + doorSize / 2, y: room.height - 4, tx: -1, ty: 0 }
-          : { x: 4, y: room.height * object.position / 100 + doorSize / 2, tx: 0, ty: -1 };
-    const hinge = isRightSwing ? doorSize : 0;
-    const closedTip = isRightSwing ? 0 : doorSize;
-    const openDepth = isInward ? doorSize : -doorSize;
-    const sweep = isRightSwing === isInward ? 0 : 1;
+    const { doorProperties: doorProps, bar, origin, transform, swingSize, leafArcPath, sectorPath } = getDoorGeometry(room, object);
 
     return (
-      <div style={{ position: 'absolute' }}>
+      <div aria-hidden={preview || undefined} style={{ position: 'absolute', left: 0, top: 0, pointerEvents: preview ? 'none' : undefined }}>
         {/* Door opening line */}
         <div
           style={{
@@ -102,61 +98,38 @@ const RoomObject = ({ room, object, scale, isSelected, onSelect, onDragStart }: 
             zIndex: 1000,
             border: isSelected ? '3px solid #3B82F6' : '2px solid #000000',
             boxShadow: '0 0 4px rgba(0,0,0,0.5)',
-            ...((() => {
-              const size = object.doorProperties ? inchesToPixels(object.doorProperties.width) : 40;
-              const styles: React.CSSProperties = {};
-              
-              switch (object.wallSide) {
-                case 'top':
-                  styles.left = `${(room.width * object.position / 100) - size / 2}px`;
-                  styles.top = '0px';
-                  styles.width = `${size}px`;
-                  styles.height = '8px';
-                  break;
-                case 'right':
-                  styles.left = `${room.width - 8}px`;
-                  styles.top = `${(room.height * object.position / 100) - size / 2}px`;
-                  styles.width = '8px';
-                  styles.height = `${size}px`;
-                  break;
-                case 'bottom':
-                  styles.left = `${(room.width * object.position / 100) - size / 2}px`;
-                  styles.top = `${room.height - 8}px`;
-                  styles.width = `${size}px`;
-                  styles.height = '8px';
-                  break;
-                case 'left':
-                  styles.left = '0px';
-                  styles.top = `${(room.height * object.position / 100) - size / 2}px`;
-                  styles.width = '8px';
-                  styles.height = `${size}px`;
-                  break;
-              }
-              
-              return styles;
-            })())
+            left: bar.x, top: bar.y, width: bar.width, height: bar.height,
+            pointerEvents: preview ? 'none' : 'auto',
           }}
-          data-testid={`opening-${object.id}`}
-          role="button" tabIndex={0} aria-label={`Select ${object.type} on ${object.wallSide} wall`}
+          ref={openingRef}
+          data-testid={`${preview ? 'preview-opening' : 'opening'}-${object.id}`}
+          role={preview ? undefined : "button"} tabIndex={preview ? undefined : 0} aria-label={`Select ${object.type} on ${object.wallSide} wall`}
           aria-pressed={isSelected} onKeyDown={handleSelectionKey}
           data-opening-type={object.type}
           data-wall-side={object.wallSide}
           onClick={event => event.stopPropagation()}
-          onMouseDown={handleMouseDown}
-          onTouchStart={handleTouchStart}
+          title={object.doorProperties && doorProps.style !== 'sliding' ? "Double-click to flip hand. Drag the wall opening to move the door." : undefined}
+          onDoubleClick={handleFlip}
+          onMouseDown={preview ? undefined : handleMouseDown}
+          onTouchStart={preview ? undefined : handleTouchStart}
           onTouchEnd={handleTouchEnd}
           onTouchCancel={handleTouchEnd}
-        >{hitArea}</div>
+        >{!preview && hitArea}</div>
         
-        {/* Swing is view-only: stored style, center, attachment and size stay unchanged. */}
         {doorProps.style !== 'sliding' && (
           <svg data-testid={`door-swing-${object.id}`} data-door-hinge={doorProps.swingSide}
             data-door-direction={doorProps.swingDirection} data-door-style={doorProps.style}
-            aria-hidden="true" style={{ position: 'absolute', left: wallStart.x, top: wallStart.y,
-              width: doorSize, height: doorSize, overflow: 'visible', pointerEvents: 'none', zIndex: 15, opacity: 0.8 }}>
-            <g transform={`matrix(${wallStart.tx} ${wallStart.ty} ${-wallStart.ty} ${wallStart.tx} 0 0)`}>
-              <path d={`M ${hinge} 0 L ${hinge} ${openDepth} M ${closedTip} 0 A ${doorSize} ${doorSize} 0 0 ${sweep} ${hinge} ${openDepth}`}
-                fill="none" stroke="#FF6B35" strokeWidth="1.5" strokeDasharray="4,2" />
+            aria-hidden="true" style={{ position: 'absolute', left: origin.x, top: origin.y,
+              width: swingSize, height: swingSize, overflow: 'visible', pointerEvents: 'none', zIndex: 15, opacity: 0.8 }}>
+            <g transform={transform}>
+              {!preview && <path data-testid={`door-hit-${object.id}`} d={sectorPath}
+                fill="transparent" stroke="transparent" strokeWidth={Math.max(3, 8 / Math.max(scale, 0.05))}
+                style={{ pointerEvents: 'all', cursor: 'pointer' }}
+                onMouseDown={handleSwingPress} onTouchStart={handleSwingTouch}
+                onTouchEnd={handleTouchEnd} onTouchCancel={handleTouchEnd}
+                onClick={event => event.stopPropagation()} onDoubleClick={handleFlip} />}
+              <path data-door-outline="true" d={leafArcPath}
+                fill="none" stroke={isSelected ? '#2563EB' : '#FF6B35'} strokeWidth="1.5" strokeDasharray="4,2" />
             </g>
           </svg>
         )}
@@ -169,7 +142,7 @@ const RoomObject = ({ room, object, scale, isSelected, onSelect, onDragStart }: 
     const windowSize = object.size; // Use actual window size from properties
 
     return (
-      <div style={{ position: 'absolute' }}>
+      <div aria-hidden={preview || undefined} style={{ position: 'absolute', left: 0, top: 0, pointerEvents: preview ? 'none' : undefined }}>
         {/* Window opening - simple line break in wall */}
         <div
           style={{
@@ -210,17 +183,19 @@ const RoomObject = ({ room, object, scale, isSelected, onSelect, onDragStart }: 
               return styles;
             })())
           }}
-          data-testid={`opening-${object.id}`}
-          role="button" tabIndex={0} aria-label={`Select ${object.type} on ${object.wallSide} wall`}
+          ref={openingRef}
+          data-testid={`${preview ? 'preview-opening' : 'opening'}-${object.id}`}
+          role={preview ? undefined : "button"} tabIndex={preview ? undefined : 0} aria-label={`Select ${object.type} on ${object.wallSide} wall`}
           aria-pressed={isSelected} onKeyDown={handleSelectionKey}
           data-opening-type={object.type}
           data-wall-side={object.wallSide}
           onClick={event => event.stopPropagation()}
-          onMouseDown={handleMouseDown}
-          onTouchStart={handleTouchStart}
+          onDoubleClick={event => event.stopPropagation()}
+          onMouseDown={preview ? undefined : handleMouseDown}
+          onTouchStart={preview ? undefined : handleTouchStart}
           onTouchEnd={handleTouchEnd}
           onTouchCancel={handleTouchEnd}
-        >{hitArea}</div>
+        >{!preview && hitArea}</div>
         
         {/* Window frame lines - simple parallel lines */}
         <svg

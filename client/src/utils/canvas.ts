@@ -11,6 +11,7 @@
  */
 
 import { Position, Room, Size, WallSide, ObjectType, RoomObject } from './types';
+import { createDefaultDoorProperties } from './doorGeometry';
 
 export const GRID_SIZE = 20; // pixels
 export const ROOM_MIN_SIZE = 60; // pixels
@@ -206,10 +207,11 @@ export function createRoomObject(
   type: ObjectType,
   wallSide: WallSide,
   position: number,
-  size: number = 30
+  size: number = 30,
+  id: string = `obj_${generateId()}`
 ): RoomObject {
   const baseObject = {
-    id: `obj_${generateId()}`,
+    id,
     type,
     wallSide,
     position,
@@ -218,16 +220,8 @@ export function createRoomObject(
 
   // Add default door properties if this is a door
   if (type === 'door') {
-    return {
-      ...baseObject,
-      doorProperties: {
-        style: 'single',
-        swingDirection: 'inward',
-        swingSide: 'right',
-        width: 36, // 36 inches = ~3 feet
-        height: 80, // 80 inches = ~6.67 feet
-      },
-    };
+    const doorProperties = createDefaultDoorProperties();
+    return { ...baseObject, size: inchesToPixels(doorProperties.width), doorProperties };
   }
 
   return baseObject;
