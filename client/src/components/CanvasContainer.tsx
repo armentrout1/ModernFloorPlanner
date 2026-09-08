@@ -14,6 +14,7 @@ import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { Room, Position, ResizeHandle, CanvasState, ObjectType, WallSide } from '@/utils/types';
 import { shouldIgnoreEditorShortcut } from '@/utils/keyboard';
 import CanvasControls from './CanvasControls';
+import { useCanvasView } from '@/hooks/useCanvasView';
 import RoomBox from './RoomBox';
 import RoomObject from './RoomObject';
 import TotalAreaDisplay from './TotalAreaDisplay';
@@ -65,6 +66,7 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
 }) => {
   const canvasRef = useRef<HTMLDivElement>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
+  const stageRef = useRef<HTMLDivElement>(null);
   
   const [state, setState] = useState<CanvasState>({
     rooms: [],
@@ -89,6 +91,8 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
     isPreviewMode: false, // For quick preview
   });
 
+  const view = useCanvasView(wrapperRef, rooms, state.scale);
+
   // Enhanced door interaction state
   const [doorState, setDoorState] = useState<{
     mode: 'idle' | 'placing' | 'dragging';
@@ -106,6 +110,7 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
   
   // Zoom functions
   const handleZoomIn = useCallback(() => {
+    view.captureCenter();
     setState(prev => ({
       ...prev,
       scale: prev.scale * SCALE_FACTOR,
@@ -113,6 +118,7 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
   }, []);
   
   const handleZoomOut = useCallback(() => {
+    view.captureCenter();
     setState(prev => ({
       ...prev,
       scale: prev.scale / SCALE_FACTOR,
@@ -125,11 +131,8 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
       scale: 1,
     }));
     
-    if (wrapperRef.current) {
-      wrapperRef.current.scrollLeft = 0;
-      wrapperRef.current.scrollTop = 0;
-    }
-  }, []);
+    view.centerOn({ x: view.viewport.width / 2, y: view.viewport.height / 2 });
+  }, [view.centerOn, view.viewport.width, view.viewport.height]);
   
   // Update local state when props change
   useEffect(() => {
@@ -590,81 +593,32 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
     }
   };
   
-  // Center the view on a particular room
+  // Center the view only; room positions and attached openings are unchanged.
   const handleCenterView = () => {
-    if (!selectedRoomId || !wrapperRef.current) return;
-    
     const selectedRoom = rooms.find(room => room.id === selectedRoomId);
-    if (!selectedRoom) return;
-    
-    // Calculate the center position of the room
-    const roomCenterX = selectedRoom.x + selectedRoom.width / 2;
-    const roomCenterY = selectedRoom.y + selectedRoom.height / 2;
-    
-    // Calculate the center of the viewport
-    const viewportWidth = wrapperRef.current.clientWidth;
-    const viewportHeight = wrapperRef.current.clientHeight;
-    
-    // Set scroll position to center the room
-    wrapperRef.current.scrollLeft = roomCenterX * state.scale - viewportWidth / 2;
-    wrapperRef.current.scrollTop = roomCenterY * state.scale - viewportHeight / 2;
+    if (selectedRoom) view.centerOn({ x: selectedRoom.x + selectedRoom.width / 2, y: selectedRoom.y + selectedRoom.height / 2 });
   };
-  
-  // Reset the view to fit all rooms
+
   const handleResetView = () => {
-    if (!wrapperRef.current || rooms.length === 0) return;
-    
-    // Find the bounds of all rooms
-    let minX = Infinity;
-    let minY = Infinity;
-    let maxX = -Infinity;
-    let maxY = -Infinity;
-    
-    rooms.forEach(room => {
-      minX = Math.min(minX, room.x);
-      minY = Math.min(minY, room.y);
-      maxX = Math.max(maxX, room.x + room.width);
-      maxY = Math.max(maxY, room.y + room.height);
-    });
-    
-    // Add padding
-    const padding = 100;
-    minX -= padding;
-    minY -= padding;
-    maxX += padding;
-    maxY += padding;
-    
-    // Get viewport dimensions
-    const viewportWidth = wrapperRef.current.clientWidth;
-    const viewportHeight = wrapperRef.current.clientHeight;
-    
-    // Calculate required scale to fit all rooms
-    const scaleX = viewportWidth / (maxX - minX);
-    const scaleY = viewportHeight / (maxY - minY);
-    const newScale = Math.min(scaleX, scaleY, 1); // Don't zoom in more than 1x
-    
-    // Set new scale
-    setState(prev => ({
-      ...prev,
-      scale: newScale,
-    }));
-    
-    // Center the view
-    const centerX = (minX + maxX) / 2;
-    const centerY = (minY + maxY) / 2;
-    
-    // Set scroll position after a short delay to allow scale change to apply
-    setTimeout(() => {
-      if (wrapperRef.current) {
-        wrapperRef.current.scrollLeft = centerX * newScale - viewportWidth / 2;
-        wrapperRef.current.scrollTop = centerY * newScale - viewportHeight / 2;
-      }
-    }, 10);
+    const wrapper = wrapperRef.current;
+    if (!wrapper || rooms.length === 0) return;
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    for (const room of rooms) {
+      minX = Math.min(minX, room.x); minY = Math.min(minY, room.y);
+      maxX = Math.max(maxX, room.x + room.width); maxY = Math.max(maxY, room.y + room.height);
+    }
+    // Keep room edges clear of the view controls, using actual visible pixels.
+    const padding = 64;
+    const availableWidth = Math.max(1, wrapper.clientWidth - padding * 2);
+    const availableHeight = Math.max(1, wrapper.clientHeight - padding * 2);
+    const scale = Math.min(availableWidth / (maxX - minX), availableHeight / (maxY - minY), 1);
+    setState(previous => ({ ...previous, scale }));
+    view.centerOn({ x: (minX + maxX) / 2, y: (minY + maxY) / 2 });
   };
 
   // Handle spacebar + click for panning
   const handleCanvasMouseDown = (e: React.MouseEvent) => {
-    if (e.target !== canvasRef.current) return;
+    if (e.target !== canvasRef.current && e.target !== stageRef.current) return;
     
     const rect = canvasRef.current?.getBoundingClientRect();
     if (!rect) return;
@@ -1148,7 +1102,7 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
     }
     
     // Check if touch is on a room or on the canvas itself
-    if (e.target !== canvasRef.current) {
+    if (e.target !== canvasRef.current && e.target !== stageRef.current) {
       // Touch is likely on a room or other element - don't handle here
       return;
     }
@@ -1313,8 +1267,10 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
   
   // Calculate canvas style based on scale
   const canvasStyle: React.CSSProperties = {
-    width: '2000px',
-    height: '2000px',
+    width: view.planeWidth,
+    height: view.planeHeight,
+    left: view.origin.x,
+    top: view.origin.y,
     transformOrigin: '0 0',
     transform: `scale(${state.scale})`,
     backgroundSize: `${GRID_SIZE}px ${GRID_SIZE}px`,
@@ -1325,7 +1281,7 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
   };
   
   return (
-    <main className="flex-grow relative overflow-hidden">
+    <main className="relative flex h-full min-h-0 min-w-0 flex-col overflow-hidden">
       <CanvasControls
         onZoomIn={handleZoomIn}
         onZoomOut={handleZoomOut}
@@ -1335,68 +1291,19 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
         isPanMode={state.isPanning}
       />
       
-      <TotalAreaDisplay rooms={rooms} />
-      
-      {/* Canvas Navigation Controls */}
-      <div className="absolute left-1/2 bottom-4 -translate-x-1/2 flex items-center gap-2 z-10 bg-white/90 rounded-full shadow-md px-4 py-2 border border-slate-200">
-        <Button
-          variant="outline"
-          size="icon"
-          className="h-8 w-8 rounded-full"
-          onClick={handleResetView}
-          title="Fit All Rooms"
-        >
-          <RotateCcw className="h-4 w-4" />
-        </Button>
-        
-        {selectedRoomId && (
-          <Button
-            variant="outline"
-            size="icon"
-            className="h-8 w-8 rounded-full"
-            onClick={handleCenterView}
-            title="Center Selected Room"
-          >
-            <MoveHorizontal className="h-4 w-4" />
-          </Button>
-        )}
-        
-        {/* Preview Mode Toggle */}
-        <Button
-          variant={state.isPreviewMode ? "default" : "outline"}
-          size="icon"
-          className="h-8 w-8 rounded-full"
-          onClick={() => setState(prev => ({ ...prev, isPreviewMode: !prev.isPreviewMode }))}
-          title="Toggle Preview Mode"
-        >
-          <svg 
-            xmlns="http://www.w3.org/2000/svg" 
-            viewBox="0 0 24 24" 
-            fill="none" 
-            stroke="currentColor" 
-            strokeWidth="2" 
-            strokeLinecap="round" 
-            strokeLinejoin="round" 
-            className="h-4 w-4"
-          >
-            <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
-            <circle cx="12" cy="12" r="3" />
-          </svg>
-        </Button>
-        
-        <div className="text-xs bg-slate-100 px-2 py-1 rounded">
-          {Math.round(state.scale * 100)}%
-        </div>
-      </div>
-      
       <div 
-        ref={wrapperRef} 
-        className="w-full h-full overflow-auto bg-slate-100"
+        ref={wrapperRef}
+        data-testid="canvas-viewport"
+        className="min-h-0 w-full flex-1 overflow-auto bg-white"
+        style={{ overflowAnchor: 'none' }}
       >
         <div
-          ref={canvasRef}
-          className="relative bg-white cursor-crosshair"
-          style={canvasStyle}
+          ref={stageRef}
+          className="relative overflow-hidden bg-white cursor-crosshair"
+          style={{ width: view.width, height: view.height,
+            backgroundSize: `${GRID_SIZE * state.scale}px ${GRID_SIZE * state.scale}px`,
+            backgroundPosition: `${view.origin.x}px ${view.origin.y}px`,
+            backgroundImage: canvasStyle.backgroundImage }}
           onMouseDown={handleCanvasMouseDown}
           onMouseMove={handleCanvasMouseMove}
           onMouseUp={handleCanvasMouseUp}
@@ -1406,6 +1313,7 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
           onTouchEnd={handleCanvasTouchEnd}
           onTouchCancel={handleCanvasTouchEnd}
         >
+        <div ref={canvasRef} data-testid="canvas-surface" className="absolute bg-white cursor-crosshair" style={canvasStyle}>
           {rooms.map(room => (
             <RoomBox
               key={room.id}
@@ -1680,6 +1588,63 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
             <PreviewMode rooms={rooms} scale={state.scale} />
           )}
         </div>
+        </div>
+      </div>
+      <div className="flex shrink-0 flex-wrap items-center justify-center gap-2 border-t border-slate-200 bg-white p-2 sm:justify-between">
+        <TotalAreaDisplay rooms={rooms} />
+        {/* Canvas Navigation Controls */}
+        <div data-testid="canvas-view-controls" className="flex flex-wrap items-center justify-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-8 whitespace-nowrap"
+            onClick={handleResetView}
+            title="Fit All Rooms"
+            aria-label="Fit All Rooms"
+          >
+            <RotateCcw className="mr-1.5 h-4 w-4" />Fit drawing
+          </Button>
+
+          {selectedRoomId && (
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-8 w-8 rounded-full"
+              onClick={handleCenterView}
+              title="Center Selected Room"
+            >
+              <MoveHorizontal className="h-4 w-4" />
+            </Button>
+          )}
+
+          {/* Preview Mode Toggle */}
+          <Button
+            variant={state.isPreviewMode ? "default" : "outline"}
+            size="icon"
+            className="h-8 w-8 rounded-full"
+            onClick={() => setState(prev => ({ ...prev, isPreviewMode: !prev.isPreviewMode }))}
+            title="Toggle Preview Mode"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="h-4 w-4"
+            >
+              <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
+              <circle cx="12" cy="12" r="3" />
+            </svg>
+          </Button>
+
+          <div className="text-xs bg-slate-100 px-2 py-1 rounded">
+            {Math.round(state.scale * 100)}%
+          </div>
+        </div>
+
       </div>
     </main>
   );

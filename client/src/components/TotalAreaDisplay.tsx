@@ -11,9 +11,9 @@ const TotalAreaDisplay: React.FC<TotalAreaDisplayProps> = ({ rooms }) => {
   const totalArea = calculateTotalArea(rooms);
   
   return (
-    <div className="absolute bottom-4 left-4 z-10">
+    <div data-testid="canvas-totals" className="max-w-full">
       <Card className="shadow-md">
-        <CardContent className="p-3">
+        <CardContent className="p-2">
           <div className="flex items-center">
             <div>
               <p className="text-xs text-slate-500">Total Area</p>

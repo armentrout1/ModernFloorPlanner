@@ -349,7 +349,7 @@ const FloorPlanner: React.FC<{ active?: boolean }> = ({ active = true }) => {
         onExpandRightPanel={handleExpandRightPanel}
       />
       
-      <div className="flex-grow overflow-hidden">
+      <div className="min-h-0 flex-grow overflow-hidden">
         <ResizablePanels
           leftPanelWidth={leftPanelExpanded ? 70 : 20}
           rightPanelWidth={rightPanelExpanded ? 70 : 25}
