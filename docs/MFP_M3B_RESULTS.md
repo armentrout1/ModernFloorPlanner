@@ -2,6 +2,83 @@
 
 Date: 2026-09-08
 Requirement: DR-002 / [M3B issue #10](https://github.com/armentrout1/ModernFloorPlanner/issues/10)
+**Slice 1 COMPLETE locally; Slice 2 eligible, NOT STARTED.** M3B as a whole is still in progress.
+Application/test commit: **5e67eaee84f50de16d3209881b2fc28e6fa934e8**. Entry main/origin/main: 77ac8c7c1fd7cfc6cf4732f7b433243b0c771e07.
+Deployment: **NOT DEPLOYED**; production/database/auth/partner smoke **NOT VERIFIED**. #2 remains unreleased; #4 remains PROPOSED.
+
+## Implemented application result
+
+The owner's explicit implementation assignment superseded the earlier prerequisite-only stopping instruction. The existing selected design was implemented in the existing React/Vite product. No framework, dependency, live database or hosting change was made.
+
+Open **/physical-draft** for the unified physical workflow. New physical draft creates an empty independent document. Existing standalone Quick Rooms and the legacy sketch offer **Open a physical copy**; the action copies exactly one chosen source into a new selected local draft identity. Existing originals, IDs and source lineage remain intact. Nothing is automatically adopted or merged. The original /quick-room and / workflows remain separate; the two tabs inside /physical-draft share one canonical document.
+
+- **State/provider:** client/src/features/physical-draft/state.ts, store.ts, storage.ts and provider.tsx own the selected full physical draft, raw text/unit context, measurement events, declarations and recovery registry. Shared command guards reject stale target/revision writes. Read-only pixel projections are never synchronized back into a second Room[] store.
+- **Views:** pages/PhysicalDraft.tsx, RoomMeasurements.tsx, PhysicalDrawing.tsx and PhysicalQuantities.tsx connect room name, length, width and existing ceilingHeight in both supported views. The existing RoomBox renderer is reused as an inert projection with room selection. Quantities use the existing shared engine and formatter; React contains no takeoff formulas.
+- **Compatibility:** shared/compatibility/physicalDraft.ts provides opt-in legacy-pixels-v2 and detached physical-draft-upgrade-v1 operations. Recorded window heights become imported/unconfirmed millimeters; missing heights/sills stay unknown. Original JSON, groups, IDs, door appearance/hinge geometry, conflicting width candidates and historical evidence survive. Unknown physical extensions are refused without changing originals. Captured physical v2 is never silently re-imported from its old compatibility.original.
+- **Versioned calculations:** typed room-applicability-v1 and sketch-editor-v1 contracts; rectangular-flat-v2 policy, engine/result/snapshot v2 dispatch and versioned geometry/content fingerprints. Existing pure arithmetic is reused. Frozen v1 behavior and a pre-change golden snapshot remain verifiable.
+- **Recovery:** modern-floor-planner:editor-draft:v1 stores a full mfp-editor-draft-v1 registry with selected identity, raw inputs, complete documents/openings/contracts/evidence/settings and no authoritative totals. Original Quick Rooms storage is untouched. Corrupt/future data stays preserved with a download action. Quota/read/CAS failure preserves prior bytes and usable memory state. Physical mode has no legacy API save path.
+
+## Acceptance and fresh final checks
+
+The nine new real-browser scenarios cover explicit empty/Quick Rooms/legacy adoption; same draft/room identity; 12 x 10 x 8 ft producing 120/120/352 sq ft; inspector height 9 producing 120/120/396; reverse length/width/name synchronization; cleared/invalid height masking walls; fractional/metric context and Enter-plus-blur once; view-only fit/zoom/pan; independent unsupported ceiling/wall blocking; same-tab recovery; preserved groups/windows/door outlines; and denied/corrupt/quota recovery with no API writes.
+
+New unit cases: 15 applicability/snapshot regressions, 23 importer/state/recovery regressions, 7 projection regressions. Existing 234 unit and 96 browser regressions remain included, including all existing browser/Node engine parity cases. No old test expectation was weakened or skipped.
+
+Final checks ran after the last application change in the isolated implementation copy using Node 20.20.2 / npm 10.8.2 and Playwright 1.55.1. The following is one fresh sequence, not combined targeted history:
+
+| Command | Actual result | Duration |
+| --- | --- | --- |
+| `npm ci` | PASS, exit 0 | 11.99 s |
+| `npm test` | PASS, exit 0; **279/279**, no failures/skips/cancellations | 1.90 s |
+| `npm run check` | PASS, exit 0 | 5.41 s |
+| `npm run build` | PASS, exit 0 | 4.32 s |
+| `npx playwright test --reporter=line` | PASS, exit 0; **105/105**, one worker, zero retries | 264.53 s |
+| `git diff --check` | PASS in the canonical checkout before application commit and final documentation commit. | Not timed |
+
+[Sanitized source/check manifest](evidence/MFP_M3B_SLICE1_2026-09-08.json) binds this code commit, application/test files and raw-log hashes. The full-suite source was compared with the application commit after integration. npm reports the existing 28 advisories (4 low, 10 moderate, 14 high); old browser-data and chunk-size warnings remain. No audit fix or package/lock changes.
+
+Earlier evidence is explicitly separate: initial focused browser run was 8/9 due solely to the new corrupt-message assertion wording; corrected assertion retains exact download/original-byte checks. The first full sequence was 279/279 unit and 104/105 browser: two added header links caused a real compact-inspector viewport regression. Removing the redundant link repaired it without changing the old acceptance test. A focused fitted-view screenshot then exposed a new projection scroll reset; its bounded repair and before/after center assertions are included in the final suite. Earlier failed logs are retained locally and are not counted as passes.
+
+## Preservation and local integration
+
+Implementation development, clean installs and the full automated suites used a disposable tracked-source export in the task workspace. The later canonical smoke is recorded below. No permanent product repository was created. No owner browser tab was navigated, reloaded, inspected or used for tests. No owner .env/database/customer data was copied. The owner's dependencies were not reinstalled.
+
+The connected-client HMR rehearsal of an earlier candidate on a synthetic old 77ac8c7 app **FAILED**: Vite increased page loads from 1 to 3 page loads when new modules/dependencies appeared. It is not safe evidence for hot-applying this patch to an active unsaved legacy editor. No owner source was changed by that rehearsal.
+
+Instead, immediately before integration the canonical checkout/root/remote/main and writer availability were reverified; port 5173 had no listener, prior PID 15820 was absent, and no Vite process watched this checkout. The copy was guarded against an active canonical watcher. With no server watching, file writes could not send hot reload to the old loaded page. Port 5173 remains stopped: restarting it could reconnect its old client and reload unsaved work. The separate review server uses 5176; use a new tab. Do not imply that unsaved browser memory is saved in Git.
+
+Historical stash remains 779950aeaa1b81fc8955ad8f399ab87ae5e59063. Archived original roadmap SHA256 remains 4AA44769A3AF1CC8A4FE940B09E024109FEA19630F61181772B42F7EFDB7BCF1. No reset, forced push, stash apply/drop, archive replacement, destructive migration or customer onboarding occurred.
+
+## Canonical local smoke
+
+A fresh isolated browser context loaded the existing checkout at http://127.0.0.1:5176/physical-draft after integration. It created 12 x 10 x 8 ft, observed 120/120/352 sq ft, changed the inspector to 9 ft and observed 120/120/396, then verified the same IDs and fields through a view round trip. Fit stayed centered with 0 px error before and after full-page capture; view controls preserved the document, events and quantity request. There were zero page errors and zero API writes. The 27 integrated file hashes matched the implementation manifest, and all 213 tracked non-document files were subsequently matched to the application commit after CRLF normalization. The test context closed; the separate review server remains available. This is local smoke, not deployment evidence.
+
+## Populated view and owner checks
+
+![Unified physical draft with 9-foot ceiling and 396 sq ft gross walls](evidence/MFP_M3B_SLICE1_DESKTOP.png)
+
+1. In a new physical draft add a room, enter 12 ft, 10 ft and 8 ft; check 120/120/352 sq ft.
+2. Switch to Drawing, set Ceiling height to 9 ft, then return to Quick Rooms; check the same 9 ft and 396 sq ft walls.
+3. Clear height or enter unfinished text: walls become incomplete while floor/flat ceiling remain 120; restore 9 ft and use Fit drawing.
+
+## Limits and single next task
+
+Temporary same-tab recovery is not account, PostgreSQL or cross-device saving. The drawing is read-only apart from selecting rooms; opening placement/editing/deletion/group movement are visibly unavailable here and remain functional in the preserved standalone legacy workflow. Physical doors with no recorded appearance have no invented handed symbol; an available historical source symbol is labeled accordingly. Unknown plan dimensions are not drawn as measured placeholders, and unsupported rendering ranges retain physical data.
+
+Supported proposed/manual/imported measurements and room models remain provisional until explicit review; confirmation/work-surface UI comes later. Sloped/vaulted/stepped/soffit/void and nonuniform wall/path conditions are preserved and block dependent outputs. Room ceiling height is not a plan dimension, stair rise or rough framing height. These three measured quantities are not a full construction materials list: M7 owns specified recipes/coverage/accessories/waste/purchasing; later trade modules need their construction/routing inputs.
+
+**Next: M3B Slice 2 only — synchronized physical opening forms and drawing interactions**, including measured width/height/sill/clockwise center offset/basis, supported appearance, validated placement/movement, deletion/recovery and explicit shared-attachment protection. It is eligible and has not started. Slices 3/4, general M3C work, proposed M3D levels-before-stairs, hosting and database work are not activated.
+
+---
+
+## Historical prerequisite-only and later-brief checkpoints
+
+The record below describes earlier assignments. Its dated stop/eligibility statements are historical; the implementation and current status above supersede them.
+
+# Historical MFP-M3B prerequisite results
+
+Date: 2026-09-08
+Requirement: DR-002 / [M3B issue #10](https://github.com/armentrout1/ModernFloorPlanner/issues/10)
 Current scope: failed entry-gate prerequisite only.
 Gate: **CLEARED LOCALLY - fresh full baseline passed on 09929dd.**
 Slice 1: NOT STARTED. Slice 2: NOT ELIGIBLE.

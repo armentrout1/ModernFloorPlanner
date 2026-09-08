@@ -4,8 +4,8 @@ Date: 2026-09-08
 Requirement: DR-002 / MFP-M3B
 Issue: [MFP-M3B / issue #10](https://github.com/armentrout1/ModernFloorPlanner/issues/10)
 Original gate: **BLOCKED - initial full browser baseline was 95/96.**
-Current gate: **CLEARED locally by test-only prerequisite 09929dd and fresh 234/234 unit, 96/96 browser checks.** See [M3B follow-up results](MFP_M3B_RESULTS.md). Slice 1 remains NOT STARTED.
-Implementation: NOT STARTED. This assignment changes documentation only.
+Current gate: **CLEARED locally by test-only prerequisite 09929dd and fresh 234/234 unit, 96/96 browser checks.** See [M3B follow-up results](MFP_M3B_RESULTS.md). Slice 1 has now been implemented and verified in the explicit follow-up assignment.
+Implementation: Slice 1 COMPLETE locally in the follow-up; Slice 2 NEXT ELIGIBLE, not started. The original gate below was documentation only; its past-tense stop statements are historical. Current results and BUILD_ROADMAP control status.
 Canonical sequence: [BUILD_ROADMAP.md](BUILD_ROADMAP.md); this is its design/evidence record, not another roadmap.
 
 ## 1. Original entry baseline and preservation (historical failure)
