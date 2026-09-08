@@ -98,18 +98,18 @@ export default function SelectionPanel({ rooms, selectedRoomIds, selectedObjectI
           const current = objectRoom?.id === context.id && selectedObject?.type === type;
           return <TabsContent key={type} value={type === 'door' ? 'doors' : 'windows'} className="m-0 min-h-0 flex-1 overflow-y-auto">
             <section className="space-y-2 px-4 pb-3" aria-label={`${type === 'door' ? 'Doors' : 'Windows'} in ${nameOf(context)}`}>
-              <p className="text-xs text-slate-500">{items.length ? `Choose a ${type} to edit its size and properties.` : `No ${type === 'door' ? 'doors' : 'windows'} in this room. Use Add ${type === 'door' ? 'Door' : 'Window'} and click a wall.`}</p>
-              <div className="max-h-44 space-y-2 overflow-y-auto">
+              <p className={current ? "sr-only" : "text-xs text-slate-500"}>{items.length ? `Choose a ${type} to edit its size and properties.` : `No ${type === 'door' ? 'doors' : 'windows'} in this room. Use Add ${type === 'door' ? 'Door' : 'Window'} and click a wall.`}</p>
+              <div className="flex max-h-28 flex-wrap gap-1.5 overflow-y-auto">
                 {items.map((item, index) => {
                   const active = selectedObjectId === item.id;
                   const width = item.type === 'door' && item.doorProperties ? item.doorProperties.width : pixelsToInches(item.size);
                   const Icon = type === 'door' ? DoorOpen : Square;
                   return <Button key={item.id} variant="outline" aria-pressed={active}
-                    className={`h-auto w-full justify-start gap-2 whitespace-normal px-3 py-2.5 text-left ${active ? 'border-blue-500 bg-blue-50 text-blue-800 hover:bg-blue-100' : ''}`}
+                    title={`${item.wallSide} wall - ${Number(width.toFixed(2))} in`}
+                    className={`h-8 justify-start gap-1.5 px-2 text-xs ${active ? 'border-blue-500 bg-blue-50 text-blue-800 hover:bg-blue-100' : ''}`}
                     onClick={() => onSelectObject(item.id)} aria-label={`Select ${type} ${index + 1} in ${nameOf(context)}`}>
                     <Icon aria-hidden="true" className="h-4 w-4 shrink-0" />
-                    <span><span className="block font-medium">{type === 'door' ? 'Door' : 'Window'} {index + 1}</span>
-                      <span className="block text-xs font-normal capitalize">{item.wallSide} wall · {Number(width.toFixed(2))} in</span></span>
+                    <span>{type === 'door' ? 'Door' : 'Window'} {index + 1}</span>
                   </Button>;
                 })}
               </div>

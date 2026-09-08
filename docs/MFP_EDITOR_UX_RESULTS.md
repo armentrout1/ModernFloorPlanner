@@ -189,3 +189,27 @@ Actual checks:
 ![Floor Plan Preview on a phone viewport](evidence/editor-plan-preview-phone.png)
 
 Bounded Plan Preview acceptance complete locally, with no known implementation blocker. NOT DEPLOYED; production smoke and hosting/database/auth binding remain unverified. No saved-model, quantity-engine, API, migration, customer-onboarding or other-product changes. Saved-sketch thumbnails and export features were outside this repair. M3B remains next eligible only on a separate bounded assignment.
+
+## Compact door/window inspector - 2026-09-08
+
+Owner requested less scrolling and removal of duplicate door/window size controls. This is a bounded DR-002 editor follow-up from clean synchronized main `aac086b862ac470f4407a85c8937e15861948788`. Verified the existing root, origin, main/upstream, safe fetch and local writer availability. Preserved the original roadmap archive and existing stash. Issue #8 publication remains pending the earlier permission question; no issue mutation was attempted.
+
+Each dimension now has one number input with an attached common-size menu. Width/height appear together when space permits and stack in narrow panels. Custom fractions, blank unknown heights, Enter/blur commits and independent invalid-draft recovery remain supported. Presets use the same wall-fit/overlap checks; selecting the saved preset resolves only its own draft. Door heights offer 80/84/96 inches. Swing and hand are compact labeled radio rows; duplicate Flip hinge/Reverse swing buttons are removed, with direct selection and canvas double-click behavior preserved. Room-scoped opening buttons are compact chips. Wall/position share one line, and longer sizing/hand instructions live in an optional tips popover. Delete remains explicitly labeled and targets the selected item.
+
+Menu focus now blocks editor shortcuts. A rejected legacy width confirmation clears after a successful width correction. No geometry engine, stored model, API or quantity calculation changed; existing width/height update semantics and legacy metadata are retained.
+
+Actual verification:
+
+- `npm run check` and `npm run build`: passed after the final corrections (1,803 modules). Existing Browserslist age and bundle-size warnings remain nonblocking.
+- Initial `npx playwright test tests/browser/editor.spec.ts tests/browser/selection.spec.ts tests/browser/quick-room-navigation.spec.ts --workers=2`: 40 passed, eight placement assertions failed in 3.3 minutes. The runner reported one worker. Traces proved the newly named inspector test IDs matched the existing drawing-opening prefix, producing count 3 instead of 1. Inspector IDs were renamed; existing placement assertions were retained unchanged. No placement geometry was changed to satisfy these assertions.
+- Final `node node_modules/@playwright/test/cli.js test tests/browser/editor.spec.ts tests/browser/selection.spec.ts --grep 'placement on|compact|legacy width confirmation' --workers 2`: **11/11 passed in 36.2 seconds**, zero retries/skips. Covers all eight door/window wall-placement/save/reload cases, compact layout, independent preset/custom draft recovery, menu Delete/Backspace/R/P protection and the new legacy-warning regression. The earlier 40 passing cases cover drag/resize, all styles/handing, exact custom/legacy metadata, tabs, grouping, delete/recovery and route guards. Together, 49 distinct relevant cases have passing evidence; this is not a claim of a second complete browser run.
+- Fresh isolated browser at `http://127.0.0.1:5173/`: compact door/window fields, presets, swing changes and narrow input legibility passed, with no page errors. Desktop panel and 820x900 captures were visually inspected and regenerated after final corrections. Mock plans stayed in that browser; the owner's tab and drawing were not operated on.
+- `git diff --check`: passed. Unit/API/quantity suites were not rerun for this inspector-only change; focused browser regressions exercise the new form behavior and shared keyboard guard.
+
+![Compact door inspector](evidence/editor-compact-door.png)
+
+![Compact window inspector](evidence/editor-compact-window.png)
+
+![Readable opening fields in a narrow panel](evidence/editor-compact-opening-narrow.png)
+
+Bounded inspector acceptance complete locally, with no known implementation blocker. NOT DEPLOYED; production smoke and hosting/database/auth binding remain unverified. No migration, customer onboarding or other-product change. M3B remains next eligible only on a separate assignment.

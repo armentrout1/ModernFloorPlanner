@@ -203,8 +203,8 @@ test('32-inch width, all door styles and swing properties remain editable and pe
     const saved = await save(page, plan.id);
     expect(saved.rooms[0].objects![0].doorProperties).toMatchObject({ width: 32, height: 84, style: value });
   }
-  await page.getByRole('combobox').nth(1).click();
-  await page.getByRole('option', { name: '32"', exact: true }).click();
+  await page.getByRole('button', { name: 'Common door width', exact: true }).click();
+  await page.getByRole('menuitem', { name: '32 in', exact: true }).click();
   await page.getByRole('radio', { name: 'Inward', exact: true }).check();
   await page.getByRole('radio', { name: 'Right Hand (RH)', exact: true }).check();
   const saved = await save(page, plan.id);
@@ -224,16 +224,16 @@ test('window width updates retain its legacy attachment and persist', async ({ p
   await page.getByRole('spinbutton', { name: 'Window width', exact: true }).fill('48');
   let saved = await save(page, plan.id);
   expect(saved.rooms[0].objects).toEqual([{ ...original, size: 80 }]);
-  const commonWidth = page.getByRole('combobox', { name: 'Common window width', exact: true });
-  const commonHeight = page.getByRole('combobox', { name: 'Common window height', exact: true });
+  const commonWidth = page.getByRole('button', { name: 'Common window width', exact: true });
+  const commonHeight = page.getByRole('button', { name: 'Common window height', exact: true });
   await commonWidth.click();
-  await page.getByRole('option', { name: '30 in', exact: true }).click();
+  await page.getByRole('menuitem', { name: '30 in', exact: true }).click();
   await expect(page.getByRole('spinbutton', { name: 'Window height', exact: true })).toHaveValue('');
   saved = await save(page, plan.id);
   expect(saved.rooms[0].objects).toEqual([{ ...original, size: 50 }]);
   expect(Object.hasOwn(saved.rooms[0].objects![0], 'windowProperties')).toBe(false);
   await commonHeight.click();
-  await page.getByRole('option', { name: '36 in', exact: true }).click();
+  await page.getByRole('menuitem', { name: '36 in', exact: true }).click();
   saved = await save(page, plan.id);
   expect(saved.rooms[0].objects).toEqual([{ ...original, size: 50, windowProperties: { height: 36 } }]);
 });
@@ -455,9 +455,9 @@ for (const side of ['top', 'right', 'bottom', 'left'] as const) {
       expect((await save(page, plan.id)).rooms).toEqual([{ ...originalRoom, objects: [flipped] }]);
 
       const flippedPath = await path.getAttribute('d');
-      await page.getByRole('button', { name: 'Flip hinge', exact: true }).click();
+      await page.getByRole('radio', { name: direction === 'inward' ? 'Right Hand (RH)' : 'Left Hand (LH)', exact: true }).check();
       await expect(path).toHaveAttribute('d', before!);
-      await page.getByRole('button', { name: 'Reverse swing', exact: true }).click();
+      await page.getByRole('radio', { name: direction === 'inward' ? 'Outward' : 'Inward', exact: true }).check();
       await expect(path).not.toHaveAttribute('d', before!);
       await expect(path).not.toHaveAttribute('d', flippedPath!);
       await expect(page.getByRole('radio', { name: direction === 'inward' ? 'Left Hand (LH)' : 'Right Hand (RH)', exact: true })).toBeChecked();
@@ -531,11 +531,11 @@ test('custom opening dimensions preserve fractions, reject empty/overlap, and ke
   expect((await save(page, plan.id)).rooms[0].objects![0].doorProperties!.width).toBe(30.5);
   await page.getByTestId('opening-window-b').click();
   await expect(page.getByRole('spinbutton', { name: 'Window height', exact: true })).toHaveValue('');
-  await page.getByRole('combobox', { name: 'Common window width', exact: true }).click();
-  await page.getByRole('option', { name: '36 in', exact: true }).click();
+  await page.getByRole('button', { name: 'Common window width', exact: true }).click();
+  await page.getByRole('menuitem', { name: '36 in', exact: true }).click();
   await expect(page.getByRole('spinbutton', { name: 'Window height', exact: true })).toHaveValue('');
-  await page.getByRole('combobox', { name: 'Common window height', exact: true }).click();
-  await page.getByRole('option', { name: '48 in', exact: true }).click();
+  await page.getByRole('button', { name: 'Common window height', exact: true }).click();
+  await page.getByRole('menuitem', { name: '48 in', exact: true }).click();
   const saved = await save(page, plan.id);
   expect(saved.rooms[0].objects![1]).toEqual({ ...original.objects![1], size: 60, windowProperties: { height: 48 } });
 });
@@ -614,11 +614,13 @@ test('window height presets and custom height preserve exact legacy width, attac
   await page.getByTestId('room-room-a').click();
   await page.getByRole('tab', { name: 'Windows (1)', exact: true }).click();
   await page.getByRole('button', { name: 'Select window 1 in Legacy room', exact: true }).click();
-  const commonWidth = page.getByRole('combobox', { name: 'Common window width', exact: true });
-  const commonHeight = page.getByRole('combobox', { name: 'Common window height', exact: true });
-  await expect(commonWidth).toContainText('Custom');
+  const commonWidth = page.getByRole('button', { name: 'Common window width', exact: true });
+  const commonHeight = page.getByRole('button', { name: 'Common window height', exact: true });
+  await expect(commonWidth).toBeVisible();
+  expect(Number(await page.getByRole('spinbutton', { name: 'Window width', exact: true }).inputValue()))
+    .toBeCloseTo(original.size * 12 / 20, 10);
   await commonHeight.click();
-  await page.getByRole('option', { name: '48 in', exact: true }).click();
+  await page.getByRole('menuitem', { name: '48 in', exact: true }).click();
   await expect(page.getByRole('spinbutton', { name: 'Window height', exact: true })).toHaveValue('48');
   await expect(page.getByText('This width overlaps another opening. Choose a smaller width or move the opening first.')).toHaveCount(0);
   expect((await save(page, plan.id)).rooms).toEqual([{ ...originalRoom, objects: [
@@ -627,8 +629,9 @@ test('window height presets and custom height preserve exact legacy width, attac
   const height = page.getByRole('spinbutton', { name: 'Window height', exact: true });
   await height.fill('37.625');
   await height.press('Enter');
-  await expect(commonHeight).toContainText('Custom');
-  await expect(commonWidth).toContainText('Custom');
+  await expect(height).toHaveValue('37.625');
+  expect(Number(await page.getByRole('spinbutton', { name: 'Window width', exact: true }).inputValue()))
+    .toBeCloseTo(original.size * 12 / 20, 10);
   expect((await save(page, plan.id)).rooms).toEqual([originalRoom]);
 });
 
@@ -640,10 +643,10 @@ test('rejected window width preset preserves both dimensions and custom fraction
   const originalRoom = room([original, neighbor]);
   const plan = await seedAndLoad(page, [originalRoom]);
   await page.getByTestId('opening-opening-a').click();
-  const commonWidth = page.getByRole('combobox', { name: 'Common window width', exact: true });
-  const commonHeight = page.getByRole('combobox', { name: 'Common window height', exact: true });
+  const commonWidth = page.getByRole('button', { name: 'Common window width', exact: true });
+  const commonHeight = page.getByRole('button', { name: 'Common window height', exact: true });
   await commonWidth.click();
-  await page.getByRole('option', { name: '72 in', exact: true }).click();
+  await page.getByRole('menuitem', { name: '72 in', exact: true }).click();
   await expect(page.getByText('This width overlaps another opening. Choose a smaller width or move the opening first.').first()).toBeVisible();
   await expect(page.getByRole('spinbutton', { name: 'Window width', exact: true })).toHaveValue('30');
   await expect(page.getByRole('spinbutton', { name: 'Window height', exact: true })).toHaveValue('42.25');
@@ -652,7 +655,7 @@ test('rejected window width preset preserves both dimensions and custom fraction
   const width = page.getByRole('spinbutton', { name: 'Window width', exact: true });
   await width.fill('29.25');
   await width.press('Enter');
-  await expect(commonWidth).toContainText('Custom');
+  await expect(width).toHaveValue('29.25');
   await expect(page.getByRole('spinbutton', { name: 'Window height', exact: true })).toHaveValue('42.25');
   expect((await save(page, plan.id)).rooms).toEqual([{ ...originalRoom, objects: [
     { ...original, size: 48.75 }, neighbor,
@@ -661,8 +664,7 @@ test('rejected window width preset preserves both dimensions and custom fraction
   const height = page.getByRole('spinbutton', { name: 'Window height', exact: true });
   await height.fill('41.125');
   await height.press('Enter');
-  await expect(commonHeight).toContainText('Custom');
-  await expect(commonWidth).toContainText('Custom');
+  await expect(height).toHaveValue('41.125');
   await expect(width).toHaveValue('29.25');
   expect((await save(page, plan.id)).rooms).toEqual([{ ...originalRoom, objects: [
     { ...original, size: 48.75, windowProperties: { ...original.windowProperties, height: 41.125 } }, neighbor,
@@ -676,13 +678,13 @@ test('reselecting the current window preset clears only that dimension invalid d
   await page.getByTestId('opening-opening-a').click();
   const width = page.getByRole('spinbutton', { name: 'Window width', exact: true });
   const height = page.getByRole('spinbutton', { name: 'Window height', exact: true });
-  const commonWidth = page.getByRole('combobox', { name: 'Common window width', exact: true });
-  const commonHeight = page.getByRole('combobox', { name: 'Common window height', exact: true });
+  const commonWidth = page.getByRole('button', { name: 'Common window width', exact: true });
+  const commonHeight = page.getByRole('button', { name: 'Common window height', exact: true });
   await width.fill('');
   await width.press('Tab');
   await expect(width).toHaveAttribute('aria-invalid', 'true');
   await commonWidth.click();
-  await page.getByRole('option', { name: '36 in', exact: true }).click();
+  await page.getByRole('menuitem', { name: '36 in', exact: true }).click();
   await expect(width).toHaveValue('36');
   await expect(width).toHaveAttribute('aria-invalid', 'false');
   await expect(height).toHaveValue('48');
@@ -697,10 +699,96 @@ test('reselecting the current window preset clears only that dimension invalid d
   await expect(width).toHaveAttribute('aria-invalid', 'true');
   await expect(height).toHaveAttribute('aria-invalid', 'true');
   await commonHeight.click();
-  await page.getByRole('option', { name: '48 in', exact: true }).click();
+  await page.getByRole('menuitem', { name: '48 in', exact: true }).click();
   await expect(height).toHaveValue('48');
   await expect(height).toHaveAttribute('aria-invalid', 'false');
   await expect(width).toHaveValue('');
   await expect(width).toHaveAttribute('aria-invalid', 'true');
   expect((await save(page, plan.id)).rooms).toEqual([originalRoom]);
+});
+
+test('compact door size menus recover invalid drafts independently and accept fractional custom values', async ({ page }) => {
+  const original = opening();
+  const originalRoom = room([original]);
+  const plan = await seedAndLoad(page, [originalRoom]);
+  await page.getByTestId('opening-opening-a').click();
+  const width = page.getByRole('spinbutton', { name: 'Door width', exact: true });
+  const height = page.getByRole('spinbutton', { name: 'Door height', exact: true });
+  const commonWidth = page.getByRole('button', { name: 'Common door width', exact: true });
+  const commonHeight = page.getByRole('button', { name: 'Common door height', exact: true });
+  await expect(width).toHaveCount(1);
+  await expect(height).toHaveCount(1);
+
+  const selectedToolClass = await page.getByRole('button', { name: 'Select & Move', exact: true }).getAttribute('class');
+  await commonWidth.click();
+  for (const key of ['Delete', 'Backspace', 'r', 'p']) {
+    await page.keyboard.press(key);
+    await expect(page.getByRole('menu')).toBeVisible();
+    await expect(page.locator('[role="dialog"]')).toHaveCount(0);
+  }
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('menu')).toHaveCount(0);
+  await expect(page.getByTestId('opening-opening-a')).toHaveAttribute('aria-pressed', 'true');
+  expect(await page.getByRole('button', { name: 'Select & Move', exact: true }).getAttribute('class')).toBe(selectedToolClass);
+  expect((await save(page, plan.id)).rooms).toEqual([originalRoom]);
+
+  await width.fill('');
+  await width.press('Tab');
+  await expect(width).toHaveAttribute('aria-invalid', 'true');
+  await commonWidth.click();
+  await page.getByRole('menuitem', { name: '32 in', exact: true }).click();
+  await expect(width).toHaveValue('32');
+  await expect(width).toHaveAttribute('aria-invalid', 'false');
+  await expect(height).toHaveValue('84');
+  expect((await save(page, plan.id)).rooms).toEqual([originalRoom]);
+
+  await width.fill('');
+  await width.press('Tab');
+  await height.fill('');
+  await height.press('Tab');
+  await expect(height).toHaveAttribute('aria-invalid', 'true');
+  await commonHeight.click();
+  await expect(page.getByRole('menuitem')).toHaveText(['80 in', '84 in', '96 in']);
+  await page.getByRole('menuitem', { name: '84 in', exact: true }).click();
+  await expect(height).toHaveValue('84');
+  await expect(height).toHaveAttribute('aria-invalid', 'false');
+  await expect(width).toHaveValue('');
+  await expect(width).toHaveAttribute('aria-invalid', 'true');
+  expect((await save(page, plan.id)).rooms).toEqual([originalRoom]);
+
+  await commonWidth.click();
+  await page.getByRole('menuitem', { name: '32 in', exact: true }).click();
+  await commonHeight.click();
+  await page.getByRole('menuitem', { name: '96 in', exact: true }).click();
+  expect((await save(page, plan.id)).rooms).toEqual([{ ...originalRoom, objects: [
+    { ...original, doorProperties: { ...original.doorProperties!, height: 96 } },
+  ] }]);
+  await width.fill('31.125');
+  await width.press('Enter');
+  await height.fill('83.5');
+  await height.press('Tab');
+  await expect(width).toHaveValue('31.125');
+  await expect(height).toHaveValue('83.5');
+  expect((await save(page, plan.id)).rooms).toEqual([{ ...originalRoom, objects: [
+    { ...original, size: 51.875, doorProperties: { ...original.doorProperties!, width: 31.125, height: 83.5 } },
+  ] }]);
+});
+
+test('a valid door preset clears a rejected legacy width confirmation without changing other metadata', async ({ page }) => {
+  const base = opening();
+  const original = { ...base, doorProperties: { ...base.doorProperties!, width: 300 } };
+  const originalRoom = room([original]);
+  const plan = await seedAndLoad(page, [originalRoom]);
+  await page.getByTestId('opening-opening-a').click();
+  await page.getByRole('button', { name: 'Confirm entered width', exact: true }).click();
+  const error = page.getByRole('alert').filter({ hasText: 'This width extends past the wall.' });
+  await expect(error).toBeVisible();
+  expect((await save(page, plan.id)).rooms).toEqual([originalRoom]);
+
+  await page.getByRole('button', { name: 'Common door width', exact: true }).click();
+  await page.getByRole('menuitem', { name: '32 in', exact: true }).click();
+  await expect(error).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Confirm entered width', exact: true })).toHaveCount(0);
+  await expect(page.getByRole('spinbutton', { name: 'Door width', exact: true })).toHaveValue('32');
+  expect((await save(page, plan.id)).rooms).toEqual([{ ...originalRoom, objects: [base] }]);
 });

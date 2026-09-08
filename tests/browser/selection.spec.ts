@@ -453,3 +453,40 @@ test('narrow sidebar keeps tab labels and selected-opening actions inside its bo
   expect(removeBounds.x + removeBounds.width).toBeLessThanOrEqual(bounds.x + bounds.width);
   await expect(inspector.getByRole('spinbutton', { name: 'Window width', exact: true })).toBeVisible();
 });
+
+test('compact opening inspector has one size pair and keeps wall location visible without duplicate controls', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 820 });
+  const plan = await seedAndLoad(page);
+  const inspector = await openContentsRoom(page, 'Alpha');
+  for (const [type, label, wall, position] of [
+    ['door', 'Door', 'top', '38%'], ['window', 'Window', 'bottom', '63%'],
+  ] as const) {
+    await inspector.getByRole('tab', { name: type === 'door' ? 'Doors (1)' : 'Windows (1)', exact: true }).click();
+    await inspector.getByRole('button', { name: 'Select ' + type + ' 1 in Alpha', exact: true }).click();
+    await expect(inspector.getByRole('spinbutton')).toHaveCount(2);
+    for (const axis of ['width', 'height']) {
+      await expect(inspector.getByRole('spinbutton', { name: label + ' ' + axis, exact: true })).toHaveCount(1);
+      await expect(inspector.getByRole('button', { name: 'Common ' + type + ' ' + axis, exact: true })).toHaveCount(1);
+    }
+    await expect(inspector.getByText(/^Current size:/)).toHaveCount(0);
+    await expect(inspector.getByText(/^Custom size/)).toHaveCount(0);
+    await expect(inspector.getByRole('button', { name: 'Flip hinge', exact: true })).toHaveCount(0);
+    await expect(inspector.getByRole('button', { name: 'Reverse swing', exact: true })).toHaveCount(0);
+    const location = inspector.getByTestId('inspector-opening-location');
+    await expect(location).toContainText(wall);
+    await expect(location).toContainText(position);
+    // Read bounds without auto-scrolling the location into view.
+    const outer = (await inspector.boundingBox())!;
+    const locationBounds = (await location.boundingBox())!;
+    expect(locationBounds.y).toBeGreaterThanOrEqual(outer.y);
+    expect(locationBounds.y + locationBounds.height).toBeLessThanOrEqual(Math.min(outer.y + outer.height, outer.y + 680));
+    expect(locationBounds.x).toBeGreaterThanOrEqual(outer.x);
+    expect(locationBounds.x + locationBounds.width).toBeLessThanOrEqual(outer.x + outer.width);
+    if (type === 'door') {
+      for (const name of ['Inward', 'Outward', 'Left Hand (LH)', 'Right Hand (RH)']) {
+        await expect(inspector.getByRole('radio', { name, exact: true })).toBeVisible();
+      }
+    }
+  }
+  expect((await save(page, plan.id)).rooms).toEqual(plan.rooms);
+});
