@@ -13,6 +13,8 @@ import { createRegistry, createDraft, adoptQuickDraft, adoptLegacyDraft, adoptPh
 import { parseRegistry, serializeRegistry, PHYSICAL_DRAFT_STORAGE_KEY } from '../client/src/features/physical-draft/storage';
 import { createPhysicalDraftStore, type DraftStorage } from '../client/src/features/physical-draft/store';
 
+import { setOutputEnabled, selectAllCurrentTargets } from '../client/src/features/physical-draft/takeoffCommands';
+
 const AT = '2026-09-08T12:00:00.000Z';
 const clone = <T,>(value: T): T => JSON.parse(JSON.stringify(value));
 function legacy() { return { name: 'Original', extra: { preserve: ['all', 'metadata'] }, rooms: [
@@ -31,7 +33,9 @@ function complete() {
   let draft = addRoom(createDraft('first'), 'one', 'Bedroom');
   draft = enter(draft, 'length', '12 ft');
   draft = enter(draft, 'width', '10 ft');
-  return enter(draft, 'ceilingHeight', '8 ft');
+  draft = enter(draft, 'ceilingHeight', '8 ft');
+  for (const output of ['floor-area', 'ceiling-area', 'gross-wall-area'] as const) draft = selectAllCurrentTargets(setOutputEnabled(draft, output, true), output);
+  return draft;
 }
 function output(draft: PhysicalDraft, name: string) {
   const result = calculateQuantities(previewDocument(draft), draft.request);

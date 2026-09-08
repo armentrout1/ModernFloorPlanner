@@ -11,6 +11,8 @@ import { assertSupportedPhysicalDocument, importLegacyPhysicalDraft, upgradePhys
 import { parseDraft as parseQuickDraft } from '../quick-room/storage';
 import type { QuickRoomDraft } from '../quick-room/state';
 import { openingFieldsFor, type OpeningFields, type OpeningEvent, type OpeningDeleteUndo } from './openingCommands';
+import type { TakeoffState } from './takeoffCommands';
+import { recordApplicabilityDeclaration, type ReviewState } from './reviewCommands';
 
 export const ROOM_FIELDS = ['length', 'width', 'ceilingHeight'] as const;
 export type RoomField = typeof ROOM_FIELDS[number];
@@ -30,6 +32,8 @@ export interface PhysicalDraft {
   openingFields?: Record<string, OpeningFields>;
   openingEvents?: OpeningEvent[];
   openingDeleteUndo?: OpeningDeleteUndo;
+  takeoffState?: TakeoffState;
+  reviewState?: ReviewState;
 }
 export interface PhysicalDraftRegistry {
   version: 'mfp-editor-draft-v1';
@@ -149,7 +153,6 @@ export function addRoom(draft: PhysicalDraft, id: string, name = 'Room ' + (draf
     ...Object.entries(next.document.calculationContract!.rooms), [id, createProposedRoomApplicability()],
   ]);
   next.fields = Object.fromEntries([...Object.entries(next.fields), [id, fieldsFor({ ...next.document, rooms: [room] }, next.displayUnit)[id]]]);
-  next.request = requestForRooms(next.document);
   assertSupportedPhysicalDocument(next.document);
   return next;
 }
@@ -209,13 +212,14 @@ export function switchUnit(draft: PhysicalDraft, unit: InputUnit): PhysicalDraft
   }
   return next;
 }
-export function setApplicability(draft: PhysicalDraft, id: string, kind: keyof RoomApplicability, declaration: AppDeclaration): PhysicalDraft {
+export function setApplicability(draft: PhysicalDraft, id: string, kind: keyof RoomApplicability, declaration: AppDeclaration, at = new Date().toISOString()): PhysicalDraft {
   roomIn(draft, id);
   if (!['ceiling', 'walls', 'crownPath'].includes(kind)) throw new PhysicalDraftError('INVALID_MODEL', 'Choose a supported model declaration.');
   const next = changed(draft);
   const current = next.document.calculationContract!.rooms[id];
   const proposed = { ...current, [kind]: copy(declaration) };
   if (!roomApplicabilitySchema.safeParse(proposed).success) throw new PhysicalDraftError('INVALID_MODEL', 'The model declaration is invalid; keep the supported value or explain what is unknown/unsupported.');
+  recordApplicabilityDeclaration(next, id, kind, current[kind], declaration, at);
   next.document.calculationContract!.rooms[id] = proposed as RoomApplicability;
   return next;
 }

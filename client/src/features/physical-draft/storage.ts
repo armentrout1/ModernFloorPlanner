@@ -8,6 +8,9 @@ import { parseMeasurement } from '@shared/domain/parseMeasurement';
 import { committedFieldText, PhysicalDraftError, ROOM_FIELDS, type PhysicalDraftRegistry } from './state';
 import { openingFieldsSchema, openingEventSchema, openingDeleteUndoSchema, openingFieldsFor, OPENING_FIELDS } from './openingCommands';
 
+import { takeoffStateSchema, validateTakeoffState } from './takeoffCommands';
+import { reviewStateSchema, validateReviewEvidence } from './reviewCommands';
+
 export const PHYSICAL_DRAFT_STORAGE_KEY = 'modern-floor-planner:editor-draft:v1';
 const id = z.string().refine(value => value.trim().length > 0 && !/[\u0000-\u001f\u007f]/.test(value));
 const revision = z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER);
@@ -23,6 +26,8 @@ const draft = z.object({ id, localEditRevision: revision, document: physicalDocu
   openingFields: z.record(openingFieldsSchema).optional(),
   openingEvents: z.array(openingEventSchema).optional(),
   openingDeleteUndo: openingDeleteUndoSchema.optional(),
+  takeoffState: takeoffStateSchema.optional(),
+  reviewState: reviewStateSchema.optional(),
 }).strict();
 const registrySchema = z.object({ version: z.literal('mfp-editor-draft-v1'), localEditRevision: revision,
   selectedDraftId: id.nullable(), drafts: z.array(draft),
@@ -73,6 +78,10 @@ export function validateRegistry(input: unknown): RegistryReadResult {
       }
     }
     if (!validateQuantityRequest(item.document, item.request).ok) return corrupt('Stored calculation settings reference invalid physical content.');
+    const takeoffError = validateTakeoffState(item), reviewError = validateReviewEvidence(item);
+    if (takeoffError || reviewError) return corrupt(takeoffError ?? reviewError!);
+    if (item.openingDeleteUndo?.scopeRevisionAfter !== undefined
+        && item.openingDeleteUndo.scopeRevisionAfter > (item.takeoffState?.scopeRevision ?? 0)) return corrupt('Stored deletion scope revision is inconsistent.');
     const fieldOwners = Object.entries(item.openingFields ?? {}).map(([openingId, fields]) => ({
       opening: item.document.openings.find(value => value.id === openingId), fields,
     }));

@@ -5,6 +5,9 @@ import { PhysicalDraftProvider, usePhysicalDraft } from '@/features/physical-dra
 import { RoomMeasurements } from '@/features/physical-draft/RoomMeasurements';
 import { PhysicalDrawing } from '@/features/physical-draft/PhysicalDrawing';
 import { OpeningList, OpeningMeasurements } from '@/features/physical-draft/OpeningMeasurements';
+import { TakeoffPanel } from '@/features/physical-draft/TakeoffPanel';
+import { ReviewPanel } from '@/features/physical-draft/ReviewPanel';
+import { scopeForRequest, type DrawingSourceScope } from '@/features/physical-draft/takeoffReadModel';
 import { deleteOpening, undoOpeningDelete } from '@/features/physical-draft/openingCommands';
 import { shouldIgnoreEditorShortcut } from '@/utils/keyboard';
 import { PhysicalQuantities } from '@/features/physical-draft/PhysicalQuantities';
@@ -14,6 +17,8 @@ import { createDraft, insertDraft, selectDraft, selectedDraft, addRoom, switchUn
 function DraftWorkspace() {
   const { registry, cache, message, error, rawRecovery, store } = usePhysicalDraft();
   const draft = selectedDraft(registry);
+  const [showTakeoffScope, setShowTakeoffScope] = useState(true);
+  const [sourceFocus, setSourceFocus] = useState<{ draftId: string; key: string; scope: DrawingSourceScope } | null>(null);
   const [view, setView] = useState<'rooms' | 'drawing'>('rooms');
   const [selected, setSelected] = useState<{ draftId: string; roomId: string } | null>(null);
   const [openingSelection, setOpeningSelection] = useState<{ draftId: string; openingId: string } | null>(null);
@@ -31,6 +36,19 @@ function DraftWorkspace() {
     if (draft) setOpeningSelection(openingId ? { draftId: draft.id, openingId } : null);
   }
   const preview = useMemo(() => draft ? previewDocument(draft) : null, [draft]);
+  const takeoffScope = useMemo(() => draft ? scopeForRequest(draft.document, draft.request) : undefined, [draft]);
+  const focus = sourceFocus?.draftId === draft?.id ? sourceFocus ?? undefined : undefined;
+  function locateSource(scope: DrawingSourceScope) {
+    if (!draft) return;
+    setView('drawing');
+    setSourceFocus({ draftId: draft.id, key: crypto.randomUUID(), scope });
+    requestAnimationFrame(() => document.querySelector('[data-testid="physical-canvas"]')?.scrollIntoView({ block: 'center' }));
+  }
+  function editSource(scope: DrawingSourceScope) {
+    if (scope.openingIds.length === 1) selectOpening(scope.openingIds[0]);
+    else if (scope.roomIds.length === 1) selectRoom(scope.roomIds[0]);
+    locateSource(scope);
+  }
   const blocked = ['uninitialized', 'corrupt', 'unsupported'].includes(cache);
   function update(change: (current: Draft) => Draft, expectedRevision?: number): boolean {
     if (!draft) return false;
@@ -110,17 +128,19 @@ function DraftWorkspace() {
         <section role="tabpanel" id="physical-panel" aria-labelledby={view === 'rooms' ? 'physical-rooms-tab' : 'physical-drawing-tab'}>
           {selectedRoomId ? <div className={view === 'drawing' ? 'grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_350px]' : 'grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(340px,1fr)]'}>
             <div className="space-y-4">
-              {view === 'drawing' ? <PhysicalDrawing key={draft.id + view} document={preview} draft={draft} selectedId={selectedRoomId} onSelect={selectRoom} selectedOpeningId={selectedOpening?.id ?? null} onSelectOpening={selectOpening} update={update} /> :
+              {view === 'drawing' ? <PhysicalDrawing key={draft.id + view} document={preview} draft={draft} selectedId={selectedRoomId} onSelect={selectRoom} selectedOpeningId={selectedOpening?.id ?? null} onSelectOpening={selectOpening} update={update} takeoffScope={showTakeoffScope ? takeoffScope : undefined} sourceFocus={focus} /> :
                 <fieldset disabled={blocked} className="rounded-lg border bg-white p-5"><legend className="sr-only">Quick room measurements</legend><RoomMeasurements draft={draft} roomId={selectedRoomId} update={update} /></fieldset>}
               <PhysicalQuantities document={preview} roomId={selectedRoomId} unit={draft.displayUnit} />
               <OpeningList draft={draft} roomId={selectedRoomId} selectedId={selectedOpening?.id ?? null} onSelect={selectOpening} update={update} />
             </div>
             {view === 'drawing' ? <aside className="rounded-lg border bg-white p-5" aria-label="Drawing inspector">
               <fieldset disabled={blocked}><legend className="sr-only">Inspector measurements</legend>{selectedOpening ? <OpeningMeasurements key={selectedOpening.id} draft={draft} openingId={selectedOpening.id} update={update} commandError={error} onDeleted={() => selectOpening(null)} /> : <><h2 className="mb-4 font-semibold">Room inspector</h2><RoomMeasurements draft={draft} roomId={selectedRoomId} update={update} /></>}</fieldset>
-            </aside> : <div className="space-y-4"><PhysicalDrawing key={draft.id + view} document={preview} draft={draft} selectedId={selectedRoomId} onSelect={selectRoom} selectedOpeningId={selectedOpening?.id ?? null} onSelectOpening={selectOpening} update={update} />
+            </aside> : <div className="space-y-4"><PhysicalDrawing key={draft.id + view} document={preview} draft={draft} selectedId={selectedRoomId} onSelect={selectRoom} selectedOpeningId={selectedOpening?.id ?? null} onSelectOpening={selectOpening} update={update} takeoffScope={showTakeoffScope ? takeoffScope : undefined} sourceFocus={focus} />
               {selectedOpening ? <aside className="min-w-0 rounded-lg border bg-white p-5" aria-label="Opening inspector"><OpeningMeasurements key={selectedOpening.id} draft={draft} openingId={selectedOpening.id} update={update} commandError={error} onDeleted={() => selectOpening(null)} /></aside> : <p className="text-sm leading-6 text-slate-600">The drawing uses these same measurements. Select a room or opening to edit it.</p>}</div>}
           </div> : <p className="rounded-lg border border-dashed p-8 text-center text-slate-600">Add a room, then enter its measured dimensions. Ceiling height begins unknown.</p>}
         </section>
+        <TakeoffPanel key={draft.id} draft={draft} update={update} onFocus={locateSource} showScope={showTakeoffScope} onShowScope={setShowTakeoffScope}
+          review={<ReviewPanel draft={draft} update={update} onFocus={editSource} commandError={error} />} />
         {draft.source.review.length ? <section className="rounded-lg border bg-white p-4 text-sm" aria-label="Source review">
           <h2 className="font-semibold">Copied source review</h2><ul className="mt-2 list-disc space-y-1 pl-5 text-slate-600">{draft.source.review.map((note, index) => <li key={index}>{note}</li>)}</ul>
         </section> : null}

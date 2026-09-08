@@ -9,6 +9,8 @@ import { getDoorGeometry } from '@/utils/doorGeometry';
 import type { Room } from '@/utils/types';
 import { projectPhysicalRooms } from './projection';
 import type { PhysicalDraft } from './state';
+import type { DrawingSourceScope, DrawingSourceFocus } from './takeoffReadModel';
+import { drawingSourceMarks, drawingSourceBounds, type SourceMark } from './drawingSources';
 import { addOpening, moveOpening, createOpeningProposal, validateOpeningPlacement, setOpeningAppearance } from './openingCommands';
 import { pointerToWorld, findPhysicalWall, openingWallCenter, moveOpeningPreview, gestureMatchesDraft,
   type WallTarget, type OpeningGestureStamp } from './openingGeometry';
@@ -21,13 +23,17 @@ const proposalOptions = (kind: Kind) => ({ widthMm: (kind === 'door' ? 32 : 36) 
   style: 'single' as const, swingDirection: 'inward' as const, swingSide: 'right' as const, metadata: { source: 'proposed' },
 } } : {}) });
 const kindLabel = (kind: Kind) => kind === 'floor-level-opening' ? 'opening' : kind;
-export function PhysicalDrawing({ document, selectedId, onSelect, draft, selectedOpeningId = null, onSelectOpening = noop, update }: {
+export function PhysicalDrawing({ document, selectedId, onSelect, draft, selectedOpeningId = null, onSelectOpening = noop, update, takeoffScope, sourceFocus }: {
   document: PhysicalDocument; selectedId: string | null; onSelect: (id: string) => void;
   draft?: PhysicalDraft; selectedOpeningId?: string | null; onSelectOpening?: (id: string | null) => void;
+  takeoffScope?: DrawingSourceScope; sourceFocus?: DrawingSourceFocus;
   update?: (change: (draft: PhysicalDraft) => PhysicalDraft, expectedRevision?: number) => boolean;
 }) {
   const projection = useMemo(() => projectPhysicalRooms(document), [document]);
   const wrapper = useRef<HTMLDivElement>(null);
+  const scopeMarks = useMemo(() => takeoffScope ? drawingSourceMarks(document, projection.rooms, takeoffScope) : [], [document, projection.rooms, takeoffScope]);
+  const focusMarks = useMemo(() => sourceFocus ? drawingSourceMarks(document, projection.rooms, sourceFocus.scope) : [], [document, projection.rooms, sourceFocus]);
+  const appliedSourceFocus = useRef<string | null>(null);
   const [scale, setScale] = useState(1), [tool, setTool] = useState<Kind | null>(null);
   const [preview, setPreview] = useState<Preview | null>(null), [message, setMessage] = useState('');
   const gesture = useRef<Gesture | null>(null), spaceHeld = useRef(false);
@@ -69,6 +75,32 @@ export function PhysicalDrawing({ document, selectedId, onSelect, draft, selecte
   useEffect(() => {
     if (gesture.current && draft && !gestureMatchesDraft(gesture.current, draft)) cancel('The draft changed. The unfinished opening gesture was canceled.');
   }, [draft?.id, draft?.localEditRevision, cancel]);
+  useEffect(() => {
+    const key = sourceFocus ? JSON.stringify([draft?.id, sourceFocus.key]) : null;
+    if (!key || key === appliedSourceFocus.current) return;
+    appliedSourceFocus.current = key;
+    cancel();
+    const bounds = drawingSourceBounds(focusMarks), viewport = wrapper.current;
+    if (!bounds || !viewport) { setMessage('This source has no supported drawing position yet. Complete its plan dimensions in the inspector.'); return; }
+    view.captureCenter();
+    setScale(Math.min(3, Math.max(.02, Math.min((viewport.clientWidth - 100) / Math.max(bounds.width, 40),
+      (viewport.clientHeight - 100) / Math.max(bounds.height, 40)))));
+    view.centerOn({ x: bounds.x + bounds.width / 2, y: bounds.y + bounds.height / 2 });
+    // A new key is an explicit locate action. Editing, panel reflow and source
+    // mark changes retain the current camera instead of repeatedly re-fitting.
+  }, [sourceFocus?.key, draft?.id]);
+  function sourceOverlay(marks: SourceMark[], focused: boolean) {
+    const color = focused ? '#a855f7' : '#0f766e', thickness = (focused ? 5 : 3) / scale;
+    return marks.map(mark => <div key={JSON.stringify([mark.kind, mark.id, mark.wallFaceId])}
+      data-testid={'physical-' + (focused ? 'source' : 'scope') + '-' + mark.kind + '-' + mark.id}
+      data-wall-face-id={mark.wallFaceId} data-source-kind={mark.kind} aria-hidden="true"
+      style={{ position: 'absolute', pointerEvents: 'none', zIndex: 6000,
+        left: mark.x - (mark.width === 0 ? thickness / 2 : 0), top: mark.y - (mark.height === 0 ? thickness / 2 : 0),
+        width: Math.max(mark.width, thickness), height: Math.max(mark.height, thickness),
+        border: mark.kind === 'room' ? thickness + 'px solid ' + color : undefined,
+        background: mark.kind === 'room' ? (focused ? '#a855f712' : '#0f766e12') : color,
+        boxSizing: 'border-box', opacity: focused ? .8 : .6 }} />);
+  }
   function fit() {
     cancel(); const bounds = getPlanPreviewBounds(projection.rooms);
     if (!bounds || !wrapper.current) return;
@@ -266,6 +298,8 @@ export function PhysicalDrawing({ document, selectedId, onSelect, draft, selecte
                 zIndex: 4000, fontSize: 11 / scale, background: 'white', color: '#1d4ed8', pointerEvents: 'none' }}>{activeWall} start (clockwise)</span>}
             </div>;
           })}
+          {sourceOverlay(scopeMarks, false)}
+          {sourceOverlay(focusMarks, true)}
           {preview && previewProjection && (() => {
             const room = previewProjection.rooms.find(item => item.id === preview.target.roomId);
             if (!room) return null;
@@ -289,6 +323,7 @@ export function PhysicalDrawing({ document, selectedId, onSelect, draft, selecte
         {preview && <p role="status">{preview.validation.status === 'invalid' ? 'Invalid drop: ' : preview.validation.status === 'undetermined' ? 'Incomplete, fit unverified: ' : 'Ready to place: '}
           {preview.validation.messages.join(' ') || 'Center measured from the clockwise wall start.'}</p>}
       </div>}
+      {takeoffScope && <p>Teal marks show takeoff scope; purple marks locate the selected quantity source. Editing selection is separate.</p>}
       {document.rooms.some(room => !room.presentation) ? <p>Rooms without saved positions are arranged for viewing only.</p> : null}
       {projection.notices.map(notice => <p key={notice} className="text-amber-800">{notice}</p>)}
     </div>

@@ -7,6 +7,7 @@ import { validateGeometry, wallIndex } from '@shared/domain/geometryValidation';
 import { elevationMmSchema, positiveMmSchema } from '@shared/domain/units';
 import { copyJson, canonicalJson } from '@shared/quantities/canonicalJson';
 import { quantityRequestSchema, type QuantityRequest } from '@shared/quantities/policy';
+import { pruneTakeoffTargets, restoreTakeoffRequest, takeoffScopeRevision } from './takeoffCommands';
 import { copyDraftForEdit, committedFieldText, PhysicalDraftError, previewDocument,
   type PhysicalDraft, type FieldDraft, type InputUnit } from './state';
 
@@ -46,6 +47,7 @@ export type OpeningEvent = z.infer<typeof openingEventSchema>;
 export const openingDeleteUndoSchema = z.object({
   opening: physicalOpeningSchema, index: z.number().int().nonnegative(), fields: openingFieldsSchema,
   requestBefore: quantityRequestSchema, requestAfter: quantityRequestSchema,
+  scopeRevisionAfter: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER).optional(),
 }).strict();
 export type OpeningDeleteUndo = z.infer<typeof openingDeleteUndoSchema>;
 export interface OpeningOptions { widthMm?: number; appearance?: PhysicalOpening['appearance'] }
@@ -214,6 +216,7 @@ export function moveOpening(draft: PhysicalDraft, openingId: string, wallFaceId:
   const fields = copy(getOpeningFields(draft, openingId));
   fields.offset = openingFieldsFor(after, next.displayUnit).offset;
   setFields(next, openingId, fields); record(next, 'move', openingId, before, after, at);
+  pruneTakeoffTargets(next, 'The opening moved to another wall.');
   return next;
 }
 export function setOpeningBasis(draft: PhysicalDraft, openingId: string, basis: PhysicalOpening['measureBasis'], at: string): PhysicalDraft {
@@ -232,23 +235,16 @@ export function setOpeningAppearance(draft: PhysicalDraft, openingId: string, ap
   const next = copyDraftForEdit(draft); next.document.openings = next.document.openings.map(item => item.id === openingId ? after : item);
   record(next, 'appearance', openingId, before, after, at); return next;
 }
-function withoutOpening(request: QuantityRequest, openingId: string): QuantityRequest {
-  const result = copy(request);
-  result.policy.crownFullHeightGaps = result.policy.crownFullHeightGaps.filter(face => face.openingId !== openingId);
-  for (const selection of result.selections) {
-    if ('openingIds' in selection) selection.openingIds = selection.openingIds.filter(value => value !== openingId);
-    if ('faces' in selection) selection.faces = selection.faces.filter(face => face.openingId !== openingId);
-  }
-  return result;
-}
 export function deleteOpening(draft: PhysicalDraft, openingId: string, at: string): PhysicalDraft {
   const opening = openingIn(draft, openingId); timestamp(at);
   const next = copyDraftForEdit(draft);
   next.openingDeleteUndo = { opening: copy(opening), index: draft.document.openings.findIndex(item => item.id === openingId),
-    fields: copy(getOpeningFields(draft, openingId)), requestBefore: copy(draft.request), requestAfter: withoutOpening(draft.request, openingId) };
+    fields: copy(getOpeningFields(draft, openingId)), requestBefore: copy(draft.request), requestAfter: copy(draft.request) };
   next.document.openings = next.document.openings.filter(item => item.id !== openingId);
   next.openingFields = Object.fromEntries(Object.entries(next.openingFields ?? {}).filter(([key]) => key !== openingId));
-  next.request = copy(next.openingDeleteUndo.requestAfter);
+  pruneTakeoffTargets(next, 'The opening was deleted.');
+  next.openingDeleteUndo.requestAfter = copy(next.request);
+  next.openingDeleteUndo.scopeRevisionAfter = takeoffScopeRevision(next);
   record(next, 'delete', openingId, opening, null, at); return next;
 }
 export function undoOpeningDelete(draft: PhysicalDraft, at: string): PhysicalDraft {
@@ -262,7 +258,10 @@ export function undoOpeningDelete(draft: PhysicalDraft, at: string): PhysicalDra
   next.document.openings.splice(Math.min(undo.index, next.document.openings.length), 0, copy(undo.opening));
   assertGeometry(next.document, undo.opening.id);
   setFields(next, undo.opening.id, copy(undo.fields));
-  if (canonicalJson(next.request) === canonicalJson(undo.requestAfter)) next.request = copy(undo.requestBefore);
+  if (canonicalJson(next.request) === canonicalJson(undo.requestAfter)
+      && (undo.scopeRevisionAfter === undefined ? !next.takeoffState : takeoffScopeRevision(next) === undo.scopeRevisionAfter)) {
+    restoreTakeoffRequest(next, undo.requestBefore);
+  }
   // A later scope choice is independent of geometry undo and must not be replaced.
   delete next.openingDeleteUndo;
   record(next, 'restore', undo.opening.id, null, undo.opening, at); return next;
