@@ -186,6 +186,8 @@ M1A: establish compatible unit/component/browser test tooling and exact `check`/
 
 **Separately assigned sketch centering repair:** [issue #8](https://github.com/armentrout1/ModernFloorPlanner/issues/8), [results and screenshots](MFP_CANVAS_CENTERING_RESULTS.md). Fit drawing now centers all room bounds in the actual visible grid, with a visible footer and view-only zoom/pan preservation. All 201 unit/API and 49 browser tests, typecheck and build pass. This bounded repair is producer-verified locally and NOT DEPLOYED; Select All/group movement remain proposed. It does not activate M3B or complete the broader M3C responsive editor work.
 
+**Subsequent mouse-pan repair:** [issue #8](https://github.com/armentrout1/ModernFloorPlanner/issues/8), [results](MFP_CANVAS_PAN_RESULTS.md). Middle-button, Hand and Space drags now use one view-only gesture path with native-autoscroll cancellation, steady screen-pixel movement and protected release/cancellation. Pan gestures and leaving a hover preview cannot place openings. All 201 unit/API and 55 browser tests, typecheck and build pass; producer-verified locally, NOT DEPLOYED. Selection/group movement remain proposed, and M3B has not started.
+
 **Touchpoints:** quick-room/editor features and existing panels; calculations only via the shared engine.
 
 **Exit:** one room can be entered without drawing; dimensions, openings, sketch and totals agree immediately; duplication does not alias IDs; selecting one wall does not count all four; keyboard-only form use works; desktop/tablet/mobile checks show no hidden fields or overlaying controls. Browser regression checks cover placement on all walls and representative zooms.
