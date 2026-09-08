@@ -120,3 +120,25 @@ Unit/API/quantity suites were not repeated for this sidebar-only change; no calc
 ![Readable sidebar tabs and window controls at narrow width](evidence/editor-sidebar-tabs-narrow.png)
 
 Producer-verified locally; NOT DEPLOYED. Production smoke and deployment/database/auth binding remain unverified. No customer onboarding, migration or other-product changes. No known blocker remains for this bounded sidebar acceptance. Full phone layout work remains separate; M3B is still next eligible on a separately authorized assignment.
+
+
+## Single side-panel toggles follow-up — 2026-09-07
+
+Owner-assigned DR-002 repair on issue #8, from clean synchronized main `7aca3592df2053689c64e3aa486320db0a5a3850`. The existing Floor Planner task remained the only MFP release owner; the preserved roadmap archive and stash remain intact.
+
+Each side now has one permanent toggle at its own edge. Left closes left and opens right; right closes right and opens left. The arrow, accessible action name and expanded state match the actual panel. Duplicate full-expand controls and their ineffective width state are removed. Collapse/expand restores the previous resized width. Sidebar children remain mounted while hidden, retaining the selected inspector tab and unapplied field drafts. Resize dividers have a usable four-pixel target and are hidden/disabled for closed panels. Materials uses a bounded, flexible-width scroll area so bottom totals remain reachable.
+
+Actual final checks:
+
+- `npm run check`: passed.
+- `npm run build`: passed (1,799 modules). Existing Browserslist age and bundle-size warnings remain nonblocking.
+- `npx playwright test tests/browser/canvas-view.spec.ts tests/browser/selection.spec.ts tests/browser/quick-room-navigation.spec.ts tests/browser/panel-materials.spec.ts`: **34/34 passed in 1.8 minutes**, zero retries/skips, against the rebuilt disposable fixture. Four new cases cover both close/reopen orders at desktop/narrow widths, fixed-edge controls, real resize dragging, Enter/Space activation, remembered widths, mounted invalid drafts, retained tabs, and Materials bottom totals at a narrow width/short height. Existing canvas fit, pan, Ctrl-wheel, emulated pinch, opening placement, grouping, deletion/recovery, tab selection and navigation guards passed. Saved-room equality checks passed.
+- Earlier iterations exposed a one-pixel divider drag hitting the canvas and visible collapsed dividers; both were corrected. An initial 2.5px far-origin centering check passed with the final divider layout, without changing drawing/zoom logic or weakening the assertion. A repeated run before rebuilding tested stale assets and was not counted as final evidence. The hidden-draft locator was corrected to include hidden elements; element identity and raw draft preservation were then verified.
+- Fresh isolated browser at `http://127.0.0.1:5173/`: exactly two controls, fixed positions, zero-width collapse, previous-width reopen and no page errors. Both final screenshots below inspected. Mock plan responses stayed in the isolated browser; the owner's tab and drawing were not operated on.
+- `git diff --check`: passed. Unit/API/quantity suites were not repeated for this UI-only repair; no calculation, schema or persisted drawing model changed.
+
+![One fixed toggle for each open panel](evidence/editor-panel-toggles.png)
+
+![Left reopen toggle stays at the left edge](evidence/editor-left-panel-closed.png)
+
+This bounded panel acceptance is complete locally, with no known blocker. NOT DEPLOYED; production smoke and deployment/database/auth binding remain unverified. No customer onboarding, migration or other-product changes. Issue #8 remains open pending release/integration evidence. M3B remains next eligible only on a separate bounded assignment; full phone layout remains separate.

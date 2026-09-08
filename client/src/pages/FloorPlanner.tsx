@@ -379,14 +379,10 @@ const FloorPlanner: React.FC<{ active?: boolean }> = ({ active = true }) => {
   // Add state for panel controls
   const [leftCollapsed, setLeftCollapsed] = useState(false);
   const [rightCollapsed, setRightCollapsed] = useState(false);
-  const [leftPanelExpanded, setLeftPanelExpanded] = useState(false);
-  const [rightPanelExpanded, setRightPanelExpanded] = useState(false);
   
   // Panel control handlers
   const handleToggleLeftPanel = (collapsed: boolean) => setLeftCollapsed(collapsed);
   const handleToggleRightPanel = (collapsed: boolean) => setRightCollapsed(collapsed);
-  const handleExpandLeftPanel = () => setLeftPanelExpanded(!leftPanelExpanded);
-  const handleExpandRightPanel = () => setRightPanelExpanded(!rightPanelExpanded);
 
   return (
     <div className="bg-slate-50 text-slate-800 h-screen flex flex-col">
@@ -406,20 +402,16 @@ const FloorPlanner: React.FC<{ active?: boolean }> = ({ active = true }) => {
       <PanelHeaderControls
         leftPanelTitle="Tools & Actions"
         rightPanelTitle={showMaterialPanel ? "Materials" : "Properties"}
-        leftPanelExpanded={leftPanelExpanded}
-        rightPanelExpanded={rightPanelExpanded}
         leftCollapsed={leftCollapsed}
         rightCollapsed={rightCollapsed}
         onToggleLeftPanel={handleToggleLeftPanel}
         onToggleRightPanel={handleToggleRightPanel}
-        onExpandLeftPanel={handleExpandLeftPanel}
-        onExpandRightPanel={handleExpandRightPanel}
       />
       
       <div className="min-h-0 flex-grow overflow-hidden">
         <ResizablePanels
-          leftPanelWidth={leftPanelExpanded ? 70 : 20}
-          rightPanelWidth={rightPanelExpanded ? 70 : 25}
+          leftPanelWidth={20}
+          rightPanelWidth={25}
           leftPanelTitle="Tools & Actions"
           rightPanelTitle={showMaterialPanel ? "Materials" : "Properties"}
           leftPanelMinSize={15}

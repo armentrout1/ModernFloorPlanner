@@ -613,3 +613,128 @@ test.describe('two-finger zoom through browser touch input', () => {
     }
   });
 });
+
+async function expectPanelState(page: Page, side: 'left' | 'right', expanded: boolean) {
+  const toggle = page.getByTestId('toggle-' + side + '-panel');
+  await expect(toggle).toHaveAttribute('aria-label', (expanded ? 'Close ' : 'Open ') + side + ' panel');
+  await expect(toggle).toHaveAttribute('aria-expanded', String(expanded));
+  const arrow = side === 'left' ? (expanded ? 'left' : 'right') : (expanded ? 'right' : 'left');
+  await expect(toggle.locator('svg.lucide-chevron-' + arrow)).toHaveCount(1);
+  const panel = page.getByTestId(side + '-editor-panel');
+  await expect(panel).toHaveCount(1);
+  await expect.poll(() => panel.evaluate(node => node.getBoundingClientRect().width))
+    [expanded ? 'toBeGreaterThan' : 'toBeLessThanOrEqual'](expanded ? 40 : 1);
+  if (expanded) await expect(page.getByTestId(side + '-panel-resizer')).toBeVisible();
+  else await expect(page.getByTestId(side + '-panel-resizer')).toBeHidden();
+}
+
+for (const width of [1440, 820]) {
+  test('two panel toggles stay fixed and resize the usable canvas through both close orders at width ' + width, async ({ page }) => {
+    await page.setViewportSize({ width, height: 1000 });
+    const rooms = layout(0, 0), saved = await seedAndLoad(page, rooms);
+    const toggles = page.getByTestId('panel-toggles');
+    await expect(toggles.getByRole('button')).toHaveCount(2);
+    for (const side of ['left', 'right'] as const) {
+      if (await page.getByTestId('toggle-' + side + '-panel').getAttribute('aria-expanded') === 'false') {
+        await page.getByTestId('toggle-' + side + '-panel').click();
+      }
+      await expectPanelState(page, side, true);
+    }
+    const positions = {
+      left: await centerOf(page.getByTestId('toggle-left-panel')),
+      right: await centerOf(page.getByTestId('toggle-right-panel')),
+    };
+    const initialWidth = (await visibleViewport(page)).width;
+    const stableControls = async () => {
+      await expect(toggles.getByRole('button')).toHaveCount(2);
+      for (const side of ['left', 'right'] as const) {
+        const toggle = page.getByTestId('toggle-' + side + '-panel');
+        await expectInBrowserViewport(page, toggle);
+        const point = await centerOf(toggle);
+        expect(Math.abs(point.x - positions[side].x), side + ' toggle horizontal position').toBeLessThanOrEqual(1);
+        expect(Math.abs(point.y - positions[side].y), side + ' toggle vertical position').toBeLessThanOrEqual(1);
+      }
+      await fit(page).click();
+      await expectCenteredAndVisible(page, rooms);
+    };
+    for (const [first, second] of [['left', 'right'], ['right', 'left']] as const) {
+      await page.getByTestId('toggle-' + first + '-panel').click();
+      await expectPanelState(page, first, false);
+      await expectPanelState(page, second, true);
+      await expect.poll(async () => (await visibleViewport(page)).width).toBeGreaterThan(initialWidth + 20);
+      const oneClosedWidth = (await visibleViewport(page)).width;
+      await stableControls();
+      await page.getByTestId('toggle-' + second + '-panel').click();
+      await expectPanelState(page, second, false);
+      await expect.poll(async () => (await visibleViewport(page)).width).toBeGreaterThan(oneClosedWidth + 20);
+      const bothClosedWidth = (await visibleViewport(page)).width;
+      await stableControls();
+      await page.getByTestId('toggle-' + first + '-panel').click();
+      await expectPanelState(page, first, true);
+      await expectPanelState(page, second, false);
+      await expect.poll(async () => (await visibleViewport(page)).width).toBeLessThan(bothClosedWidth - 20);
+      await stableControls();
+      await page.getByTestId('toggle-' + second + '-panel').click();
+      await expectPanelState(page, second, true);
+      await expect.poll(async () => Math.abs((await visibleViewport(page)).width - initialWidth)).toBeLessThanOrEqual(2);
+      await stableControls();
+    }
+    expect((await save(page, saved.id)).rooms).toEqual(rooms);
+  });
+}
+
+test('panel toggles restore resized widths with Enter and Space while retaining the inspector tab and invalid draft', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  const rooms = layout(0, 0), saved = await seedAndLoad(page, rooms);
+  for (const side of ['left', 'right'] as const) {
+    if (await page.getByTestId('toggle-' + side + '-panel').getAttribute('aria-expanded') === 'false') {
+      await page.getByTestId('toggle-' + side + '-panel').click();
+    }
+  }
+  const resized: Record<string, number> = {};
+  for (const [side, delta] of [['left', 48], ['right', -48]] as const) {
+    const panel = page.getByTestId(side + '-editor-panel');
+    const before = await panel.evaluate(node => node.getBoundingClientRect().width);
+    const handle = await centerOf(page.getByTestId(side + '-panel-resizer'));
+    await page.mouse.move(handle.x, handle.y);
+    await page.mouse.down();
+    await page.mouse.move(handle.x + delta, handle.y, { steps: 8 });
+    await page.mouse.up();
+    await expect.poll(() => panel.evaluate(node => node.getBoundingClientRect().width)).toBeGreaterThan(before + 20);
+  }
+  for (const side of ['left', 'right']) {
+    resized[side] = await page.getByTestId(side + '-editor-panel').evaluate(node => node.getBoundingClientRect().width);
+  }
+  await fit(page).click();
+  await expectCenteredAndVisible(page, rooms);
+  await page.getByRole('button', { name: 'Select & Move', exact: true }).click();
+  await page.getByTestId('opening-fit-door').click();
+  const inspector = page.getByTestId('selection-inspector');
+  await expect(inspector.getByRole('tab', { name: 'Doors (1)', exact: true })).toHaveAttribute('aria-selected', 'true');
+  const draft = inspector.getByRole('spinbutton', { name: 'Door width', exact: true, includeHidden: true });
+  const originalInput = await draft.elementHandle();
+  expect(originalInput).not.toBeNull();
+  await draft.fill('');
+  await page.getByTestId('toggle-right-panel').press('Enter');
+  await expectPanelState(page, 'right', false);
+  await expect(inspector).toHaveCount(1);
+  await expect(inspector).toBeHidden();
+  await expect(draft).toHaveCount(1);
+  expect(await originalInput!.evaluate(node => node.isConnected)).toBe(true);
+  await page.getByTestId('toggle-left-panel').press('Space');
+  await expectPanelState(page, 'left', false);
+  await page.getByTestId('toggle-right-panel').press('Space');
+  await expectPanelState(page, 'right', true);
+  await expect(inspector.getByRole('tab', { name: 'Doors (1)', exact: true })).toHaveAttribute('aria-selected', 'true');
+  await expect(draft).toHaveValue('');
+  expect(await draft.evaluate((node, original) => node === original, originalInput)).toBe(true);
+  await page.getByTestId('toggle-left-panel').press('Enter');
+  await expectPanelState(page, 'left', true);
+  for (const side of ['left', 'right']) {
+    await expect.poll(async () => Math.abs(await page.getByTestId(side + '-editor-panel')
+      .evaluate(node => node.getBoundingClientRect().width) - resized[side])).toBeLessThanOrEqual(2);
+  }
+  await fit(page).click();
+  await expectCenteredAndVisible(page, rooms);
+  expect((await save(page, saved.id)).rooms).toEqual(rooms);
+});

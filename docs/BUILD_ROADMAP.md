@@ -202,6 +202,8 @@ M1A: establish compatible unit/component/browser test tooling and exact `check`/
 
 **Owner-assigned contextual sidebar tabs:** [issue #8](https://github.com/armentrout1/ModernFloorPlanner/issues/8) and the [editor UX report](MFP_EDITOR_UX_RESULTS.md) record the researched replacement of room accordions with Room / Doors / Windows tabs, scoped exact-item buttons, canvas synchronization and safe browsing. Producer-verified locally: 42 relevant browser cases plus one final narrow-layout case, typecheck/build and inspected desktop/narrow screenshots passed. NOT DEPLOYED. This bounded sidebar assignment preserves saved geometry and group semantics and does not activate M3B or complete all M3C layout work.
 
+**Owner-assigned panel-toggle repair:** issue #8 and [editor UX results](MFP_EDITOR_UX_RESULTS.md) record one fixed toggle per side, correct arrow directions, remembered resized widths, preserved inspector drafts and bounded Materials scrolling. Producer-verified locally with 34/34 focused browser checks, typecheck/build and inspected local screenshots. NOT DEPLOYED. No saved-model change or later milestone activation.
+
 ### M4 — Make standalone use safe and dependable
 
 **Entry:** M1–M3; deployment binding verified; actual identity provider decision recorded. M4A: authentication, workspace/membership authorization and denied-access tests. M4B: explicit legacy ownership review, additive storage migrations, revisions, autosave/idempotency/conflicts and local recovery. M4C: project list, rename/duplicate/archive/restore; PDF/CSV and accessible print view from the same snapshot.

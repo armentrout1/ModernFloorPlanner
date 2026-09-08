@@ -21,7 +21,7 @@ const MaterialCalculationPanel: React.FC<MaterialCalculationPanelProps> = ({ roo
   const materials = calculateMaterials(rooms);
 
   return (
-    <div className="w-80 bg-white border-l border-slate-200 overflow-y-auto p-4">
+    <div className="h-full w-full min-w-0 bg-white border-l border-slate-200 overflow-y-auto p-4">
       <h2 className="text-lg font-semibold mb-3">Material Calculations</h2>
       
       {materials.widthWarnings.length > 0 && (
