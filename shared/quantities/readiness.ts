@@ -5,7 +5,7 @@ import {
   measurementFinding, checkFinding, atFloor, exceedsTolerance,
   type MeasurementRef, type GeometryCheck, type GeometryReport, type Finding, type Location, type QuantityOutput,
 } from '../domain/geometryValidation';
-import { validateQuantityRequest, QUANTITY_POLICY_VERSION_V2, type QuantityPolicyVersion, type ContractError } from './policy';
+import { validateQuantityRequest, QUANTITY_POLICY_VERSION_V2, QUANTITY_POLICY_VERSION_V3, type QuantityPolicyVersion, type ContractError } from './policy';
 
 export interface ApplicabilityReadiness {
   status: 'supported' | 'provisional' | 'unknown' | 'unsupported';
@@ -68,7 +68,7 @@ export function evaluateQuantityReadiness(input: unknown, requested: unknown): R
       return measurement.state !== 'known' || measurement.provenance.confirmation.status === 'needs-review';
     }) || basisFindings.length > 0;
     let applicability: ApplicabilityReadiness | undefined;
-    if (request.policy.version === QUANTITY_POLICY_VERSION_V2) {
+    if (request.policy.version === QUANTITY_POLICY_VERSION_V2 || request.policy.version === QUANTITY_POLICY_VERSION_V3) {
       const refs: { roomId: string; field: ApplicabilityField }[] = [];
       const add = (roomId: string, field: ApplicabilityField) => {
         if (!refs.some(ref => ref.roomId === roomId && ref.field === field)) refs.push({ roomId, field });

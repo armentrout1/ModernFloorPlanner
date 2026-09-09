@@ -1,4 +1,4 @@
-import { physicalDocumentSchema, type PhysicalDocument, type PhysicalRoom, type PhysicalOpening } from './document';
+import { supportedPhysicalDocumentSchema, type PhysicalDocument, type PhysicalRoom, type PhysicalOpening } from './document';
 import type { Dimension } from './measurements';
 import { GEOMETRIC_TOLERANCE_MM as T } from './units';
 
@@ -80,7 +80,7 @@ export function checkFinding(check: GeometryCheck): Finding | undefined {
  */
 export function validateGeometry(input: unknown): GeometryReport {
   const report: GeometryReport = { reportVersion: 'geometry-v1', structuralValid: false, checks: [], findings: [] };
-  const parsed = physicalDocumentSchema.safeParse(input);
+  const parsed = supportedPhysicalDocumentSchema.safeParse(input);
   if (!parsed.success) {
     const raw = input as Partial<PhysicalDocument> | null;
     for (const issue of parsed.error.issues) {

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as Pointer } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, useLayoutEffect, type PointerEvent as Pointer } from 'react';
 import type { PhysicalDocument, PhysicalOpening } from '@shared/domain/document';
 import { Button } from '@/components/ui/button';
 import RoomBox from '@/components/RoomBox';
@@ -9,6 +9,7 @@ import { getDoorGeometry } from '@/utils/doorGeometry';
 import type { Room } from '@/utils/types';
 import { projectPhysicalRooms } from './projection';
 import type { PhysicalDraft } from './state';
+import type { LevelCamera } from './levelView';
 import type { DrawingSourceScope, DrawingSourceFocus } from './takeoffReadModel';
 import { drawingSourceMarks, drawingSourceBounds, type SourceMark } from './drawingSources';
 import { addOpening, moveOpening, createOpeningProposal, validateOpeningPlacement, setOpeningAppearance } from './openingCommands';
@@ -23,22 +24,34 @@ const proposalOptions = (kind: Kind) => ({ widthMm: (kind === 'door' ? 32 : 36) 
   style: 'single' as const, swingDirection: 'inward' as const, swingSide: 'right' as const, metadata: { source: 'proposed' },
 } } : {}) });
 const kindLabel = (kind: Kind) => kind === 'floor-level-opening' ? 'opening' : kind;
-export function PhysicalDrawing({ document, selectedId, onSelect, draft, selectedOpeningId = null, onSelectOpening = noop, update, takeoffScope, sourceFocus }: {
+export function PhysicalDrawing({ document, selectedId, onSelect, draft, selectedOpeningId = null, onSelectOpening = noop, update, takeoffScope, sourceFocus, levelId, camera, onCamera }: {
+  levelId?: string | null; camera?: LevelCamera; onCamera?: (camera: LevelCamera) => void;
   document: PhysicalDocument; selectedId: string | null; onSelect: (id: string) => void;
   draft?: PhysicalDraft; selectedOpeningId?: string | null; onSelectOpening?: (id: string | null) => void;
   takeoffScope?: DrawingSourceScope; sourceFocus?: DrawingSourceFocus;
   update?: (change: (draft: PhysicalDraft) => PhysicalDraft, expectedRevision?: number) => boolean;
 }) {
-  const projection = useMemo(() => projectPhysicalRooms(document), [document]);
+  const projection = useMemo(() => projectPhysicalRooms(document, levelId), [document, levelId]);
   const wrapper = useRef<HTMLDivElement>(null);
   const scopeMarks = useMemo(() => takeoffScope ? drawingSourceMarks(document, projection.rooms, takeoffScope) : [], [document, projection.rooms, takeoffScope]);
   const focusMarks = useMemo(() => sourceFocus ? drawingSourceMarks(document, projection.rooms, sourceFocus.scope) : [], [document, projection.rooms, sourceFocus]);
   const appliedSourceFocus = useRef<string | null>(null);
-  const [scale, setScale] = useState(1), [tool, setTool] = useState<Kind | null>(null);
+  const [scale, setScale] = useState(camera?.scale ?? 1), [tool, setTool] = useState<Kind | null>(null);
   const [preview, setPreview] = useState<Preview | null>(null), [message, setMessage] = useState('');
   const gesture = useRef<Gesture | null>(null), spaceHeld = useRef(false);
   const lastOpeningClick = useRef<{ id: string; at: number; x: number; y: number; count: number } | null>(null);
-  const view = useCanvasView(wrapper, projection.rooms, scale);
+  const view = useCanvasView(wrapper, projection.rooms, scale, camera?.center);
+  const cameraCallback = useRef(onCamera); cameraCallback.current = onCamera;
+  useLayoutEffect(() => {
+    const element = wrapper.current;
+    if (!element || !view.viewport.width || !view.viewport.height) return;
+    const remember = () => cameraCallback.current?.({ scale, center: {
+      x: (element.scrollLeft + element.clientWidth / 2 - view.origin.x) / scale,
+      y: (element.scrollTop + element.clientHeight / 2 - view.origin.y) / scale,
+    } });
+    remember(); element.addEventListener('scroll', remember, { passive: true });
+    return () => { element.removeEventListener('scroll', remember); };
+  }, [scale, view.origin.x, view.origin.y, view.viewport.width, view.viewport.height]);
   const editable = Boolean(draft && update);
   const release = useCallback(() => {
     const previous = gesture.current; gesture.current = null;
@@ -72,7 +85,7 @@ export function PhysicalDrawing({ document, selectedId, onSelect, draft, selecte
       window.document.removeEventListener('visibilitychange', hidden);
     };
   }, [cancel, release]);
-  useEffect(() => { cancel(); }, [draft?.id, cancel]);
+  useEffect(() => { cancel(); }, [draft?.id, levelId, cancel]);
   useEffect(() => {
     const viewport = wrapper.current; if (!viewport) return;
     let width = viewport.clientWidth, height = viewport.clientHeight;
@@ -211,7 +224,7 @@ export function PhysicalDrawing({ document, selectedId, onSelect, draft, selecte
       swingSide: opening.appearance!.swingSide === 'left' ? 'right' : 'left' }, new Date().toISOString()), draft.localEditRevision);
   }
   const previewProjection = useMemo(() => preview ? projectPhysicalRooms({ ...document,
-    openings: [...document.openings.filter(item => item.id !== preview.opening.id), preview.opening] }) : null, [document, preview]);
+    openings: [...document.openings.filter(item => item.id !== preview.opening.id), preview.opening] }, levelId) : null, [document, preview, levelId]);
   function openingHits(room: Room) {
     const physical = document.rooms.find(item => item.id === room.id)!;
     return document.openings.flatMap(opening => opening.attachments.filter(attachment => physical.wallFaces.some(face => face.id === attachment.wallFaceId)).map(attachment => {
@@ -296,7 +309,7 @@ export function PhysicalDrawing({ document, selectedId, onSelect, draft, selecte
               : document.openings.find(opening => opening.id === selectedOpeningId)?.attachments.map(attachment => physical.wallFaces.find(face => face.id === attachment.wallFaceId)).find(Boolean)?.side;
             const startPoint = activeWall === 'right' ? { x: room.width, y: 0 } : activeWall === 'bottom' ? { x: room.width, y: room.height }
               : activeWall === 'left' ? { x: 0, y: room.height } : { x: 0, y: 0 };
-            return <div key={room.id} data-testid={'physical-room-' + room.id} data-physical-room-id={room.id}
+            return <div key={room.id} data-testid={'physical-room-' + room.id} data-physical-room-id={room.id} data-level-id={levelId ?? undefined}
               data-mm-length={physical.length.valueMm ?? ''} data-mm-width={physical.width.valueMm ?? ''} data-group-id={room.groupId}
               role="button" tabIndex={0} aria-label={'Select ' + (room.name || 'Room')} aria-pressed={room.id === selectedId}
               onClick={event => { if (!editable) onSelect(room.id); event.stopPropagation(); }} onKeyDown={event => {
@@ -337,7 +350,7 @@ export function PhysicalDrawing({ document, selectedId, onSelect, draft, selecte
           {preview.validation.messages.join(' ') || 'Center measured from the clockwise wall start.'}</p>}
       </div>}
       {takeoffScope && <p>Teal marks show takeoff scope; purple marks locate the selected quantity source. Editing selection is separate.</p>}
-      {document.rooms.some(room => !room.presentation) ? <p>Rooms without saved positions are arranged for viewing only.</p> : null}
+      {projection.rooms.some(room => !document.rooms.find(value => value.id === room.id)?.presentation) ? <p>Rooms without saved positions are arranged for viewing only.</p> : null}
       {projection.notices.map(notice => <p key={notice} className="text-amber-800">{notice}</p>)}
     </div>
   </section>;

@@ -4,11 +4,13 @@ import { Input } from '@/components/ui/input';
 import { useInputRevert } from '@/components/InputRevert';
 import { captureFieldRevert, revertField } from './fieldRevert';
 import type { PhysicalDraft } from './state';
+import { activeLevelId } from './levelCommands';
+import { levelForRoom, sourceRoomIds } from './levelView';
 import { QUANTITY_OUTPUTS, type QuantityOutput } from '@shared/domain/geometryValidation';
 import type { QuantitySelection } from '@shared/quantities/policy';
 import { setOutputEnabled, setOutputTargets, selectAllCurrentTargets, setTakeoffBasis, setCrownGaps,
   getWasteField, editWaste, commitWaste, wasteError } from './takeoffCommands';
-import { buildTakeoffReadModel, OUTPUT_LABELS, type DrawingSourceScope } from './takeoffReadModel';
+import { buildTakeoffReadModel, OUTPUT_LABELS, roomLabel, scopeForRequest, scopeForSelection, type DrawingSourceScope } from './takeoffReadModel';
 import { TakeoffResults } from './TakeoffResults';
 
 type Change = (change: (draft: PhysicalDraft) => PhysicalDraft, expectedRevision?: number) => boolean;
@@ -18,8 +20,8 @@ const faceKey = (face: Face) => JSON.stringify([face.openingId, face.wallFaceId]
 const keyOf = (value: string | Face) => typeof value === 'string' ? value : faceKey(value);
 export function scopeChoices(draft: PhysicalDraft, output: QuantityOutput): Choice[] {
   const rooms = draft.document.rooms;
-  const walls = rooms.flatMap(room => room.wallFaces.map(wall => ({ key: wall.id, label: (room.name || 'Room') + ' · ' + wall.side + ' wall', value: wall.id })));
-  if (output === 'floor-area' || output === 'ceiling-area') return rooms.map(room => ({ key: room.id, label: room.name || 'Room', value: room.id }));
+  const walls = rooms.flatMap(room => room.wallFaces.map(wall => ({ key: wall.id, label: roomLabel(draft.document, room.id) + ' · ' + wall.side + ' wall', value: wall.id })));
+  if (output === 'floor-area' || output === 'ceiling-area') return rooms.map(room => ({ key: room.id, label: roomLabel(draft.document, room.id), value: room.id }));
   if (output === 'door-casing' || output === 'window-casing') return openingFaces(draft).filter(choice =>
     draft.document.openings.find(opening => opening.id === (choice.value as Face).openingId)?.kind === (output === 'door-casing' ? 'door' : 'window'));
   if (output === 'opening-inventory') return draft.document.openings.map(opening => ({ key: opening.id, label: openingLabel(draft, opening.id), value: opening.id }));
@@ -29,14 +31,16 @@ export function openingLabel(draft: PhysicalDraft, id: string): string {
   const opening = draft.document.openings.find(item => item.id === id);
   if (!opening) return 'Removed opening';
   const index = draft.document.openings.filter(item => item.kind === opening.kind).findIndex(item => item.id === id) + 1;
-  return (opening.kind === 'door' ? 'Door' : opening.kind === 'window' ? 'Window' : 'Opening') + ' ' + index;
+  const name = (opening.kind === 'door' ? 'Door' : opening.kind === 'window' ? 'Window' : 'Opening') + ' ' + index;
+  const room = draft.document.rooms.find(room => room.wallFaces.some(wall => opening.attachments.some(a => a.wallFaceId === wall.id)));
+  return draft.document.schemaVersion === 3 && room ? roomLabel(draft.document, room.id) + ' · ' + name : name;
 }
 function openingFaces(draft: PhysicalDraft): Choice[] {
   return draft.document.openings.flatMap(opening => opening.attachments.map(face => {
     const room = draft.document.rooms.find(room => room.wallFaces.some(wall => wall.id === face.wallFaceId));
     const wall = room?.wallFaces.find(wall => wall.id === face.wallFaceId);
     const value = { openingId: opening.id, wallFaceId: face.wallFaceId };
-    return { key: faceKey(value), label: openingLabel(draft, opening.id) + ' · ' + (room?.name || 'Room') + ' · ' + wall?.side + ' wall', value };
+    return { key: faceKey(value), label: openingLabel(draft, opening.id) + ' · ' + (room ? roomLabel(draft.document, room.id) : 'Room') + ' · ' + wall?.side + ' wall', value };
   }));
 }
 function targets(selection: QuantitySelection): (string | Face)[] {
@@ -56,6 +60,22 @@ export function TakeoffPanel({ draft, update, onFocus, review, showScope, onShow
   const chosen = selection ? targets(selection) : [];
   const selectedKeys = new Set(chosen.map(keyOf));
   const waste = output && output !== 'opening-inventory' ? getWasteField(draft, output) : null;
+  const levelEnabled = draft.document.schemaVersion === 3;
+  const includedLevelIds = new Set(sourceRoomIds(draft.document, scopeForRequest(draft.document, draft.request)).map(id => levelForRoom(draft.document, id)));
+  const includedLevelNames = draft.document.schemaVersion === 3 ? [...draft.document.buildingLevels.levels]
+    .sort((a, b) => a.displayOrder - b.displayOrder).filter(level => includedLevelIds.has(level.id)).map(level => level.name) : [];
+  function captureCurrentLevel() {
+    if (!selection || !output) return;
+    const levelId = activeLevelId(draft);
+    const values = choices.filter(choice => {
+      const scope = scopeForSelection('roomIds' in selection ? { ...selection, roomIds: [choice.value as string] }
+        : 'wallFaceIds' in selection ? { ...selection, wallFaceIds: [choice.value as string] }
+        : 'openingIds' in selection ? { ...selection, openingIds: [choice.value as string] }
+        : { ...selection, faces: [choice.value as Face] });
+      return sourceRoomIds(draft.document, scope).some(id => levelForRoom(draft.document, id) === levelId);
+    }).map(choice => choice.value);
+    update(current => setOutputTargets(current, output, values as string[] | Face[]), draft.localEditRevision);
+  }
   function toggleTarget(choice: Choice, include: boolean) {
     if (!output || !selection) return;
     const values = include ? [...chosen, choice.value] : chosen.filter(value => keyOf(value) !== choice.key);
@@ -66,6 +86,7 @@ export function TakeoffPanel({ draft, update, onFocus, review, showScope, onShow
       <p className="mt-1 text-sm text-slate-600">Choose work and its targets. Inspecting a room or moving the camera does not change this scope.</p></div>
       <Button variant="outline" size="sm" aria-expanded={reviewVisible} onClick={() => setReviewVisible(value => !value)}>Review inputs</Button>
     </div>
+    {levelEnabled ? <p data-testid="takeoff-levels" className="rounded-md bg-slate-50 p-2 text-sm">Takeoff includes: {includedLevelNames.join(', ') || 'no targets yet'} · explicit selected targets only. Editing a different level leaves this scope unchanged.</p> : null}
     <fieldset><legend className="mb-2 text-sm font-semibold">Work to measure</legend>
       <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5">{QUANTITY_OUTPUTS.map(value => <label key={value} className="flex min-w-0 items-center gap-2 rounded-md border p-2 text-sm">
         <input className="shrink-0" type="checkbox" aria-label={'Measure ' + OUTPUT_LABELS[value]} checked={draft.request.selections.some(selection => selection.output === value)}
@@ -85,7 +106,9 @@ export function TakeoffPanel({ draft, update, onFocus, review, showScope, onShow
         <select className="h-10 w-full min-w-0 rounded-md border bg-white px-2" value={output} onChange={event => setActive(event.target.value as QuantityOutput)}>
           {draft.request.selections.map(item => <option key={item.output} value={item.output}>{OUTPUT_LABELS[item.output]}</option>)}
         </select></label>
-        <Button size="sm" variant="outline" onClick={() => update(current => selectAllCurrentTargets(current, output))}>All current {targetNoun(output)}</Button>
+        {levelEnabled ? <><Button size="sm" variant="outline" className="h-auto min-h-9 whitespace-normal" onClick={captureCurrentLevel}>Current level’s current targets</Button>
+          <Button size="sm" variant="outline" className="h-auto min-h-9 whitespace-normal" onClick={() => update(current => selectAllCurrentTargets(current, output), draft.localEditRevision)}>All levels’ current targets</Button></>
+          : <Button size="sm" variant="outline" onClick={() => update(current => selectAllCurrentTargets(current, output))}>All current {targetNoun(output)}</Button>}
         <Button size="sm" variant="outline" onClick={() => update(current => setOutputTargets(current, output, []))}>Clear targets</Button>
       </div>
       <p className="my-3 text-xs text-slate-600">{chosen.length} selected · {choices.filter(choice => !selectedKeys.has(choice.key)).length} current targets not included. Newly added targets are not included automatically.</p>

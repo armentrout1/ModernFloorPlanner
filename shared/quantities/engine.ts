@@ -1,13 +1,14 @@
 import { adaptMeasurementDocument } from '../compatibility/legacyDocument';
-import type { PhysicalDocument, PhysicalOpening } from '../domain/document';
+import { physicalDocumentV3Schema, type PhysicalDocument, type PhysicalOpening } from '../domain/document';
+import { levelOwnershipBasis } from '../domain/levels';
 import { atFloor, measurementAt, wallIndex, type QuantityOutput, type MeasurementRef } from '../domain/geometryValidation';
 import { evaluateQuantityReadiness, type OutputReadiness } from './readiness';
-import { validateQuantityRequest, QUANTITY_POLICY_VERSION_V2, type ContractError, type QuantityRequest } from './policy';
+import { validateQuantityRequest, QUANTITY_POLICY_VERSION_V2, QUANTITY_POLICY_VERSION_V3, type ContractError, type QuantityRequest } from './policy';
 import { ownFrozen, type DeepReadonly } from './immutability';
 import { copyJson } from './canonicalJson';
 import { add, subtract, multiply, sum, checked, nonnegative, limited, interval, elevatedInterval, intersect, span, unionLength, unionArea,
   ArithmeticFailure, type Interval, type Rectangle } from './arithmetic';
-import { RESULT_SCHEMA_VERSION, ENGINE_VERSION, RESULT_SCHEMA_VERSION_V2, ENGINE_VERSION_V2, calculationSchema,
+import { RESULT_SCHEMA_VERSION, ENGINE_VERSION, RESULT_SCHEMA_VERSION_V2, ENGINE_VERSION_V2, RESULT_SCHEMA_VERSION_V3, ENGINE_VERSION_V3, calculationSchema,
   type Calculation, type Amounts, type QuantityRecord, type QuantityAggregate, type QuantityTrace } from './result';
 
 export type CalculationResult = { ok: true; calculation: DeepReadonly<Calculation> } | { ok: false; errors: ContractError[] };
@@ -47,20 +48,30 @@ function failure(error: unknown, id: string): ContractError {
     code: 'CALCULATION_FAILURE', path: [], id, message: 'The selected record could not be evaluated safely' };
 }
 
-/** Pure rectangular quantities. Explicit v2 only; callers may adapt legacy JSON separately.
+/** Pure rectangular quantities. Explicit supported physical versions; callers adapt legacy JSON separately.
  * No clocks, hashes, viewport state, display rounding, persistence or implicit selections.
  */
 export function calculateQuantities(input: unknown, requested: unknown): CalculationResult {
   try { input = copyJson(input); requested = copyJson(requested); }
   catch { return { ok: false, errors: [{ code: 'INVALID_JSON', path: [], message: 'Calculation inputs must be finite, acyclic plain JSON without accessors or omitted values' }] }; }
-  if (!input || typeof input !== 'object' || (input as { schemaVersion?: unknown }).schemaVersion !== 2) {
-    return { ok: false, errors: [{ code: 'EXPLICIT_V2_REQUIRED', path: ['schemaVersion'], message: 'Adapt legacy input explicitly before calculating physical quantities' }] };
+  const version = (input as { schemaVersion?: unknown } | null)?.schemaVersion;
+  if (version !== 2 && version !== 3) {
+    return { ok: false, errors: [{ code: 'EXPLICIT_V2_REQUIRED', path: ['schemaVersion'], message: 'An explicit supported physical document is required; adapt legacy input separately' }] };
   }
-  const adapted = adaptMeasurementDocument(input);
-  if (adapted.status !== 'already-v2') return { ok: false, errors: adapted.status === 'invalid'
-    ? adapted.errors.map(error => ({ ...error, code: 'INVALID_DOCUMENT' }))
-    : [{ code: 'INVALID_DOCUMENT', path: [], message: 'Expected a structurally valid finite JSON v2 document' }] };
-  const document = adapted.document;
+  let document: PhysicalDocument;
+  if (version === 2) {
+    const adapted = adaptMeasurementDocument(input);
+    if (adapted.status !== 'already-v2') return { ok: false, errors: adapted.status === 'invalid'
+      ? adapted.errors.map(error => ({ ...error, code: 'INVALID_DOCUMENT' }))
+      : [{ code: 'INVALID_DOCUMENT', path: [], message: 'Expected a structurally valid finite JSON v2 document' }] };
+    document = adapted.document;
+  } else {
+    const valid = physicalDocumentV3Schema.safeParse(input);
+    if (!valid.success) return { ok: false, errors: valid.error.issues.map(issue => ({
+      code: 'INVALID_DOCUMENT', path: issue.path, message: issue.message,
+    })) };
+    document = input as PhysicalDocument;
+  }
   const contract = validateQuantityRequest(document, requested);
   if (!contract.ok) return contract;
   const readiness = evaluateQuantityReadiness(document, contract.request);
@@ -70,11 +81,14 @@ export function calculateQuantities(input: unknown, requested: unknown): Calcula
   const outputs = Array.from(new Set(records.map(record => record.output))).sort(compare)
     .map(output => aggregate(output, records.filter(record => record.output === output)));
   const calculation: Calculation = {
-    schemaVersion: contract.request.policy.version === QUANTITY_POLICY_VERSION_V2 ? RESULT_SCHEMA_VERSION_V2 : RESULT_SCHEMA_VERSION,
-    engineVersion: contract.request.policy.version === QUANTITY_POLICY_VERSION_V2 ? ENGINE_VERSION_V2 : ENGINE_VERSION,
+    schemaVersion: contract.request.policy.version === QUANTITY_POLICY_VERSION_V3 ? RESULT_SCHEMA_VERSION_V3
+      : contract.request.policy.version === QUANTITY_POLICY_VERSION_V2 ? RESULT_SCHEMA_VERSION_V2 : RESULT_SCHEMA_VERSION,
+    engineVersion: contract.request.policy.version === QUANTITY_POLICY_VERSION_V3 ? ENGINE_VERSION_V3
+      : contract.request.policy.version === QUANTITY_POLICY_VERSION_V2 ? ENGINE_VERSION_V2 : ENGINE_VERSION,
     policyVersion: contract.request.policy.version,
     source: { documentId: document.id, revisionId: document.revisionId,
-      revisionState: document.revisionId === null ? 'unsaved' : 'identified' },
+      revisionState: document.revisionId === null ? 'unsaved' : 'identified',
+      ...(document.schemaVersion === 3 ? { levelOwnership: levelOwnershipBasis(document.buildingLevels) } : {}) },
     request: contract.request,
     status: !records.length ? 'empty' : outputs.some(output => output.status === 'blocked') ? 'blocked'
       : outputs.some(output => output.status === 'provisional') ? 'provisional' : 'complete',

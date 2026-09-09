@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { dimensionSchema, elevationSchema } from './measurements';
 import { elevationMmSchema, mmSchema } from './units';
 import { calculationContractSchema } from './applicability';
+import { buildingLevelsSchema } from './levels';
 
 export const wallSideSchema = z.enum(['top', 'right', 'bottom', 'left']);
 export type WallSide = z.infer<typeof wallSideSchema>;
@@ -112,7 +113,46 @@ export const physicalDocumentSchema = z.object({
   });
 });
 
-export type PhysicalDocument = z.infer<typeof physicalDocumentSchema>;
+export type PhysicalDocumentV2 = z.infer<typeof physicalDocumentSchema>;
+
+/** Version 2 above is frozen. New ownership cannot pass through old consumers. */
+export const physicalDocumentV3Schema = physicalDocumentSchema.innerType().extend({
+  schemaVersion: z.literal(3), quantityPolicyVersion: z.literal('rectangular-flat-v3'),
+  rooms: z.array(physicalRoomSchema.strict()), openings: z.array(physicalOpeningSchema.strict()),
+  calculationContract: calculationContractSchema,
+  editorContract: physicalDocumentSchema.innerType().shape.editorContract.unwrap(),
+  buildingLevels: buildingLevelsSchema,
+}).strict().superRefine((document, ctx) => {
+  // Reuse unchanged structural room/opening checks without dropping any source data.
+  const previous = physicalDocumentSchema.safeParse({ ...document, schemaVersion: 2 });
+  if (!previous.success) previous.error.issues.forEach(issue => ctx.addIssue(issue));
+  const roomIds = new Set(document.rooms.map(room => room.id));
+  const membership = document.buildingLevels.roomLevels;
+  if (Object.keys(membership).length !== roomIds.size || Object.keys(membership).some(id => !roomIds.has(id))
+      || Array.from(roomIds).some(id => !Object.hasOwn(membership, id))) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['buildingLevels', 'roomLevels'],
+      message: 'Exactly one authoritative level membership is required for every existing room' });
+  }
+  const domainIds = new Set([...document.rooms.flatMap(room => [room.id, ...room.wallFaces.map(wall => wall.id)]),
+    ...document.openings.map(opening => opening.id), ...document.editorContract.groups.map(group => group.id)]);
+  document.buildingLevels.levels.forEach((level, index) => {
+    if (domainIds.has(level.id)) ctx.addIssue({ code: z.ZodIssueCode.custom,
+      path: ['buildingLevels', 'levels', index, 'id'], message: 'Level IDs must not reuse room, wall, opening or group IDs' });
+  });
+  document.editorContract.groups.forEach((group, index) => {
+    if (new Set(group.roomIds.map(id => membership[id])).size > 1) ctx.addIssue({ code: z.ZodIssueCode.custom,
+      path: ['editorContract', 'groups', index, 'roomIds'], message: 'A room group must remain on one level' });
+  });
+  const wallRooms = new Map(document.rooms.flatMap(room => room.wallFaces.map(wall => [wall.id, room.id] as const)));
+  document.openings.forEach((opening, index) => {
+    const levels = new Set(opening.attachments.map(face => membership[wallRooms.get(face.wallFaceId)!]));
+    if (levels.size > 1) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['openings', index, 'attachments'],
+      message: 'All attachments of one opening must remain on the same level' });
+  });
+});
+export type PhysicalDocumentV3 = z.infer<typeof physicalDocumentV3Schema>;
+export const supportedPhysicalDocumentSchema = z.union([physicalDocumentSchema, physicalDocumentV3Schema]);
+export type PhysicalDocument = PhysicalDocumentV2 | PhysicalDocumentV3;
 export type PhysicalRoom = z.infer<typeof physicalRoomSchema>;
 export type PhysicalOpening = z.infer<typeof physicalOpeningSchema>;
 export type ReviewItem = z.infer<typeof reviewItemSchema>;

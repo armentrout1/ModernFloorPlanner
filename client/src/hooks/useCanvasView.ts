@@ -4,7 +4,7 @@ import type { Position, Room } from '@/utils/types';
 /** View-only scroll space. The canvas element still represents model origin (0, 0),
  * so pointer coordinates continue to use its bounding rectangle and current scale.
  */
-export function useCanvasView(wrapperRef: RefObject<HTMLDivElement>, rooms: Room[], scale: number) {
+export function useCanvasView(wrapperRef: RefObject<HTMLDivElement>, rooms: Room[], scale: number, initialCenter?: Position) {
   const [viewport, setViewport] = useState({ width: 0, height: 0 });
   const [request, setRequest] = useState(0);
   const pendingCenter = useRef<Position | null>(null);
@@ -40,8 +40,8 @@ export function useCanvasView(wrapperRef: RefObject<HTMLDivElement>, rooms: Room
     };
   }, [rooms, scale, viewport]);
   const previousLayout = useRef<typeof layout | null>(null);
-  const worldCenter = useRef<Position | null>(null);
-  const viewEstablished = useRef(false);
+  const worldCenter = useRef<Position | null>(initialCenter ?? null);
+  const viewEstablished = useRef(Boolean(initialCenter));
   const appliedScroll = useRef<Position | null>(null);
   // Remember actual user scroll/pan before a later scale/extent change can clamp
   // the DOM scroll offsets. Reading the old position after layout is too late.

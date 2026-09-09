@@ -1,8 +1,8 @@
 import { z } from 'zod';
-import { physicalDocumentSchema } from '@shared/domain/document';
+import { supportedPhysicalDocumentSchema } from '@shared/domain/document';
 import { assertSupportedPhysicalDocument, PhysicalDraftImportError } from '@shared/compatibility/physicalDraft';
-import { copyJson } from '@shared/quantities/canonicalJson';
-import { quantityRequestSchema, validateQuantityRequest, QUANTITY_POLICY_VERSION_V2 } from '@shared/quantities/policy';
+import { canonicalJson, copyJson } from '@shared/quantities/canonicalJson';
+import { quantityRequestSchema, validateQuantityRequest, QUANTITY_POLICY_VERSION_V2, QUANTITY_POLICY_VERSION_V3 } from '@shared/quantities/policy';
 import { measurementEventCaptureSchema } from '@shared/quantities/snapshot';
 import { parseMeasurement } from '@shared/domain/parseMeasurement';
 import { committedFieldText, PhysicalDraftError, ROOM_FIELDS, type PhysicalDraftRegistry } from './state';
@@ -13,15 +13,16 @@ import { reviewStateSchema, validateReviewEvidence } from './reviewCommands';
 
 import { historyEvidenceSchema, validateHistoryEvidence } from './historyEvidence';
 
-export const PHYSICAL_DRAFT_STORAGE_KEY = 'modern-floor-planner:editor-draft:v1';
+export const LEGACY_PHYSICAL_DRAFT_STORAGE_KEY = 'modern-floor-planner:editor-draft:v1';
+export const PHYSICAL_DRAFT_STORAGE_KEY = 'modern-floor-planner:editor-draft:v2';
 const id = z.string().refine(value => value.trim().length > 0 && !/[\u0000-\u001f\u007f]/.test(value));
 const revision = z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER);
 const field = z.object({ text: z.string(), unit: z.enum(['ft', 'm']), dirty: z.boolean() }).strict();
 const source = z.object({ kind: z.enum(['new', 'quick-rooms', 'legacy', 'physical']),
-  operation: z.enum(['new-physical-draft-v1', 'legacy-pixels-v2', 'physical-draft-upgrade-v1']),
+  operation: z.enum(['new-physical-draft-v1', 'new-physical-level-draft-v1', 'legacy-pixels-v2', 'physical-draft-upgrade-v1']),
   original: z.unknown(), review: z.array(z.string()),
 }).strict();
-const draft = z.object({ id, localEditRevision: revision, document: physicalDocumentSchema,
+const draft = z.object({ id, localEditRevision: revision, document: supportedPhysicalDocumentSchema,
   displayUnit: z.enum(['ft', 'm']),
   fields: z.record(z.object({ length: field, width: field, ceilingHeight: field }).strict()),
   events: z.array(measurementEventCaptureSchema), request: quantityRequestSchema, source,
@@ -31,8 +32,11 @@ const draft = z.object({ id, localEditRevision: revision, document: physicalDocu
   takeoffState: takeoffStateSchema.optional(),
   reviewState: reviewStateSchema.optional(),
   historyEvidence: historyEvidenceSchema.optional(),
+  levelView: z.object({ version: z.literal('physical-level-view-v1'), activeLevelId: id, pendingNames: z.record(id, z.string()).optional() }).strict().optional(),
+  levelUpgradeLineage: z.object({ version: z.literal('physical-level-upgrade-v1'), sourceDraftId: id,
+    sourceRevision: revision, at: z.string().datetime({ offset: true }), originalDraft: z.unknown() }).strict().optional(),
 }).strict();
-const registrySchema = z.object({ version: z.literal('mfp-editor-draft-v1'), localEditRevision: revision,
+const registrySchema = z.object({ version: z.enum(['mfp-editor-draft-v1', 'mfp-editor-draft-v2']), localEditRevision: revision,
   selectedDraftId: id.nullable(), drafts: z.array(draft),
 }).strict();
 export type RegistryReadResult = { status: 'empty' } | { status: 'recovered'; registry: PhysicalDraftRegistry }
@@ -45,7 +49,7 @@ export function validateRegistry(input: unknown): RegistryReadResult {
   try { copied = copyJson(input); }
   catch { return corrupt('The stored physical draft registry is not finite plain JSON.'); }
   if (!copied || typeof copied !== 'object' || Array.isArray(copied)) return corrupt('The stored physical draft registry has an invalid shape.');
-  if ((copied as { version?: unknown }).version !== 'mfp-editor-draft-v1') return {
+  if (!['mfp-editor-draft-v1', 'mfp-editor-draft-v2'].includes(String((copied as { version?: unknown }).version))) return {
     status: 'unsupported', message: 'This stored physical draft registry uses an unsupported version. Its contents are preserved.',
   };
   const parsed = registrySchema.safeParse(copied);
@@ -60,8 +64,25 @@ export function validateRegistry(input: unknown): RegistryReadResult {
     catch (error) { return { status: error instanceof PhysicalDraftImportError && error.code === 'UNSUPPORTED_CONTENT' ? 'unsupported' : 'corrupt',
       message: error instanceof Error ? error.message : 'The stored physical document is invalid.' }; }
     if (item.document.id !== null || item.document.revisionId !== null) return corrupt('A temporary draft cannot impersonate a saved document revision.');
-    if (item.document.quantityPolicyVersion !== QUANTITY_POLICY_VERSION_V2 || !item.document.calculationContract || !item.document.editorContract) {
+    if (item.document.quantityPolicyVersion !== (item.document.schemaVersion === 3 ? QUANTITY_POLICY_VERSION_V3 : QUANTITY_POLICY_VERSION_V2) || !item.document.calculationContract || !item.document.editorContract) {
       return { status: 'unsupported', message: 'This draft has not explicitly adopted the supported physical editor contract. Its contents are preserved.' };
+    }
+    if (item.document.schemaVersion === 3) {
+      if (registry.version !== 'mfp-editor-draft-v2') return corrupt('Building-level drafts require recovery envelope v2.');
+      if (!item.levelView || !item.document.buildingLevels.levels.some(level => level.id === item.levelView!.activeLevelId)) return corrupt('Stored active level does not reference this building.');
+      const levelIds = new Set(item.document.buildingLevels.levels.map(level => level.id));
+      if (Object.keys(item.levelView.pendingNames ?? {}).some(id => !levelIds.has(id))) return corrupt('Stored pending level names must reference existing levels.');
+    } else if (item.levelView || item.levelUpgradeLineage || item.historyEvidence?.version === 'physical-history-evidence-v2') return corrupt('Legacy documents cannot claim building-level editor state.');
+    if (item.levelUpgradeLineage) {
+      const lineage = item.levelUpgradeLineage, original = lineage.originalDraft as PhysicalDraftRegistry['drafts'][number] | null;
+      if (!original || original.id !== lineage.sourceDraftId || original.localEditRevision !== lineage.sourceRevision
+          || original.id === item.id || original.document?.schemaVersion !== 2 || original.levelUpgradeLineage) return corrupt('Stored level upgrade lineage is inconsistent.');
+      const originRegistry = validateRegistry({ version: 'mfp-editor-draft-v1', localEditRevision: 0, selectedDraftId: original.id, drafts: [original] });
+      if (originRegistry.status !== 'recovered' || canonicalJson(original.source) !== canonicalJson(item.source)) return corrupt('Stored level upgrade source has changed or is invalid.');
+      const retainsPrefix = (before: unknown[], after: unknown[]) => before.length <= after.length && before.every((event, index) => canonicalJson(event) === canonicalJson(after[index]));
+      if (!retainsPrefix(original.events, item.events) || !retainsPrefix(original.openingEvents ?? [], item.openingEvents ?? [])
+          || !retainsPrefix(original.historyEvidence?.events ?? [], item.historyEvidence?.events ?? [])
+          || !retainsPrefix(original.reviewState?.applicabilityEvents ?? [], item.reviewState?.applicabilityEvents ?? [])) return corrupt('Stored level upgrade discarded retained action evidence.');
     }
     const roomIds = item.document.rooms.map(room => room.id);
     if (Object.keys(item.fields).length !== roomIds.length || roomIds.some(roomId => !Object.hasOwn(item.fields, roomId))) {
@@ -114,7 +135,7 @@ export function validateRegistry(input: unknown): RegistryReadResult {
     }
     // Event captures are historical evidence. Their transitions are validated
     // above, but their former targets need not remain in the current document.
-    const expectedOperation = item.source.kind === 'new' ? 'new-physical-draft-v1'
+    const expectedOperation = item.source.kind === 'new' ? (item.document.schemaVersion === 3 && !item.levelUpgradeLineage ? 'new-physical-level-draft-v1' : 'new-physical-draft-v1')
       : item.source.kind === 'legacy' ? 'legacy-pixels-v2' : 'physical-draft-upgrade-v1';
     if (item.source.operation !== expectedOperation || !Object.hasOwn(item.source, 'original')) return corrupt('Stored draft origin evidence is inconsistent.');
   }

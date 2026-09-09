@@ -4,11 +4,14 @@ import { QUANTITY_OUTPUTS } from '../domain/geometryValidation';
 import type { OutputReadiness } from './readiness';
 import { quantityRequestSchema } from './policy';
 import { roomApplicabilitySchema } from '../domain/applicability';
+import { levelOwnershipBasisSchema } from '../domain/levels';
 
 export const RESULT_SCHEMA_VERSION = 'quantity-result-v1' as const;
 export const ENGINE_VERSION = 'rectangular-engine-v1' as const;
 export const RESULT_SCHEMA_VERSION_V2 = 'quantity-result-v2' as const;
 export const ENGINE_VERSION_V2 = 'rectangular-engine-v2' as const;
+export const RESULT_SCHEMA_VERSION_V3 = 'quantity-result-v3' as const;
+export const ENGINE_VERSION_V3 = 'rectangular-engine-v3' as const;
 // A supported decimal magnitude, not a promise of exact fixed-point arithmetic.
 export const MAX_QUANTITY_MAGNITUDE = Number.MAX_SAFE_INTEGER;
 const amount = z.number().finite().nonnegative().max(MAX_QUANTITY_MAGNITUDE);
@@ -183,22 +186,30 @@ export const quantityAggregateSchema = z.object({
 });
 export type QuantityAggregate = z.infer<typeof quantityAggregateSchema>;
 export const calculationSchema = z.object({
-  schemaVersion: z.enum([RESULT_SCHEMA_VERSION, RESULT_SCHEMA_VERSION_V2]), engineVersion: z.enum([ENGINE_VERSION, ENGINE_VERSION_V2]),
-  policyVersion: z.enum(['rectangular-flat-v1', 'rectangular-flat-v2']),
+  schemaVersion: z.enum([RESULT_SCHEMA_VERSION, RESULT_SCHEMA_VERSION_V2, RESULT_SCHEMA_VERSION_V3]), engineVersion: z.enum([ENGINE_VERSION, ENGINE_VERSION_V2, ENGINE_VERSION_V3]),
+  policyVersion: z.enum(['rectangular-flat-v1', 'rectangular-flat-v2', 'rectangular-flat-v3']),
   source: z.object({
     documentId: z.union([id, z.number().int().positive().safe()]).nullable(),
     revisionId: id.nullable(), revisionState: z.enum(['unsaved', 'identified']),
+    levelOwnership: levelOwnershipBasisSchema.optional(),
   }).strict(),
   request: quantityRequestSchema,
   status: z.enum(['complete', 'provisional', 'blocked', 'empty']),
   records: z.array(quantityRecordSchema), outputs: z.array(quantityAggregateSchema),
 }).strict().superRefine((calculation, ctx) => {
-  const v2 = calculation.policyVersion === 'rectangular-flat-v2';
-  if (calculation.schemaVersion !== (v2 ? RESULT_SCHEMA_VERSION_V2 : RESULT_SCHEMA_VERSION)
-      || calculation.engineVersion !== (v2 ? ENGINE_VERSION_V2 : ENGINE_VERSION)
+  const v3 = calculation.policyVersion === 'rectangular-flat-v3';
+  const applicability = calculation.policyVersion !== 'rectangular-flat-v1';
+  if (calculation.schemaVersion !== (v3 ? RESULT_SCHEMA_VERSION_V3 : applicability ? RESULT_SCHEMA_VERSION_V2 : RESULT_SCHEMA_VERSION)
+      || calculation.engineVersion !== (v3 ? ENGINE_VERSION_V3 : applicability ? ENGINE_VERSION_V2 : ENGINE_VERSION)
       || calculation.request.policy.version !== calculation.policyVersion
-      || calculation.records.some(record => Boolean(record.readiness.applicability) !== v2)) {
+      || Boolean(calculation.source.levelOwnership) !== v3
+      || calculation.records.some(record => Boolean(record.readiness.applicability) !== applicability)) {
     ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['schemaVersion'], message: 'Result, engine, policy and applicability versions must agree' });
+  }
+  if (calculation.source.levelOwnership && calculation.records.some(record =>
+      record.readiness.roomIds.some(id => !Object.hasOwn(calculation.source.levelOwnership!.roomLevels, id)))) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['source', 'levelOwnership'],
+      message: 'Every result room must retain its level identity' });
   }
   if ((calculation.source.revisionId === null) !== (calculation.source.revisionState === 'unsaved')) {
     ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['source'], message: 'Null revisions are explicitly unsaved' });

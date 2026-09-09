@@ -2,7 +2,8 @@ import { z } from 'zod';
 import { dimensionSchema, elevationSchema, type Dimension, type KnownMeasurement } from './measurements';
 import { adaptMeasurementDocument } from '../compatibility/legacyDocument';
 import { validateGeometry, measurementAt, type MeasurementRef, type GeometryReport } from './geometryValidation';
-import type { PhysicalDocument } from './document';
+import { physicalDocumentV3Schema, type PhysicalDocument } from './document';
+import { copyJson } from '../quantities/canonicalJson';
 
 const timestamp = z.string().datetime({ offset: true });
 const actionSchema = z.discriminatedUnion('type', [
@@ -59,12 +60,21 @@ export type DocumentActionResult = { ok: true; document: PhysicalDocument; targe
 export function applyMeasurementAction(input: unknown, targetInput: unknown, action: unknown): DocumentActionResult {
   const target = targetSchema.safeParse(targetInput);
   if (!target.success) return { ok: false, code: 'INVALID_MEASUREMENT_TARGET', message: 'Select an explicit room/opening measurement field' };
-  if ((input as { schemaVersion?: unknown } | null)?.schemaVersion !== 2) return {
+  const version = (input as { schemaVersion?: unknown } | null)?.schemaVersion;
+  if (version !== 2 && version !== 3) return {
     ok: false, code: 'V2_REQUIRED', message: 'Adapt legacy data explicitly before physical measurement actions',
   };
-  const adapted = adaptMeasurementDocument(input);
-  if (!('document' in adapted)) return { ok: false, code: 'INVALID_DOCUMENT', message: 'Expected structurally valid JSON v2 document' };
-  const document = adapted.document, ref = target.data;
+  let document: PhysicalDocument;
+  if (version === 2) {
+    const adapted = adaptMeasurementDocument(input);
+    if (!('document' in adapted)) return { ok: false, code: 'INVALID_DOCUMENT', message: 'Expected structurally valid JSON v2 document' };
+    document = adapted.document;
+  } else {
+    try { document = copyJson(input) as unknown as PhysicalDocument; }
+    catch { return { ok: false, code: 'INVALID_DOCUMENT', message: 'Expected finite plain JSON physical data' }; }
+    if (!physicalDocumentV3Schema.safeParse(document).success) return { ok: false, code: 'INVALID_DOCUMENT', message: 'Expected a valid level-owned physical document' };
+  }
+  const ref = target.data;
   const exists = ref.entity === 'room' ? document.rooms.some(room => room.id === ref.id) : document.openings.some(opening => opening.id === ref.id);
   if (!exists) return { ok: false, code: 'INVALID_MEASUREMENT_TARGET', message: 'Measurement owner does not exist' };
   const result = transitionMeasurement(measurementAt(document, ref), action,

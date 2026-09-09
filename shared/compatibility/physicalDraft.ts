@@ -1,4 +1,4 @@
-import { physicalDocumentSchema, type PhysicalDocument } from '../domain/document';
+import { supportedPhysicalDocumentSchema, type PhysicalDocument, type PhysicalDocumentV2 } from '../domain/document';
 import { createUnknownRoomApplicability } from '../domain/applicability';
 import { toMm } from '../domain/units';
 import { copyJson, type JsonValue } from '../quantities/canonicalJson';
@@ -11,7 +11,7 @@ export class PhysicalDraftImportError extends Error {
 
 export interface PhysicalDraftSource {
   kind: 'new' | 'quick-rooms' | 'legacy' | 'physical';
-  operation: 'new-physical-draft-v1' | 'legacy-pixels-v2' | 'physical-draft-upgrade-v1';
+  operation: 'new-physical-draft-v1' | 'new-physical-level-draft-v1' | 'legacy-pixels-v2' | 'physical-draft-upgrade-v1';
   original: JsonValue;
   review: string[];
 }
@@ -26,18 +26,18 @@ const openingKeys = new Set(['id', 'kind', 'width', 'height', 'sillHeight', 'mea
  * Arbitrary metadata is opaque evidence: only a named importer may interpret a known field.
  */
 export function assertSupportedPhysicalDocument(input: unknown): asserts input is PhysicalDocument {
-  const parsed = physicalDocumentSchema.safeParse(input);
+  const parsed = supportedPhysicalDocumentSchema.safeParse(input);
   if (!parsed.success) throw new PhysicalDraftImportError('INVALID_DOCUMENT', 'The physical document or its declared model is invalid.');
   const document = input as PhysicalDocument;
-  if (Object.keys(document).some(key => !documentKeys.has(key))
+  if (Object.keys(document).some(key => !documentKeys.has(key) && !(document.schemaVersion === 3 && key === 'buildingLevels'))
       || document.rooms.some(room => Object.keys(room).some(key => !roomKeys.has(key)))
       || document.openings.some(opening => Object.keys(opening).some(key => !openingKeys.has(key)))) {
     throw new PhysicalDraftImportError('UNSUPPORTED_CONTENT', 'This document contains physical content this editor cannot safely edit. Keep the original unchanged.');
   }
 }
 
-function workingCopy(input: PhysicalDocument): PhysicalDocument {
-  const document = copyJson(input) as unknown as PhysicalDocument;
+function workingCopy(input: PhysicalDocumentV2): PhysicalDocumentV2 {
+  const document = copyJson(input) as unknown as PhysicalDocumentV2;
   const previousPolicy = document.quantityPolicyVersion;
   if (previousPolicy !== null && previousPolicy !== 'rectangular-flat-v1' && previousPolicy !== QUANTITY_POLICY_VERSION_V2) {
     throw new PhysicalDraftImportError('UNSUPPORTED_POLICY', 'This document uses an unsupported quantity policy. Its original is preserved.');
@@ -103,7 +103,7 @@ export function upgradePhysicalDraft(input: unknown): ImportedPhysicalDraft {
     throw new PhysicalDraftImportError('PHYSICAL_REQUIRED', 'Choose a physical schema-version-2 document to copy.');
   }
   assertSupportedPhysicalDocument(original);
-  const document = workingCopy(original);
+  const document = workingCopy(original as PhysicalDocumentV2);
   assertSupportedPhysicalDocument(document);
   return { document, source: { kind: 'physical', operation: 'physical-draft-upgrade-v1', original,
     review: ['The original physical document and any historical snapshots are unchanged.',

@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { legacyRoomsSchema } from '../legacyValidation';
-import { CLOCKWISE_WALLS, physicalDocumentSchema, type PhysicalDocument, type PhysicalOpening,
+import { CLOCKWISE_WALLS, physicalDocumentSchema, type PhysicalDocumentV2 as PhysicalDocument, type PhysicalOpening,
   type ReviewItem } from '../domain/document';
 import { unknownMeasurement, type Dimension, type MeasurementProvenance } from '../domain/measurements';
 import { mmSchema, sameLength, toMm, type Mm } from '../domain/units';

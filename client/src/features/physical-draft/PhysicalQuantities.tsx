@@ -10,8 +10,15 @@ const outputs = [
   { id: 'gross-wall-area', test: 'walls', label: 'Gross wall area' },
 ] as const;
 export function PhysicalQuantities({ document, roomId, unit }: { document: PhysicalDocument; roomId: string | null; unit: InputUnit }) {
-  const result = useMemo(() => calculateQuantities(document, requestForRooms({ ...document,
-    rooms: roomId ? document.rooms.filter(room => room.id === roomId) : document.rooms })), [document, roomId]);
+  const result = useMemo(() => {
+    const request = requestForRooms(document);
+    if (roomId) {
+      const room = document.rooms.find(value => value.id === roomId);
+      request.selections = request.selections.map(selection => 'roomIds' in selection ? { ...selection, roomIds: room ? [roomId] : [] }
+        : 'wallFaceIds' in selection ? { ...selection, wallFaceIds: room?.wallFaces.map(wall => wall.id) ?? [] } : selection);
+    }
+    return calculateQuantities(document, request);
+  }, [document, roomId]);
   function display(value: number) {
     const formatted = formatQuantity({ value, unit: 'mm2' }, { unit, fractionDigits: 2 });
     return formatted.ok ? formatted.formatted + (unit === 'ft' ? ' sq ft' : ' m²') : 'Unavailable';

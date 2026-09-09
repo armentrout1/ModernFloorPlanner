@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { physicalDocumentSchema, type PhysicalDocument } from '../domain/document';
+import { supportedPhysicalDocumentSchema, type PhysicalDocument } from '../domain/document';
 import { elevationSchema, type Dimension } from '../domain/measurements';
 import { transitionMeasurement } from '../domain/measurementActions';
 import { calculateQuantities } from './engine';
@@ -8,17 +8,19 @@ import { ownFrozen, type DeepReadonly } from './immutability';
 import { canonicalJson, copyJson } from './canonicalJson';
 import { sha256Canonical } from './fingerprint';
 import type { ContractError } from './policy';
+import { levelOwnershipBasis } from '../domain/levels';
 
 const hash = z.string().regex(/^[0-9a-f]{64}$/);
 export const fingerprintsSchema = z.object({
   algorithm: z.literal('SHA-256'), serialization: z.literal('mfp-json-v1'),
-  geometryScope: z.enum(['physical-geometry-v1', 'physical-geometry-v2']), contentScope: z.enum(['calculation-content-v1', 'calculation-content-v2']),
+  geometryScope: z.enum(['physical-geometry-v1', 'physical-geometry-v2', 'physical-geometry-v3']), contentScope: z.enum(['calculation-content-v1', 'calculation-content-v2', 'calculation-content-v3']),
   geometry: hash, content: hash,
 }).strict();
 export const evaluationSchema = z.object({ calculation: calculationSchema, fingerprints: fingerprintsSchema }).strict().superRefine((value, context) => {
-  const v2 = value.calculation.policyVersion === 'rectangular-flat-v2';
-  if (value.fingerprints.geometryScope !== (v2 ? 'physical-geometry-v2' : 'physical-geometry-v1')
-      || value.fingerprints.contentScope !== (v2 ? 'calculation-content-v2' : 'calculation-content-v1')) {
+  const suffix = value.calculation.policyVersion === 'rectangular-flat-v3' ? 'v3'
+    : value.calculation.policyVersion === 'rectangular-flat-v2' ? 'v2' : 'v1';
+  if (value.fingerprints.geometryScope !== 'physical-geometry-' + suffix
+      || value.fingerprints.contentScope !== 'calculation-content-' + suffix) {
     context.addIssue({ code: z.ZodIssueCode.custom, path: ['fingerprints'], message: 'Fingerprint scopes must match calculation semantics' });
   }
 });
@@ -55,18 +57,21 @@ export const snapshotMetadataSchema = z.object({
   createdAt: z.string().datetime({ offset: true }), kind: z.enum(['evaluation', 'confirmed']),
 }).strict();
 export const quantitySnapshotSchema = z.object({
-  snapshotSchemaVersion: z.enum(['quantity-snapshot-v1', 'quantity-snapshot-v2']),
+  snapshotSchemaVersion: z.enum(['quantity-snapshot-v1', 'quantity-snapshot-v2', 'quantity-snapshot-v3']),
   instance: snapshotMetadataSchema,
-  sourceDocument: physicalDocumentSchema,
+  sourceDocument: supportedPhysicalDocumentSchema,
   measurementEvents: z.array(measurementEventCaptureSchema),
   evaluation: evaluationSchema,
   captureFingerprint: hash,
 }).strict().superRefine((snapshot, context) => {
-  const v2 = snapshot.evaluation.calculation.policyVersion === 'rectangular-flat-v2';
-  if (snapshot.snapshotSchemaVersion !== (v2 ? 'quantity-snapshot-v2' : 'quantity-snapshot-v1')
-      || (v2 ? snapshot.sourceDocument.quantityPolicyVersion !== 'rectangular-flat-v2' || !snapshot.sourceDocument.calculationContract
-        : Boolean(snapshot.sourceDocument.calculationContract)
-          || (snapshot.sourceDocument.quantityPolicyVersion !== null && snapshot.sourceDocument.quantityPolicyVersion !== 'rectangular-flat-v1'))) {
+  const policy = snapshot.evaluation.calculation.policyVersion, document = snapshot.sourceDocument;
+  const expectedVersion = policy === 'rectangular-flat-v3' ? 'quantity-snapshot-v3'
+    : policy === 'rectangular-flat-v2' ? 'quantity-snapshot-v2' : 'quantity-snapshot-v1';
+  const sourceAgrees = policy === 'rectangular-flat-v3' ? document.schemaVersion === 3 && document.quantityPolicyVersion === policy
+    : document.schemaVersion === 2 && (policy === 'rectangular-flat-v2'
+      ? document.quantityPolicyVersion === policy && Boolean(document.calculationContract)
+      : !document.calculationContract && (document.quantityPolicyVersion === null || document.quantityPolicyVersion === 'rectangular-flat-v1'));
+  if (snapshot.snapshotSchemaVersion !== expectedVersion || !sourceAgrees) {
     context.addIssue({ code: z.ZodIssueCode.custom, path: ['snapshotSchemaVersion'], message: 'Snapshot, source contract and calculation versions must agree' });
   }
   if (snapshot.instance.kind === 'confirmed' && snapshot.evaluation.calculation.status !== 'complete') {
@@ -91,6 +96,7 @@ const numericMeasurement = (measurement: Dimension) => measurement.state === 'kn
 function geometryBasis(document: PhysicalDocument) {
   return {
     schemaVersion: document.schemaVersion,
+    ...(document.schemaVersion === 3 ? { levelOwnership: levelOwnershipBasis(document.buildingLevels) } : {}),
     ...(document.calculationContract ? { applicability: {
       version: document.calculationContract.version,
       rooms: Object.fromEntries(Object.entries(document.calculationContract.rooms).map(([id, profile]) => [id, {
@@ -110,6 +116,9 @@ function geometryBasis(document: PhysicalDocument) {
 }
 function evidenceBasis(document: PhysicalDocument) {
   return {
+    ...(document.schemaVersion === 3 ? { levelEvidence: document.buildingLevels.levels
+      .map(level => ({ id: level.id, finishedFloorElevation: level.finishedFloorElevation }))
+      .sort((a, b) => a.id < b.id ? -1 : a.id > b.id ? 1 : 0) } : {}),
     ...(document.calculationContract ? { applicability: document.calculationContract } : {}),
     rooms: document.rooms.map(room => ({ id: room.id, length: room.length, width: room.width, ceilingHeight: room.ceilingHeight })),
     openings: document.openings.map(opening => ({ id: opening.id, width: opening.width, height: opening.height, sillHeight: opening.sillHeight })),
@@ -120,9 +129,9 @@ async function evaluateOwned(document: PhysicalDocument, requested: unknown): Pr
   const result = calculateQuantities(document, requested);
   if (!result.ok) return result;
   const geometry = geometryBasis(document), calculation = result.calculation;
-  const v2 = calculation.policyVersion === 'rectangular-flat-v2';
-  const geometryScope = v2 ? 'physical-geometry-v2' as const : 'physical-geometry-v1' as const;
-  const contentScope = v2 ? 'calculation-content-v2' as const : 'calculation-content-v1' as const;
+  const v3 = calculation.policyVersion === 'rectangular-flat-v3', v2 = calculation.policyVersion === 'rectangular-flat-v2';
+  const geometryScope = v3 ? 'physical-geometry-v3' as const : v2 ? 'physical-geometry-v2' as const : 'physical-geometry-v1' as const;
+  const contentScope = v3 ? 'calculation-content-v3' as const : v2 ? 'calculation-content-v2' as const : 'calculation-content-v1' as const;
   const [geometryHash, contentHash] = await Promise.all([
     sha256Canonical({ scope: geometryScope, geometry }),
     sha256Canonical({ scope: contentScope, geometry, evidence: evidenceBasis(document), calculation }),
@@ -142,7 +151,7 @@ export async function evaluateQuantities(documentInput: unknown, requestInput: u
   let document: unknown, requested: unknown;
   try { document = copyJson(documentInput); requested = copyJson(requestInput); }
   catch { return failure('INVALID_JSON_INPUT', 'Expected finite acyclic plain JSON inputs'); }
-  if (!physicalDocumentSchema.safeParse(document).success) return failure('INVALID_DOCUMENT', 'Explicit structurally valid v2 document required; adapt legacy separately');
+  if (!supportedPhysicalDocumentSchema.safeParse(document).success) return failure('INVALID_DOCUMENT', 'Explicit structurally valid supported physical document required; adapt legacy separately');
   try { return await evaluateOwned(document as PhysicalDocument, requested); }
   catch { return failure('FINGERPRINT_FAILED', 'Platform SHA-256 or deterministic serialization failed'); }
 }
@@ -162,7 +171,7 @@ export async function createQuantitySnapshot(documentInput: unknown, requestInpu
   if (!instance.success || !z.array(measurementEventCaptureSchema).safeParse(events).success) {
     return failure('INVALID_SNAPSHOT_METADATA', 'Explicit snapshot ID, timestamp, kind and valid measurement-event captures required');
   }
-  if (!physicalDocumentSchema.safeParse(document).success) return failure('INVALID_DOCUMENT', 'Explicit structurally valid v2 document required');
+  if (!supportedPhysicalDocumentSchema.safeParse(document).success) return failure('INVALID_DOCUMENT', 'Explicit structurally valid supported physical document required');
   try {
     const result = await evaluateOwned(document as PhysicalDocument, requested);
     if (!result.ok) return result;
@@ -170,8 +179,8 @@ export async function createQuantitySnapshot(documentInput: unknown, requestInpu
       return failure('CONFIRMED_SNAPSHOT_UNAVAILABLE', 'Every selected output must be complete with required measurements confirmed; empty is not confirmed');
     }
     const capture = {
-      snapshotSchemaVersion: result.evaluation.calculation.policyVersion === 'rectangular-flat-v2'
-        ? 'quantity-snapshot-v2' as const : 'quantity-snapshot-v1' as const, instance: instance.data,
+      snapshotSchemaVersion: result.evaluation.calculation.policyVersion === 'rectangular-flat-v3' ? 'quantity-snapshot-v3' as const
+        : result.evaluation.calculation.policyVersion === 'rectangular-flat-v2' ? 'quantity-snapshot-v2' as const : 'quantity-snapshot-v1' as const, instance: instance.data,
       sourceDocument: document as PhysicalDocument,
       measurementEvents: events as z.infer<typeof measurementEventCaptureSchema>[],
       evaluation: result.evaluation,

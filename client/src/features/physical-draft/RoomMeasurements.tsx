@@ -1,4 +1,5 @@
 import { useRef } from 'react';
+import { RoomLevelAssignment } from './LevelControls';
 import { usePhysicalDraft } from './provider';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -68,6 +69,7 @@ export function RoomMeasurements({ draft, roomId, update }: { draft: PhysicalDra
   const openings = draft.document.openings.filter(opening => opening.attachments.some(attachment => room.wallFaces.some(wall => wall.id === attachment.wallFaceId)));
   const group = draft.document.editorContract?.groups.find(item => item.roomIds.includes(roomId));
   return <div className="space-y-4" data-testid="physical-room-inspector" data-room-id={roomId}>
+    <RoomLevelAssignment key={draft.id + roomId} draft={draft} roomId={roomId} update={update} />
     <div><Label htmlFor={'physical-name-' + roomId}>Room name</Label>
       <Input id={'physical-name-' + roomId} className="mt-1 bg-white" value={room.name ?? ''}
         onFocus={() => { nameSession.current = crypto.randomUUID(); }}

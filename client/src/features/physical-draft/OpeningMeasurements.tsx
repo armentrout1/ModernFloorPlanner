@@ -5,6 +5,7 @@ import { getDoorHand, getStoredHinge } from '@/utils/doorGeometry';
 import type { PhysicalOpening, WallSide } from '@shared/domain/document';
 import { formatMeasurement } from '@shared/domain/parseMeasurement';
 import type { PhysicalDraft } from './state';
+import { activeLevelId, roomLevelId } from './levelCommands';
 import * as commands from './openingCommands';
 import { captureFieldRevert, revertField } from './fieldRevert';
 
@@ -108,7 +109,7 @@ export function OpeningMeasurements({ draft, openingId, update, onDeleted, comma
             const nextWall = nextRoom.wallFaces.find(item => item.side === wall.side)!;
             update(current => commands.moveOpening(current, openingId, nextWall.id, attachment.offsetMm, new Date().toISOString()));
           }}>
-          {draft.document.rooms.map(item => <option key={item.id} value={item.id}>{item.name || 'Room'}</option>)}
+          {draft.document.rooms.filter(item => !activeLevelId(draft) || roomLevelId(draft, item.id) === activeLevelId(draft)).map(item => <option key={item.id} value={item.id}>{item.name || 'Room'}</option>)}
         </select></div>
       <div className="min-w-0"><Label htmlFor="opening-wall" className="text-xs">Wall</Label>
         <select id="opening-wall" aria-label="Opening wall" className={selectClass} value={wall.id} disabled={shared}

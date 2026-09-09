@@ -1,3 +1,4 @@
+import { levelNameForRoom } from './levelView';
 import type { PhysicalDocument } from '@shared/domain/document';
 import type { Finding, QuantityOutput } from '@shared/domain/geometryValidation';
 import { calculateQuantities, type CalculationResult } from '@shared/quantities/engine';
@@ -22,7 +23,8 @@ export const emptySourceScope = (): DrawingSourceScope => ({ roomIds: [], wallFa
 const unique = (values: string[]) => Array.from(new Set(values));
 export function roomLabel(document: PhysicalDocument, id: string) {
   const room = document.rooms.find(item => item.id === id);
-  return room?.name?.trim() || (room ? 'Room ' + (document.rooms.indexOf(room) + 1) : 'Removed room');
+  const name = room?.name?.trim() || (room ? 'Room ' + (document.rooms.indexOf(room) + 1) : 'Removed room');
+  return room && document.schemaVersion === 3 ? levelNameForRoom(document, id) + ' · ' + name : name;
 }
 export function wallLabel(document: PhysicalDocument, id: string) {
   const room = document.rooms.find(item => item.wallFaces.some(wall => wall.id === id));

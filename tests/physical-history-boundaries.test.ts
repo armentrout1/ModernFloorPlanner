@@ -9,7 +9,7 @@ import { setOutputEnabled, selectAllCurrentTargets, editWaste, getWasteField } f
 import { captureFieldRevert, revertField } from '../client/src/features/physical-draft/fieldRevert';
 import { captureMeasurementReview, confirmMeasurement, resolveMeasurementCandidate,
   captureApplicabilityReview, confirmApplicability } from '../client/src/features/physical-draft/reviewCommands';
-import { serializeRegistry, parseRegistry, PHYSICAL_DRAFT_STORAGE_KEY } from '../client/src/features/physical-draft/storage';
+import { serializeRegistry, parseRegistry, PHYSICAL_DRAFT_STORAGE_KEY, LEGACY_PHYSICAL_DRAFT_STORAGE_KEY } from '../client/src/features/physical-draft/storage';
 import { createQuantitySnapshot, verifyQuantitySnapshot } from '../shared/quantities/snapshot';
 import { toMm } from '../shared/domain/units';
 import { q001, request as legacyRequest } from './fixtures/physical';
@@ -19,7 +19,7 @@ const LATER = '2026-09-09T15:01:00.000Z';
 const clone = <T,>(value: T): T => structuredClone(value);
 class MemoryStorage implements DraftStorage {
   value: string | null = null;
-  getItem(key: string) { assert.equal(key, PHYSICAL_DRAFT_STORAGE_KEY); return this.value; }
+  getItem(key: string) { if (key === LEGACY_PHYSICAL_DRAFT_STORAGE_KEY) return null; assert.equal(key, PHYSICAL_DRAFT_STORAGE_KEY); return this.value; }
   setItem(key: string, value: string) { assert.equal(key, PHYSICAL_DRAFT_STORAGE_KEY); this.value = value; }
   removeItem(key: string) { assert.equal(key, PHYSICAL_DRAFT_STORAGE_KEY); this.value = null; }
 }

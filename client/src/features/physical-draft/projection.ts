@@ -6,13 +6,14 @@ import { legacyRoomsSchema } from '@shared/legacyValidation';
 // Never write these pixels back to the document or to the legacy save endpoint.
 const pixels = (mm: number) => mm * 20 / 304.8;
 export interface FloorLevelOpeningView { id: string; wallSide: RoomObject['wallSide']; position: number; size: number }
-export function projectPhysicalRooms(document: PhysicalDocument): { rooms: Room[]; notices: string[]; floorLevelOpenings: Record<string, FloorLevelOpeningView[]> } {
+export function projectPhysicalRooms(document: PhysicalDocument, levelId?: string | null): { rooms: Room[]; notices: string[]; floorLevelOpenings: Record<string, FloorLevelOpeningView[]> } {
   const rooms: Room[] = [], notices: string[] = [];
   const floorLevelOpenings: Record<string, FloorLevelOpeningView[]> = Object.create(null);
   const legacy = legacyRoomsSchema.safeParse(document.compatibility?.original.rooms);
   const originalObjects = legacy.success ? legacy.data.flatMap(room => room.objects ?? []) : [];
   let nextX = 0;
   for (const physical of document.rooms) {
+    if (document.schemaVersion === 3 && levelId != null && document.buildingLevels.roomLevels[physical.id] !== levelId) continue;
     if (physical.length.state !== 'known' || physical.width.state !== 'known') {
       notices.push(`${physical.name || 'Room'}: finish its plan dimensions to show its drawing.`);
       continue;
