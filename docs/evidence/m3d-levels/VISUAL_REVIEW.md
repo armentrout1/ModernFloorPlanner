@@ -1,0 +1,9 @@
+# M3D levels final-source visual review
+
+The three genuine screenshots below came from the passing unfiltered 158-case Playwright run and were inspected at original image resolution. The source and screenshot hashes are recorded in [the published source/check manifest](../MFP_M3D_LEVELS_2026-09-08.json). The agent-browser CLI was unavailable; verification used the project Playwright runner with fresh isolated browser contexts.
+
+- [levels-desktop-basement.png](levels-desktop-basement.png) (1600 px): Editing Basement is explicit. Only its 12×10 room and door appear; the room name and dimensions do not overlap. The selected-room floor/ceiling/gross walls read 120/120/352 sq ft. The all-level takeoff remains 270/270/802 sq ft and explicitly includes Basement and Main floor. Level, scope and docked-inspector controls are readable without clipping.
+- [levels-desktop-main-floor.png](levels-desktop-main-floor.png) (1600 px): Editing Main floor shows only its 15×10 room and window, with 150/150/450 sq ft. Its window width, height, sill and center position are visible. The project takeoff still reads 270/270/802 sq ft. No ghost room or hidden-level opening is visible.
+- [levels-phone-pending-drawer.png](levels-phone-pending-drawer.png) (390×844): The door inspector retains pending `3 ft -` text and its original feet context while clean fields display meters. The focus outline, inline syntax error, Revert, Close and preset controls are visible. The form remains readable within the drawer, with no horizontal clipping observed.
+
+No blocking visual defect was found in these captured states. These are desktop Chromium and a narrow CSS viewport, not a hardware-device claim. Production deployment, authentication, account saving and database behavior were not verified. The synthetic legacy compatibility fixture uses only the isolated in-memory test API; the level editing UI makes no API writes.
