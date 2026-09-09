@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { PhysicalDraftProvider, usePhysicalDraft } from '@/features/physical-draft/provider';
 import { RoomMeasurements } from '@/features/physical-draft/RoomMeasurements';
 import { PhysicalDrawing } from '@/features/physical-draft/PhysicalDrawing';
+import { HistoryControls } from '@/features/physical-draft/HistoryControls';
 import { PhysicalViewTabs, type PhysicalView } from '@/features/physical-draft/PhysicalViewTabs';
 import { OpeningList, OpeningMeasurements } from '@/features/physical-draft/OpeningMeasurements';
 import { TakeoffPanel } from '@/features/physical-draft/TakeoffPanel';
@@ -107,6 +108,7 @@ function DraftWorkspace() {
         <Button onClick={create} disabled={blocked}>New physical draft</Button>
       </div>
       {draft && preview ? <>
+        <HistoryControls blocked={blocked} />
         <div className="flex flex-wrap items-center justify-between gap-3 border-b pb-3">
           <div><h2 className="text-lg font-semibold">{draft.document.name || 'Physical draft'}</h2>
             <p className="text-xs text-slate-500">Draft <span data-testid="physical-draft-id">{draft.id}</span> · local edit {draft.localEditRevision} · source: {draft.source.kind}</p></div>

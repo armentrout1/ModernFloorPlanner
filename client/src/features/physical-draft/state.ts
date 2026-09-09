@@ -14,6 +14,8 @@ import { openingFieldsFor, type OpeningFields, type OpeningEvent, type OpeningDe
 import type { TakeoffState } from './takeoffCommands';
 import { recordApplicabilityDeclaration, type ReviewState } from './reviewCommands';
 
+import type { HistoryEvidence } from './historyEvidence';
+
 export const ROOM_FIELDS = ['length', 'width', 'ceilingHeight'] as const;
 export type RoomField = typeof ROOM_FIELDS[number];
 export type InputUnit = 'ft' | 'm';
@@ -34,6 +36,7 @@ export interface PhysicalDraft {
   openingDeleteUndo?: OpeningDeleteUndo;
   takeoffState?: TakeoffState;
   reviewState?: ReviewState;
+  historyEvidence?: HistoryEvidence;
 }
 export interface PhysicalDraftRegistry {
   version: 'mfp-editor-draft-v1';

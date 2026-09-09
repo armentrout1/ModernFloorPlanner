@@ -131,7 +131,7 @@ function WasteInput({ draft, output, update }: { draft: PhysicalDraft; output: Q
       onBlur={event => { if (!composing.current && !revert.skipBlur(event)) applyWaste(); }}
       onCompositionStart={() => { composing.current = true; }} onCompositionEnd={event => {
         composing.current = false;
-        if (document.activeElement !== event.currentTarget && !revert.isRevertFocus(document.activeElement)) applyWaste();
+        if (document.activeElement !== event.currentTarget && !revert.isDeferredFocus(document.activeElement)) applyWaste();
       }}
       onKeyDown={event => {
         if (revert.onInputKeyDown(event, composing.current)) return;

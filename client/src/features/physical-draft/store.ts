@@ -1,9 +1,12 @@
 import { createRegistry, updateDraft, type PhysicalDraft, type PhysicalDraftRegistry } from './state';
 import { parseRegistry, serializeRegistry, validateRegistry, PHYSICAL_DRAFT_STORAGE_KEY } from './storage';
 
+import { emptyHistory, historySummary, recordHistoryCommit, restoreHistory, type DraftHistory, type HistorySummary, type HistoryUpdateOptions } from './history';
+
 export interface DraftStorage { getItem(key: string): string | null; setItem(key: string, value: string): void; removeItem(key: string): void }
 export interface PhysicalDraftStoreSnapshot {
   registry: PhysicalDraftRegistry;
+  history: HistorySummary;
   cache: 'uninitialized' | 'ready' | 'corrupt' | 'unsupported' | 'unavailable' | 'conflict';
   message: string;
   error: string;
@@ -20,10 +23,13 @@ function freeze<T>(value: T): T {
 /** Lazy, session-only storage. Never reads or modifies either legacy editor cache. */
 export function createPhysicalDraftStore(storageFactory: () => DraftStorage = () => window.sessionStorage) {
   let storage: DraftStorage | null = null, lastGoodRaw: string | null = null;
-  let snapshot: PhysicalDraftStoreSnapshot = { registry: freeze(createRegistry()), cache: 'uninitialized', message: '', error: '', rawRecovery: null };
+  const histories = new Map<string, DraftHistory>();
+  const currentHistory = (id: string) => histories.get(id) ?? emptyHistory();
+  let snapshot: PhysicalDraftStoreSnapshot = { history: historySummary(null, emptyHistory()), registry: freeze(createRegistry()), cache: 'uninitialized', message: '', error: '', rawRecovery: null };
   const listeners = new Set<() => void>();
   const publish = (next: PhysicalDraftStoreSnapshot) => {
-    snapshot = next;
+    const draft = next.registry.drafts.find(item => item.id === next.registry.selectedDraftId) ?? null;
+    snapshot = { ...next, history: freeze(historySummary(draft, draft ? currentHistory(draft.id) : emptyHistory())) };
     listeners.forEach(listener => listener());
   };
   function hydrate(): void {
@@ -41,10 +47,11 @@ export function createPhysicalDraftStore(storageFactory: () => DraftStorage = ()
       return;
     }
     lastGoodRaw = raw;
+    if (result.status === 'recovered') for (const draft of result.registry.drafts) histories.set(draft.id, emptyHistory('Undo/Redo history starts in this page session. The latest recovered draft and its evidence are preserved.'));
     publish({ ...snapshot, registry: freeze(result.status === 'recovered' ? result.registry : createRegistry()), cache: 'ready',
       message: result.status === 'recovered' ? 'Temporary physical drafts recovered for this browser session.' : '' });
   }
-  function dispatch(change: (registry: PhysicalDraftRegistry) => PhysicalDraftRegistry): boolean {
+  function dispatch(change: (registry: PhysicalDraftRegistry) => PhysicalDraftRegistry, accepted?: () => void): boolean {
     hydrate();
     if (snapshot.cache === 'corrupt' || snapshot.cache === 'unsupported') {
       publish({ ...snapshot, error: 'Preserved recovery data must be explicitly discarded before starting or adopting another draft.' });
@@ -62,6 +69,7 @@ export function createPhysicalDraftStore(storageFactory: () => DraftStorage = ()
       publish({ ...snapshot, error: error instanceof Error ? error.message : 'The draft could not be changed.' });
       return false;
     }
+    accepted?.();
     let following: PhysicalDraftStoreSnapshot = { ...snapshot, registry: next, error: '' };
     if (snapshot.cache === 'ready' && storage) {
       try {
@@ -89,19 +97,37 @@ export function createPhysicalDraftStore(storageFactory: () => DraftStorage = ()
       activeStorage.removeItem(PHYSICAL_DRAFT_STORAGE_KEY);
       storage = activeStorage;
       lastGoodRaw = null;
-      publish({ registry: freeze(createRegistry()), cache: 'ready', message: '', error: '', rawRecovery: null });
+      histories.clear();
+      publish({ history: historySummary(null, emptyHistory()), registry: freeze(createRegistry()), cache: 'ready', message: '', error: '', rawRecovery: null });
       return true;
     } catch {
       publish({ ...snapshot, error: 'Recovery data could not be discarded. The current draft and stored contents are unchanged.' });
       return false;
     }
   }
+  function replay(id: string, revision: number, direction: 'undo' | 'redo', at: string): boolean {
+    let acceptedHistory: DraftHistory | undefined;
+    return dispatch(registry => updateDraft(registry, id, revision, draft => {
+      const prepared = restoreHistory(draft, currentHistory(id), direction, at);
+      acceptedHistory = prepared.history;
+      return prepared.draft;
+    }), () => { if (acceptedHistory) histories.set(id, acceptedHistory); });
+  }
   return {
     getSnapshot: () => snapshot,
     subscribe: (listener: () => void) => { listeners.add(listener); return () => { listeners.delete(listener); }; },
     hydrate, dispatch, discardRecovery,
-    updateDraft: (id: string, expectedRevision: number, change: (draft: PhysicalDraft) => PhysicalDraft): boolean =>
-      dispatch(registry => updateDraft(registry, id, expectedRevision, change)),
+    updateDraft: (id: string, expectedRevision: number, change: (draft: PhysicalDraft) => PhysicalDraft, options: HistoryUpdateOptions = {}): boolean => {
+      let acceptedHistory: DraftHistory | undefined;
+      return dispatch(registry => updateDraft(registry, id, expectedRevision, before => {
+        const after = change(before);
+        const prepared = recordHistoryCommit(before, after, currentHistory(id), options);
+        acceptedHistory = prepared.history;
+        return prepared.draft;
+      }), () => { if (acceptedHistory) histories.set(id, acceptedHistory); });
+    },
+    undo: (id: string, expectedRevision: number, at: string): boolean => replay(id, expectedRevision, 'undo', at),
+    redo: (id: string, expectedRevision: number, at: string): boolean => replay(id, expectedRevision, 'redo', at),
   };
 }
 export const physicalDraftStore = createPhysicalDraftStore();

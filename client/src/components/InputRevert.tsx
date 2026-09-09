@@ -31,7 +31,11 @@ export function useInputRevert(input: RefObject<HTMLInputElement>, options?: Inp
     event.preventDefault(); event.stopPropagation(); apply(); return true;
   }
   function isRevertFocus(target: EventTarget | null) { return Boolean(options?.pending && target === button.current); }
-  function skipBlur(event: FocusEvent<HTMLInputElement>) { return isRevertFocus(event.relatedTarget); }
+  function isHistoryFocus(target: EventTarget | null) {
+    return Boolean(options && target instanceof Element && target.closest('[data-physical-history-control]'));
+  }
+  function isDeferredFocus(target: EventTarget | null) { return isRevertFocus(target) || isHistoryFocus(target); }
+  function skipBlur(event: FocusEvent<HTMLInputElement>) { return isDeferredFocus(event.relatedTarget); }
   const control = options?.pending ? <Button ref={button} type="button" size="sm" variant="ghost"
     className="absolute right-0 top-0 h-7 w-14 px-1 text-xs" aria-label={options.name}
     onPointerDown={event => {
@@ -51,7 +55,7 @@ export function useInputRevert(input: RefObject<HTMLInputElement>, options?: Inp
     onBlur={event => {
       activation.current = null;
       // Tab onto Revert offers cancellation; Tab onward retains normal commit.
-      if (event.relatedTarget !== input.current && input.current?.isConnected) options.onLeave();
+      if (event.relatedTarget !== input.current && !isHistoryFocus(event.relatedTarget) && input.current?.isConnected) options.onLeave();
     }}
     onClick={event => {
       if (event.defaultPrevented) return;
@@ -59,5 +63,5 @@ export function useInputRevert(input: RefObject<HTMLInputElement>, options?: Inp
       activation.current = null;
       apply(candidate);
     }}>Revert</Button> : null;
-  return { control, skipBlur, isRevertFocus, onInputKeyDown };
+  return { control, skipBlur, isRevertFocus, isDeferredFocus, onInputKeyDown };
 }

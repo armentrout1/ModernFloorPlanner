@@ -152,7 +152,7 @@ export function ControlledOpeningSizeField({ label, visibleLabel, text, choices 
         onChange={event => onChange(event.target.value)}
         onBlur={event => { if (!composing.current && !menuOpening.current && !revert.skipBlur(event)) onCommit(); }}
         onCompositionStart={() => { composing.current = true; }}
-        onCompositionEnd={event => { composing.current = false; if (document.activeElement !== event.currentTarget && !menuOpening.current && !revert.isRevertFocus(document.activeElement)) onCommit(); }}
+        onCompositionEnd={event => { composing.current = false; if (document.activeElement !== event.currentTarget && !menuOpening.current && !revert.isDeferredFocus(document.activeElement)) onCommit(); }}
         onKeyDown={event => {
           if (revert.onInputKeyDown(event, composing.current || menuOpening.current)) return;
           if (composing.current || event.nativeEvent.isComposing || event.keyCode === 229 || event.repeat) return;
