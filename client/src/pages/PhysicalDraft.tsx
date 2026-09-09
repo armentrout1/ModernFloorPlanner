@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { PhysicalDraftProvider, usePhysicalDraft } from '@/features/physical-draft/provider';
 import { RoomMeasurements } from '@/features/physical-draft/RoomMeasurements';
 import { PhysicalDrawing } from '@/features/physical-draft/PhysicalDrawing';
+import { PhysicalViewTabs, type PhysicalView } from '@/features/physical-draft/PhysicalViewTabs';
 import { OpeningList, OpeningMeasurements } from '@/features/physical-draft/OpeningMeasurements';
 import { TakeoffPanel } from '@/features/physical-draft/TakeoffPanel';
 import { ReviewPanel } from '@/features/physical-draft/ReviewPanel';
@@ -19,7 +20,7 @@ function DraftWorkspace() {
   const draft = selectedDraft(registry);
   const [showTakeoffScope, setShowTakeoffScope] = useState(true);
   const [sourceFocus, setSourceFocus] = useState<{ draftId: string; key: string; scope: DrawingSourceScope } | null>(null);
-  const [view, setView] = useState<'rooms' | 'drawing'>('rooms');
+  const [view, setView] = useState<PhysicalView>('rooms');
   const [selected, setSelected] = useState<{ draftId: string; roomId: string } | null>(null);
   const [openingSelection, setOpeningSelection] = useState<{ draftId: string; openingId: string } | null>(null);
   const selectedOpening = draft?.document.openings.find(item => openingSelection?.draftId === draft.id && item.id === openingSelection.openingId) ?? null;
@@ -115,17 +116,17 @@ function DraftWorkspace() {
           </div>
         </div>
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex gap-1" role="tablist" aria-label="Physical draft views">
-            <Button role="tab" id="physical-rooms-tab" aria-controls="physical-panel" aria-selected={view === 'rooms'} variant={view === 'rooms' ? 'default' : 'outline'} onClick={() => setView('rooms')}>Quick Rooms</Button>
-            <Button role="tab" id="physical-drawing-tab" aria-controls="physical-panel" aria-selected={view === 'drawing'} variant={view === 'drawing' ? 'default' : 'outline'} onClick={() => setView('drawing')}>Drawing</Button>
-          </div>
+          <PhysicalViewTabs view={view} onChange={setView} />
           <div className="flex flex-wrap gap-2">{draft.openingDeleteUndo ? <Button variant="outline" disabled={blocked} onClick={() => update(current => undoOpeningDelete(current, new Date().toISOString()))}>Undo opening delete</Button> : null}<Button variant="outline" disabled={blocked} onClick={add}>Add room</Button></div>
         </div>
         <div className="flex flex-wrap gap-2" aria-label="Rooms in selected draft">
           {draft.document.rooms.map(room => <Button size="sm" className="h-auto max-w-full whitespace-normal break-words text-left" key={room.id} variant={selectedRoomId === room.id ? 'secondary' : 'outline'}
             aria-pressed={selectedRoomId === room.id} onClick={() => selectRoom(room.id)}>{room.name || 'Unnamed room'}</Button>)}
         </div>
-        <section role="tabpanel" id="physical-panel" aria-labelledby={view === 'rooms' ? 'physical-rooms-tab' : 'physical-drawing-tab'}>
+        {(['rooms', 'drawing'] as const).map(panel => <section key={panel} role="tabpanel" id={'physical-' + panel + '-panel'}
+          aria-labelledby={'physical-' + panel + '-tab'} hidden={view !== panel} tabIndex={view === panel ? 0 : -1}
+          className="rounded-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-900">
+          {view === panel ? <>
           {selectedRoomId ? <div className={view === 'drawing' ? 'grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_350px]' : 'grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(340px,1fr)]'}>
             <div className="space-y-4">
               {view === 'drawing' ? <PhysicalDrawing key={draft.id + view} document={preview} draft={draft} selectedId={selectedRoomId} onSelect={selectRoom} selectedOpeningId={selectedOpening?.id ?? null} onSelectOpening={selectOpening} update={update} takeoffScope={showTakeoffScope ? takeoffScope : undefined} sourceFocus={focus} /> :
@@ -138,7 +139,8 @@ function DraftWorkspace() {
             </aside> : <div className="space-y-4"><PhysicalDrawing key={draft.id + view} document={preview} draft={draft} selectedId={selectedRoomId} onSelect={selectRoom} selectedOpeningId={selectedOpening?.id ?? null} onSelectOpening={selectOpening} update={update} takeoffScope={showTakeoffScope ? takeoffScope : undefined} sourceFocus={focus} />
               {selectedOpening ? <aside className="min-w-0 rounded-lg border bg-white p-5" aria-label="Opening inspector"><OpeningMeasurements key={selectedOpening.id} draft={draft} openingId={selectedOpening.id} update={update} commandError={error} onDeleted={() => selectOpening(null)} /></aside> : <p className="text-sm leading-6 text-slate-600">The drawing uses these same measurements. Select a room or opening to edit it.</p>}</div>}
           </div> : <p className="rounded-lg border border-dashed p-8 text-center text-slate-600">Add a room, then enter its measured dimensions. Ceiling height begins unknown.</p>}
-        </section>
+          </> : null}
+        </section>)}
         <TakeoffPanel key={draft.id} draft={draft} update={update} onFocus={locateSource} showScope={showTakeoffScope} onShowScope={setShowTakeoffScope}
           review={<ReviewPanel draft={draft} update={update} onFocus={editSource} commandError={error} />} />
         {draft.source.review.length ? <section className="rounded-lg border bg-white p-4 text-sm" aria-label="Source review">
