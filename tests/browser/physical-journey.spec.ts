@@ -1,3 +1,4 @@
+import { openResponsiveInspector, closeResponsiveInspector } from './physical-inspector-helpers';
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import { parseRegistry, PHYSICAL_DRAFT_STORAGE_KEY as KEY } from '../../client/src/features/physical-draft/storage';
 import type { PhysicalDraft } from '../../client/src/features/physical-draft/state';
@@ -261,13 +262,13 @@ test('populated long-label review and takeoff stay usable with keyboard focus on
   await configure(page, 'floor-area'); await commit(panel(page).getByLabel('Waste percentage', { exact: true }), '10');
   const before = await selected(page);
   for (const [size, width, height] of [['desktop', 1600, 1200], ['tablet', 820, 1100], ['phone', 390, 844]] as const) {
-    await page.setViewportSize({ width, height }); await showDrawing(page); await item(page, door.id).click();
+    await page.setViewportSize({ width, height }); await showDrawing(page); await item(page, door.id).click(); await openResponsiveInspector(page);
     await expect(openings(page).getByLabel('Door height', { exact: true })).toHaveValue('7 ft');
     await openings(page).getByLabel('Door width', { exact: true }).focus(); await page.keyboard.press('Control+A'); await page.keyboard.press('ArrowRight');
     await expect(openings(page).getByLabel('Door width', { exact: true })).toBeFocused();
-    await page.getByRole('button', { name, exact: true }).click();
+    await closeResponsiveInspector(page); await page.getByRole('button', { name, exact: true }).click(); await openResponsiveInspector(page);
     await expect(rooms(page).getByLabel('Ceiling height (ft)', { exact: true })).toHaveValue('8 ft');
-    await reviewTarget(page, alpha.id); await configure(page, 'floor-area');
+    await closeResponsiveInspector(page); await reviewTarget(page, alpha.id); await configure(page, 'floor-area');
     await amount(total(page, 'floor-area'), 'adjusted', '132.00 sq ft'); await amount(total(page, 'net-wall-area'), 'net', '319.00 sq ft');
     await revealBreakdown(page, 'net-wall-area');
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), size + ' page has no horizontal overflow').toBe(true);
@@ -288,7 +289,7 @@ test('populated long-label review and takeoff stay usable with keyboard focus on
     await page.keyboard.press('Escape'); await expect(dialog).not.toBeVisible(); await expect(trigger).toBeFocused();
     expect((await selected(page)).document).toEqual(before.document); expect((await selected(page)).request).toEqual(before.request);
   }
-  await item(page, window.id).click(); await commit(openings(page).getByLabel('Window height', { exact: true }), '99 ft');
+  await item(page, window.id).click(); await openResponsiveInspector(page); await commit(openings(page).getByLabel('Window height', { exact: true }), '99 ft');
   await expect(page.getByRole('alert').first()).toBeVisible();
   await expect(openings(page).getByLabel('Window height', { exact: true })).toHaveValue('99 ft');
   await expect(total(page, 'net-wall-area')).toContainText('Full selected total unavailable');

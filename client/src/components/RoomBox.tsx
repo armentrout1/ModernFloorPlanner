@@ -32,6 +32,8 @@ interface RoomBoxProps {
   isPartOfMultiSelection?: boolean; // New prop for multi-select
   isCanvasPinching?: boolean;
   showRoomNames?: boolean;
+  /** Keep read-only physical annotations together when users enlarge text. */
+  stackAnnotations?: boolean;
   allowResize?: boolean;
   floorLevelOpenings?: { id: string; wallSide: WallSide; position: number; size: number }[];
 }
@@ -50,7 +52,7 @@ const RoomBox: React.FC<RoomBoxProps> = ({
   placingObjectType,
   scale,
   isPartOfMultiSelection = false,
-  isCanvasPinching = false, showRoomNames = true, allowResize = true, floorLevelOpenings = []
+  isCanvasPinching = false, showRoomNames = true, stackAnnotations = false, allowResize = true, floorLevelOpenings = []
 }) => {
   const [isEditingName, setIsEditingName] = useState(false);
   
@@ -276,13 +278,14 @@ const RoomBox: React.FC<RoomBoxProps> = ({
     >
       {/* Custom walls with door openings */}
       {renderWallsWithOpenings()}
+      <div className={stackAnnotations ? "pointer-events-none absolute inset-0 flex flex-col-reverse items-center justify-center gap-1 px-1" : "contents"}>
       {/* Room dimensions display */}
-      <div className="absolute inset-0 flex items-center justify-center text-xs font-medium text-blue-800 pointer-events-none">
+      <div className={(stackAnnotations ? "relative shrink-0" : "absolute inset-0") + " flex items-center justify-center text-xs font-medium text-blue-800 pointer-events-none"}>
         {formatDimensions(room.width, room.height)}
       </div>
       
       {/* Room name */}
-      {showRoomNames && <div data-testid={`room-name-${room.id}`} className="absolute top-1 left-1 right-1 flex justify-center" onMouseDown={e => e.stopPropagation()} onTouchStart={e => e.stopPropagation()}>
+      {showRoomNames && <div data-testid={`room-name-${room.id}`} className={stackAnnotations ? "relative min-w-0 max-w-full flex shrink-0 justify-center" : "absolute top-1 left-1 right-1 flex justify-center"} onMouseDown={e => e.stopPropagation()} onTouchStart={e => e.stopPropagation()}>
         <RoomLabel
           name={room.name || 'Room'}
           isEditing={isEditingName}
@@ -291,6 +294,7 @@ const RoomBox: React.FC<RoomBoxProps> = ({
         />
       </div>}
       
+      </div>
       {/* Resize handles - shown only when selected */}
       {isSelected && allowResize && !placingObjectType && resizeHandles.map(handle => {
         const position = getResizeHandlePosition(room, handle);

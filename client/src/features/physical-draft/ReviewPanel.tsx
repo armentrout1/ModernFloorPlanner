@@ -66,11 +66,11 @@ export function ReviewPanel({ draft, update, onFocus, commandError }: { draft: P
     if (target.entity === 'room') scope.roomIds.push(target.id); else scope.openingIds.push(target.id);
     onFocus(scope);
   }
-  return <section aria-label="Input review" data-testid="takeoff-review" className="space-y-4 rounded-lg border bg-slate-50 p-4">
+  return <section aria-label="Input review" data-testid="takeoff-review" className="min-w-0 space-y-4 rounded-lg border bg-slate-50 p-4 [overflow-wrap:anywhere]">
     <div><h3 className="font-semibold">Review committed inputs</h3><p className="mt-1 text-xs leading-5 text-slate-600">Draft: {draft.document.name || 'Physical draft'} · {draft.id}. Confirm only values and room models you have reviewed. This records input review, not professional verification or code compliance.</p></div>
     {target ? <><div className="flex flex-wrap items-end gap-3"><label className="grid min-w-0 basis-full gap-1 text-sm font-medium sm:flex-1">Review target
-      <select ref={reviewTarget} className="h-10 w-full rounded-md border bg-white px-2" value={target.key} onChange={event => setSelected(event.target.value)}>{options.map(option => <option key={option.key} value={option.key}>{option.label}</option>)}</select></label>
-      <Button size="sm" variant="outline" onClick={editTarget}>Edit in inspector</Button></div>
+      <select ref={reviewTarget} className="h-10 min-w-0 max-w-full w-full rounded-md border bg-white px-2" value={target.key} onChange={event => setSelected(event.target.value)}>{options.map(option => <option key={option.key} value={option.key}>{option.label}</option>)}</select></label>
+      <Button size="sm" variant="outline" data-physical-layout-control onClick={editTarget}>Edit in inspector</Button></div>
       <div className="grid gap-3 md:grid-cols-3">{(target.entity === 'room' ? roomFields : openingFields).map(item => {
         const ref = { entity: target.entity, id: target.id, field: item.field } as MeasurementRef;
         const measurement = measurementAt(draft.document, ref);

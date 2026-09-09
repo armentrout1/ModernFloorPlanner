@@ -9,7 +9,7 @@ import { ROOM_FIELDS, renameRoom, editField, commitField, fieldError, setApplica
 import type { RoomApplicability, ApplicabilityField } from '@shared/domain/applicability';
 
 const fieldLabels: Record<RoomField, string> = { length: 'Length', width: 'Width', ceilingHeight: 'Ceiling height' };
-const selectClass = 'mt-1 h-10 w-full rounded-md border border-slate-300 bg-white px-2 text-sm';
+const selectClass = 'mt-1 h-10 min-w-0 max-w-full w-full rounded-md border border-slate-300 bg-white px-2 text-sm';
 type Change = (change: (draft: PhysicalDraft) => PhysicalDraft, expectedRevision?: number) => boolean;
 function MeasurementField({ draft, roomId, field, update }: { draft: PhysicalDraft; roomId: string; field: RoomField; update: Change }) {
   const composing = useRef(false), input = draft.fields[roomId][field];
@@ -27,10 +27,10 @@ function MeasurementField({ draft, roomId, field, update }: { draft: PhysicalDra
   });
   const commit = () => update(current => commitField(current, roomId, field, new Date().toISOString()));
   const measurement = draft.document.rooms.find(room => room.id === roomId)![field];
-  return <div className="relative">
+  return <div className="relative min-w-0 [overflow-wrap:anywhere]">
     <Label className="block min-h-7 pr-16" htmlFor={id}>{fieldLabels[field]} ({input.unit})</Label>
     <Input ref={inputRef} id={id} className="mt-1 bg-white" type="text" value={input.text} autoComplete="off" spellCheck={false}
-      aria-invalid={error ? true : undefined} aria-describedby={id + '-help'}
+      data-physical-pending={input.dirty ? "true" : undefined} aria-invalid={error ? true : undefined} aria-describedby={id + '-help'}
       placeholder={field === 'ceilingHeight' ? 'Unknown until entered' : input.unit === 'ft' ? 'e.g. 12 ft 6 in' : 'e.g. 3.81 m'}
       onChange={event => update(current => editField(current, roomId, field, event.target.value))}
       onBlur={event => { if (!composing.current && !revert.skipBlur(event)) commit(); }}

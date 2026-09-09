@@ -1,3 +1,4 @@
+import { openResponsiveInspector, closeResponsiveInspector } from './physical-inspector-helpers';
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import { parseRegistry, serializeRegistry, PHYSICAL_DRAFT_STORAGE_KEY as KEY } from '../../client/src/features/physical-draft/storage';
 import { adoptPhysicalDraft, createRegistry, insertDraft, type PhysicalDraft } from '../../client/src/features/physical-draft/state';
@@ -266,7 +267,7 @@ test.describe('touch Revert', () => {
     await page.getByRole('region', { name: 'Physical drawing', exact: true }).getByRole('button', { name: 'Fit drawing', exact: true }).click();
     const before = await selected(page); await field(page, 'Ceiling height').fill('9 ft -');
     for (const [name, width, height] of [['desktop', 1600, 1200], ['phone', 390, 844]] as const) {
-      await page.setViewportSize({ width, height }); await revert(page, 'ceiling height').scrollIntoViewIfNeeded();
+      await page.setViewportSize({ width, height }); await openResponsiveInspector(page); await revert(page, 'ceiling height').scrollIntoViewIfNeeded();
       await expect(revert(page, 'ceiling height')).toBeVisible();
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
       await page.screenshot({ path: test.info().outputPath('field-revert-pending-' + name + '.png'), fullPage: true });
@@ -280,7 +281,7 @@ test.describe('touch Revert', () => {
     await field(page, 'Length').fill('12 ft -'); await revert(page, 'length').tap();
     await expect(field(page, 'Length')).toHaveValue('12 ft'); await expect(revert(page, 'length')).toHaveCount(0);
     await expect(page.getByTestId('physical-floor')).toContainText('120.00 sq ft');
-    await expect(page.getByRole('status')).toContainText(/held in memory|could not be saved/i);
+    await closeResponsiveInspector(page); await expect(page.getByRole('status')).toContainText(/held in memory|could not be saved/i);
     expect(await page.evaluate(key => sessionStorage.getItem(key), KEY)).toBe(priorBytes);
   });
 });

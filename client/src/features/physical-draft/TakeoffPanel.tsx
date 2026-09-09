@@ -61,23 +61,23 @@ export function TakeoffPanel({ draft, update, onFocus, review, showScope, onShow
     const values = include ? [...chosen, choice.value] : chosen.filter(value => keyOf(value) !== choice.key);
     update(current => setOutputTargets(current, output, values as string[] | Face[]), draft.localEditRevision);
   }
-  return <section data-testid="takeoff-panel" aria-label="Measured takeoff" className="space-y-4 rounded-lg border bg-white p-4 sm:p-5">
+  return <section data-testid="takeoff-panel" aria-label="Measured takeoff" className="min-w-0 space-y-4 rounded-lg border bg-white p-4 [overflow-wrap:anywhere] sm:p-5">
     <div className="flex flex-wrap items-start justify-between gap-3"><div><h2 className="text-lg font-semibold">Measured takeoff</h2>
       <p className="mt-1 text-sm text-slate-600">Choose work and its targets. Inspecting a room or moving the camera does not change this scope.</p></div>
       <Button variant="outline" size="sm" aria-expanded={reviewVisible} onClick={() => setReviewVisible(value => !value)}>Review inputs</Button>
     </div>
     <fieldset><legend className="mb-2 text-sm font-semibold">Work to measure</legend>
-      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5">{QUANTITY_OUTPUTS.map(value => <label key={value} className="flex items-center gap-2 rounded-md border p-2 text-sm">
-        <input type="checkbox" aria-label={'Measure ' + OUTPUT_LABELS[value]} checked={draft.request.selections.some(selection => selection.output === value)}
-          onChange={event => { const checked = event.target.checked; update(current => setOutputEnabled(current, value, checked)); if (checked) setActive(value); }} />{OUTPUT_LABELS[value]}</label>)}</div>
+      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5">{QUANTITY_OUTPUTS.map(value => <label key={value} className="flex min-w-0 items-center gap-2 rounded-md border p-2 text-sm">
+        <input className="shrink-0" type="checkbox" aria-label={'Measure ' + OUTPUT_LABELS[value]} checked={draft.request.selections.some(selection => selection.output === value)}
+          onChange={event => { const checked = event.target.checked; update(current => setOutputEnabled(current, value, checked)); if (checked) setActive(value); }} /><span className="min-w-0">{OUTPUT_LABELS[value]}</span></label>)}</div>
     </fieldset>
-    <div className="grid gap-4 border-t pt-4 lg:grid-cols-2">
+    <div className="grid min-w-0 gap-4 border-t pt-4 lg:grid-cols-2">
       <div><label className="grid gap-1 text-sm font-medium">Opening measurement basis for takeoff
         <select className="h-10 w-full rounded-md border bg-white px-2" value={draft.request.policy.openingMeasureBasis}
           onChange={event => { const value = event.target.value as typeof draft.request.policy.openingMeasureBasis; update(current => setTakeoffBasis(current, value)); }}>
           <option value="finished">Finished</option><option value="nominal">Nominal</option><option value="clear">Clear</option><option value="rough">Rough</option>
         </select></label><p className="mt-1 text-xs leading-5 text-slate-500">Opening measurements must match this basis. Choosing a policy does not convert their dimensions.</p></div>
-      <label className="flex items-start gap-2 text-sm"><input type="checkbox" className="mt-1" checked={showScope} onChange={event => onShowScope(event.target.checked)} />Show takeoff scope in drawing</label>
+      <label className="flex min-w-0 items-start gap-2 text-sm"><input type="checkbox" className="mt-1 shrink-0" checked={showScope} onChange={event => onShowScope(event.target.checked)} />Show takeoff scope in drawing</label>
     </div>
     {selection && output ? <fieldset className="min-w-0 rounded-md border bg-slate-50 p-3" data-testid="takeoff-scope-controls">
       <legend className="px-1 text-sm font-semibold">Explicit targets and waste</legend>
@@ -89,15 +89,15 @@ export function TakeoffPanel({ draft, update, onFocus, review, showScope, onShow
         <Button size="sm" variant="outline" onClick={() => update(current => setOutputTargets(current, output, []))}>Clear targets</Button>
       </div>
       <p className="my-3 text-xs text-slate-600">{chosen.length} selected · {choices.filter(choice => !selectedKeys.has(choice.key)).length} current targets not included. Newly added targets are not included automatically.</p>
-      <div className="grid max-h-52 gap-2 overflow-y-auto sm:grid-cols-2">{choices.map(choice => <label key={choice.key} className="flex items-start gap-2 text-sm">
-        <input className="mt-1" type="checkbox" aria-label={'Include ' + choice.label} checked={selectedKeys.has(choice.key)} onChange={event => toggleTarget(choice, event.target.checked)} />{choice.label}
+      <div className="grid min-w-0 max-h-52 gap-2 overflow-y-auto sm:grid-cols-2">{choices.map(choice => <label key={choice.key} className="flex min-w-0 items-start gap-2 text-sm">
+        <input className="mt-1 shrink-0" type="checkbox" aria-label={'Include ' + choice.label} checked={selectedKeys.has(choice.key)} onChange={event => toggleTarget(choice, event.target.checked)} /><span className="min-w-0">{choice.label}</span>
       </label>)}{!choices.length ? <p className="text-sm text-slate-600">No available {targetNoun(output)} yet.</p> : null}</div>
       {waste ? <WasteInput key={output} draft={draft} output={output} update={update} /> : <p className="mt-3 text-xs text-slate-600">Inventory counts physical identities; no waste is applied.</p>}
       {output === 'crown' ? <fieldset className="mt-4 border-t pt-3"><legend className="text-sm font-medium">Explicit full-height gaps</legend>
         <p className="mb-2 text-xs leading-5 text-slate-600">Only deduct selected, measured floor-to-ceiling gaps. The engine checks their full height; ordinary doors are not deducted automatically.</p>
-        <div className="grid max-h-44 gap-2 overflow-y-auto sm:grid-cols-2">{openingFaces(draft).map(choice => <label key={choice.key} className="flex items-start gap-2 text-sm">
-          <input type="checkbox" className="mt-1" aria-label={'Deduct full-height gap ' + choice.label} checked={draft.request.policy.crownFullHeightGaps.some(face => faceKey(face) === choice.key)}
-            onChange={event => { const include = event.target.checked; const faces = include ? [...draft.request.policy.crownFullHeightGaps, choice.value as Face] : draft.request.policy.crownFullHeightGaps.filter(face => faceKey(face) !== choice.key); update(current => setCrownGaps(current, faces), draft.localEditRevision); }} />{choice.label}
+        <div className="grid min-w-0 max-h-44 gap-2 overflow-y-auto sm:grid-cols-2">{openingFaces(draft).map(choice => <label key={choice.key} className="flex min-w-0 items-start gap-2 text-sm">
+          <input type="checkbox" className="mt-1 shrink-0" aria-label={'Deduct full-height gap ' + choice.label} checked={draft.request.policy.crownFullHeightGaps.some(face => faceKey(face) === choice.key)}
+            onChange={event => { const include = event.target.checked; const faces = include ? [...draft.request.policy.crownFullHeightGaps, choice.value as Face] : draft.request.policy.crownFullHeightGaps.filter(face => faceKey(face) !== choice.key); update(current => setCrownGaps(current, faces), draft.localEditRevision); }} /><span className="min-w-0">{choice.label}</span>
         </label>)}</div>
       </fieldset> : null}
     </fieldset> : null}
@@ -125,8 +125,8 @@ function WasteInput({ draft, output, update }: { draft: PhysicalDraft; output: Q
     // Keep malformed text inline; a second error at the page top would move the next click.
     update(current => wasteError(getWasteField(current, output)) ? current : commitWaste(current, output));
   }
-  return <div className="relative mt-4 max-w-xs"><label className="block min-h-7 pr-16 text-sm font-medium" htmlFor="takeoff-waste">Waste percentage</label>
-    <Input ref={inputRef} id="takeoff-waste" type="text" className="mt-1 bg-white" value={waste.text} aria-invalid={Boolean(error)} aria-describedby="takeoff-waste-help"
+  return <div className="relative mt-4 min-w-0 max-w-xs"><label className="block min-h-7 pr-16 text-sm font-medium" htmlFor="takeoff-waste">Waste percentage</label>
+    <Input ref={inputRef} id="takeoff-waste" type="text" className="mt-1 min-w-0 bg-white" value={waste.text} data-physical-pending={waste.dirty ? 'true' : undefined} aria-invalid={Boolean(error)} aria-describedby="takeoff-waste-help"
       onChange={event => { const text = event.target.value; update(current => editWaste(current, output, text)); }}
       onBlur={event => { if (!composing.current && !revert.skipBlur(event)) applyWaste(); }}
       onCompositionStart={() => { composing.current = true; }} onCompositionEnd={event => {

@@ -147,6 +147,7 @@ export function ControlledOpeningSizeField({ label, visibleLabel, text, choices 
     <div className="flex min-w-0">
       <Input ref={inputRef} id={id} type="text" value={text} disabled={disabled}
         placeholder="Not entered" autoComplete="off" spellCheck={false}
+        data-physical-pending={revertOptions?.pending ? "true" : undefined}
         aria-label={label} aria-invalid={Boolean(error)} aria-describedby={id + '-help'}
         className={'h-9 min-w-0 px-2 text-sm focus-visible:z-10' + (choices.length ? ' rounded-r-none' : '')}
         onChange={event => onChange(event.target.value)}
@@ -167,7 +168,7 @@ export function ControlledOpeningSizeField({ label, visibleLabel, text, choices 
             <ChevronDown className="h-4 w-4" aria-hidden="true" />
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
+        <DropdownMenuContent align="end" className="max-h-[var(--radix-dropdown-menu-content-available-height)] overflow-y-auto">
           {choices.map(choice => <DropdownMenuItem key={choice} onSelect={() => onPreset(choice)}>{choice} in</DropdownMenuItem>)}
         </DropdownMenuContent>
       </DropdownMenu> : null}

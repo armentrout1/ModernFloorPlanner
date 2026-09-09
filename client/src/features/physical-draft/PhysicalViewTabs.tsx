@@ -31,7 +31,7 @@ export function PhysicalViewTabs({ view, onChange }: { view: PhysicalView; onCha
       if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setFocused(null);
     }}>
     {views.map(value => <Button key={value} ref={element => { buttons.current[value] = element; }} type="button"
-      role="tab" id={'physical-' + value + '-tab'} aria-controls={'physical-' + value + '-panel'}
+      data-physical-layout-control role="tab" id={'physical-' + value + '-tab'} aria-controls={'physical-' + value + '-panel'}
       aria-selected={view === value} tabIndex={(focused ?? view) === value ? 0 : -1}
       variant={view === value ? 'default' : 'outline'}
       className="focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-900 focus-visible:ring-0"

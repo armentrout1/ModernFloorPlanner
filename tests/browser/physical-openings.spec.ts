@@ -1,3 +1,4 @@
+import { openResponsiveInspector, closeResponsiveInspector } from './physical-inspector-helpers';
 import { expect, test, type Page, type Locator } from '@playwright/test';
 import { parseRegistry, serializeRegistry, PHYSICAL_DRAFT_STORAGE_KEY as KEY } from '../../client/src/features/physical-draft/storage';
 import { adoptPhysicalDraft, createRegistry, insertDraft, type PhysicalDraft } from '../../client/src/features/physical-draft/state';
@@ -346,7 +347,9 @@ test('populated opening views retain controls and precise placement through zoom
     await page.getByTestId('physical-canvas').evaluate(node=>{node.scrollLeft+=17;node.scrollTop+=9;});
     await drawing(page).getByRole('button',{name:'Fit drawing',exact:true}).click(); await frames(page);
     expect((await selected(page)).document).toEqual(original.document);
+    await openResponsiveInspector(page);
     await expect(openingInspector(page).getByLabel('Door width',{exact:true})).toBeVisible();
+    await closeResponsiveInspector(page);
     expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
     const point=await wallPoint(page,alpha.id,'top',2.5/12),box=await overlay(page,door.id).boundingBox();
     expect(Math.abs(box!.x+box!.width/2-point.x)).toBeLessThanOrEqual(1);

@@ -42,6 +42,7 @@ export function PhysicalDrawing({ document, selectedId, onSelect, draft, selecte
   const editable = Boolean(draft && update);
   const release = useCallback(() => {
     const previous = gesture.current; gesture.current = null;
+    if (wrapper.current) delete wrapper.current.dataset.physicalGesture;
     if (previous && wrapper.current?.hasPointerCapture(previous.pointerId)) wrapper.current.releasePointerCapture(previous.pointerId);
   }, []);
   const cancel = useCallback((reason = '', disarm = true) => {
@@ -50,7 +51,7 @@ export function PhysicalDrawing({ document, selectedId, onSelect, draft, selecte
   useEffect(() => {
     const blur = () => { spaceHeld.current = false; cancel('Unfinished opening gesture canceled.'); };
     const keydown = (event: KeyboardEvent) => {
-      if (event.isComposing) return;
+      if (event.isComposing || event.defaultPrevented) return;
       const editing = event.target instanceof Element && event.target.closest('input, textarea, select, [contenteditable="true"], [role="dialog"], [role="menu"]');
       if (event.code === 'Space' && !editing) {
         spaceHeld.current = true; lastOpeningClick.current = null;
@@ -60,7 +61,7 @@ export function PhysicalDrawing({ document, selectedId, onSelect, draft, selecte
         lastOpeningClick.current = null;
         if (gesture.current) cancel('Opening gesture canceled after a modifier change.');
       }
-      if (event.key === 'Escape') cancel();
+      if (event.key === 'Escape' && !editing && !window.document.querySelector('[role="dialog"][data-state="open"], [role="menu"][data-state="open"]')) cancel();
     };
     const keyup = (event: KeyboardEvent) => { if (event.code === 'Space') spaceHeld.current = false; };
     const hidden = () => { if (window.document.hidden) blur(); };
@@ -72,6 +73,18 @@ export function PhysicalDrawing({ document, selectedId, onSelect, draft, selecte
     };
   }, [cancel, release]);
   useEffect(() => { cancel(); }, [draft?.id, cancel]);
+  useEffect(() => {
+    const viewport = wrapper.current; if (!viewport) return;
+    let width = viewport.clientWidth, height = viewport.clientHeight;
+    const changed = () => { spaceHeld.current = false; cancel(); };
+    const resize = new ResizeObserver(() => {
+      if (width !== viewport.clientWidth || height !== viewport.clientHeight) {
+        width = viewport.clientWidth; height = viewport.clientHeight; changed();
+      }
+    });
+    resize.observe(viewport); window.addEventListener('physical-layout-change', changed);
+    return () => { resize.disconnect(); window.removeEventListener('physical-layout-change', changed); };
+  }, [cancel]);
   useEffect(() => {
     if (gesture.current && draft && !gestureMatchesDraft(gesture.current, draft)) cancel('The draft changed. The unfinished opening gesture was canceled.');
   }, [draft?.id, draft?.localEditRevision, cancel]);
@@ -148,7 +161,7 @@ export function PhysicalDrawing({ document, selectedId, onSelect, draft, selecte
     }
     const next: Gesture = { draftId: draft.id, revision: draft.localEditRevision, pointerId: event.pointerId,
       openingId, kind: tool, id: openingId ?? crypto.randomUUID(), startX: event.clientX, startY: event.clientY, moved: false };
-    gesture.current = next; wrapper.current?.setPointerCapture(event.pointerId);
+    gesture.current = next; if (wrapper.current) wrapper.current.dataset.physicalGesture = "active"; wrapper.current?.setPointerCapture(event.pointerId);
     if (tool) setPreview(makePreview(targetAt(event.clientX, event.clientY), next));
   }
   function move(event: Pointer<HTMLDivElement>) {
@@ -271,7 +284,7 @@ export function PhysicalDrawing({ document, selectedId, onSelect, draft, selecte
         if (gesture.current) cancel('Opening gesture canceled for panning or zooming.'); else setPreview(null);
       }}
       style={{ overflowAnchor: 'none', contain: 'inline-size', touchAction: tool ? 'none' : 'auto' }}
-      className="relative h-[460px] overflow-auto overscroll-contain bg-slate-50">
+      className="relative h-[clamp(220px,50dvh,460px)] min-w-0 overflow-auto overscroll-contain bg-slate-50">
       <div style={{ position: 'relative', width: view.width, height: view.height,
         backgroundImage: 'linear-gradient(#dce3ed 1px, transparent 1px), linear-gradient(90deg, #dce3ed 1px, transparent 1px)',
         backgroundSize: `${Math.max(8, 20 * scale)}px ${Math.max(8, 20 * scale)}px`, backgroundPosition: `${view.origin.x}px ${view.origin.y}px` }}>
@@ -289,9 +302,9 @@ export function PhysicalDrawing({ document, selectedId, onSelect, draft, selecte
               onClick={event => { if (!editable) onSelect(room.id); event.stopPropagation(); }} onKeyDown={event => {
                 if ((event.key === 'Enter' || event.key === ' ') && !event.nativeEvent.isComposing) { event.preventDefault(); event.stopPropagation(); onSelect(room.id); }
               }} style={{ position: 'absolute', left: room.x, top: room.y, width: room.width, height: room.height, cursor: tool ? 'crosshair' : 'pointer' }}>
-              <div aria-hidden="true" style={{ pointerEvents: 'none' }}>
+              <div aria-hidden="true" style={{ pointerEvents: 'none' }} className="[&_[data-testid^=room-name-]>div]:max-w-full [&_[data-testid^=room-name-]>div]:truncate">
                 <RoomBox room={{ ...room, x: 0, y: 0 }} scale={scale} isSelected={room.id === selectedId} selectedObjectId={selectedOpeningId}
-                  floorLevelOpenings={projection.floorLevelOpenings[room.id]} onSelect={noop} onResizeStart={noop} onMoveStart={noop} onUpdateRoom={noop} allowResize={false} />
+                  floorLevelOpenings={projection.floorLevelOpenings[room.id]} onSelect={noop} onResizeStart={noop} onMoveStart={noop} onUpdateRoom={noop} allowResize={false} stackAnnotations />
               </div>
               {editable && openingHits(room)}
               {activeWall && <span aria-hidden="true" data-testid="physical-wall-start" style={{ position: 'absolute', left: startPoint.x, top: startPoint.y,

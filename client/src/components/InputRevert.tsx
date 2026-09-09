@@ -1,3 +1,4 @@
+import { isInputLayoutTransition, isInputLayoutControl, isInputLayoutEscape } from '@/utils/inputLayout';
 import { useRef, type RefObject, type KeyboardEvent, type FocusEvent } from 'react';
 import { Button } from '@/components/ui/button';
 
@@ -25,7 +26,7 @@ export function useInputRevert(input: RefObject<HTMLInputElement>, options?: Inp
     if (candidate.onRevert() && restoreFocus) input.current?.focus();
   }
   function onInputKeyDown(event: KeyboardEvent<HTMLInputElement>, composing = false): boolean {
-    if (event.key !== 'Escape' || !options?.pending || event.defaultPrevented || event.repeat || composing
+    if (event.key !== 'Escape' || !options?.pending || (event.defaultPrevented && !isInputLayoutEscape(event.nativeEvent)) || event.repeat || composing
       || event.nativeEvent.isComposing || event.nativeEvent.keyCode === 229 || event.ctrlKey || event.metaKey || event.altKey || event.shiftKey
       || event.currentTarget !== document.activeElement) return false;
     event.preventDefault(); event.stopPropagation(); apply(); return true;
@@ -34,7 +35,7 @@ export function useInputRevert(input: RefObject<HTMLInputElement>, options?: Inp
   function isHistoryFocus(target: EventTarget | null) {
     return Boolean(options && target instanceof Element && target.closest('[data-physical-history-control]'));
   }
-  function isDeferredFocus(target: EventTarget | null) { return isRevertFocus(target) || isHistoryFocus(target); }
+  function isDeferredFocus(target: EventTarget | null) { return isRevertFocus(target) || isHistoryFocus(target) || Boolean(options && (isInputLayoutTransition(input.current) || isInputLayoutControl(target))); }
   function skipBlur(event: FocusEvent<HTMLInputElement>) { return isDeferredFocus(event.relatedTarget); }
   const control = options?.pending ? <Button ref={button} type="button" size="sm" variant="ghost"
     className="absolute right-0 top-0 h-7 w-14 px-1 text-xs" aria-label={options.name}
@@ -55,7 +56,7 @@ export function useInputRevert(input: RefObject<HTMLInputElement>, options?: Inp
     onBlur={event => {
       activation.current = null;
       // Tab onto Revert offers cancellation; Tab onward retains normal commit.
-      if (event.relatedTarget !== input.current && !isHistoryFocus(event.relatedTarget) && input.current?.isConnected) options.onLeave();
+      if (event.relatedTarget !== input.current && !isDeferredFocus(event.relatedTarget) && input.current?.isConnected) options.onLeave();
     }}
     onClick={event => {
       if (event.defaultPrevented) return;

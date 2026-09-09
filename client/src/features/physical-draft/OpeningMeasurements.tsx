@@ -30,7 +30,7 @@ export function OpeningList({ draft, roomId, selectedId, onSelect, update }: {
     if (update(current => commands.addOpening(current, id, kind, room.wallFaces[0].id, offset, new Date().toISOString(),
       { widthMm: (kind === 'door' ? 32 : 36) * 25.4, ...(kind === 'door' ? { appearance: proposedAppearance } : {}) }))) onSelect(id);
   }
-  return <section className="space-y-3 rounded-lg border bg-white p-4" aria-label="Room openings">
+  return <section className="min-w-0 space-y-3 rounded-lg border bg-white p-4 [overflow-wrap:anywhere]" aria-label="Room openings">
     <h2 className="font-semibold">Doors and openings</h2>
     <div className="flex flex-wrap gap-2">
       {(['door', 'window', 'floor-level-opening'] as const).map(kind => <Button key={kind} size="sm" variant="outline"
@@ -45,7 +45,7 @@ export function OpeningList({ draft, roomId, selectedId, onSelect, update }: {
         return <Button key={opening.id} variant={selectedId === opening.id ? 'secondary' : 'outline'}
           data-testid={'physical-opening-list-' + opening.id} aria-pressed={selectedId === opening.id}
           className="h-auto min-w-0 justify-start whitespace-normal py-2 text-left" onClick={() => onSelect(opening.id)}>
-          <span><span className="block">{names[opening.kind]} {number} · {wall?.side} wall</span>
+          <span className="min-w-0"><span className="block">{names[opening.kind]} {number} · {wall?.side} wall</span>
             <span className="text-xs font-normal">{checks.status === 'invalid' ? 'Needs correction' : checks.status === 'undetermined' ? 'Incomplete / fit unverified' : 'Geometry fits · measurements need review'}
               {opening.attachments.length > 1 ? ' · shared on two faces' : ''}</span></span>
         </Button>;
@@ -92,7 +92,7 @@ export function OpeningMeasurements({ draft, openingId, update, onDeleted, comma
       })}
       onPreset={inches => update(current => commands.applyOpeningPreset(current, openingId, field, inches + ' in', new Date().toISOString()))} />;
   }
-  return <div className="min-w-0 space-y-4" data-testid="physical-opening-inspector" data-opening-id={openingId}>
+  return <div className="min-w-0 space-y-4 [overflow-wrap:anywhere]" data-testid="physical-opening-inspector" data-opening-id={openingId}>
     <div className="flex flex-wrap items-center justify-between gap-2">
       <h2 className="font-semibold">{names[opening.kind]} properties</h2>
       <Button size="sm" variant="outline" onClick={() => {
@@ -100,8 +100,8 @@ export function OpeningMeasurements({ draft, openingId, update, onDeleted, comma
       }}>Delete {names[opening.kind].toLowerCase()}</Button>
     </div>
     {commandError ? <p role="alert" className="rounded border border-red-200 bg-red-50 p-2 text-xs leading-5 text-red-800">{commandError}</p> : null}
-    <div className="grid min-w-0 grid-cols-2 gap-2">
-      <div><Label htmlFor="opening-room" className="text-xs">Room</Label>
+    <div className="grid min-w-0 grid-cols-[repeat(auto-fit,minmax(min(100%,8rem),1fr))] gap-2">
+      <div className="min-w-0"><Label htmlFor="opening-room" className="text-xs">Room</Label>
         <select id="opening-room" aria-label="Opening room" className={selectClass} value={room.id} disabled={shared}
           onChange={event => {
             const nextRoom = draft.document.rooms.find(item => item.id === event.target.value)!;
@@ -110,7 +110,7 @@ export function OpeningMeasurements({ draft, openingId, update, onDeleted, comma
           }}>
           {draft.document.rooms.map(item => <option key={item.id} value={item.id}>{item.name || 'Room'}</option>)}
         </select></div>
-      <div><Label htmlFor="opening-wall" className="text-xs">Wall</Label>
+      <div className="min-w-0"><Label htmlFor="opening-wall" className="text-xs">Wall</Label>
         <select id="opening-wall" aria-label="Opening wall" className={selectClass} value={wall.id} disabled={shared}
           onChange={event => update(current => commands.moveOpening(current, openingId, event.target.value, attachment.offsetMm, new Date().toISOString()))}>
           {room.wallFaces.map(item => <option key={item.id} value={item.id}>{item.side[0].toUpperCase() + item.side.slice(1)} wall</option>)}
@@ -127,7 +127,7 @@ export function OpeningMeasurements({ draft, openingId, update, onDeleted, comma
         const side = parent.wallFaces.find(w => w.id === face.wallFaceId)!.side;
         return <span key={face.wallFaceId} className="block">{index === 0 ? 'Primary' : 'Other'} face: {parent.name || 'Room'} · {side} wall · center {formatMeasurement(face.offsetMm, draft.displayUnit, 4)} from its clockwise start.</span>;
       })}</p> : null}
-    <div><Label htmlFor="opening-basis" className="text-xs">Measurement basis</Label>
+    <div className="min-w-0"><Label htmlFor="opening-basis" className="text-xs">Measurement basis</Label>
       <select id="opening-basis" className={selectClass} value={opening.measureBasis}
         onChange={event => update(current => commands.setOpeningBasis(current, openingId, event.target.value as PhysicalOpening['measureBasis'], new Date().toISOString()))}>
         <option value="unknown">Unknown — needs review</option><option value="finished">Finished</option>
@@ -138,19 +138,19 @@ export function OpeningMeasurements({ draft, openingId, update, onDeleted, comma
       <ul>{opening.width.candidates.map((candidate, index) => <li key={index}>{formatMeasurement(candidate.valueMm, draft.displayUnit, 6)}</li>)}</ul>
     </div> : null}
     {opening.kind === 'door' ? opening.appearance ? <div className="space-y-3 border-t pt-3">
-      <div><Label htmlFor="physical-door-style" className="text-xs">Door style</Label>
+      <div className="min-w-0"><Label htmlFor="physical-door-style" className="text-xs">Door style</Label>
         <select id="physical-door-style" className={selectClass} value={opening.appearance.style}
           onChange={event => appearance({ style: event.target.value as NonNullable<PhysicalOpening['appearance']>['style'] })}>
           <option value="single">Single door</option><option value="double">Double door</option>
           <option value="sliding">Sliding door</option><option value="bifold">Bifold door</option>
         </select></div>
-      {opening.appearance.style !== 'sliding' ? <div className="grid grid-cols-2 gap-2">
-        <div><Label htmlFor="physical-door-swing" className="text-xs">Swing</Label>
+      {opening.appearance.style !== 'sliding' ? <div className="grid min-w-0 grid-cols-[repeat(auto-fit,minmax(min(100%,8rem),1fr))] gap-2">
+        <div className="min-w-0"><Label htmlFor="physical-door-swing" className="text-xs">Swing</Label>
           <select id="physical-door-swing" className={selectClass} value={opening.appearance.swingDirection}
             onChange={event => appearance({ swingDirection: event.target.value as 'inward' | 'outward' })}>
             <option value="inward">Inward</option><option value="outward">Outward</option>
           </select></div>
-        <div><Label htmlFor="physical-door-hand" className="text-xs">Hand</Label>
+        <div className="min-w-0"><Label htmlFor="physical-door-hand" className="text-xs">Hand</Label>
           <select id="physical-door-hand" className={selectClass} value={getDoorHand(opening.appearance.swingSide, opening.appearance.swingDirection)}
             onChange={event => appearance({ swingSide: getStoredHinge(event.target.value as 'left' | 'right', opening.appearance!.swingDirection) })}>
             <option value="left">Left hand (LH)</option><option value="right">Right hand (RH)</option>
@@ -158,7 +158,7 @@ export function OpeningMeasurements({ draft, openingId, update, onDeleted, comma
       </div> : null}
       <p className="text-xs leading-5 text-slate-500">Hand is viewed with your back to the hinge jamb, facing the latch. Style and handing change the symbol, not measurements.</p>
     </div> : <div className="space-y-2 text-xs leading-5 text-amber-800"><p>Door appearance is unknown. A historical symbol is source evidence only.</p>
-      <Button size="sm" variant="outline" onClick={() => update(current => commands.setOpeningAppearance(current, openingId, proposedAppearance, new Date().toISOString()))}>Set proposed door appearance</Button></div> : null}
+      <Button size="sm" variant="outline" className="h-auto max-w-full whitespace-normal py-2" onClick={() => update(current => commands.setOpeningAppearance(current, openingId, proposedAppearance, new Date().toISOString()))}>Set proposed door appearance</Button></div> : null}
     <p className="text-xs leading-5 text-slate-500">Common sizes are editable proposals, not field confirmation. Measurements remain unconfirmed until explicit review.</p>
     <div className={'rounded border p-3 text-xs leading-5 ' + (validation.status === 'invalid' ? 'border-red-200 bg-red-50 text-red-800' : 'border-amber-200 bg-amber-50 text-amber-900')}
       role={validation.status === 'invalid' ? 'alert' : 'status'} data-testid="physical-opening-validation">
