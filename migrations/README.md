@@ -1,0 +1,9 @@
+# M4A additive authorization migration
+
+`0001_workspace_authorization.sql` creates application principals, verified external-identity links, workspaces and active/revoked owner/editor/viewer memberships. It adds nullable `floor_plans.workspace_id` and a scoped-list index. Existing plan rows remain null-owned and inaccessible through ordinary repository methods. Existing `users`, passwords and room JSON are neither activated nor changed.
+
+No migration is run automatically by the application. This is a once-only, transactional migration; unexpected existing tables/columns fail instead of silently accepting an unknown schema. It is not permission to apply it to production or an unidentified `DATABASE_URL`. Do not use `db:push` as a substitute. No principal, workspace, membership or legacy ownership is seeded. An approved identity integration and explicit provisioning/assignment process are still required.
+
+For a reviewed application, use an explicitly identified PostgreSQL database with the existing `floor_plans` table. Record the deployment's separate change authorization and migration identity. This task applies the SQL only inside a dedicated synthetic PostgreSQL test schema. No destructive rollback is provided: dropping these tables or ownership fields would lose authorization data.
+
+Run `npm run test:authorization:db` only with `MFP_TEST_DATABASE_URL` and `MFP_TEST_DATA_DIRECTORY` naming the isolated synthetic cluster. Tests verify loopback host, the dedicated database/user and the actual server data directory before creating a unique test schema. Missing/mismatched configuration fails; there is no fallback to `DATABASE_URL` and no silent skip. See the focused M4A report for the actual isolated run and limits. The repository uses transaction locks and scoped predicates; no RLS or hosted-provider integration is claimed.

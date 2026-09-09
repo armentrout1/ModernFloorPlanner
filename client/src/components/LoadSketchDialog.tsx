@@ -16,7 +16,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { MoreHorizontal as DotsHorizontalIcon } from 'lucide-react';
-import { SavedSketch, fetchSavedSketches, deleteSketch, renameSketch } from '@/utils/api';
+import { SavedSketch, fetchSavedSketches, fetchSketch, deleteSketch, renameSketch, sketchErrorMessage, isSketchAccessError } from '@/utils/api';
 import { useToast } from '@/hooks/use-toast';
 import SketchPreview from './SketchPreview';
 
@@ -40,24 +40,45 @@ const LoadSketchDialog: React.FC<LoadSketchDialogProps> = ({
   const [isRenaming, setIsRenaming] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Load sketches when dialog opens
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [reload, setReload] = useState(0);
+  const requestGeneration = useRef(0);
+  const composing = useRef(false);
+  const loadingSelected = useRef(false);
+
+  // Private rows are never reused on reopen, and an old request cannot repopulate
+  // a closed/reopened dialog after a newer authorization result.
   useEffect(() => {
-    if (open) {
-      setIsLoading(true);
-      fetchSavedSketches()
-        .then(loadedSketches => {
-          setSketches(loadedSketches);
-          setSelectedSketchId(null);
-        })
-        .finally(() => setIsLoading(false));
+    const generation = ++requestGeneration.current;
+    setSketches([]);
+    setSelectedSketchId(null);
+    if (!open) return;
+    setIsLoading(true);
+    setErrorMessage(null);
+    fetchSavedSketches().then(loaded => {
+      if (generation === requestGeneration.current) setSketches(loaded);
+    }).catch(error => {
+      if (generation === requestGeneration.current) setErrorMessage(sketchErrorMessage(error));
+    }).finally(() => {
+      if (generation === requestGeneration.current) setIsLoading(false);
+    });
+    return () => { requestGeneration.current++; };
+  }, [open, reload]);
+
+  const showError = (error: unknown) => {
+    setErrorMessage(sketchErrorMessage(error));
+    if (isSketchAccessError(error)) {
+      setSketches([]);
+      setSelectedSketchId(null);
     }
-  }, [open]);
+  };
 
   const selectedSketch = sketches.find(sketch => sketch.id === selectedSketchId);
 
   const handleRename = (id: number, name: string) => {
     setEditingId(id);
     setNewName(name);
+    setErrorMessage(null);
   };
 
   const saveNewName = async (id: number) => {
@@ -69,24 +90,23 @@ const LoadSketchDialog: React.FC<LoadSketchDialogProps> = ({
     }
     renaming.current = true;
     setIsRenaming(true);
+    const generation = requestGeneration.current;
     try {
       const updatedSketch = await renameSketch(id, newName);
-      if (!updatedSketch) {
-        toast({
-          title: 'Rename failed',
-          description: 'Your draft name is preserved. Try saving it again.',
-          variant: 'destructive',
-        });
-        return;
-      }
-      setSketches(current => current.map(sketch =>
-        sketch.id === id ? updatedSketch : sketch
-      ));
+      if (generation !== requestGeneration.current) return;
+      setSketches(current => current.some(sketch => sketch.id === id)
+        ? current.map(sketch => sketch.id === id ? updatedSketch : sketch)
+        : [updatedSketch]);
+      setErrorMessage(null);
       setEditingId(null);
       toast({
         title: 'Sketch renamed',
         description: `Sketch has been renamed to "${newName}".`,
       });
+    } catch (error) {
+      if (generation !== requestGeneration.current) return;
+      showError(error);
+      toast({ title: 'Rename failed', description: sketchErrorMessage(error), variant: 'destructive' });
     } finally {
       renaming.current = false;
       setIsRenaming(false);
@@ -94,31 +114,37 @@ const LoadSketchDialog: React.FC<LoadSketchDialogProps> = ({
   };
 
   const handleDelete = async (id: number) => {
-    if (window.confirm('Are you sure you want to delete this sketch? This action cannot be undone.')) {
-      const success = await deleteSketch(id);
-      if (success) {
-        setSketches(sketches.filter(sketch => sketch.id !== id));
-        if (selectedSketchId === id) {
-          setSelectedSketchId(null);
-        }
-        toast({
-          title: 'Sketch deleted',
-          description: 'The sketch has been deleted.',
-        });
-      }
+    if (!window.confirm('Are you sure you want to delete this sketch? This action cannot be undone.')) return;
+    const generation = requestGeneration.current;
+    try {
+      await deleteSketch(id);
+      if (generation !== requestGeneration.current) return;
+      setSketches(current => current.filter(sketch => sketch.id !== id));
+      if (selectedSketchId === id) setSelectedSketchId(null);
+      setErrorMessage(null);
+      toast({ title: 'Sketch deleted', description: 'The sketch has been deleted.' });
+    } catch (error) {
+      if (generation === requestGeneration.current) showError(error);
     }
   };
 
-  const handleLoadSketch = () => {
-    if (selectedSketch) {
-      onLoadSketch(selectedSketch);
+  const handleLoadSketch = async () => {
+    if (!selectedSketch || loadingSelected.current) return;
+    loadingSelected.current = true;
+    setIsLoading(true);
+    const generation = requestGeneration.current;
+    try {
+      // Recheck current server access rather than loading a possibly revoked
+      // record from the list response cached in this dialog.
+      const current = await fetchSketch(selectedSketch.id);
+      if (generation !== requestGeneration.current) return;
+      onLoadSketch(current);
       onOpenChange(false);
-    } else {
-      toast({
-        title: 'No sketch selected',
-        description: 'Please select a sketch to load.',
-        variant: 'destructive',
-      });
+    } catch (error) {
+      if (generation === requestGeneration.current) showError(error);
+    } finally {
+      loadingSelected.current = false;
+      if (generation === requestGeneration.current) setIsLoading(false);
     }
   };
 
@@ -130,30 +156,27 @@ const LoadSketchDialog: React.FC<LoadSketchDialogProps> = ({
         </DialogHeader>
         
         <div className="flex-grow overflow-y-auto py-2">
-          {sketches.length === 0 ? (
+          {errorMessage && <div className="mb-3 space-y-2">
+            <p role="alert" className="text-sm text-red-700">{errorMessage}</p>
+            <Button variant="outline" onClick={() => setReload(value => value + 1)} disabled={isLoading}>Retry saved sketches</Button>
+          </div>}
+          {editingId !== null && <div className="mb-3 rounded-md border bg-white p-3">
+            <Input aria-label="New sketch name" disabled={isRenaming} value={newName}
+              onChange={event => setNewName(event.target.value)}
+              onKeyDown={event => { if (event.key === 'Enter' && !event.repeat && !composing.current && !event.nativeEvent.isComposing && event.keyCode !== 229) { event.preventDefault(); void saveNewName(editingId); } }}
+              onCompositionStart={() => { composing.current = true; }}
+              onCompositionEnd={() => { composing.current = false; }}
+              onBlur={() => { if (!composing.current) void saveNewName(editingId); }} autoFocus />
+          </div>}
+          {isLoading ? <p role="status" className="py-10 text-center text-slate-500">Loading saved sketches...</p> : !errorMessage && sketches.length === 0 ? (
             <div className="text-center py-10">
               <p className="text-slate-500">You don't have any saved sketches yet.</p>
-              <p className="text-slate-400 text-sm mt-2">
-                Create a floor plan and use the "Save Sketch" button to save it.
-              </p>
+              <p className="text-slate-400 text-sm mt-2">Create a floor plan and use the "Save Sketch" button to save it.</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-              {sketches.map(sketch => (
+              {sketches.filter(sketch => sketch.id !== editingId).map(sketch => (
                 <div key={sketch.id} className="relative">
-                  {editingId === sketch.id ? (
-                    <div className="p-3 border rounded-md bg-white">
-                      <Input
-                        aria-label="New sketch name"
-                        disabled={isRenaming}
-                        value={newName}
-                        onChange={e => setNewName(e.target.value)}
-                        onKeyDown={e => e.key === 'Enter' && saveNewName(sketch.id)}
-                        onBlur={() => saveNewName(sketch.id)}
-                        autoFocus
-                      />
-                    </div>
-                  ) : (
                     <>
                       <SketchPreview
                         sketch={sketch}
@@ -183,7 +206,6 @@ const LoadSketchDialog: React.FC<LoadSketchDialogProps> = ({
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </>
-                  )}
                 </div>
               ))}
             </div>
@@ -196,7 +218,7 @@ const LoadSketchDialog: React.FC<LoadSketchDialogProps> = ({
           </DialogClose>
           <Button
             onClick={handleLoadSketch}
-            disabled={!selectedSketchId}
+            disabled={!selectedSketchId || isLoading || Boolean(errorMessage)}
           >
             Load Selected Sketch
           </Button>

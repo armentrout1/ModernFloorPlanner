@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Room } from '@/utils/types';
-import { saveSketch, SavedSketch } from '@/utils/api';
+import { saveSketch, SavedSketch, sketchErrorMessage } from '@/utils/api';
 import { useToast } from '@/hooks/use-toast';
 
 interface SaveSketchModalProps {
@@ -35,6 +35,7 @@ const SaveSketchModal: React.FC<SaveSketchModalProps> = ({
   const [sketchName, setSketchName] = useState(currentSketchName);
 
   const saving = useRef(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   // Reset only when changing sketches; reopening a failed save preserves the draft name.
   useEffect(() => { setSketchName(currentSketchName); }, [currentSketchId, currentSketchName]);
   const [isSaving, setIsSaving] = useState(false);
@@ -53,6 +54,7 @@ const SaveSketchModal: React.FC<SaveSketchModalProps> = ({
     // Save the sketch
     saving.current = true;
     setIsSaving(true);
+    setErrorMessage(null);
     try {
       const savedSketch = await saveSketch(sketchName, rooms, currentSketchId);
       toast({
@@ -64,10 +66,11 @@ const SaveSketchModal: React.FC<SaveSketchModalProps> = ({
       onSave(savedSketch);
       onOpenChange(false);
     } catch (error) {
-      console.error('Error saving sketch:', error);
+      const message = sketchErrorMessage(error);
+      setErrorMessage(message);
       toast({
         title: 'Error saving sketch',
-        description: 'An error occurred while saving your sketch.',
+        description: message,
         variant: 'destructive',
       });
     } finally {
@@ -109,6 +112,7 @@ const SaveSketchModal: React.FC<SaveSketchModalProps> = ({
             Your sketch will be saved with {rooms.length} room{rooms.length !== 1 ? 's' : ''}.
           </div>
         </div>
+        {errorMessage && <p role="alert" className="text-sm text-red-700">{errorMessage}</p>}
         <DialogFooter>
           <DialogClose asChild>
             <Button variant="outline" disabled={isSaving}>Cancel</Button>

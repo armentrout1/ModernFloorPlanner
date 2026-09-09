@@ -3,7 +3,9 @@ import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { httpErrorHandler } from "./httpErrors";
 
+import { privateApiResponses } from './authorizedRoutes';
 const app = express();
+app.use('/api', privateApiResponses);
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 

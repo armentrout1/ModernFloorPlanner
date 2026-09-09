@@ -3,7 +3,9 @@ import { once } from 'node:events';
 import type { AddressInfo } from 'node:net';
 import { test } from 'node:test';
 import express from 'express';
-import { registerRoutes, type FloorPlanStorage } from '../server/routes';
+import { createServer } from 'node:http';
+import { mountAuthorizedRoutes } from '../server/authorizedRoutes';
+import { FixtureAuthorizationStorage, createTestIdentityResolver, TEST_WORKSPACE_A, TEST_ORIGIN } from './support/authFixtures';
 import type { FloorPlan, InsertFloorPlan } from '../shared/schema';
 import { createLegacyFloorPlanSchema } from '../shared/legacyValidation';
 import { httpErrorHandler } from '../server/httpErrors';
@@ -33,41 +35,20 @@ const legacyPlan = () => ({
   }, { id: 'room-empty', x: 0, y: 400, width: 100, height: 120 }],
 });
 
-class FixtureStorage implements FloorPlanStorage {
-  plans: FloorPlan[] = [{ id: 1, ...legacyPlan() }];
-  writes = 0;
-  reads = 0;
-  failWrites = false;
-
-  async getFloorPlans() { this.reads++; return structuredClone(this.plans); }
-  async getFloorPlan(id: number) {
-    this.reads++;
-    return structuredClone(this.plans.find((plan) => plan.id === id));
-  }
-  async createFloorPlan(input: InsertFloorPlan) {
-    if (this.failWrites) throw new Error('private database detail');
-    this.writes++;
-    const plan = { id: this.plans.length + 1, ...structuredClone(input) };
-    this.plans.push(plan);
-    return structuredClone(plan);
-  }
-  async updateFloorPlan(id: number, input: Partial<InsertFloorPlan>) {
-    if (this.failWrites) throw new Error('private database detail');
-    this.writes++;
-    const index = this.plans.findIndex((plan) => plan.id === id);
-    if (index < 0) return undefined;
-    this.plans[index] = { ...this.plans[index], ...structuredClone(input) };
-    return structuredClone(this.plans[index]);
-  }
-  async deleteFloorPlan(id: number) {
-    if (this.failWrites) throw new Error('private database detail');
-    this.writes++;
-    const index = this.plans.findIndex((plan) => plan.id === id);
-    if (index < 0) return false;
-    this.plans.splice(index, 1);
-    return true;
-  }
+class FixtureStorage extends FixtureAuthorizationStorage {
+  constructor() { super([{ id: 1, ...legacyPlan() }]); }
 }
+
+// Explicit authenticated workspace selection and same-origin mutation evidence
+// for this legacy payload suite; the server still authorizes every operation.
+const fetch = (input: string, init: RequestInit = {}) => {
+  const headers = new Headers(init.headers);
+  headers.set('x-mfp-workspace-id', TEST_WORKSPACE_A);
+  if (!['GET','HEAD','OPTIONS'].includes((init.method ?? 'GET').toUpperCase())) {
+    headers.set('Origin', TEST_ORIGIN); headers.set('X-MFP-Request', '1');
+  }
+  return globalThis.fetch(input, { ...init, headers });
+};
 
 async function withApi(
   run: (base: string, storage: FixtureStorage) => Promise<void>,
@@ -77,7 +58,8 @@ async function withApi(
   const app = express();
   app.use(express.json());
   configure?.(app);
-  const server = await registerRoutes(app, storage);
+  mountAuthorizedRoutes(app, { identityResolver: createTestIdentityResolver(), storage: () => storage, allowedOrigin: TEST_ORIGIN });
+  const server = createServer(app);
   app.use(httpErrorHandler);
   server.listen(0, '127.0.0.1');
   await once(server, 'listening');
@@ -236,7 +218,8 @@ test('storage failures report retryable server failure without exposing internal
       const response = method === 'DELETE'
         ? await fetch(url, { method })
         : await send(url, method, legacyPlan());
-      assert.equal(response.status, 500);
+      // Storage unavailability is now the explicit fail-closed503 contract.
+      assert.equal(response.status, 503);
       assert.doesNotMatch(await response.text(), /private database detail/);
     }
     assert.deepEqual(storage.plans, before);

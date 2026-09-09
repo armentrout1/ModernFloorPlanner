@@ -1,6 +1,6 @@
 import { FloorPlan } from '@shared/schema';
 import { Room } from './types';
-import { apiRequest } from '@/lib/queryClient';
+import { apiRequest, ApiError } from '@/lib/queryClient';
 
 export interface SavedSketch {
   id: number;
@@ -36,107 +36,47 @@ export const savedSketchToFloorPlan = (
   };
 };
 
-// API functions
+// No workspace is inferred here. The account/workspace integration must provide
+// an explicit selection; the server still verifies current membership.
+export const isSketchAccessError = (error: unknown): boolean =>
+  error instanceof ApiError && [401, 403, 404, 503].includes(error.status);
+
+export const sketchErrorMessage = (error: unknown): string => {
+  if (error instanceof ApiError) {
+    if (error.status === 401) return 'Sign in is required to access server-saved sketches. Your local drawing is unchanged.';
+    if (error.status === 403) return 'You do not have permission to access these server-saved sketches. Your local drawing is unchanged.';
+    if (error.status === 503) return 'Server-saved sketches are unavailable. Your local drawing and unfinished input are unchanged.';
+    if (error.status === 400) return 'The server could not accept this request. An authorized workspace selection is required for server-saved sketches.';
+    if (error.status === 404) return 'This saved sketch is unavailable. Your local drawing is unchanged.';
+  }
+  return 'The sketch request failed. Your local drawing and unfinished input are unchanged. Try again.';
+};
+
 export const fetchSavedSketches = async (): Promise<SavedSketch[]> => {
-  try {
-    const response = await apiRequest('GET', '/api/floor-plans');
-    const floorPlans = (await response.json()) as FloorPlan[];
-    return floorPlans.map(floorPlanToSavedSketch);
-  } catch (error) {
-    console.error('Failed to fetch sketches:', error);
-    return [];
-  }
+  const response = await apiRequest('GET', '/api/floor-plans');
+  return ((await response.json()) as FloorPlan[]).map(floorPlanToSavedSketch);
 };
 
-export const fetchSketch = async (id: number): Promise<SavedSketch | null> => {
-  try {
-    const response = await apiRequest('GET', `/api/floor-plans/${id}`);
-    const floorPlan = (await response.json()) as FloorPlan;
-    return floorPlanToSavedSketch(floorPlan);
-  } catch (error) {
-    console.error(`Failed to fetch sketch with id ${id}:`, error);
-    return null;
-  }
+export const fetchSketch = async (id: number): Promise<SavedSketch> => {
+  const response = await apiRequest('GET', `/api/floor-plans/${id}`);
+  return floorPlanToSavedSketch(await response.json());
 };
 
-export const saveSketch = async (
-  name: string,
-  rooms: Room[],
-  id?: number
-): Promise<SavedSketch> => {
-  try {
-    if (id) {
-      // Update existing sketch
-      const sketch = await fetchSketch(id);
-      if (!sketch) {
-        throw new Error(`Sketch with id ${id} not found`);
-      }
-      
-      const updatedData = savedSketchToFloorPlan(
-        { name, rooms },
-        sketch.createdAt,
-        new Date().toISOString()
-      );
-      
-      const response = await apiRequest(
-        'PATCH',
-        `/api/floor-plans/${id}`,
-        updatedData
-      );
-      
-      const updatedFloorPlan = (await response.json()) as FloorPlan;
-      return floorPlanToSavedSketch(updatedFloorPlan);
-    } else {
-      // Create new sketch
-      const newSketchData = savedSketchToFloorPlan({ name, rooms });
-      
-      const response = await apiRequest(
-        'POST',
-        '/api/floor-plans',
-        newSketchData
-      );
-      
-      const newFloorPlan = (await response.json()) as FloorPlan;
-      return floorPlanToSavedSketch(newFloorPlan);
-    }
-  } catch (error) {
-    console.error('Failed to save sketch:', error);
-    throw error;
-  }
+export const saveSketch = async (name: string, rooms: Room[], id?: number): Promise<SavedSketch> => {
+  const existing = id ? await fetchSketch(id) : null;
+  const data = savedSketchToFloorPlan({ name, rooms }, existing?.createdAt);
+  const response = await apiRequest(id ? 'PATCH' : 'POST', id ? `/api/floor-plans/${id}` : '/api/floor-plans', data);
+  return floorPlanToSavedSketch(await response.json());
 };
 
 export const deleteSketch = async (id: number): Promise<boolean> => {
-  try {
-    await apiRequest('DELETE', `/api/floor-plans/${id}`);
-    return true;
-  } catch (error) {
-    console.error(`Failed to delete sketch with id ${id}:`, error);
-    return false;
-  }
+  await apiRequest('DELETE', `/api/floor-plans/${id}`);
+  return true;
 };
 
-export const renameSketch = async (id: number, newName: string): Promise<SavedSketch | null> => {
-  try {
-    const sketch = await fetchSketch(id);
-    if (!sketch) {
-      throw new Error(`Sketch with id ${id} not found`);
-    }
-    
-    const updateData = {
-      name: newName,
-      updatedAt: new Date().toISOString(),
-    };
-    
-    const response = await apiRequest(
-      'PATCH',
-      `/api/floor-plans/${id}`,
-      updateData
-    );
-    
-    const updatedFloorPlan = (await response.json()) as FloorPlan;
-    return floorPlanToSavedSketch(updatedFloorPlan);
-  } catch (error) {
-    console.error(`Failed to rename sketch with id ${id}:`, error);
-    return null;
-  }
+export const renameSketch = async (id: number, newName: string): Promise<SavedSketch> => {
+  const response = await apiRequest('PATCH', `/api/floor-plans/${id}`, {
+    name: newName, updatedAt: new Date().toISOString(),
+  });
+  return floorPlanToSavedSketch(await response.json());
 };
