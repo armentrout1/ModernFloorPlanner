@@ -1,4 +1,4 @@
-import { physicalDocumentV4Schema, type PhysicalDocumentV4 } from './document';
+import { physicalDocumentV4Schema, physicalDocumentV5Schema, type PhysicalDocumentWithStairs } from './document';
 import { ENDPOINT_ROLES, type StairAssembly, type StairPlacement, type EndpointRole } from './stairs';
 import type { Dimension } from './measurements';
 import { exceedsTolerance } from './geometryValidation';
@@ -29,7 +29,7 @@ function invalidNumeric(bounds: PlanBounds) {
   }
   return false;
 }
-function fit(bounds: PlanBounds | null, room: PhysicalDocumentV4['rooms'][number] | undefined, internal: boolean) {
+function fit(bounds: PlanBounds | null, room: PhysicalDocumentWithStairs['rooms'][number] | undefined, internal: boolean) {
   if (!bounds || !room || room.length.state !== 'known' || room.width.state !== 'known')
     return { status: 'undetermined' as const, message: 'Measured dimensions and room-local placement are required to verify this footprint.' };
   if (invalidNumeric(bounds)) return { status: 'invalid' as const, message: 'The footprint exceeds supported arithmetic range or loses its measured extent.' };
@@ -42,11 +42,11 @@ function fit(bounds: PlanBounds | null, room: PhysicalDocumentV4['rooms'][number
   return { status: 'valid' as const, message: internal ? 'Explicit rectangular opening fits strictly inside this room surface.' : 'Footprint fits its explicit host room within the 0.01 mm geometry tolerance.' };
 }
 export function validateStairGeometry(input: unknown): { status: 'valid' | 'invalid' | 'undetermined'; checks: StairGeometryCheck[] } {
-  const parsed = physicalDocumentV4Schema.safeParse(input);
+  const parsed = ((input as {schemaVersion?:unknown}|null)?.schemaVersion === 5 ? physicalDocumentV5Schema : physicalDocumentV4Schema).safeParse(input);
   if (!parsed.success) return { status: 'invalid', checks: [{ kind: 'stair', id: 'document',
     status: 'invalid', code: 'INVALID_STAIR_DOCUMENT', paths: parsed.error.issues.map(issue => issue.path),
     message: 'Repair structural stair, endpoint and surface references before interpreting their geometry.' }] };
-  const document = input as PhysicalDocumentV4, checks: StairGeometryCheck[] = [];
+  const document = input as PhysicalDocumentWithStairs, checks: StairGeometryCheck[] = [];
   document.stairsContract.stairs.forEach((stair, index) => {
     const path = ['stairsContract', 'stairs', index] as (string | number)[];
     for (const role of ENDPOINT_ROLES) {

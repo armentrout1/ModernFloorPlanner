@@ -4,7 +4,7 @@ import { activeLevelId } from './levelCommands';
 import { addStair, addSurfaceOpening, createRoomLocalPlacement } from './stairCommands';
 import type { StairChange } from './StairInspector';
 
-export type BuildingSelection = { kind:'stair'|'surface-opening'; id:string; roomId:string; role?:'lower'|'upper'; surface?:'floor'|'ceiling' };
+export type BuildingSelection = { kind:'stair'|'surface-opening'|'zone'|'cabinet'; id:string; roomId:string; role?:'lower'|'upper'; surface?:'floor'|'ceiling' };
 export function StairControls({draft,roomId,selected,update,onUpgrade,onSelect,blocked}:{
   draft:PhysicalDraft;roomId:string|null;selected:BuildingSelection|null;update:StairChange;onUpgrade:()=>void;
   onSelect:(selection:BuildingSelection)=>void;blocked:boolean;

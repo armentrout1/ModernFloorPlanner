@@ -10,7 +10,7 @@ import { createDraft as createQuick, addRoom as addQuickRoom, editField as editQ
 import { createRegistry, createDraft, adoptQuickDraft, adoptLegacyDraft, adoptPhysicalDraft, addRoom, renameRoom,
   editField, commitField, switchUnit, previewDocument, insertDraft, selectDraft, selectedDraft, updateDraft,
   setApplicability, type PhysicalDraft, type RoomField } from '../client/src/features/physical-draft/state';
-import { parseRegistry, serializeRegistry, PHYSICAL_DRAFT_STORAGE_KEY, PREVIOUS_PHYSICAL_DRAFT_STORAGE_KEY, LEGACY_PHYSICAL_DRAFT_STORAGE_KEY } from '../client/src/features/physical-draft/storage';
+import { parseRegistry, serializeRegistry, PHYSICAL_DRAFT_STORAGE_KEY, STAIRS_PHYSICAL_DRAFT_STORAGE_KEY, PREVIOUS_PHYSICAL_DRAFT_STORAGE_KEY, LEGACY_PHYSICAL_DRAFT_STORAGE_KEY } from '../client/src/features/physical-draft/storage';
 import { createPhysicalDraftStore, type DraftStorage } from '../client/src/features/physical-draft/store';
 
 import { setOutputEnabled, selectAllCurrentTargets } from '../client/src/features/physical-draft/takeoffCommands';
@@ -245,7 +245,7 @@ test('store initializes lazily, touches only its own key and publishes stable im
   const store = createPhysicalDraftStore(() => { factories++; return storage; });
   assert.equal(factories, 0); assert.equal(store.getSnapshot(), store.getSnapshot());
   store.hydrate(); store.hydrate(); assert.equal(factories, 1);
-  assert.deepEqual(storage.reads, [PHYSICAL_DRAFT_STORAGE_KEY, PREVIOUS_PHYSICAL_DRAFT_STORAGE_KEY, LEGACY_PHYSICAL_DRAFT_STORAGE_KEY]);
+  assert.deepEqual(storage.reads, [PHYSICAL_DRAFT_STORAGE_KEY, STAIRS_PHYSICAL_DRAFT_STORAGE_KEY, PREVIOUS_PHYSICAL_DRAFT_STORAGE_KEY, LEGACY_PHYSICAL_DRAFT_STORAGE_KEY]);
   assert.ok(store.dispatch(registry => insertDraft(registry, complete())));
   assert.deepEqual(storage.writes, [PHYSICAL_DRAFT_STORAGE_KEY]);
   assert.throws(() => { store.getSnapshot().registry.drafts[0].document.rooms[0].name = 'Mutated'; });

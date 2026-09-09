@@ -34,7 +34,7 @@ export function validStairHistoryValue(target:StairHistoryTarget,value:unknown):
   return schema.safeParse(value).success;
 }
 export function stairHistoryValue(draft:PhysicalDraft,target:StairHistoryTarget):unknown {
-  if(draft.document.schemaVersion!==4)return target.kind==='stair-object'?null:undefined;
+  if((draft.document.schemaVersion !== 4 && draft.document.schemaVersion !== 5))return target.kind==='stair-object'?null:undefined;
   const items=target.object==='stair'?draft.document.stairsContract.stairs:draft.document.stairsContract.surfaceOpenings;
   const entity=items.find(item=>item.id===target.id);
   return target.kind==='stair-object'?entity?{entity,index:items.indexOf(entity as any),fields:Object.values(draft.stairFields??{}).filter(entry=>owns(entry,target))}:null:entity?stairPartValue(entity,target.part):undefined;

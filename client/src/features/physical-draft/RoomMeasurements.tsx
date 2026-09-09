@@ -1,3 +1,4 @@
+import { RoomUseControl } from './LayoutInspector';
 import { useRef } from 'react';
 import { RoomLevelAssignment } from './LevelControls';
 import { usePhysicalDraft } from './provider';
@@ -84,6 +85,7 @@ export function RoomMeasurements({ draft, roomId, update }: { draft: PhysicalDra
           store.updateDraft(draft.id, draft.localEditRevision, current => renameRoom(current, roomId, name),
             { nameSession: nameSession.current ?? undefined });
         }} /></div>
+    <RoomUseControl draft={draft} roomId={roomId} update={update} />
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
       {ROOM_FIELDS.map(field => <MeasurementField key={roomId + ":" + field} {...{ draft, roomId, field, update }} />)}
     </div>
@@ -98,7 +100,7 @@ export function RoomMeasurements({ draft, roomId, update }: { draft: PhysicalDra
           <option value="unsupported">{item.unsupported}</option>
         </select>
       </div>)}
-      <p className="text-xs leading-5 text-slate-500">Declaration changes start unconfirmed; use Review inputs for explicit review. {draft.document.schemaVersion === 4 ? 'Flat ceiling supports separately specified internal rectangular openings; unmodeled voids, soffits and other shapes remain unsupported.' : 'Flat ceiling assumes no unmodeled voids or soffits.'} Uniform walls use the entered height around the room. Unsupported conditions block their dependent quantities.</p>
+      <p className="text-xs leading-5 text-slate-500">Declaration changes start unconfirmed; use Review inputs for explicit review. {(draft.document.schemaVersion === 4 || draft.document.schemaVersion === 5) ? 'Flat ceiling supports separately specified internal rectangular openings; unmodeled voids, soffits and other shapes remain unsupported.' : 'Flat ceiling assumes no unmodeled voids or soffits.'} Uniform walls use the entered height around the room. Unsupported conditions block their dependent quantities.</p>
     </fieldset>
     {openings.length || group ? <div className="border-t pt-3 text-xs leading-5 text-slate-600">
       {group ? <p>Group preserved: {group.id} ({group.roomIds.length} rooms)</p> : null}

@@ -1,3 +1,5 @@
+import { layoutHistoryParts, guardLayoutHistory, applyLayoutHistory } from './layoutHistory';
+import { layoutRoomDependencies } from './layoutCommands';
 import { stairHistoryParts, guardStairHistory, applyStairHistory } from './stairHistory';
 import { stairRoomDependencies } from './stairCommands';
 import { assertSupportedPhysicalDocument } from '@shared/compatibility/physicalDraft';
@@ -17,7 +19,7 @@ import { copyHistory as copy, equalHistoryValue as equal, historyTargetKey as ke
 export const HISTORY_LIMIT = 50 as const;
 export interface HistoryUpdateOptions { nameSession?: string }
 export interface HistoryEntry { id: string; eventId: string; label: string; changes: HistoryChange[]; scopeRevision: number; automaticScope: boolean; nameSession?: string }
-export interface HistoryReveal { levelId: string; roomId?: string; openingId?: string; stairId?: string; surfaceOpeningId?: string; endpointRole?: 'lower' | 'upper'; surface?: 'floor' | 'ceiling'; revision: number }
+export interface HistoryReveal { levelId: string; roomId?: string; openingId?: string; stairId?: string; surfaceOpeningId?: string; zoneId?: string; cabinetId?: string; endpointRole?: 'lower' | 'upper'; surface?: 'floor' | 'ceiling'; revision: number }
 export interface DraftHistory { undo: HistoryEntry[]; redo: HistoryEntry[]; boundary: string | null; reveal?: HistoryReveal }
 export interface HistorySummary { undoLabel: string | null; redoLabel: string | null; undoReason: string | null; redoReason: string | null; boundary: string | null; limit: 50; reveal?: HistoryReveal }
 export const emptyHistory = (boundary: string | null = null): DraftHistory => ({ undo: [], redo: [], boundary });
@@ -62,11 +64,20 @@ function changesBetween(before: PhysicalDraft, after: PhysicalDraft): HistoryCha
     openingMeasurements.forEach(field => add({ kind: 'opening-measurement', id, field }));
     add({ kind: 'opening-position', id }); add({ kind: 'opening-basis', id }); add({ kind: 'opening-appearance', id });
   }
-  if(before.document.schemaVersion===4&&after.document.schemaVersion===4)for(const object of ['stair','surface-opening'] as const){
+  if((before.document.schemaVersion === 4 || before.document.schemaVersion === 5)&&(after.document.schemaVersion === 4 || after.document.schemaVersion === 5))for(const object of ['stair','surface-opening'] as const){
     const old=object==='stair'?before.document.stairsContract.stairs:before.document.stairsContract.surfaceOpenings;
     const next=object==='stair'?after.document.stairsContract.stairs:after.document.stairsContract.surfaceOpenings;
     for(const id of ids(old,next)){if(!old.some(item=>item.id===id)||!next.some(item=>item.id===id))add({kind:'stair-object',object,id});
       else for(const part of stairHistoryParts(object))add({kind:'stair-part',object,id,part});}
+  }
+  if(before.document.schemaVersion===5&&after.document.schemaVersion===5){
+    for(const id of ids(before.document.rooms,after.document.rooms))add({kind:'room-use',id});
+    for(const object of ['zone','cabinet'] as const){
+      const old=object==='zone'?before.document.layoutContract.zones:before.document.layoutContract.cabinetBlocks;
+      const next=object==='zone'?after.document.layoutContract.zones:after.document.layoutContract.cabinetBlocks;
+      for(const id of ids(old,next)){if(!old.some(item=>item.id===id)||!next.some(item=>item.id===id))add({kind:'layout-object',object,id});
+        else for(const part of layoutHistoryParts(object))add({kind:'layout-part',object,id,part});}
+    }
   }
   for (const output of Array.from(new Set([...before.request.selections, ...after.request.selections].map(item => item.output)))) add({ kind: 'takeoff-output', output });
   add({ kind: 'takeoff-basis' }); add({ kind: 'crown-gaps' });
@@ -77,6 +88,9 @@ function labelFor(before: PhysicalDraft, after: PhysicalDraft, changes: HistoryC
   const target = changes[0].target;
   const openingKind = 'id' in target ? (after.document.openings.find(item => item.id === target.id) ?? before.document.openings.find(item => item.id === target.id))?.kind ?? 'opening' : 'opening';
   switch (target.kind) {
+    case 'room-use': return 'room use change';
+    case 'layout-object': return target.object+(changes[0].before===null?' creation':' deletion');
+    case 'layout-part': return target.object+' '+words(target.part)+' change';
     case 'stair-object': return (target.object==='stair'?'stair':'surface opening')+(changes[0].before===null?' creation':' deletion');
     case 'stair-part': return (target.object==='stair'?'stair':'surface opening')+' '+words(target.part)+' change';
     case 'level': return changes[0].before === null ? 'level creation' : 'level deletion';
@@ -102,11 +116,12 @@ function labelFor(before: PhysicalDraft, after: PhysicalDraft, changes: HistoryC
   }
 }
 function appendEvent(draft: PhysicalDraft, event: HistoryEvent): void {
-  draft.historyEvidence = { version: draft.document.schemaVersion === 4 ? 'physical-history-evidence-v3' : draft.document.schemaVersion === 3 ? 'physical-history-evidence-v2' : 'physical-history-evidence-v1', events: [...(draft.historyEvidence?.events ?? []), copy(event)] };
+  draft.historyEvidence = { version: draft.document.schemaVersion === 5 ? 'physical-history-evidence-v4' : draft.document.schemaVersion === 4 ? 'physical-history-evidence-v3' : draft.document.schemaVersion === 3 ? 'physical-history-evidence-v2' : 'physical-history-evidence-v1', events: [...(draft.historyEvidence?.events ?? []), copy(event)] };
 }
 function eventId(draft: PhysicalDraft): string { return `${draft.id}:history:${draft.localEditRevision}`; }
 function actionTime(before: PhysicalDraft, after: PhysicalDraft): string {
-  return after.stairEvents?.slice(before.stairEvents?.length??0).at(-1)?.at
+  return after.layoutEvents?.slice(before.layoutEvents?.length??0).at(-1)?.at
+    ?? after.stairEvents?.slice(before.stairEvents?.length??0).at(-1)?.at
     ?? after.events.slice(before.events.length).at(-1)?.event.at
     ?? after.openingEvents?.slice(before.openingEvents?.length ?? 0).at(-1)?.at
     ?? after.reviewState?.applicabilityEvents.slice(before.reviewState?.applicabilityEvents.length ?? 0).at(-1)?.at
@@ -158,8 +173,8 @@ function requireClean(raw: FieldDraft | undefined, name: string): void {
   if (raw?.dirty) fail(`Apply or Revert the pending ${name} edit before Undo or Redo.`);
 }
 function comparable(target: HistoryTarget, value: any): unknown {
-  if ((target.kind === 'opening' || target.kind === 'room' || target.kind === 'level' || target.kind === 'stair-object') && value !== null && value !== undefined) {
-    const { fields: _fields, index: _index, ...semantic } = value; return semantic;
+  if ((target.kind === 'opening' || target.kind === 'room' || target.kind === 'level' || target.kind === 'stair-object' || target.kind === 'layout-object') && value !== null && value !== undefined) {
+    const { fields: _fields, texts: _texts, index: _index, ...semantic } = value; return semantic;
   }
   return value;
 }
@@ -168,6 +183,7 @@ function guardTarget(draft: PhysicalDraft, change: HistoryChange): void {
   const current = bundleValue(draft, target);
   if (!equal(comparable(target, current), comparable(target, change.after))) fail('The next history target changed or no longer exists. Its newer value has not been overwritten.');
   switch (target.kind) {
+    case 'room-use': case 'layout-object': case 'layout-part': guardLayoutHistory(draft,target,restoredHistoryValue(target,change.before,change.after));break;
     case 'stair-object': case 'stair-part': guardStairHistory(draft,target,restoredHistoryValue(target,change.before,change.after));break;
     case 'level':
     case 'level-name':
@@ -198,6 +214,7 @@ function applyInverse(draft: PhysicalDraft, entry: HistoryEntry, at: string): { 
     const room = 'id' in target ? next.document.rooms.find(item => item.id === target.id) : undefined;
     const opening = 'id' in target ? next.document.openings.find(item => item.id === target.id) : undefined;
     switch (target.kind) {
+      case 'room-use': case 'layout-object': case 'layout-part': applyLayoutHistory(next,target,restored);break;
       case 'stair-object': case 'stair-part': applyStairHistory(next,target,restored);break;
       case 'level': {
         if (next.document.schemaVersion === 2) fail('This history requires the building-level contract.');
@@ -234,6 +251,8 @@ function applyInverse(draft: PhysicalDraft, entry: HistoryEntry, at: string): { 
       }
       case 'room': {
         if (restored === null) {
+          const layoutDependencies=layoutRoomDependencies(next,target.id);
+          if(layoutDependencies.length)fail("This room has dependent zones or cabinet blocks: "+layoutDependencies.join(", ")+". Resolve those changes before Undo.");
           const stairDependencies=stairRoomDependencies(next,target.id);
           if(stairDependencies.length)fail('This room has dependent stairs or surface openings: '+stairDependencies.join(', ')+'. Resolve those changes before Undo.');
           const walls = new Set(room!.wallFaces.map(wall => wall.id));
@@ -370,8 +389,8 @@ function revealFor(after: PhysicalDraft, before: PhysicalDraft, changes: History
     if (target.kind === 'level' || target.kind === 'level-name') {
       const found = make(target.id); if (found) return found;
     }
-    if((target.kind==='stair-object'||target.kind==='stair-part')&&after.document.schemaVersion===4){
-      const prior=before.document.schemaVersion===4?before.document.stairsContract:null;
+    if((target.kind==='stair-object'||target.kind==='stair-part')&&(after.document.schemaVersion === 4 || after.document.schemaVersion === 5)){
+      const prior=(before.document.schemaVersion === 4 || before.document.schemaVersion === 5)?before.document.stairsContract:null;
       if(target.object==='stair'){
         const stair=after.document.stairsContract.stairs.find(item=>item.id===target.id)??prior?.stairs.find(item=>item.id===target.id);
         if(stair){const preferred=target.kind==='stair-part'&&target.part.includes('upper')?'upper':'lower';
@@ -380,6 +399,12 @@ function revealFor(after: PhysicalDraft, before: PhysicalDraft, changes: History
         const opening=after.document.stairsContract.surfaceOpenings.find(item=>item.id===target.id)??prior?.surfaceOpenings.find(item=>item.id===target.id);
         const attachment=opening?.attachments[0];if(attachment){const found=make(roomLevelId(after,attachment.roomId),attachment.roomId);if(found)return {...found,surfaceOpeningId:target.id,surface:attachment.surface};}
       }
+    }
+    if((target.kind==='layout-object'||target.kind==='layout-part')&&after.document.schemaVersion===5){
+      const old=before.document.schemaVersion===5?before.document.layoutContract:null;
+      const entity=target.object==='zone'?(after.document.layoutContract.zones.find(item=>item.id===target.id)??old?.zones.find(item=>item.id===target.id))
+        :(after.document.layoutContract.cabinetBlocks.find(item=>item.id===target.id)??old?.cabinetBlocks.find(item=>item.id===target.id));
+      if(entity){const found=make(roomLevelId(after,entity.roomId),entity.roomId);if(found)return {...found,...(target.object==='zone'?{zoneId:target.id}:{cabinetId:target.id})};}
     }
     if (!('id' in target)) continue;
     if (target.kind.startsWith('room') || target.kind === 'applicability') {

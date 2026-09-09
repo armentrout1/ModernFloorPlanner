@@ -1,5 +1,5 @@
 import { createRegistry, updateDraft, type PhysicalDraft, type PhysicalDraftRegistry } from './state';
-import { parseRegistry, serializeRegistry, validateRegistry, PHYSICAL_DRAFT_STORAGE_KEY, PREVIOUS_PHYSICAL_DRAFT_STORAGE_KEY, LEGACY_PHYSICAL_DRAFT_STORAGE_KEY } from './storage';
+import { parseRegistry, serializeRegistry, validateRegistry, PHYSICAL_DRAFT_STORAGE_KEY, STAIRS_PHYSICAL_DRAFT_STORAGE_KEY, PREVIOUS_PHYSICAL_DRAFT_STORAGE_KEY, LEGACY_PHYSICAL_DRAFT_STORAGE_KEY } from './storage';
 
 import { emptyHistory, historySummary, recordHistoryCommit, restoreHistory, type DraftHistory, type HistorySummary, type HistoryUpdateOptions } from './history';
 
@@ -40,7 +40,7 @@ export function createPhysicalDraftStore(storageFactory: () => DraftStorage = ()
     try {
       storage = storageFactory(); raw = storage.getItem(PHYSICAL_DRAFT_STORAGE_KEY);
       fallbackReads=[];
-      if(raw===null)for(const key of [PREVIOUS_PHYSICAL_DRAFT_STORAGE_KEY,LEGACY_PHYSICAL_DRAFT_STORAGE_KEY]){
+      if(raw===null)for(const key of [STAIRS_PHYSICAL_DRAFT_STORAGE_KEY,PREVIOUS_PHYSICAL_DRAFT_STORAGE_KEY,LEGACY_PHYSICAL_DRAFT_STORAGE_KEY]){
         const older=storage.getItem(key);fallbackReads.push({key,raw:older});
         if(older!==null){raw=older;recoveryKey=key;break;}
       }
@@ -71,7 +71,7 @@ export function createPhysicalDraftStore(storageFactory: () => DraftStorage = ()
       const candidate = change(snapshot.registry);
       if (candidate === snapshot.registry) { if (snapshot.error) publish({ ...snapshot, error: '' }); return true; }
       if (candidate.localEditRevision !== snapshot.registry.localEditRevision + 1) throw new Error('A registry change must advance exactly one local edit revision.');
-      const validated = validateRegistry({ ...candidate, version: 'mfp-editor-draft-v3' });
+      const validated = validateRegistry({ ...candidate, version: 'mfp-editor-draft-v4' });
       if (validated.status !== 'recovered') throw new Error(validated.status === 'empty' ? 'The draft registry is empty.' : validated.message);
       next = freeze(validated.registry);
     } catch (error) {

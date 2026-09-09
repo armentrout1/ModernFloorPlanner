@@ -59,8 +59,8 @@ export function validateQuantityRequest(doc: PhysicalDocument, input: unknown): 
   if (suppliedVersion !== QUANTITY_POLICY_VERSION && suppliedVersion !== QUANTITY_POLICY_VERSION_V2 && suppliedVersion !== QUANTITY_POLICY_VERSION_V3 && suppliedVersion !== QUANTITY_POLICY_VERSION_V4) return { ok: false, errors: [{
     code: 'UNSUPPORTED_POLICY_VERSION', path: ['policy', 'version'], message: 'Explicit supported policy version is required',
   }] };
-  if ((doc.schemaVersion === 4) !== (suppliedVersion === QUANTITY_POLICY_VERSION_V4)) return { ok: false, errors: [{
-    code: 'STAIR_POLICY_MISMATCH', path: ['policy', 'version'], message: 'Schema4 stair and surface-opening content requires rectangular-flat-v4; historical policies cannot ignore it',
+  if ((doc.schemaVersion === 4 || doc.schemaVersion === 5) !== (suppliedVersion === QUANTITY_POLICY_VERSION_V4)) return { ok: false, errors: [{
+    code: 'STAIR_POLICY_MISMATCH', path: ['policy', 'version'], message: 'Stair/surface content (including schema5 layout-only data) requires rectangular-flat-v4; historical policies cannot ignore it',
   }] };
   if ((doc.schemaVersion === 3) !== (suppliedVersion === QUANTITY_POLICY_VERSION_V3)) return { ok: false, errors: [{
     code: 'LEVEL_POLICY_MISMATCH', path: ['policy', 'version'], message: 'Version-3 level ownership requires the explicit rectangular-flat-v3 policy; historical documents retain their own policy',

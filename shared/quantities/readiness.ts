@@ -39,7 +39,7 @@ export function evaluateQuantityReadiness(input: unknown, requested: unknown): R
   const doc = input as PhysicalDocument, contract = validateQuantityRequest(doc, requested);
   if (!contract.ok) return { ok: false, errors: contract.errors, validation };
   const request = contract.request, walls = wallIndex(doc), outputs: OutputReadiness[] = [];
-  const surfaceChecks = doc.schemaVersion === 4 ? validateStairGeometry(doc).checks : undefined;
+  const surfaceChecks = (doc.schemaVersion === 4 || doc.schemaVersion === 5) ? validateStairGeometry(doc).checks : undefined;
   const known = (ref: MeasurementRef) => {
     const measurement = measurementAt(doc, ref);
     return measurement.state === 'known' ? measurement.valueMm : null;
@@ -109,7 +109,7 @@ export function evaluateQuantityReadiness(input: unknown, requested: unknown): R
           : appDependencies.some(ref => ref.declaration.value === 'unknown') ? 'unknown'
           : appFindings.length ? 'provisional' : 'supported' };
     }
-    const surface = doc.schemaVersion === 4 && (output === 'floor-area' || output === 'ceiling-area')
+    const surface = (doc.schemaVersion === 4 || doc.schemaVersion === 5) && (output === 'floor-area' || output === 'ceiling-area')
       ? evaluateSurfaceReadiness(doc, location.roomIds[0], output === 'floor-area' ? 'floor' : 'ceiling', surfaceChecks) : undefined;
     const appBlocked = applicability?.status === 'unknown' || applicability?.status === 'unsupported';
     outputs.push({ ...location, output, wasteFraction,

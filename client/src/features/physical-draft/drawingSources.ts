@@ -37,7 +37,7 @@ export function drawingSourceMarks(document: PhysicalDocument, rooms: Room[], sc
       }
     }
   }
-  if (document.schemaVersion === 4) {
+  if ((document.schemaVersion === 4 || document.schemaVersion === 5)) {
     const pixels = (value: number) => value * 20 / 304.8;
     for (const source of scope.surfaceOpenings ?? []) {
       const opening = document.stairsContract.surfaceOpenings.find(item => item.id === source.openingId), room = rooms.find(room => room.id === source.roomId);

@@ -11,7 +11,7 @@ export function sourceRoomIds(document: PhysicalDocument, scope: DrawingSourceSc
   const walls = new Set([...scope.wallFaceIds, ...scope.openingFaces.map(face => face.wallFaceId),
     ...document.openings.filter(opening => openings.has(opening.id)).flatMap(opening => opening.attachments.map(face => face.wallFaceId))]);
   const extra=new Set((scope.surfaceOpenings??[]).map(item=>item.roomId));
-  if(document.schemaVersion===4)for(const stair of document.stairsContract.stairs)if(scope.stairIds?.includes(stair.id))for(const endpoint of Object.values(stair.endpoints))if(endpoint.state==='modeled')extra.add(endpoint.roomId);
+  if(((document.schemaVersion === 4 || document.schemaVersion === 5)))for(const stair of document.stairsContract.stairs)if(scope.stairIds?.includes(stair.id))for(const endpoint of Object.values(stair.endpoints))if(endpoint.state==='modeled')extra.add(endpoint.roomId);
   return document.rooms.filter(room => scope.roomIds.includes(room.id) || extra.has(room.id) || room.wallFaces.some(wall => walls.has(wall.id))).map(room => room.id);
 }
 export interface LevelCamera { scale: number; center: { x: number; y: number } }

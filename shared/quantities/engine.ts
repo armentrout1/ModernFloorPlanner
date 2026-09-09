@@ -1,6 +1,6 @@
 import { calculateSurfaceDeductions } from './surfaceDeductions';
 import { adaptMeasurementDocument } from '../compatibility/legacyDocument';
-import { physicalDocumentV3Schema, physicalDocumentV4Schema, type PhysicalDocument, type PhysicalOpening } from '../domain/document';
+import { physicalDocumentV3Schema, physicalDocumentV4Schema, physicalDocumentV5Schema, type PhysicalDocument, type PhysicalOpening } from '../domain/document';
 import { levelOwnershipBasis } from '../domain/levels';
 import { atFloor, measurementAt, wallIndex, type QuantityOutput, type MeasurementRef } from '../domain/geometryValidation';
 import { evaluateQuantityReadiness, type OutputReadiness } from './readiness';
@@ -56,7 +56,7 @@ export function calculateQuantities(input: unknown, requested: unknown): Calcula
   try { input = copyJson(input); requested = copyJson(requested); }
   catch { return { ok: false, errors: [{ code: 'INVALID_JSON', path: [], message: 'Calculation inputs must be finite, acyclic plain JSON without accessors or omitted values' }] }; }
   const version = (input as { schemaVersion?: unknown } | null)?.schemaVersion;
-  if (version !== 2 && version !== 3 && version !== 4) {
+  if (version !== 2 && version !== 3 && version !== 4 && version !== 5) {
     return { ok: false, errors: [{ code: 'EXPLICIT_V2_REQUIRED', path: ['schemaVersion'], message: 'An explicit supported physical document is required; adapt legacy input separately' }] };
   }
   let document: PhysicalDocument;
@@ -67,7 +67,7 @@ export function calculateQuantities(input: unknown, requested: unknown): Calcula
       : [{ code: 'INVALID_DOCUMENT', path: [], message: 'Expected a structurally valid finite JSON v2 document' }] };
     document = adapted.document;
   } else {
-    const valid = (version === 4 ? physicalDocumentV4Schema : physicalDocumentV3Schema).safeParse(input);
+    const valid = (version === 5 ? physicalDocumentV5Schema : version === 4 ? physicalDocumentV4Schema : physicalDocumentV3Schema).safeParse(input);
     if (!valid.success) return { ok: false, errors: valid.error.issues.map(issue => ({
       code: 'INVALID_DOCUMENT', path: issue.path, message: issue.message,
     })) };
@@ -91,8 +91,8 @@ export function calculateQuantities(input: unknown, requested: unknown): Calcula
     policyVersion: contract.request.policy.version,
     source: { documentId: document.id, revisionId: document.revisionId,
       revisionState: document.revisionId === null ? 'unsaved' : 'identified',
-      ...(document.schemaVersion === 3 || document.schemaVersion === 4 ? { levelOwnership: levelOwnershipBasis(document.buildingLevels) } : {}),
-      ...(document.schemaVersion === 4 ? { stairContent: { version: document.stairsContract.version,
+      ...(document.schemaVersion === 3 || (document.schemaVersion === 4 || document.schemaVersion === 5) ? { levelOwnership: levelOwnershipBasis(document.buildingLevels) } : {}),
+      ...((document.schemaVersion === 4 || document.schemaVersion === 5) ? { stairContent: { version: document.stairsContract.version,
         stairIds: document.stairsContract.stairs.map(stair => stair.id).sort(compare),
         surfaceOpeningIds: document.stairsContract.surfaceOpenings.map(opening => opening.id).sort(compare) } } : {}) },
     request: contract.request,
@@ -119,7 +119,7 @@ function calculateRecord(document: PhysicalDocument, request: QuantityRequest, r
   const record: QuantityRecord = { targetId, output, unit: unitFor(output),
     status: errors.length ? 'blocked' : readiness.confirmation.status === 'provisional' ? 'provisional' : 'complete',
     readiness, evidence, amounts: null, trace, errors, inventory: null };
-  if (document.schemaVersion === 4 && (output === 'floor-area' || output === 'ceiling-area')) {
+  if ((document.schemaVersion === 4 || document.schemaVersion === 5) && (output === 'floor-area' || output === 'ceiling-area')) {
     record.grossBasis = null; record.grossBasisStatus = 'unavailable'; trace.surfaceContributions = [];
     const room = document.rooms.find(room => room.id === readiness.roomIds[0])!;
     if (room.length.state === 'known' && room.width.state === 'known'
@@ -172,7 +172,7 @@ function calculateRecord(document: PhysicalDocument, request: QuantityRequest, r
     const room = document.rooms.find(room => room.id === readiness.roomIds[0])!;
     if (output === 'floor-area' || output === 'ceiling-area') {
       const gross = multiply(value({ entity: 'room', id: room.id, field: 'length' }), value({ entity: 'room', id: room.id, field: 'width' }));
-      if (document.schemaVersion === 4) {
+      if ((document.schemaVersion === 4 || document.schemaVersion === 5)) {
         const deductions = calculateSurfaceDeductions(document, room.id, output === 'floor-area' ? 'floor' : 'ceiling', gross, trace);
         trace.formula = 'room.length * room.width minus union of explicit internal finish-surface opening rectangles; waste once after net';
         record.amounts = amounts(gross, deductions.raw, deductions.effective, readiness.wasteFraction);

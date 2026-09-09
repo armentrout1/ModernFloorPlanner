@@ -1,3 +1,4 @@
+import { layoutRawEntrySchema,layoutTextEntrySchema,layoutActionSchema,validateLayoutEditorState } from './layoutCommands';
 import { stairRawEntrySchema, stairActionSchema, validateStairEditorState } from './stairCommands';
 import { z } from 'zod';
 import { supportedPhysicalDocumentSchema } from '@shared/domain/document';
@@ -16,12 +17,13 @@ import { historyEvidenceSchema, validateHistoryEvidence } from './historyEvidenc
 
 export const LEGACY_PHYSICAL_DRAFT_STORAGE_KEY = 'modern-floor-planner:editor-draft:v1';
 export const PREVIOUS_PHYSICAL_DRAFT_STORAGE_KEY = 'modern-floor-planner:editor-draft:v2';
-export const PHYSICAL_DRAFT_STORAGE_KEY = 'modern-floor-planner:editor-draft:v3';
+export const STAIRS_PHYSICAL_DRAFT_STORAGE_KEY = 'modern-floor-planner:editor-draft:v3';
+export const PHYSICAL_DRAFT_STORAGE_KEY = 'modern-floor-planner:editor-draft:v4';
 const id = z.string().refine(value => value.trim().length > 0 && !/[\u0000-\u001f\u007f]/.test(value));
 const revision = z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER);
 const field = z.object({ text: z.string(), unit: z.enum(['ft', 'm']), dirty: z.boolean() }).strict();
 const source = z.object({ kind: z.enum(['new', 'quick-rooms', 'legacy', 'physical']),
-  operation: z.enum(['new-physical-draft-v1', 'new-physical-level-draft-v1', 'new-physical-stair-draft-v1', 'legacy-pixels-v2', 'physical-draft-upgrade-v1']),
+  operation: z.enum(['new-physical-draft-v1', 'new-physical-level-draft-v1', 'new-physical-stair-draft-v1', 'new-physical-layout-draft-v1', 'legacy-pixels-v2', 'physical-draft-upgrade-v1']),
   original: z.unknown(), review: z.array(z.string()),
 }).strict();
 const draft = z.object({ id, localEditRevision: revision, document: supportedPhysicalDocumentSchema,
@@ -34,6 +36,11 @@ const draft = z.object({ id, localEditRevision: revision, document: supportedPhy
   takeoffState: takeoffStateSchema.optional(),
   reviewState: reviewStateSchema.optional(),
   historyEvidence: historyEvidenceSchema.optional(),
+  layoutFields: z.record(layoutRawEntrySchema).optional(),
+  layoutTexts: z.record(layoutTextEntrySchema).optional(),
+  layoutEvents: z.array(layoutActionSchema).optional(),
+  layoutNotice: z.object({message:z.string()}).strict().optional(),
+  layoutUpgradeLineage: z.object({version:z.literal('physical-layout-upgrade-v1'),sourceDraftId:id,sourceRevision:revision,at:z.string().datetime({offset:true}),originalDraft:z.unknown()}).strict().optional(),
   stairFields: z.record(stairRawEntrySchema).optional(),
   stairEvents: z.array(stairActionSchema).optional(),
   stairUpgradeLineage: z.object({version:z.literal('physical-stair-upgrade-v1'),sourceDraftId:id,sourceRevision:revision,at:z.string().datetime({offset:true}),originalDraft:z.unknown()}).strict().optional(),
@@ -41,7 +48,7 @@ const draft = z.object({ id, localEditRevision: revision, document: supportedPhy
   levelUpgradeLineage: z.object({ version: z.literal('physical-level-upgrade-v1'), sourceDraftId: id,
     sourceRevision: revision, at: z.string().datetime({ offset: true }), originalDraft: z.unknown() }).strict().optional(),
 }).strict();
-const registrySchema = z.object({ version: z.enum(['mfp-editor-draft-v1', 'mfp-editor-draft-v2', 'mfp-editor-draft-v3']), localEditRevision: revision,
+const registrySchema = z.object({ version: z.enum(['mfp-editor-draft-v1', 'mfp-editor-draft-v2', 'mfp-editor-draft-v3', 'mfp-editor-draft-v4']), localEditRevision: revision,
   selectedDraftId: id.nullable(), drafts: z.array(draft),
 }).strict();
 export type RegistryReadResult = { status: 'empty' } | { status: 'recovered'; registry: PhysicalDraftRegistry }
@@ -54,7 +61,7 @@ export function validateRegistry(input: unknown): RegistryReadResult {
   try { copied = copyJson(input); }
   catch { return corrupt('The stored physical draft registry is not finite plain JSON.'); }
   if (!copied || typeof copied !== 'object' || Array.isArray(copied)) return corrupt('The stored physical draft registry has an invalid shape.');
-  if (!['mfp-editor-draft-v1', 'mfp-editor-draft-v2', 'mfp-editor-draft-v3'].includes(String((copied as { version?: unknown }).version))) return {
+  if (!['mfp-editor-draft-v1', 'mfp-editor-draft-v2', 'mfp-editor-draft-v3', 'mfp-editor-draft-v4'].includes(String((copied as { version?: unknown }).version))) return {
     status: 'unsupported', message: 'This stored physical draft registry uses an unsupported version. Its contents are preserved.',
   };
   const parsed = registrySchema.safeParse(copied);
@@ -69,7 +76,7 @@ export function validateRegistry(input: unknown): RegistryReadResult {
     catch (error) { return { status: error instanceof PhysicalDraftImportError && error.code === 'UNSUPPORTED_CONTENT' ? 'unsupported' : 'corrupt',
       message: error instanceof Error ? error.message : 'The stored physical document is invalid.' }; }
     if (item.document.id !== null || item.document.revisionId !== null) return corrupt('A temporary draft cannot impersonate a saved document revision.');
-    if (item.document.quantityPolicyVersion !== (item.document.schemaVersion === 4 ? QUANTITY_POLICY_VERSION_V4 : item.document.schemaVersion === 3 ? QUANTITY_POLICY_VERSION_V3 : QUANTITY_POLICY_VERSION_V2) || !item.document.calculationContract || !item.document.editorContract) {
+    if (item.document.quantityPolicyVersion !== (((item.document.schemaVersion === 4 || item.document.schemaVersion === 5)) ? QUANTITY_POLICY_VERSION_V4 : item.document.schemaVersion === 3 ? QUANTITY_POLICY_VERSION_V3 : QUANTITY_POLICY_VERSION_V2) || !item.document.calculationContract || !item.document.editorContract) {
       return { status: 'unsupported', message: 'This draft has not explicitly adopted the supported physical editor contract. Its contents are preserved.' };
     }
     if (item.document.schemaVersion !== 2) {
@@ -78,7 +85,17 @@ export function validateRegistry(input: unknown): RegistryReadResult {
       const levelIds = new Set(item.document.buildingLevels.levels.map(level => level.id));
       if (Object.keys(item.levelView.pendingNames ?? {}).some(id => !levelIds.has(id))) return corrupt('Stored pending level names must reference existing levels.');
     } else if (item.levelView || item.levelUpgradeLineage || (item.historyEvidence && item.historyEvidence.version !== 'physical-history-evidence-v1')) return corrupt('Legacy documents cannot claim building-level editor state.');
-    if(item.document.schemaVersion===4&&registry.version!=='mfp-editor-draft-v3')return corrupt('Stair drafts require recovery envelope v3.');
+    if((item.document.schemaVersion === 4 || item.document.schemaVersion === 5)&&!['mfp-editor-draft-v3','mfp-editor-draft-v4'].includes(registry.version))return corrupt('Stair drafts require recovery envelope v3.');
+    if(item.document.schemaVersion===5&&registry.version!=='mfp-editor-draft-v4')return corrupt('Room-layout drafts require recovery envelope v4.');
+    const layoutError=validateLayoutEditorState(item);if(layoutError)return corrupt(layoutError);
+    if(item.layoutUpgradeLineage){
+      const lineage=item.layoutUpgradeLineage,original=lineage.originalDraft as PhysicalDraftRegistry['drafts'][number]|null;
+      if(!original||original.id!==lineage.sourceDraftId||original.localEditRevision!==lineage.sourceRevision||original.id===item.id||original.document?.schemaVersion!==4||original.layoutUpgradeLineage)return corrupt('Stored layout upgrade lineage is inconsistent.');
+      const origin=validateRegistry({version:'mfp-editor-draft-v3',localEditRevision:0,selectedDraftId:original.id,drafts:[original]});
+      if(origin.status!=='recovered'||canonicalJson(original.source)!==canonicalJson(item.source))return corrupt('Stored layout upgrade source has changed or is invalid.');
+      const prefix=(a:unknown[],b:unknown[])=>a.length<=b.length&&a.every((value,index)=>canonicalJson(value)===canonicalJson(b[index]));
+      if(!prefix(original.events,item.events)||!prefix(original.openingEvents??[],item.openingEvents??[])||!prefix(original.stairEvents??[],item.stairEvents??[])||!prefix(original.historyEvidence?.events??[],item.historyEvidence?.events??[])||!prefix(original.reviewState?.applicabilityEvents??[],item.reviewState?.applicabilityEvents??[]))return corrupt('Stored layout upgrade discarded retained action evidence.');
+    }
     const stairError=validateStairEditorState(item);if(stairError)return corrupt(stairError);
     if(item.stairUpgradeLineage){
       const lineage=item.stairUpgradeLineage,original=lineage.originalDraft as PhysicalDraftRegistry['drafts'][number]|null;
@@ -150,7 +167,7 @@ export function validateRegistry(input: unknown): RegistryReadResult {
     }
     // Event captures are historical evidence. Their transitions are validated
     // above, but their former targets need not remain in the current document.
-    const expectedOperation = item.source.kind === 'new' ? (item.document.schemaVersion === 4 && !item.stairUpgradeLineage ? 'new-physical-stair-draft-v1' : item.document.schemaVersion !== 2 && !item.levelUpgradeLineage ? 'new-physical-level-draft-v1' : 'new-physical-draft-v1')
+    const expectedOperation = item.source.kind === 'new' ? (item.document.schemaVersion === 5 && !item.layoutUpgradeLineage ? 'new-physical-layout-draft-v1' : ((item.document.schemaVersion === 4 || item.document.schemaVersion === 5)) && !item.stairUpgradeLineage ? 'new-physical-stair-draft-v1' : item.document.schemaVersion !== 2 && !item.levelUpgradeLineage ? 'new-physical-level-draft-v1' : 'new-physical-draft-v1')
       : item.source.kind === 'legacy' ? 'legacy-pixels-v2' : 'physical-draft-upgrade-v1';
     if (item.source.operation !== expectedOperation || !Object.hasOwn(item.source, 'original')) return corrupt('Stored draft origin evidence is inconsistent.');
   }

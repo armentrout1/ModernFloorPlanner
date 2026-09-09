@@ -45,7 +45,7 @@ function Measure({ draft, target, label, update }: { draft: PhysicalDraft; targe
 export function StairInspector({ draft, stairId, update, onNavigate, onDeleted }: {
   draft: PhysicalDraft; stairId: string; update: StairChange; onNavigate: (levelId: string, roomId: string, stairId: string) => void; onDeleted: () => void;
 }) {
-  if (draft.document.schemaVersion !== 4) return null;
+  if ((draft.document.schemaVersion !== 4 && draft.document.schemaVersion !== 5)) return null;
   const doc = draft.document, stair = doc.stairsContract.stairs.find(item => item.id === stairId);
   if (!stair) return null;
   return <div data-testid="physical-stair-inspector" data-stair-id={stair.id} className="min-w-0 space-y-4">
@@ -102,7 +102,7 @@ export function StairInspector({ draft, stairId, update, onNavigate, onDeleted }
 }
 
 export function SurfaceOpeningInspector({draft,openingId,update,onDeleted}:{draft:PhysicalDraft;openingId:string;update:StairChange;onDeleted:()=>void}) {
-  if(draft.document.schemaVersion!==4)return null;
+  if((draft.document.schemaVersion !== 4 && draft.document.schemaVersion !== 5))return null;
   const doc=draft.document,opening=doc.stairsContract.surfaceOpenings.find(item=>item.id===openingId);
   if(!opening)return null;
   return <div data-testid="physical-surface-opening-inspector" data-surface-opening-id={opening.id} className="space-y-4 min-w-0">

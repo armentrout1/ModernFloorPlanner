@@ -1,3 +1,4 @@
+import { LayoutDrawingOverlay } from './LayoutDrawingOverlay';
 import { StairDrawingOverlay } from './StairDrawingOverlay';
 import type { BuildingSelection } from './StairControls';
 import { useCallback, useEffect, useMemo, useRef, useState, useLayoutEffect, type PointerEvent as Pointer } from 'react';
@@ -328,7 +329,8 @@ export function PhysicalDrawing({ document, selectedId, onSelect, draft, selecte
                 zIndex: 4000, fontSize: 11 / scale, background: 'white', color: '#1d4ed8', pointerEvents: 'none' }}>{activeWall} start (clockwise)</span>}
             </div>;
           })}
-          {draft && update && document.schemaVersion === 4 ? <StairDrawingOverlay document={document} draft={draft} rooms={projection.rooms} levelId={levelId} scale={scale} origin={view.origin} viewport={wrapper} selected={selectedBuilding} onSelect={onSelectBuilding} update={update} /> : null}
+          {draft && update && (document.schemaVersion === 4 || document.schemaVersion === 5) ? <StairDrawingOverlay document={document} draft={draft} rooms={projection.rooms} levelId={levelId} scale={scale} origin={view.origin} viewport={wrapper} selected={selectedBuilding} onSelect={onSelectBuilding} update={update} /> : null}
+          {draft && update && document.schemaVersion === 5 ? <LayoutDrawingOverlay document={document} draft={draft} rooms={projection.rooms} levelId={levelId} scale={scale} origin={view.origin} viewport={wrapper} selected={selectedBuilding} onSelect={onSelectBuilding} update={update} /> : null}
           {sourceOverlay(scopeMarks, false)}
           {sourceOverlay(focusMarks, true)}
           {preview && previewProjection && (() => {

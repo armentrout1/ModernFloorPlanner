@@ -13,11 +13,11 @@ import { levelOwnershipBasis } from '../domain/levels';
 const hash = z.string().regex(/^[0-9a-f]{64}$/);
 export const fingerprintsSchema = z.object({
   algorithm: z.literal('SHA-256'), serialization: z.literal('mfp-json-v1'),
-  geometryScope: z.enum(['physical-geometry-v1', 'physical-geometry-v2', 'physical-geometry-v3', 'physical-geometry-v4']), contentScope: z.enum(['calculation-content-v1', 'calculation-content-v2', 'calculation-content-v3', 'calculation-content-v4']),
+  geometryScope: z.enum(['physical-geometry-v1', 'physical-geometry-v2', 'physical-geometry-v3', 'physical-geometry-v4', 'physical-geometry-v5']), contentScope: z.enum(['calculation-content-v1', 'calculation-content-v2', 'calculation-content-v3', 'calculation-content-v4', 'calculation-content-v5']),
   geometry: hash, content: hash,
 }).strict();
 export const evaluationSchema = z.object({ calculation: calculationSchema, fingerprints: fingerprintsSchema }).strict().superRefine((value, context) => {
-  const suffix = value.calculation.policyVersion === 'rectangular-flat-v4' ? 'v4'
+  const suffix = value.calculation.policyVersion === 'rectangular-flat-v4' ? (value.fingerprints.geometryScope === 'physical-geometry-v5' ? 'v5' : 'v4')
     : value.calculation.policyVersion === 'rectangular-flat-v3' ? 'v3'
     : value.calculation.policyVersion === 'rectangular-flat-v2' ? 'v2' : 'v1';
   if (value.fingerprints.geometryScope !== 'physical-geometry-' + suffix
@@ -58,7 +58,7 @@ export const snapshotMetadataSchema = z.object({
   createdAt: z.string().datetime({ offset: true }), kind: z.enum(['evaluation', 'confirmed']),
 }).strict();
 export const quantitySnapshotSchema = z.object({
-  snapshotSchemaVersion: z.enum(['quantity-snapshot-v1', 'quantity-snapshot-v2', 'quantity-snapshot-v3', 'quantity-snapshot-v4']),
+  snapshotSchemaVersion: z.enum(['quantity-snapshot-v1', 'quantity-snapshot-v2', 'quantity-snapshot-v3', 'quantity-snapshot-v4', 'quantity-snapshot-v5']),
   instance: snapshotMetadataSchema,
   sourceDocument: supportedPhysicalDocumentSchema,
   measurementEvents: z.array(measurementEventCaptureSchema),
@@ -66,15 +66,18 @@ export const quantitySnapshotSchema = z.object({
   captureFingerprint: hash,
 }).strict().superRefine((snapshot, context) => {
   const policy = snapshot.evaluation.calculation.policyVersion, document = snapshot.sourceDocument;
-  const expectedVersion = policy === 'rectangular-flat-v4' ? 'quantity-snapshot-v4'
+  const expectedVersion = document.schemaVersion === 5 ? 'quantity-snapshot-v5' : policy === 'rectangular-flat-v4' ? 'quantity-snapshot-v4'
     : policy === 'rectangular-flat-v3' ? 'quantity-snapshot-v3'
     : policy === 'rectangular-flat-v2' ? 'quantity-snapshot-v2' : 'quantity-snapshot-v1';
-  const sourceAgrees = policy === 'rectangular-flat-v4' ? document.schemaVersion === 4 && document.quantityPolicyVersion === policy
+  const sourceAgrees = policy === 'rectangular-flat-v4' ? (document.schemaVersion === 4 || document.schemaVersion === 5) && document.quantityPolicyVersion === policy
     : policy === 'rectangular-flat-v3' ? document.schemaVersion === 3 && document.quantityPolicyVersion === policy
     : document.schemaVersion === 2 && (policy === 'rectangular-flat-v2'
       ? document.quantityPolicyVersion === policy && Boolean(document.calculationContract)
       : !document.calculationContract && (document.quantityPolicyVersion === null || document.quantityPolicyVersion === 'rectangular-flat-v1'));
-  if (snapshot.snapshotSchemaVersion !== expectedVersion || !sourceAgrees) {
+  const expectedScope = expectedVersion.replace('quantity-snapshot-', '');
+  if (snapshot.snapshotSchemaVersion !== expectedVersion || !sourceAgrees
+      || snapshot.evaluation.fingerprints.geometryScope !== 'physical-geometry-' + expectedScope
+      || snapshot.evaluation.fingerprints.contentScope !== 'calculation-content-' + expectedScope) {
     context.addIssue({ code: z.ZodIssueCode.custom, path: ['snapshotSchemaVersion'], message: 'Snapshot, source contract and calculation versions must agree' });
   }
   if (snapshot.instance.kind === 'confirmed' && snapshot.evaluation.calculation.status !== 'complete') {
@@ -92,7 +95,7 @@ const numericMeasurement = (measurement: Dimension) => measurement.state === 'kn
   : measurement.state === 'unknown' ? { state: measurement.state, valueMm: null }
     : { state: measurement.state, valueMm: null, candidates: measurement.candidates.map(candidate => candidate.valueMm) };
 
-function stairsGeometryBasis(document: Extract<PhysicalDocument, { schemaVersion: 4 }>) {
+function stairsGeometryBasis(document: Extract<PhysicalDocument, { schemaVersion: 4 | 5 }>) {
   const placement = (value: import('../domain/stairs').StairPlacement) => ({ anchor: value.anchor,
     x: numericMeasurement(value.x), y: numericMeasurement(value.y), rotation: value.rotation });
   const endpoint = (value: import('../domain/stairs').StairEndpoint) => value.state === 'unresolved' ? { state: value.state }
@@ -114,10 +117,21 @@ function stairsGeometryBasis(document: Extract<PhysicalDocument, { schemaVersion
       associatedStairId: opening.associatedStairId, attachments: opening.attachments.map(attachment => ({
         roomId: attachment.roomId, surface: attachment.surface, placement: placement(attachment.placement) })) })) };
 }
-function stairsEvidenceBasis(document: Extract<PhysicalDocument, { schemaVersion: 4 }>) {
+function stairsEvidenceBasis(document: Extract<PhysicalDocument, { schemaVersion: 4 | 5 }>) {
   return { version: document.stairsContract.version,
     stairs: document.stairsContract.stairs.map(({ name, ...evidence }) => evidence),
     surfaceOpenings: document.stairsContract.surfaceOpenings.map(({ name, ...evidence }) => evidence) };
+}
+
+function layoutGeometryBasis(document: Extract<PhysicalDocument, { schemaVersion: 5 }>) {
+  const placement = (value: import('../domain/layout').LayoutPlacement) => ({ anchor: value.anchor,
+    x: numericMeasurement(value.x), y: numericMeasurement(value.y), rotation: value.rotation });
+  return { version: document.layoutContract.version,
+    zones: document.layoutContract.zones.map(zone => ({ id: zone.id, roomId: zone.roomId, quantityEffect: zone.quantityEffect,
+      width: numericMeasurement(zone.width), length: numericMeasurement(zone.length), placement: placement(zone.placement) })),
+    cabinetBlocks: document.layoutContract.cabinetBlocks.map(cabinet => ({ id: cabinet.id, roomId: cabinet.roomId, zoneId: cabinet.zoneId,
+      quantityEffect: cabinet.quantityEffect, length: numericMeasurement(cabinet.length), depth: numericMeasurement(cabinet.depth),
+      height: numericMeasurement(cabinet.height), placement: placement(cabinet.placement) })) };
 }
 
 /** Whole physical document scope, including unselected geometry, but no names,
@@ -127,8 +141,9 @@ function stairsEvidenceBasis(document: Extract<PhysicalDocument, { schemaVersion
 function geometryBasis(document: PhysicalDocument) {
   return {
     schemaVersion: document.schemaVersion,
-    ...(document.schemaVersion === 4 ? { stairs: stairsGeometryBasis(document) } : {}),
-    ...((document.schemaVersion === 3 || document.schemaVersion === 4) ? { levelOwnership: levelOwnershipBasis(document.buildingLevels) } : {}),
+    ...(document.schemaVersion === 5 ? { layout: layoutGeometryBasis(document) } : {}),
+    ...((document.schemaVersion === 4 || document.schemaVersion === 5) ? { stairs: stairsGeometryBasis(document) } : {}),
+    ...((document.schemaVersion === 3 || document.schemaVersion === 4 || document.schemaVersion === 5) ? { levelOwnership: levelOwnershipBasis(document.buildingLevels) } : {}),
     ...(document.calculationContract ? { applicability: {
       version: document.calculationContract.version,
       rooms: Object.fromEntries(Object.entries(document.calculationContract.rooms).map(([id, profile]) => [id, {
@@ -148,8 +163,9 @@ function geometryBasis(document: PhysicalDocument) {
 }
 function evidenceBasis(document: PhysicalDocument) {
   return {
-    ...(document.schemaVersion === 4 ? { stairs: stairsEvidenceBasis(document) } : {}),
-    ...((document.schemaVersion === 3 || document.schemaVersion === 4) ? { levelEvidence: document.buildingLevels.levels
+    ...(document.schemaVersion === 5 ? { layout: document.layoutContract } : {}),
+    ...((document.schemaVersion === 4 || document.schemaVersion === 5) ? { stairs: stairsEvidenceBasis(document) } : {}),
+    ...((document.schemaVersion === 3 || document.schemaVersion === 4 || document.schemaVersion === 5) ? { levelEvidence: document.buildingLevels.levels
       .map(level => ({ id: level.id, finishedFloorElevation: level.finishedFloorElevation }))
       .sort((a, b) => a.id < b.id ? -1 : a.id > b.id ? 1 : 0) } : {}),
     ...(document.calculationContract ? { applicability: document.calculationContract } : {}),
@@ -163,8 +179,8 @@ async function evaluateOwned(document: PhysicalDocument, requested: unknown): Pr
   if (!result.ok) return result;
   const geometry = geometryBasis(document), calculation = result.calculation;
   const v4 = calculation.policyVersion === 'rectangular-flat-v4', v3 = calculation.policyVersion === 'rectangular-flat-v3', v2 = calculation.policyVersion === 'rectangular-flat-v2';
-  const geometryScope = v4 ? 'physical-geometry-v4' as const : v3 ? 'physical-geometry-v3' as const : v2 ? 'physical-geometry-v2' as const : 'physical-geometry-v1' as const;
-  const contentScope = v4 ? 'calculation-content-v4' as const : v3 ? 'calculation-content-v3' as const : v2 ? 'calculation-content-v2' as const : 'calculation-content-v1' as const;
+  const geometryScope = document.schemaVersion === 5 ? 'physical-geometry-v5' as const : v4 ? 'physical-geometry-v4' as const : v3 ? 'physical-geometry-v3' as const : v2 ? 'physical-geometry-v2' as const : 'physical-geometry-v1' as const;
+  const contentScope = document.schemaVersion === 5 ? 'calculation-content-v5' as const : v4 ? 'calculation-content-v4' as const : v3 ? 'calculation-content-v3' as const : v2 ? 'calculation-content-v2' as const : 'calculation-content-v1' as const;
   const [geometryHash, contentHash] = await Promise.all([
     sha256Canonical({ scope: geometryScope, geometry }),
     sha256Canonical({ scope: contentScope, geometry, evidence: evidenceBasis(document), calculation }),
@@ -212,7 +228,7 @@ export async function createQuantitySnapshot(documentInput: unknown, requestInpu
       return failure('CONFIRMED_SNAPSHOT_UNAVAILABLE', 'Every selected output must be complete with required measurements confirmed; empty is not confirmed');
     }
     const capture = {
-      snapshotSchemaVersion: result.evaluation.calculation.policyVersion === 'rectangular-flat-v4' ? 'quantity-snapshot-v4' as const
+      snapshotSchemaVersion: (document as PhysicalDocument).schemaVersion === 5 ? 'quantity-snapshot-v5' as const : result.evaluation.calculation.policyVersion === 'rectangular-flat-v4' ? 'quantity-snapshot-v4' as const
         : result.evaluation.calculation.policyVersion === 'rectangular-flat-v3' ? 'quantity-snapshot-v3' as const
         : result.evaluation.calculation.policyVersion === 'rectangular-flat-v2' ? 'quantity-snapshot-v2' as const : 'quantity-snapshot-v1' as const, instance: instance.data,
       sourceDocument: document as PhysicalDocument,

@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import type { PhysicalDocumentV4 } from '../domain/document';
+import type { PhysicalDocumentWithStairs } from '../domain/document';
 import { ENDPOINT_ROLES } from '../domain/stairs';
 import { coordinateMeasurementSchema } from '../domain/measurements';
 import { validateStairGeometry, type StairGeometryCheck } from '../domain/stairGeometry';
@@ -12,7 +12,7 @@ export const surfaceReadinessSchema = z.object({
     attachmentIndex: z.number().int().nonnegative().optional(), measurement: coordinateMeasurementSchema }).strict()),
 }).strict();
 export type SurfaceReadiness = z.infer<typeof surfaceReadinessSchema>;
-export function evaluateSurfaceReadiness(document: PhysicalDocumentV4, roomId: string, surface: 'floor' | 'ceiling', suppliedChecks?: readonly StairGeometryCheck[]): SurfaceReadiness {
+export function evaluateSurfaceReadiness(document: PhysicalDocumentWithStairs, roomId: string, surface: 'floor' | 'ceiling', suppliedChecks?: readonly StairGeometryCheck[]): SurfaceReadiness {
   const result: SurfaceReadiness = { roomId, surface, status: 'valid', surfaceOpeningIds: [], stairIds: [], findings: [], evidence: [] };
   const checks = suppliedChecks ?? validateStairGeometry(document).checks;
   document.stairsContract.stairs.forEach((stair, index) => {

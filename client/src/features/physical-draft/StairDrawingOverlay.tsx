@@ -20,7 +20,7 @@ export function StairDrawingOverlay({document,draft,rooms,levelId,scale,origin,v
   const space=useRef(false);
   const cancel=useCallback(()=>{const previous=drag.current;drag.current=null;setPreview(null);if(previous){delete previous.element.dataset.physicalGesture;if(previous.element.hasPointerCapture(previous.pointerId))previous.element.releasePointerCapture(previous.pointerId);}},[]);
   const marks=useMemo(()=>{
-    if(document.schemaVersion!==4)return [];
+    if((document.schemaVersion !== 4 && document.schemaVersion !== 5))return [];
     const result:Mark[]=[],checks=validateStairGeometry(document).checks;
     const visible=new Set(rooms.map(room=>room.id));
     for(const stair of document.stairsContract.stairs)for(const role of ['lower','upper'] as const){
@@ -70,7 +70,7 @@ export function StairDrawingOverlay({document,draft,rooms,levelId,scale,origin,v
     const accepted=update(current=>{
       if(active.mark.kind==='stair')return setStairPlacement(current,active.mark.id,active.mark.role!,placement,at);
       if(active.mark.kind==='landing')return setLandingPlacement(current,active.mark.stairId!,active.mark.role!,placement,at);
-      if(current.document.schemaVersion!==4)throw new Error('The building document changed.');
+      if((current.document.schemaVersion !== 4 && current.document.schemaVersion !== 5))throw new Error('The building document changed.');
       const opening=current.document.stairsContract.surfaceOpenings.find(item=>item.id===active.mark.id);if(!opening)throw new Error('The surface opening changed.');
       return setSurfaceOpeningAttachment(current,opening.id,opening.attachments.map(a=>a.roomId===active.mark.roomId&&a.surface===active.mark.surface?{...a,placement}:a),at);
     },active.revision);

@@ -1,3 +1,5 @@
+import { createUnspecifiedRoomUse } from '@shared/domain/layout';
+import { reformatLayoutFields, maskLayoutFields, type LayoutRawEntry, type LayoutTextEntry, type LayoutAction } from './layoutCommands';
 import { CLOCKWISE_WALLS, type PhysicalDocument, type PhysicalRoom } from '@shared/domain/document';
 import { createProposedRoomApplicability, roomApplicabilitySchema, type AppDeclaration, type RoomApplicability } from '@shared/domain/applicability';
 import { applyMeasurementAction, type MeasurementEvent } from '@shared/domain/measurementActions';
@@ -38,6 +40,11 @@ export interface PhysicalDraft {
   takeoffState?: TakeoffState;
   reviewState?: ReviewState;
   historyEvidence?: HistoryEvidence;
+  layoutFields?: Record<string, LayoutRawEntry>;
+  layoutTexts?: Record<string, LayoutTextEntry>;
+  layoutEvents?: LayoutAction[];
+  layoutNotice?: {message:string};
+  layoutUpgradeLineage?: {version:'physical-layout-upgrade-v1';sourceDraftId:string;sourceRevision:number;at:string;originalDraft:unknown};
   stairFields?: Record<string, StairRawEntry>;
   stairEvents?: StairAction[];
   stairUpgradeLineage?: { version: 'physical-stair-upgrade-v1'; sourceDraftId: string; sourceRevision: number; at: string; originalDraft: unknown };
@@ -45,7 +52,7 @@ export interface PhysicalDraft {
   levelUpgradeLineage?: { version: 'physical-level-upgrade-v1'; sourceDraftId: string; sourceRevision: number; at: string; originalDraft: unknown };
 }
 export interface PhysicalDraftRegistry {
-  version: 'mfp-editor-draft-v1' | 'mfp-editor-draft-v2' | 'mfp-editor-draft-v3';
+  version: 'mfp-editor-draft-v1' | 'mfp-editor-draft-v2' | 'mfp-editor-draft-v3' | 'mfp-editor-draft-v4';
   localEditRevision: number;
   selectedDraftId: string | null;
   drafts: PhysicalDraft[];
@@ -80,7 +87,7 @@ function fieldsFor(document: PhysicalDocument, unit: InputUnit): PhysicalDraft['
     [field, { text: committedFieldText(room[field], unit), unit, dirty: false }]))])) as PhysicalDraft['fields'];
 }
 export function requestForRooms(document: PhysicalDocument): QuantityRequest {
-  return { policy: { version: document.schemaVersion === 4 ? QUANTITY_POLICY_VERSION_V4 : document.schemaVersion === 3 ? QUANTITY_POLICY_VERSION_V3 : QUANTITY_POLICY_VERSION_V2, openingMeasureBasis: 'finished', crownFullHeightGaps: [] },
+  return { policy: { version: ((document.schemaVersion === 4 || document.schemaVersion === 5)) ? QUANTITY_POLICY_VERSION_V4 : document.schemaVersion === 3 ? QUANTITY_POLICY_VERSION_V3 : QUANTITY_POLICY_VERSION_V2, openingMeasureBasis: 'finished', crownFullHeightGaps: [] },
     selections: document.rooms.length ? [
       { output: 'floor-area', roomIds: document.rooms.map(room => room.id), wasteFraction: 0 },
       { output: 'ceiling-area', roomIds: document.rooms.map(room => room.id), wasteFraction: 0 },
@@ -126,7 +133,7 @@ export function adoptQuickDraft(source: QuickRoomDraft, id: string, name?: strin
 }
 export function insertDraft(registry: PhysicalDraftRegistry, draft: PhysicalDraft): PhysicalDraftRegistry {
   if (registry.drafts.some(item => item.id === draft.id)) throw new PhysicalDraftError('DUPLICATE_DRAFT_ID', 'Choose a new local draft identity; the existing draft was not replaced.');
-  return { ...registry, version: draft.document.schemaVersion === 4 || registry.version === 'mfp-editor-draft-v3' ? 'mfp-editor-draft-v3' : draft.document.schemaVersion === 3 ? 'mfp-editor-draft-v2' : registry.version, localEditRevision: nextRevision(registry.localEditRevision), selectedDraftId: draft.id,
+  return { ...registry, version: draft.document.schemaVersion === 5 || registry.version === 'mfp-editor-draft-v4' ? 'mfp-editor-draft-v4' : draft.document.schemaVersion === 4 || registry.version === 'mfp-editor-draft-v3' ? 'mfp-editor-draft-v3' : draft.document.schemaVersion === 3 ? 'mfp-editor-draft-v2' : registry.version, localEditRevision: nextRevision(registry.localEditRevision), selectedDraftId: draft.id,
     drafts: [...registry.drafts, copy(draft)] };
 }
 export function selectDraft(registry: PhysicalDraftRegistry, id: string): PhysicalDraftRegistry {
@@ -167,6 +174,7 @@ export function addRoom(draft: PhysicalDraft, id: string, name = 'Room ' + (draf
     ...Object.entries(next.document.calculationContract!.rooms), [id, createProposedRoomApplicability()],
   ]);
   next.fields = Object.fromEntries([...Object.entries(next.fields), [id, fieldsFor({ ...next.document, rooms: [room] }, next.displayUnit)[id]]]);
+  if(next.document.schemaVersion===5)next.document.layoutContract.roomUses=Object.fromEntries([...Object.entries(next.document.layoutContract.roomUses),[id,createUnspecifiedRoomUse()]]);
   assertSupportedPhysicalDocument(next.document);
   return next;
 }
@@ -225,6 +233,7 @@ export function switchUnit(draft: PhysicalDraft, unit: InputUnit): PhysicalDraft
     for (const field of ['width', 'height', 'sillHeight', 'offset'] as const) if (!fields[field].dirty) fields[field] = formatted[field];
   }
   reformatStairFields(next, unit);
+  reformatLayoutFields(next, unit);
   return next;
 }
 export function setApplicability(draft: PhysicalDraft, id: string, kind: keyof RoomApplicability, declaration: AppDeclaration, at = new Date().toISOString()): PhysicalDraft {
@@ -255,5 +264,6 @@ export function previewDocument(draft: PhysicalDraft): PhysicalDocument {
     if (fields.offset.dirty) opening.width = unknownMeasurement('Finish editing opening center position to calculate its dependent quantity');
   }
   maskStairFields(draft, document);
+  maskLayoutFields(draft, document);
   return document;
 }

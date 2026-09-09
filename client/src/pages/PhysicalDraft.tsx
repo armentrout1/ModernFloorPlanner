@@ -1,3 +1,6 @@
+import { LayoutControls } from '@/features/physical-draft/LayoutControls';
+import { LayoutInspector } from '@/features/physical-draft/LayoutInspector';
+import { upgradeExistingDraftToLayout } from '@/features/physical-draft/layoutCommands';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'wouter';
 import { StairControls, type BuildingSelection } from '@/features/physical-draft/StairControls';
@@ -49,9 +52,10 @@ function DraftWorkspace() {
   const buildingSelections = useRef(new Map<string, BuildingSelection>());
   const [buildingSelection, setBuildingSelection] = useState<{ key: string; value: BuildingSelection } | null>(null);
   const rememberedBuilding = buildingSelection?.key === contextKey ? buildingSelection.value : buildingSelections.current.get(contextKey);
-  const selectedBuilding = rememberedBuilding && draft?.document.schemaVersion === 4 && (rememberedBuilding.kind === 'stair'
+  const selectedBuilding = rememberedBuilding && draft && (draft.document.schemaVersion === 4 || draft.document.schemaVersion === 5) && (rememberedBuilding.kind === 'stair'
     ? draft.document.stairsContract.stairs.some(stair => stair.id === rememberedBuilding.id && Object.values(stair.endpoints).some(endpoint => endpoint.state === 'modeled' && endpoint.levelId === levelId))
-    : draft.document.stairsContract.surfaceOpenings.some(opening => opening.id === rememberedBuilding.id && opening.attachments.some(a => visibleRooms.some(room => room.id === a.roomId)))) ? rememberedBuilding : null;
+    : rememberedBuilding.kind === 'surface-opening' ? draft.document.stairsContract.surfaceOpenings.some(opening => opening.id === rememberedBuilding.id && opening.attachments.some(a => visibleRooms.some(room => room.id === a.roomId)))
+    : draft.document.schemaVersion === 5 && (rememberedBuilding.kind === 'zone' ? draft.document.layoutContract.zones : draft.document.layoutContract.cabinetBlocks).some(item => item.id === rememberedBuilding.id && visibleRooms.some(room => room.id === item.roomId))) ? rememberedBuilding : null;
   function clearBuildingSelection() { buildingSelections.current.delete(contextKey); setBuildingSelection(null); }
   const cameras = useRef(new Map<string, LevelCamera>());
   const [selected, setSelected] = useState<{ draftId: string; roomId: string } | null>(null);
@@ -84,7 +88,7 @@ function DraftWorkspace() {
   function selectBuilding(value: BuildingSelection) {
     if (!draft) return;
     const live = selectedDraft(store.getSnapshot().registry);
-    if (!live || live.id !== draft.id || live.document.schemaVersion !== 4 || activeLevelId(live) !== levelId) return;
+    if (!live || live.id !== draft.id || (live.document.schemaVersion !== 4 && live.document.schemaVersion !== 5) || activeLevelId(live) !== levelId) return;
     if (live.document.buildingLevels.roomLevels[value.roomId] !== levelId) return;
     runInputLayoutTransition(() => {
       buildingSelections.current.set(contextKey, value); setBuildingSelection({ key: contextKey, value });
@@ -151,8 +155,8 @@ function DraftWorkspace() {
       setSelected({ draftId: key, roomId: reveal.roomId });
       setOpeningSelection(reveal.openingId ? { draftId: key, openingId: reveal.openingId } : null);
     }
-    if (reveal.roomId && (reveal.stairId || reveal.surfaceOpeningId)) {
-      const value: BuildingSelection = reveal.stairId ? { kind: 'stair', id: reveal.stairId, roomId: reveal.roomId, role: reveal.endpointRole }
+    if (reveal.roomId && (reveal.stairId || reveal.surfaceOpeningId || reveal.zoneId || reveal.cabinetId)) {
+      const value: BuildingSelection = reveal.zoneId ? {kind:'zone',id:reveal.zoneId,roomId:reveal.roomId} : reveal.cabinetId ? {kind:'cabinet',id:reveal.cabinetId,roomId:reveal.roomId} : reveal.stairId ? { kind: 'stair', id: reveal.stairId, roomId: reveal.roomId, role: reveal.endpointRole }
         : { kind: 'surface-opening', id: reveal.surfaceOpeningId!, roomId: reveal.roomId, surface: reveal.surface };
       buildingSelections.current.set(key, value); setBuildingSelection({ key, value });
     } else { buildingSelections.current.delete(key); setBuildingSelection(null); }
@@ -204,6 +208,22 @@ function DraftWorkspace() {
       return insertDraft(current, upgradeExistingDraftToStairs(live, crypto.randomUUID(), new Date().toISOString()));
     }); });
   }
+  function upgradeLayout() {
+    if (!draft) return;
+    runInputLayoutTransition(() => { setInspectorOpen(false); store.dispatch(current => {
+      const live = selectedDraft(current);
+      if (!live || live.id !== draft.id || live.localEditRevision !== draft.localEditRevision) throw new Error('The draft changed. Try again.');
+      const copy = upgradeExistingDraftToLayout(live, crypto.randomUUID(), new Date().toISOString());
+      const nextKey = copy.id + ':' + (activeLevelId(copy) ?? 'legacy');
+      for (const [key,value] of Array.from(selections.current)) if (key.startsWith(draft.id+':')) selections.current.set(copy.id+key.slice(draft.id.length),value);
+      for (const [key,value] of Array.from(buildingSelections.current)) if (key.startsWith(draft.id+':')) buildingSelections.current.set(copy.id+key.slice(draft.id.length),value);
+      for (const [key,value] of Array.from(cameras.current)) if (key.startsWith(draft.id+':')) cameras.current.set(copy.id+key.slice(draft.id.length),value);
+      if (selectedRoomId) selections.current.set(nextKey, {roomId:selectedRoomId,openingId:selectedOpening?.id ?? null});
+      if (selectedBuilding) buildingSelections.current.set(nextKey, selectedBuilding);
+      const camera = cameras.current.get(contextKey); if (camera) cameras.current.set(nextKey,camera);
+      return insertDraft(current, copy);
+    }); });
+  }
   function add() {
     if (!draft) return;
     const id = crypto.randomUUID();
@@ -219,9 +239,10 @@ function DraftWorkspace() {
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
   const selectedRoom = draft?.document.rooms.find(room => room.id === selectedRoomId);
-  const selectedBuildingName = selectedBuilding && draft?.document.schemaVersion === 4 ? (selectedBuilding.kind === 'stair'
+  const selectedBuildingName = selectedBuilding && draft && (draft.document.schemaVersion === 4 || draft.document.schemaVersion === 5) ? (selectedBuilding.kind === 'stair'
     ? draft.document.stairsContract.stairs.find(item => item.id === selectedBuilding.id)?.name
-    : draft.document.stairsContract.surfaceOpenings.find(item => item.id === selectedBuilding.id)?.name) : null;
+    : selectedBuilding.kind === 'surface-opening' ? draft.document.stairsContract.surfaceOpenings.find(item => item.id === selectedBuilding.id)?.name
+    : draft.document.schemaVersion === 5 ? (selectedBuilding.kind === 'zone' ? draft.document.layoutContract.zones : draft.document.layoutContract.cabinetBlocks).find(item => item.id === selectedBuilding.id)?.name : null) : null;
   const selectedName = selectedBuildingName || (selectedOpening ? (selectedOpening.kind === 'door' ? 'Door' : selectedOpening.kind === 'window' ? 'Window' : 'Opening') + ' ' +
     (draft!.document.openings.filter(item => item.kind === selectedOpening.kind && item.attachments.some(a => selectedRoom?.wallFaces.some(w => w.id === a.wallFaceId))).findIndex(item => item.id === selectedOpening.id) + 1)
     : selectedRoom?.name || 'Unnamed room');
@@ -235,9 +256,9 @@ function DraftWorkspace() {
     if (!draft || !selectedRoomId || !canInspect) return null;
     return <ResponsiveInspector narrow={narrow} open={inspectorOpen} onOpenChange={changeInspector}
       targetKey={targetKey} title={'Edit ' + (selectedBuilding?.kind ?? selectedOpening?.kind ?? 'room') + ': ' + selectedName}
-      label={view === 'drawing' ? 'Drawing inspector' : 'Opening inspector'} openerRef={inspectorOpener} fallbackFocusRef={inspectorFallback}>
+      label={view === 'drawing' ? 'Drawing inspector' : selectedBuilding?.kind === 'zone' || selectedBuilding?.kind === 'cabinet' ? 'Room layout inspector' : 'Opening inspector'} openerRef={inspectorOpener} fallbackFocusRef={inspectorFallback}>
       <fieldset disabled={blocked} className="min-w-0"><legend className="sr-only">Inspector measurements</legend>
-        {selectedBuilding?.kind === 'stair' ? <StairInspector key={contextKey + selectedBuilding.id} draft={draft} stairId={selectedBuilding.id} update={update} onNavigate={navigateEndpoint} onDeleted={() => { changeInspector(false); clearBuildingSelection(); }} /> :
+        {selectedBuilding && (selectedBuilding.kind === 'zone' || selectedBuilding.kind === 'cabinet') ? <LayoutInspector key={contextKey + selectedBuilding.id} draft={draft} kind={selectedBuilding.kind} id={selectedBuilding.id} update={update} onDeleted={() => { changeInspector(false); clearBuildingSelection(); }} /> : selectedBuilding?.kind === 'stair' ? <StairInspector key={contextKey + selectedBuilding.id} draft={draft} stairId={selectedBuilding.id} update={update} onNavigate={navigateEndpoint} onDeleted={() => { changeInspector(false); clearBuildingSelection(); }} /> :
           selectedBuilding?.kind === 'surface-opening' ? <SurfaceOpeningInspector key={contextKey + selectedBuilding.id} draft={draft} openingId={selectedBuilding.id} update={update} onDeleted={() => { changeInspector(false); clearBuildingSelection(); }} /> :
           selectedOpening ? <OpeningMeasurements key={selectedOpening.id} draft={draft} openingId={selectedOpening.id} update={update} commandError={error} onDeleted={deletedOpening} /> :
           <><h2 className="mb-4 font-semibold">Room inspector</h2><RoomMeasurements draft={draft} roomId={selectedRoomId} update={update} /></>}
@@ -275,6 +296,7 @@ function DraftWorkspace() {
       {draft && preview ? <>
         <LevelControls draft={draft} update={update} onSelect={changeLevel} onUpgrade={upgrade} blocked={blocked} />
         <StairControls draft={draft} roomId={selectedRoomId} selected={selectedBuilding} update={update} onUpgrade={upgradeStairs} onSelect={selectBuilding} blocked={blocked} />
+        <LayoutControls draft={draft} roomId={selectedRoomId} selected={selectedBuilding} update={update} onUpgrade={upgradeLayout} onSelect={selectBuilding} blocked={blocked} />
         <HistoryControls blocked={blocked} />
         <div className="flex flex-wrap items-center justify-between gap-3 border-b pb-3">
           <div><h2 className="text-lg font-semibold">{draft.document.name || 'Physical draft'}</h2>
@@ -294,7 +316,7 @@ function DraftWorkspace() {
         </div>
         {narrow && canInspect ? <Button ref={inspectorOpener} type="button" variant="outline" data-physical-layout-control
           className="h-auto min-h-10 max-w-full whitespace-normal text-left" aria-haspopup="dialog" aria-expanded={inspectorOpen}
-          onClick={() => changeInspector(true)}><span className="min-w-0 [overflow-wrap:anywhere]">Edit selected {selectedBuilding ? selectedBuilding.kind === 'stair' ? 'stair' : 'surface opening' : selectedOpening ? 'opening' : 'room'}: {selectedName}</span></Button> : null}
+          onClick={() => changeInspector(true)}><span className="min-w-0 [overflow-wrap:anywhere]">Edit selected {selectedBuilding ? selectedBuilding.kind === 'surface-opening' ? 'surface opening' : selectedBuilding.kind : selectedOpening ? 'opening' : 'room'}: {selectedName}</span></Button> : null}
         {(['rooms', 'drawing'] as const).map(panel => <section key={panel} role="tabpanel" id={'physical-' + panel + '-panel'}
           ref={view === panel ? inspectorFallback : undefined} aria-labelledby={'physical-' + panel + '-tab'} hidden={view !== panel} tabIndex={view === panel ? 0 : -1}
           className="min-w-0 rounded-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-900">

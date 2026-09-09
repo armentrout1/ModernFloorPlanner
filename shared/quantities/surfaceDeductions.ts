@@ -1,10 +1,10 @@
-import type { PhysicalDocumentV4 } from '../domain/document';
+import type { PhysicalDocumentWithStairs } from '../domain/document';
 import type { QuantityTrace } from './result';
 import { multiply, subtract, sum, nonnegative, limited, elevatedInterval, span, unionArea, type Rectangle, ArithmeticFailure } from './arithmetic';
 /** Only called after surface-specific readiness validates every attached rectangle.
  * Uses the existing rectangle-union and arithmetic guards; no renderer coordinates.
  */
-export function calculateSurfaceDeductions(document: PhysicalDocumentV4, roomId: string, surface: 'floor' | 'ceiling', gross: number, trace: QuantityTrace) {
+export function calculateSurfaceDeductions(document: PhysicalDocumentWithStairs, roomId: string, surface: 'floor' | 'ceiling', gross: number, trace: QuantityTrace) {
   const rectangles: Rectangle[] = [];
   trace.surfaceContributions = [];
   const room = document.rooms.find(room => room.id === roomId)!;

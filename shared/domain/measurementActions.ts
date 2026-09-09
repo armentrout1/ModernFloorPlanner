@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { dimensionSchema, elevationSchema, type Dimension, type KnownMeasurement } from './measurements';
 import { adaptMeasurementDocument } from '../compatibility/legacyDocument';
 import { validateGeometry, measurementAt, type MeasurementRef, type GeometryReport } from './geometryValidation';
-import { physicalDocumentV3Schema, physicalDocumentV4Schema, type PhysicalDocument } from './document';
+import { physicalDocumentV3Schema, physicalDocumentV4Schema, physicalDocumentV5Schema, type PhysicalDocument } from './document';
 import { copyJson } from '../quantities/canonicalJson';
 
 const timestamp = z.string().datetime({ offset: true });
@@ -61,7 +61,7 @@ export function applyMeasurementAction(input: unknown, targetInput: unknown, act
   const target = targetSchema.safeParse(targetInput);
   if (!target.success) return { ok: false, code: 'INVALID_MEASUREMENT_TARGET', message: 'Select an explicit room/opening measurement field' };
   const version = (input as { schemaVersion?: unknown } | null)?.schemaVersion;
-  if (version !== 2 && version !== 3 && version !== 4) return {
+  if (version !== 2 && version !== 3 && version !== 4 && version !== 5) return {
     ok: false, code: 'V2_REQUIRED', message: 'Adapt legacy data explicitly before physical measurement actions',
   };
   let document: PhysicalDocument;
@@ -72,7 +72,7 @@ export function applyMeasurementAction(input: unknown, targetInput: unknown, act
   } else {
     try { document = copyJson(input) as unknown as PhysicalDocument; }
     catch { return { ok: false, code: 'INVALID_DOCUMENT', message: 'Expected finite plain JSON physical data' }; }
-    if (!(version === 4 ? physicalDocumentV4Schema : physicalDocumentV3Schema).safeParse(document).success) return { ok: false, code: 'INVALID_DOCUMENT', message: 'Expected a valid level-owned physical document' };
+    if (!(version === 5 ? physicalDocumentV5Schema : version === 4 ? physicalDocumentV4Schema : physicalDocumentV3Schema).safeParse(document).success) return { ok: false, code: 'INVALID_DOCUMENT', message: 'Expected a valid level-owned physical document' };
   }
   const ref = target.data;
   const exists = ref.entity === 'room' ? document.rooms.some(room => room.id === ref.id) : document.openings.some(opening => opening.id === ref.id);

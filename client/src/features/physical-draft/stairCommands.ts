@@ -40,7 +40,7 @@ const equal = (a:unknown,b:unknown) => canonicalJson(a) === canonicalJson(b);
 const equivalentMm=(a:number,b:number)=>Math.abs(a-b)<=Number.EPSILON*Math.max(Math.abs(a),Math.abs(b))*4;
 function fail(message:string):never { throw new PhysicalDraftError('STAIR_EDIT_INVALID',message); }
 export function stairsIn(draft:PhysicalDraft) {
-  if (draft.document.schemaVersion !== 4) fail('Enable stairs and surface openings in an explicit copy before editing them.');
+  if ((draft.document.schemaVersion !== 4 && draft.document.schemaVersion !== 5)) fail('Enable stairs and surface openings in an explicit copy before editing them.');
   return draft.document.stairsContract;
 }
 export function stairIn(draft:PhysicalDraft,id:string):StairAssembly {
@@ -122,7 +122,7 @@ export function reformatStairFields(draft:PhysicalDraft,unit:InputUnit):void {
   for(const entry of Object.values(draft.stairFields??{}))if(!entry.raw.dirty)entry.raw={text:committedFieldText(stairMeasurementAt(draft,entry.target),unit),unit,dirty:false};
 }
 export function maskStairFields(draft:PhysicalDraft,document:PhysicalDraft['document']):void {
-  if(document.schemaVersion!==4)return;
+  if((document.schemaVersion !== 4 && document.schemaVersion !== 5))return;
   const preview={...draft,document};
   for(const entry of Object.values(draft.stairFields??{}))if(entry.raw.dirty)setStairMeasurement(preview,entry.target,unknownMeasurement('Finish editing '+entry.target.field+' before calculating its dependent finish quantity.'));
 }
@@ -178,7 +178,7 @@ export function renameSurfaceOpening(draft:PhysicalDraft,id:string,label:string,
 }
 export function setStairEndpoint(draft:PhysicalDraft,id:string,role:EndpointRole,endpoint:StairEndpoint,at:string):PhysicalDraft {
   endpoint=stairEndpointSchema.parse(endpoint);const selected=stairIn(draft,id),old=selected.endpoints[role];if(equal(old,endpoint))return draft;
-  if(endpoint.state==='modeled'){const other=selected.endpoints[role==='lower'?'upper':'lower'];if(other.state==='modeled'&&other.levelId===endpoint.levelId)fail('Lower and upper stair endpoints must reference different building levels. The existing endpoint is unchanged.');if(draft.document.schemaVersion!==4||!draft.document.rooms.some(room=>room.id===endpoint.roomId)||draft.document.buildingLevels.roomLevels[endpoint.roomId]!==endpoint.levelId)fail('Choose an existing room owned by the selected endpoint level.');}
+  if(endpoint.state==='modeled'){const other=selected.endpoints[role==='lower'?'upper':'lower'];if(other.state==='modeled'&&other.levelId===endpoint.levelId)fail('Lower and upper stair endpoints must reference different building levels. The existing endpoint is unchanged.');if((draft.document.schemaVersion !== 4 && draft.document.schemaVersion !== 5)||!draft.document.rooms.some(room=>room.id===endpoint.roomId)||draft.document.buildingLevels.roomLevels[endpoint.roomId]!==endpoint.levelId)fail('Choose an existing room owned by the selected endpoint level.');}
   guardRaw(draft,t=>t.id===id&&(t.kind==='endpoint'||t.kind==='landing')&&t.role===role);
   const changedHost=old.state!==endpoint.state||(old.state==='modeled'&&endpoint.state==='modeled'&&(old.roomId!==endpoint.roomId||old.levelId!==endpoint.levelId));
   if(changedHost&&Object.values(stairIn(draft,id).surfaceImpacts[role]).some(impact=>impact.state==='deduct'))fail('Resolve this endpoint’s linked surface deductions before changing its host. Existing surface openings are preserved.');
@@ -237,12 +237,12 @@ export function deleteStair(draft:PhysicalDraft,id:string,at:string):PhysicalDra
   return finish(draft,next,'unlink',at);
 }
 export function stairRoomDependencies(draft:PhysicalDraft,roomId:string):string[] {
-  if(draft.document.schemaVersion!==4)return [];
+  if((draft.document.schemaVersion !== 4 && draft.document.schemaVersion !== 5))return [];
   return [...draft.document.stairsContract.stairs.flatMap(stair=>(['lower','upper'] as const).flatMap(role=>{const endpoint=stair.endpoints[role];return endpoint.state==='modeled'&&endpoint.roomId===roomId?[`${stair.name||stair.id} (${role} endpoint${stair.landings[role]?' and landing':''})`]:[];})),
     ...draft.document.stairsContract.surfaceOpenings.filter(opening=>opening.attachments.some(item=>item.roomId===roomId)).map(opening=>`${opening.name||opening.id} (surface opening)`)] ;
 }
 export function validateStairEditorState(draft:PhysicalDraft):string|null {
-  if(draft.document.schemaVersion!==4)return draft.stairFields||draft.stairEvents||draft.stairUpgradeLineage?'Stair editor state requires the explicit stairs document version.':null;
+  if((draft.document.schemaVersion !== 4 && draft.document.schemaVersion !== 5))return draft.stairFields||draft.stairEvents||draft.stairUpgradeLineage?'Stair editor state requires the explicit stairs document version.':null;
   for(const [key,entry] of Object.entries(draft.stairFields??{})) {
     if(key!==stairFieldKey(entry.target))return 'Stored stair field identity is inconsistent.';
     let measurement:Dimension;try{measurement=stairMeasurementAt(draft,entry.target);}catch{return 'Stored stair fields reference a missing target.';}

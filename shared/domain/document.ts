@@ -1,3 +1,4 @@
+import { layoutContractSchema } from './layout';
 import { stairsContractSchema, ENDPOINT_ROLES } from './stairs';
 import { z } from 'zod';
 import { dimensionSchema, elevationSchema } from './measurements';
@@ -209,8 +210,36 @@ export const physicalDocumentV4Schema = physicalDocumentV3Schema.innerType().ext
   });
 });
 export type PhysicalDocumentV4 = z.infer<typeof physicalDocumentV4Schema>;
-export const supportedPhysicalDocumentSchema = z.union([physicalDocumentSchema, physicalDocumentV3Schema, physicalDocumentV4Schema]);
-export type PhysicalDocument = PhysicalDocumentV2 | PhysicalDocumentV3 | PhysicalDocumentV4;
+/** Layout-only content changes capture identity, not the frozen finish policy4 arithmetic. */
+export const physicalDocumentV5Schema = physicalDocumentV4Schema.innerType().extend({
+  schemaVersion: z.literal(5), layoutContract: layoutContractSchema,
+}).strict().superRefine((document, ctx) => {
+  const { layoutContract, ...previousFields } = document;
+  const previous = physicalDocumentV4Schema.safeParse({ ...previousFields, schemaVersion: 4 });
+  if (!previous.success) previous.error.issues.forEach(issue => ctx.addIssue(issue));
+  const rooms = new Set(document.rooms.map(room => room.id)), uses = layoutContract.roomUses;
+  if (Object.keys(uses).length !== rooms.size || Object.keys(uses).some(id => !rooms.has(id)) || Array.from(rooms).some(id => !Object.hasOwn(uses, id)))
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['layoutContract', 'roomUses'], message: 'Exactly one explicit use declaration is required for every current room' });
+  const ids = new Set([...document.rooms.flatMap(room => [room.id, ...room.wallFaces.map(wall => wall.id)]),
+    ...document.openings.map(opening => opening.id), ...document.editorContract.groups.map(group => group.id),
+    ...document.buildingLevels.levels.map(level => level.id), ...document.stairsContract.stairs.flatMap(stair =>
+      [stair.id, ...Object.values(stair.landings).filter(landing => landing !== null).map(landing => landing!.id)]),
+    ...document.stairsContract.surfaceOpenings.map(opening => opening.id)]);
+  for (const key of ['zones', 'cabinetBlocks'] as const) layoutContract[key].forEach((entity, index) => {
+    const path = ['layoutContract', key, index] as (string | number)[];
+    if (ids.has(entity.id)) ctx.addIssue({ code: z.ZodIssueCode.custom, path: [...path, 'id'], message: 'Layout identities must not reuse any existing physical identity' });
+    ids.add(entity.id);
+    if (!rooms.has(entity.roomId)) ctx.addIssue({ code: z.ZodIssueCode.custom, path: [...path, 'roomId'], message: 'Layout parent room must exist; level follows that room' });
+  });
+  layoutContract.cabinetBlocks.forEach((cabinet, index) => {
+    if (cabinet.zoneId !== null && !layoutContract.zones.some(zone => zone.id === cabinet.zoneId && zone.roomId === cabinet.roomId))
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['layoutContract', 'cabinetBlocks', index, 'zoneId'], message: 'An associated zone must exist in the cabinet parent room or be explicitly unlinked' });
+  });
+});
+export type PhysicalDocumentV5 = z.infer<typeof physicalDocumentV5Schema>;
+export type PhysicalDocumentWithStairs = PhysicalDocumentV4 | PhysicalDocumentV5;
+export const supportedPhysicalDocumentSchema = z.union([physicalDocumentSchema, physicalDocumentV3Schema, physicalDocumentV4Schema, physicalDocumentV5Schema]);
+export type PhysicalDocument = PhysicalDocumentV2 | PhysicalDocumentV3 | PhysicalDocumentV4 | PhysicalDocumentV5;
 export type PhysicalRoom = z.infer<typeof physicalRoomSchema>;
 export type PhysicalOpening = z.infer<typeof physicalOpeningSchema>;
 export type ReviewItem = z.infer<typeof reviewItemSchema>;

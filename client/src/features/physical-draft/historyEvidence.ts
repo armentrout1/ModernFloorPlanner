@@ -1,3 +1,4 @@
+import { roomUseTargetSchema,layoutObjectTargetSchema,layoutPartTargetSchema,validLayoutHistoryValue,layoutHistoryValue } from './layoutHistory';
 import { stairObjectTargetSchema, stairPartTargetSchema, validStairHistoryValue, stairHistoryValue, provisionalStairValue, setStairPart } from './stairHistory';
 import { z } from 'zod';
 import { physicalOpeningSchema, physicalRoomSchema } from '@shared/domain/document';
@@ -11,7 +12,7 @@ import type { PhysicalDraft } from './state';
 const id = z.string().min(1);
 const output = z.enum(['floor-area', 'ceiling-area', 'gross-wall-area', 'net-wall-area', 'baseboard', 'base-shoe', 'crown', 'door-casing', 'window-casing', 'opening-inventory']);
 const targetSchema = z.discriminatedUnion('kind', [
-  stairObjectTargetSchema, stairPartTargetSchema,
+  stairObjectTargetSchema, stairPartTargetSchema, roomUseTargetSchema, layoutObjectTargetSchema, layoutPartTargetSchema,
   z.object({ kind: z.literal('level'), id }).strict(),
   z.object({ kind: z.literal('level-name'), id }).strict(),
   z.object({ kind: z.literal('level-order') }).strict(),
@@ -42,6 +43,7 @@ const openingBundle = z.object({ opening: physicalOpeningSchema, index: z.number
 }).strict();
 function valueValid(target: HistoryTarget, value: unknown): boolean {
   switch (target.kind) {
+    case 'room-use': case 'layout-object': case 'layout-part': return validLayoutHistoryValue(target,value);
     case 'stair-object': case 'stair-part': return validStairHistoryValue(target,value);
     case 'level': return value === null || (levelBundle.safeParse(value).success && (value as z.infer<typeof levelBundle>).level.id === target.id);
     case 'level-name': return typeof value === 'string' && !!value.trim();
@@ -74,19 +76,20 @@ const changeSchema = z.object({ target: targetSchema, before: z.unknown(), after
     ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'History values must match their declared physical target.' });
   }
 });
-export const historyEvidenceSchema = z.object({ version: z.enum(['physical-history-evidence-v1', 'physical-history-evidence-v2', 'physical-history-evidence-v3']), events: z.array(z.object({
+export const historyEvidenceSchema = z.object({ version: z.enum(['physical-history-evidence-v1', 'physical-history-evidence-v2', 'physical-history-evidence-v3', 'physical-history-evidence-v4']), events: z.array(z.object({
   id, transactionId: id, action: z.enum(['commit', 'undo', 'redo', 'boundary']), at: z.string().datetime({ offset: true }), label: z.string().min(1),
   changes: z.array(changeSchema), sourceEventId: id.optional(), preservedLaterScope: z.boolean().optional(),
 }).strict()) }).strict().superRefine((evidence, ctx) => {
-  if (evidence.version !== 'physical-history-evidence-v3' && evidence.events.some(event=>event.changes.some(change=>change.target.kind.startsWith('stair-')))) ctx.addIssue({code:z.ZodIssueCode.custom,message:'Stair targets require history evidence v3.'});
+  if (evidence.version !== 'physical-history-evidence-v4' && evidence.events.some(event=>event.changes.some(change=>change.target.kind==='room-use'||change.target.kind.startsWith('layout-')))) ctx.addIssue({code:z.ZodIssueCode.custom,message:'Room-use and layout targets require history evidence v4.'});
+  if (!['physical-history-evidence-v3','physical-history-evidence-v4'].includes(evidence.version) && evidence.events.some(event=>event.changes.some(change=>change.target.kind.startsWith('stair-')))) ctx.addIssue({code:z.ZodIssueCode.custom,message:'Stair targets require history evidence v3.'});
   if (evidence.version === 'physical-history-evidence-v1' && evidence.events.some(event => event.changes.some(change => ['level', 'level-name', 'level-order', 'room-level'].includes(change.target.kind)))) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Building-level targets require history evidence v2.' });
 });
 export type HistoryEvent = Omit<z.infer<typeof historyEvidenceSchema>['events'][number], 'changes'> & { changes: HistoryChange[] };
-export interface HistoryEvidence { version: 'physical-history-evidence-v1' | 'physical-history-evidence-v2' | 'physical-history-evidence-v3'; events: HistoryEvent[] }
+export interface HistoryEvidence { version: 'physical-history-evidence-v1' | 'physical-history-evidence-v2' | 'physical-history-evidence-v3' | 'physical-history-evidence-v4'; events: HistoryEvent[] }
 export const equalHistoryValue = (a: unknown, b: unknown): boolean => a !== undefined && b !== undefined && canonicalJson(a) === canonicalJson(b);
 export function semanticHistoryValue(target: HistoryTarget, value: any): unknown {
-  if ((target.kind === 'room' || target.kind === 'opening' || target.kind === 'level' || target.kind === 'stair-object') && value !== null && value !== undefined) {
-    const { fields: _fields, index: _index, ...committed } = value; return committed;
+  if ((target.kind === 'room' || target.kind === 'opening' || target.kind === 'level' || target.kind === 'stair-object' || target.kind === 'layout-object') && value !== null && value !== undefined) {
+    const { fields: _fields, texts: _texts, index: _index, ...committed } = value; return committed;
   }
   return value;
 }
@@ -95,13 +98,14 @@ export const copyHistory = <T,>(value: T): T => copyJson(value) as unknown as T;
 /** Restoration is a local edit, not a fresh measurement or a renewed approval. */
 export function restoredHistoryValue(target: HistoryTarget, value: unknown, current?: unknown): unknown {
   const next = copyHistory(value) as any;
-  if (target.kind === 'stair-part') return provisionalStairValue(next,current);
+  if (target.kind === 'stair-part' || target.kind === 'layout-part') return provisionalStairValue(next,current);
   if (target.kind === 'room-measurement' || target.kind === 'opening-measurement') {
     if (next.state === 'known') next.provenance.confirmation = { status: 'unconfirmed' };
   } else if (target.kind === 'applicability') next.confirmation = { status: 'unconfirmed' };
   return next;
 }
 export function historyValueAt(draft: PhysicalDraft, target: HistoryTarget): unknown {
+  if(target.kind==='room-use'||target.kind==='layout-object'||target.kind==='layout-part')return layoutHistoryValue(draft,target);
   if(target.kind==='stair-object'||target.kind==='stair-part')return stairHistoryValue(draft,target);
   const room = 'id' in target ? draft.document.rooms.find(item => item.id === target.id) : undefined;
   const opening = 'id' in target ? draft.document.openings.find(item => item.id === target.id) : undefined;
@@ -150,14 +154,17 @@ export function validateHistoryEvidence(draft: PhysicalDraft): string | null {
     for (const change of event.changes) {
       const key = historyTargetKey(change.target), previous = latest.get(key);
       if (change.target.kind === 'level') latest.delete(historyTargetKey({ kind: 'level-order' }));
-      if (previous && !['room', 'opening', 'level', 'stair-object'].includes(change.target.kind) && !equalHistoryValue(previous.after, change.before)) return 'Stored history actions disagree with their preceding target value.';
-      if (change.target.kind === 'room' || change.target.kind === 'opening' || change.target.kind === 'level' || change.target.kind === 'stair-object') {
+      if (previous && !['room', 'opening', 'level', 'stair-object', 'layout-object'].includes(change.target.kind) && !equalHistoryValue(previous.after, change.before)) return 'Stored history actions disagree with their preceding target value.';
+      if (change.target.kind === 'room' || change.target.kind === 'opening' || change.target.kind === 'level' || change.target.kind === 'stair-object' || change.target.kind === 'layout-object') {
         // A remove/recreate event owns the whole entity. Earlier leaf values no longer
         // describe its current incarnation; the complete entity is retained in this event.
         for (const [oldKey, old] of Array.from(latest.entries())) if ('id' in old.target && old.target.id === change.target.id) latest.delete(oldKey);
       }
-      if (change.target.kind === 'room' || change.target.kind === 'opening' || change.target.kind === 'level' || change.target.kind === 'stair-object') {
-        entities.set(JSON.stringify([change.target.kind === 'stair-object' ? 'stair-object:'+change.target.object : change.target.kind, change.target.id]), { target: change.target, value: copyHistory(semanticHistoryValue(change.target, change.after)) });
+      if (change.target.kind === 'room' || change.target.kind === 'opening' || change.target.kind === 'level' || change.target.kind === 'stair-object' || change.target.kind === 'layout-object') {
+        entities.set(JSON.stringify([change.target.kind === 'stair-object' ? 'stair-object:'+change.target.object : change.target.kind === 'layout-object' ? 'layout-object:'+change.target.object : change.target.kind, change.target.id]), { target: change.target, value: copyHistory(semanticHistoryValue(change.target, change.after)) });
+      } else if (change.target.kind === 'layout-part') {
+        const retained=entities.get(JSON.stringify(['layout-object:'+change.target.object,change.target.id]));
+        if(retained?.value)retained.value.entity[change.target.part]=copyHistory(change.after);
       } else if (change.target.kind === 'stair-part') {
         const retained=entities.get(JSON.stringify(['stair-object:'+change.target.object,change.target.id]));
         if(retained?.value)setStairPart(retained.value.entity,change.target.part,copyHistory(change.after));
@@ -186,7 +193,7 @@ export function validateHistoryEvidence(draft: PhysicalDraft): string | null {
   }
   for (const change of Array.from(latest.values())) {
     const actual = historyValueAt(draft, change.target);
-    if (change.target.kind === 'room' || change.target.kind === 'opening' || change.target.kind === 'level' || change.target.kind === 'stair-object') {
+    if (change.target.kind === 'room' || change.target.kind === 'opening' || change.target.kind === 'level' || change.target.kind === 'stair-object' || change.target.kind === 'layout-object') {
       if ((actual === null) !== (change.after === null)) return 'Stored entity history disagrees with the current draft.';
     } else if (actual !== undefined && !equalHistoryValue(actual, change.after)) return 'Stored history disagrees with its current committed target.';
   }
