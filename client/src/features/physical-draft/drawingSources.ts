@@ -1,9 +1,10 @@
+import { placementBounds, stairEndpointBounds } from '@shared/domain/stairGeometry';
 import type { PhysicalDocument } from '@shared/domain/document';
 import type { Room } from '@/utils/types';
 import { openingWallCenter } from './openingGeometry';
 import { getDoorGeometry } from '@/utils/doorGeometry';
 import type { DrawingSourceScope } from './takeoffReadModel';
-export interface SourceMark { kind: 'room' | 'wall' | 'opening'; id: string; roomId: string; wallFaceId?: string; x: number; y: number; width: number; height: number }
+export interface SourceMark { kind: 'room' | 'wall' | 'opening' | 'surface-opening' | 'stair'; id: string; roomId: string; wallFaceId?: string; x: number; y: number; width: number; height: number }
 /** View-only source locations. Unresolved openings get a point marker rather
  * than a fabricated measured width; source identifiers are never rewritten. */
 export function drawingSourceMarks(document: PhysicalDocument, rooms: Room[], scope: DrawingSourceScope): SourceMark[] {
@@ -33,6 +34,23 @@ export function drawingSourceMarks(document: PhysicalDocument, rooms: Room[], sc
         marks.push({ kind: 'opening', id: opening.id, roomId: room.id, wallFaceId: wall.id,
           x: room.x + point.x - (horizontal ? extent / 2 : 0), y: room.y + point.y - (horizontal ? 0 : extent / 2),
           width: horizontal ? extent : 0, height: horizontal ? 0 : extent });
+      }
+    }
+  }
+  if (document.schemaVersion === 4) {
+    const pixels = (value: number) => value * 20 / 304.8;
+    for (const source of scope.surfaceOpenings ?? []) {
+      const opening = document.stairsContract.surfaceOpenings.find(item => item.id === source.openingId), room = rooms.find(room => room.id === source.roomId);
+      const attachment = opening?.attachments.find(a => a.roomId === source.roomId && a.surface === source.surface);
+      if (!room || !opening || !attachment) continue;
+      const bounds = placementBounds(opening.width, opening.length, attachment.placement);
+      if (bounds) marks.push({ kind: 'surface-opening', id: opening.id, roomId: room.id, x: room.x + pixels(bounds.x), y: room.y + pixels(bounds.y), width: pixels(bounds.width), height: pixels(bounds.height) });
+      else marks.push({ kind: 'room', id: room.id, roomId: room.id, x: room.x, y: room.y, width: room.width, height: room.height });
+    }
+    for (const id of scope.stairIds ?? []) { const stair = document.stairsContract.stairs.find(item => item.id === id); if (!stair) continue;
+      for (const role of ['lower','upper'] as const) { const endpoint = stair.endpoints[role]; if (endpoint.state !== 'modeled') continue;
+        const room = rooms.find(item => item.id === endpoint.roomId), bounds = stairEndpointBounds(stair, role);
+        if (room && bounds) marks.push({ kind: 'stair', id, roomId: room.id, x: room.x + pixels(bounds.x), y: room.y + pixels(bounds.y), width: pixels(bounds.width), height: pixels(bounds.height) });
       }
     }
   }

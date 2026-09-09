@@ -4,7 +4,7 @@ import { applyMeasurementAction, type MeasurementEvent } from '@shared/domain/me
 import { unknownMeasurement, type Dimension } from '@shared/domain/measurements';
 import type { MeasurementRef } from '@shared/domain/geometryValidation';
 import { parseMeasurement, formatMeasurement } from '@shared/domain/parseMeasurement';
-import { QUANTITY_POLICY_VERSION_V2, QUANTITY_POLICY_VERSION_V3, type QuantityRequest } from '@shared/quantities/policy';
+import { QUANTITY_POLICY_VERSION_V2, QUANTITY_POLICY_VERSION_V3, QUANTITY_POLICY_VERSION_V4, type QuantityRequest } from '@shared/quantities/policy';
 import { copyJson } from '@shared/quantities/canonicalJson';
 import { assertSupportedPhysicalDocument, importLegacyPhysicalDraft, upgradePhysicalDraft,
   type PhysicalDraftSource } from '@shared/compatibility/physicalDraft';
@@ -14,6 +14,7 @@ import { openingFieldsFor, type OpeningFields, type OpeningEvent, type OpeningDe
 import type { TakeoffState } from './takeoffCommands';
 import { recordApplicabilityDeclaration, type ReviewState } from './reviewCommands';
 
+import { reformatStairFields, maskStairFields, type StairRawEntry, type StairAction } from './stairCommands';
 import type { HistoryEvidence } from './historyEvidence';
 
 export const ROOM_FIELDS = ['length', 'width', 'ceilingHeight'] as const;
@@ -37,11 +38,14 @@ export interface PhysicalDraft {
   takeoffState?: TakeoffState;
   reviewState?: ReviewState;
   historyEvidence?: HistoryEvidence;
+  stairFields?: Record<string, StairRawEntry>;
+  stairEvents?: StairAction[];
+  stairUpgradeLineage?: { version: 'physical-stair-upgrade-v1'; sourceDraftId: string; sourceRevision: number; at: string; originalDraft: unknown };
   levelView?: { version: 'physical-level-view-v1'; activeLevelId: string; pendingNames?: Record<string, string> };
   levelUpgradeLineage?: { version: 'physical-level-upgrade-v1'; sourceDraftId: string; sourceRevision: number; at: string; originalDraft: unknown };
 }
 export interface PhysicalDraftRegistry {
-  version: 'mfp-editor-draft-v1' | 'mfp-editor-draft-v2';
+  version: 'mfp-editor-draft-v1' | 'mfp-editor-draft-v2' | 'mfp-editor-draft-v3';
   localEditRevision: number;
   selectedDraftId: string | null;
   drafts: PhysicalDraft[];
@@ -76,7 +80,7 @@ function fieldsFor(document: PhysicalDocument, unit: InputUnit): PhysicalDraft['
     [field, { text: committedFieldText(room[field], unit), unit, dirty: false }]))])) as PhysicalDraft['fields'];
 }
 export function requestForRooms(document: PhysicalDocument): QuantityRequest {
-  return { policy: { version: document.schemaVersion === 3 ? QUANTITY_POLICY_VERSION_V3 : QUANTITY_POLICY_VERSION_V2, openingMeasureBasis: 'finished', crownFullHeightGaps: [] },
+  return { policy: { version: document.schemaVersion === 4 ? QUANTITY_POLICY_VERSION_V4 : document.schemaVersion === 3 ? QUANTITY_POLICY_VERSION_V3 : QUANTITY_POLICY_VERSION_V2, openingMeasureBasis: 'finished', crownFullHeightGaps: [] },
     selections: document.rooms.length ? [
       { output: 'floor-area', roomIds: document.rooms.map(room => room.id), wasteFraction: 0 },
       { output: 'ceiling-area', roomIds: document.rooms.map(room => room.id), wasteFraction: 0 },
@@ -122,7 +126,7 @@ export function adoptQuickDraft(source: QuickRoomDraft, id: string, name?: strin
 }
 export function insertDraft(registry: PhysicalDraftRegistry, draft: PhysicalDraft): PhysicalDraftRegistry {
   if (registry.drafts.some(item => item.id === draft.id)) throw new PhysicalDraftError('DUPLICATE_DRAFT_ID', 'Choose a new local draft identity; the existing draft was not replaced.');
-  return { ...registry, version: draft.document.schemaVersion === 3 ? 'mfp-editor-draft-v2' : registry.version, localEditRevision: nextRevision(registry.localEditRevision), selectedDraftId: draft.id,
+  return { ...registry, version: draft.document.schemaVersion === 4 || registry.version === 'mfp-editor-draft-v3' ? 'mfp-editor-draft-v3' : draft.document.schemaVersion === 3 ? 'mfp-editor-draft-v2' : registry.version, localEditRevision: nextRevision(registry.localEditRevision), selectedDraftId: draft.id,
     drafts: [...registry.drafts, copy(draft)] };
 }
 export function selectDraft(registry: PhysicalDraftRegistry, id: string): PhysicalDraftRegistry {
@@ -154,7 +158,7 @@ export function addRoom(draft: PhysicalDraft, id: string, name = 'Room ' + (draf
     wallFaces: CLOCKWISE_WALLS.map(side => ({ id: id + ':' + side, side })) as PhysicalRoom['wallFaces'], metadata: {} };
   const next = changed(draft);
   next.document.rooms.push(room);
-  if (next.document.schemaVersion === 3) {
+  if (next.document.schemaVersion !== 2) {
     const levelId = next.levelView?.activeLevelId;
     if (!levelId || !next.document.buildingLevels.levels.some(level => level.id === levelId)) throw new PhysicalDraftError('LEVEL_NOT_FOUND', 'Select an existing level before adding a room.');
     next.document.buildingLevels.roomLevels = Object.fromEntries([...Object.entries(next.document.buildingLevels.roomLevels), [id, levelId]]);
@@ -220,6 +224,7 @@ export function switchUnit(draft: PhysicalDraft, unit: InputUnit): PhysicalDraft
     const formatted = openingFieldsFor(opening, unit);
     for (const field of ['width', 'height', 'sillHeight', 'offset'] as const) if (!fields[field].dirty) fields[field] = formatted[field];
   }
+  reformatStairFields(next, unit);
   return next;
 }
 export function setApplicability(draft: PhysicalDraft, id: string, kind: keyof RoomApplicability, declaration: AppDeclaration, at = new Date().toISOString()): PhysicalDraft {
@@ -249,5 +254,6 @@ export function previewDocument(draft: PhysicalDraft): PhysicalDocument {
     // dependent results until raw positioning is resolved; never invent zero.
     if (fields.offset.dirty) opening.width = unknownMeasurement('Finish editing opening center position to calculate its dependent quantity');
   }
+  maskStairFields(draft, document);
   return document;
 }

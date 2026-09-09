@@ -1,5 +1,5 @@
 import { createRegistry, updateDraft, type PhysicalDraft, type PhysicalDraftRegistry } from './state';
-import { parseRegistry, serializeRegistry, validateRegistry, PHYSICAL_DRAFT_STORAGE_KEY, LEGACY_PHYSICAL_DRAFT_STORAGE_KEY } from './storage';
+import { parseRegistry, serializeRegistry, validateRegistry, PHYSICAL_DRAFT_STORAGE_KEY, PREVIOUS_PHYSICAL_DRAFT_STORAGE_KEY, LEGACY_PHYSICAL_DRAFT_STORAGE_KEY } from './storage';
 
 import { emptyHistory, historySummary, recordHistoryCommit, restoreHistory, type DraftHistory, type HistorySummary, type HistoryUpdateOptions } from './history';
 
@@ -23,7 +23,8 @@ function freeze<T>(value: T): T {
 /** Lazy, session-only storage. Never reads or modifies either legacy editor cache. */
 export function createPhysicalDraftStore(storageFactory: () => DraftStorage = () => window.sessionStorage) {
   let storage: DraftStorage | null = null, lastGoodRaw: string | null = null;
-  let legacyFallback = false, legacyRaw: string | null = null, recoveryKey = PHYSICAL_DRAFT_STORAGE_KEY;
+  let recoveryKey = PHYSICAL_DRAFT_STORAGE_KEY;
+  let fallbackReads: {key:string;raw:string|null}[] = [];
   const histories = new Map<string, DraftHistory>();
   const currentHistory = (id: string) => histories.get(id) ?? emptyHistory();
   let snapshot: PhysicalDraftStoreSnapshot = { history: historySummary(null, emptyHistory()), registry: freeze(createRegistry()), cache: 'uninitialized', message: '', error: '', rawRecovery: null };
@@ -38,11 +39,10 @@ export function createPhysicalDraftStore(storageFactory: () => DraftStorage = ()
     let raw: string | null;
     try {
       storage = storageFactory(); raw = storage.getItem(PHYSICAL_DRAFT_STORAGE_KEY);
-      if (raw === null) {
-        legacyFallback = true;
-        legacyRaw = storage.getItem(LEGACY_PHYSICAL_DRAFT_STORAGE_KEY);
-        raw = legacyRaw;
-        if (raw !== null) recoveryKey = LEGACY_PHYSICAL_DRAFT_STORAGE_KEY;
+      fallbackReads=[];
+      if(raw===null)for(const key of [PREVIOUS_PHYSICAL_DRAFT_STORAGE_KEY,LEGACY_PHYSICAL_DRAFT_STORAGE_KEY]){
+        const older=storage.getItem(key);fallbackReads.push({key,raw:older});
+        if(older!==null){raw=older;recoveryKey=key;break;}
       }
     }
     catch {
@@ -55,7 +55,7 @@ export function createPhysicalDraftStore(storageFactory: () => DraftStorage = ()
       publish({ ...snapshot, cache: result.status, message: result.message, rawRecovery: raw });
       return;
     }
-    lastGoodRaw = legacyFallback ? null : raw;
+    lastGoodRaw = recoveryKey === PHYSICAL_DRAFT_STORAGE_KEY ? raw : null;
     if (result.status === 'recovered') for (const draft of result.registry.drafts) histories.set(draft.id, emptyHistory('Undo/Redo history starts in this page session. The latest recovered draft and its evidence are preserved.'));
     publish({ ...snapshot, registry: freeze(result.status === 'recovered' ? result.registry : createRegistry()), cache: 'ready',
       message: result.status === 'recovered' ? 'Temporary physical drafts recovered for this browser session.' : '' });
@@ -71,7 +71,7 @@ export function createPhysicalDraftStore(storageFactory: () => DraftStorage = ()
       const candidate = change(snapshot.registry);
       if (candidate === snapshot.registry) { if (snapshot.error) publish({ ...snapshot, error: '' }); return true; }
       if (candidate.localEditRevision !== snapshot.registry.localEditRevision + 1) throw new Error('A registry change must advance exactly one local edit revision.');
-      const validated = validateRegistry({ ...candidate, version: 'mfp-editor-draft-v2' });
+      const validated = validateRegistry({ ...candidate, version: 'mfp-editor-draft-v3' });
       if (validated.status !== 'recovered') throw new Error(validated.status === 'empty' ? 'The draft registry is empty.' : validated.message);
       next = freeze(validated.registry);
     } catch (error) {
@@ -83,15 +83,15 @@ export function createPhysicalDraftStore(storageFactory: () => DraftStorage = ()
     if (snapshot.cache === 'ready' && storage) {
       try {
         const current = storage.getItem(PHYSICAL_DRAFT_STORAGE_KEY);
-        const currentLegacy = legacyFallback ? storage.getItem(LEGACY_PHYSICAL_DRAFT_STORAGE_KEY) : legacyRaw;
-        if (current !== lastGoodRaw || (legacyFallback && currentLegacy !== legacyRaw)) {
-          following = { ...following, cache: 'conflict', rawRecovery: current ?? currentLegacy,
+        const changedFallback=fallbackReads.map(item=>({...item,current:storage!.getItem(item.key)})).find(item=>item.current!==item.raw);
+        if (current !== lastGoodRaw || changedFallback) {
+          following = { ...following, cache: 'conflict', rawRecovery: current ?? changedFallback?.current ?? null,
             message: 'Recovery data changed in another editor. This edit is held in memory; the newer stored draft has not been overwritten.' };
         } else {
           const raw = serializeRegistry(next);
           storage.setItem(PHYSICAL_DRAFT_STORAGE_KEY, raw);
           lastGoodRaw = raw;
-          legacyFallback = false; recoveryKey = PHYSICAL_DRAFT_STORAGE_KEY;
+          fallbackReads=[]; recoveryKey = PHYSICAL_DRAFT_STORAGE_KEY;
         }
       } catch {
         following = { ...following, cache: 'unavailable',
@@ -108,7 +108,7 @@ export function createPhysicalDraftStore(storageFactory: () => DraftStorage = ()
       activeStorage.removeItem(recoveryKey);
       storage = activeStorage;
       lastGoodRaw = null;
-      legacyFallback = false; legacyRaw = null; recoveryKey = PHYSICAL_DRAFT_STORAGE_KEY;
+      fallbackReads=[]; recoveryKey = PHYSICAL_DRAFT_STORAGE_KEY;
       histories.clear();
       publish({ history: historySummary(null, emptyHistory()), registry: freeze(createRegistry()), cache: 'ready', message: '', error: '', rawRecovery: null });
       return true;

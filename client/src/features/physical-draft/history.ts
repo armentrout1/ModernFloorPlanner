@@ -1,3 +1,5 @@
+import { stairHistoryParts, guardStairHistory, applyStairHistory } from './stairHistory';
+import { stairRoomDependencies } from './stairCommands';
 import { assertSupportedPhysicalDocument } from '@shared/compatibility/physicalDraft';
 import { assertRoomReassignment, roomLevelId } from './levelCommands';
 import type { PhysicalOpening, PhysicalRoom } from '@shared/domain/document';
@@ -15,7 +17,7 @@ import { copyHistory as copy, equalHistoryValue as equal, historyTargetKey as ke
 export const HISTORY_LIMIT = 50 as const;
 export interface HistoryUpdateOptions { nameSession?: string }
 export interface HistoryEntry { id: string; eventId: string; label: string; changes: HistoryChange[]; scopeRevision: number; automaticScope: boolean; nameSession?: string }
-export interface HistoryReveal { levelId: string; roomId?: string; openingId?: string; revision: number }
+export interface HistoryReveal { levelId: string; roomId?: string; openingId?: string; stairId?: string; surfaceOpeningId?: string; endpointRole?: 'lower' | 'upper'; surface?: 'floor' | 'ceiling'; revision: number }
 export interface DraftHistory { undo: HistoryEntry[]; redo: HistoryEntry[]; boundary: string | null; reveal?: HistoryReveal }
 export interface HistorySummary { undoLabel: string | null; redoLabel: string | null; undoReason: string | null; redoReason: string | null; boundary: string | null; limit: 50; reveal?: HistoryReveal }
 export const emptyHistory = (boundary: string | null = null): DraftHistory => ({ undo: [], redo: [], boundary });
@@ -36,7 +38,7 @@ function changesBetween(before: PhysicalDraft, after: PhysicalDraft): HistoryCha
     if (!equal(old, next)) changes.push({ target, before: copy(old), after: copy(next), ...(target.kind === 'takeoff-output' ? { beforeIndex: old === null ? null : before.request.selections.findIndex(item => item.output === target.output), afterIndex: next === null ? null : after.request.selections.findIndex(item => item.output === target.output) } : {}) });
   };
   const ids = (a: { id: string }[], b: { id: string }[]) => Array.from(new Set([...a, ...b].map(item => item.id)));
-  if (before.document.schemaVersion === 3 && after.document.schemaVersion === 3) {
+  if (before.document.schemaVersion !== 2 && after.document.schemaVersion !== 2) {
     const old = before.document.buildingLevels.levels, next = after.document.buildingLevels.levels;
     for (const id of ids(old, next)) {
       if (!old.some(level => level.id === id) || !next.some(level => level.id === id)) add({ kind: 'level', id });
@@ -47,10 +49,10 @@ function changesBetween(before: PhysicalDraft, after: PhysicalDraft): HistoryCha
   for (const id of ids(before.document.rooms, after.document.rooms)) {
     if (!before.document.rooms.some(room => room.id === id) || !after.document.rooms.some(room => room.id === id)) {
       add({ kind: 'room', id });
-      if (before.document.schemaVersion === 3 && after.document.schemaVersion === 3) add({ kind: 'room-level', id });
+      if (before.document.schemaVersion !== 2 && after.document.schemaVersion !== 2) add({ kind: 'room-level', id });
       continue;
     }
-    if (before.document.schemaVersion === 3 && after.document.schemaVersion === 3) add({ kind: 'room-level', id });
+    if (before.document.schemaVersion !== 2 && after.document.schemaVersion !== 2) add({ kind: 'room-level', id });
     add({ kind: 'room-name', id });
     roomFields.forEach(field => add({ kind: 'room-measurement', id, field }));
     applicabilityFields.forEach(field => add({ kind: 'applicability', id, field }));
@@ -59,6 +61,12 @@ function changesBetween(before: PhysicalDraft, after: PhysicalDraft): HistoryCha
     if (!before.document.openings.some(opening => opening.id === id) || !after.document.openings.some(opening => opening.id === id)) { add({ kind: 'opening', id }); continue; }
     openingMeasurements.forEach(field => add({ kind: 'opening-measurement', id, field }));
     add({ kind: 'opening-position', id }); add({ kind: 'opening-basis', id }); add({ kind: 'opening-appearance', id });
+  }
+  if(before.document.schemaVersion===4&&after.document.schemaVersion===4)for(const object of ['stair','surface-opening'] as const){
+    const old=object==='stair'?before.document.stairsContract.stairs:before.document.stairsContract.surfaceOpenings;
+    const next=object==='stair'?after.document.stairsContract.stairs:after.document.stairsContract.surfaceOpenings;
+    for(const id of ids(old,next)){if(!old.some(item=>item.id===id)||!next.some(item=>item.id===id))add({kind:'stair-object',object,id});
+      else for(const part of stairHistoryParts(object))add({kind:'stair-part',object,id,part});}
   }
   for (const output of Array.from(new Set([...before.request.selections, ...after.request.selections].map(item => item.output)))) add({ kind: 'takeoff-output', output });
   add({ kind: 'takeoff-basis' }); add({ kind: 'crown-gaps' });
@@ -69,6 +77,8 @@ function labelFor(before: PhysicalDraft, after: PhysicalDraft, changes: HistoryC
   const target = changes[0].target;
   const openingKind = 'id' in target ? (after.document.openings.find(item => item.id === target.id) ?? before.document.openings.find(item => item.id === target.id))?.kind ?? 'opening' : 'opening';
   switch (target.kind) {
+    case 'stair-object': return (target.object==='stair'?'stair':'surface opening')+(changes[0].before===null?' creation':' deletion');
+    case 'stair-part': return (target.object==='stair'?'stair':'surface opening')+' '+words(target.part)+' change';
     case 'level': return changes[0].before === null ? 'level creation' : 'level deletion';
     case 'level-name': return 'level name change';
     case 'level-order': return 'level display order change';
@@ -92,11 +102,12 @@ function labelFor(before: PhysicalDraft, after: PhysicalDraft, changes: HistoryC
   }
 }
 function appendEvent(draft: PhysicalDraft, event: HistoryEvent): void {
-  draft.historyEvidence = { version: draft.document.schemaVersion === 3 ? 'physical-history-evidence-v2' : 'physical-history-evidence-v1', events: [...(draft.historyEvidence?.events ?? []), copy(event)] };
+  draft.historyEvidence = { version: draft.document.schemaVersion === 4 ? 'physical-history-evidence-v3' : draft.document.schemaVersion === 3 ? 'physical-history-evidence-v2' : 'physical-history-evidence-v1', events: [...(draft.historyEvidence?.events ?? []), copy(event)] };
 }
 function eventId(draft: PhysicalDraft): string { return `${draft.id}:history:${draft.localEditRevision}`; }
 function actionTime(before: PhysicalDraft, after: PhysicalDraft): string {
-  return after.events.slice(before.events.length).at(-1)?.event.at
+  return after.stairEvents?.slice(before.stairEvents?.length??0).at(-1)?.at
+    ?? after.events.slice(before.events.length).at(-1)?.event.at
     ?? after.openingEvents?.slice(before.openingEvents?.length ?? 0).at(-1)?.at
     ?? after.reviewState?.applicabilityEvents.slice(before.reviewState?.applicabilityEvents.length ?? 0).at(-1)?.at
     ?? new Date().toISOString();
@@ -117,8 +128,8 @@ export function recordHistoryCommit(before: PhysicalDraft, after: PhysicalDraft,
     return { draft: next, history: emptyHistory(boundary) };
   }
   const baseLabel = labelFor(before, after, changes), targetLevel = revealFor(after, before, changes)?.levelId;
-  const levelName = after.document.schemaVersion === 3 ? after.document.buildingLevels.levels.find(level => level.id === targetLevel)?.name : null;
-  const projectTakeoff = after.document.schemaVersion === 3 && changes.every(change => ['takeoff-output', 'takeoff-basis', 'crown-gaps'].includes(change.target.kind));
+  const levelName = after.document.schemaVersion !== 2 ? after.document.buildingLevels.levels.find(level => level.id === targetLevel)?.name : null;
+  const projectTakeoff = after.document.schemaVersion !== 2 && changes.every(change => ['takeoff-output', 'takeoff-basis', 'crown-gaps'].includes(change.target.kind));
   const label = projectTakeoff ? baseLabel + ' — project takeoff' : changes[0].target.kind === 'level-order' ? 'building level display order change' : levelName ? baseLabel + ' — ' + levelName : baseLabel, previous = history.undo.at(-1);
   const coalesce = options.nameSession && previous?.nameSession === options.nameSession && previous.changes.length === 1
     && changes.length === 1 && changes[0].target.kind === 'room-name' && key(previous.changes[0].target) === key(changes[0].target)
@@ -147,7 +158,7 @@ function requireClean(raw: FieldDraft | undefined, name: string): void {
   if (raw?.dirty) fail(`Apply or Revert the pending ${name} edit before Undo or Redo.`);
 }
 function comparable(target: HistoryTarget, value: any): unknown {
-  if ((target.kind === 'opening' || target.kind === 'room' || target.kind === 'level') && value !== null && value !== undefined) {
+  if ((target.kind === 'opening' || target.kind === 'room' || target.kind === 'level' || target.kind === 'stair-object') && value !== null && value !== undefined) {
     const { fields: _fields, index: _index, ...semantic } = value; return semantic;
   }
   return value;
@@ -157,6 +168,7 @@ function guardTarget(draft: PhysicalDraft, change: HistoryChange): void {
   const current = bundleValue(draft, target);
   if (!equal(comparable(target, current), comparable(target, change.after))) fail('The next history target changed or no longer exists. Its newer value has not been overwritten.');
   switch (target.kind) {
+    case 'stair-object': case 'stair-part': guardStairHistory(draft,target,restoredHistoryValue(target,change.before,change.after));break;
     case 'level':
     case 'level-name':
       if (draft.levelView?.pendingNames && Object.hasOwn(draft.levelView.pendingNames, target.id)) fail('Apply the pending level name before Undo or Redo.');
@@ -182,12 +194,13 @@ function applyInverse(draft: PhysicalDraft, entry: HistoryEntry, at: string): { 
   const next = copyDraftForEdit(draft), openingChecks = new Set<string>();
   const request = copy(next.request);
   for (const change of effective) {
-    const { target } = change, restored = restoredHistoryValue(target, change.before) as any;
+    const { target } = change, restored = restoredHistoryValue(target, change.before, change.after) as any;
     const room = 'id' in target ? next.document.rooms.find(item => item.id === target.id) : undefined;
     const opening = 'id' in target ? next.document.openings.find(item => item.id === target.id) : undefined;
     switch (target.kind) {
+      case 'stair-object': case 'stair-part': applyStairHistory(next,target,restored);break;
       case 'level': {
-        if (next.document.schemaVersion !== 3) fail('This history requires the building-level contract.');
+        if (next.document.schemaVersion === 2) fail('This history requires the building-level contract.');
         const contract = next.document.buildingLevels;
         if (restored === null) {
           if (contract.levels.length <= 1 || Object.values(contract.roomLevels).includes(target.id)) fail('This level cannot be removed while it owns rooms or is the only level.');
@@ -200,18 +213,18 @@ function applyInverse(draft: PhysicalDraft, entry: HistoryEntry, at: string): { 
         break;
       }
       case 'level-name': {
-        if (next.document.schemaVersion !== 3) fail('This history requires the building-level contract.');
+        if (next.document.schemaVersion === 2) fail('This history requires the building-level contract.');
         next.document.buildingLevels.levels.find(level => level.id === target.id)!.name = restored; break;
       }
       case 'level-order': {
-        if (next.document.schemaVersion !== 3) fail('This history requires the building-level contract.');
+        if (next.document.schemaVersion === 2) fail('This history requires the building-level contract.');
         const contract = next.document.buildingLevels;
         if (restored.length !== contract.levels.length || restored.some((item: { id: string }) => !contract.levels.some(level => level.id === item.id))) fail('The set of levels changed; the old order cannot replace it.');
         for (const level of contract.levels) level.displayOrder = restored.find((item: { id: string }) => item.id === level.id).displayOrder;
         break;
       }
       case 'room-level': {
-        if (next.document.schemaVersion !== 3) fail('This history requires the building-level contract.');
+        if (next.document.schemaVersion === 2) fail('This history requires the building-level contract.');
         if (restored !== null && room) assertRoomReassignment(next, target.id);
         next.document.buildingLevels.roomLevels = Object.fromEntries([
           ...Object.entries(next.document.buildingLevels.roomLevels).filter(([id]) => id !== target.id),
@@ -221,6 +234,8 @@ function applyInverse(draft: PhysicalDraft, entry: HistoryEntry, at: string): { 
       }
       case 'room': {
         if (restored === null) {
+          const stairDependencies=stairRoomDependencies(next,target.id);
+          if(stairDependencies.length)fail('This room has dependent stairs or surface openings: '+stairDependencies.join(', ')+'. Resolve those changes before Undo.');
           const walls = new Set(room!.wallFaces.map(wall => wall.id));
           if (next.document.openings.some(item => item.attachments.some(face => walls.has(face.wallFaceId)))
               || next.document.editorContract?.groups.some(group => group.roomIds.includes(target.id))) fail('This room has dependent openings or group membership. Resolve those changes before Undo.');
@@ -346,14 +361,25 @@ export function historySummary(draft: PhysicalDraft | null, history: DraftHistor
 }
 
 function revealFor(after: PhysicalDraft, before: PhysicalDraft, changes: HistoryChange[]): HistoryReveal | undefined {
-  if (after.document.schemaVersion !== 3 || changes.every(change => ['takeoff-output', 'takeoff-basis', 'crown-gaps'].includes(change.target.kind))) return undefined;
+  if (after.document.schemaVersion === 2 || changes.every(change => ['takeoff-output', 'takeoff-basis', 'crown-gaps'].includes(change.target.kind))) return undefined;
   const make = (levelId: string | null, roomId?: string, openingId?: string): HistoryReveal | undefined =>
-    levelId && after.document.schemaVersion === 3 && after.document.buildingLevels.levels.some(level => level.id === levelId)
+    levelId && after.document.schemaVersion !== 2 && after.document.buildingLevels.levels.some(level => level.id === levelId)
       ? { levelId, ...(roomId ? { roomId } : {}), ...(openingId ? { openingId } : {}), revision: after.localEditRevision } : undefined;
   for (const change of changes) {
     const target = change.target;
     if (target.kind === 'level' || target.kind === 'level-name') {
       const found = make(target.id); if (found) return found;
+    }
+    if((target.kind==='stair-object'||target.kind==='stair-part')&&after.document.schemaVersion===4){
+      const prior=before.document.schemaVersion===4?before.document.stairsContract:null;
+      if(target.object==='stair'){
+        const stair=after.document.stairsContract.stairs.find(item=>item.id===target.id)??prior?.stairs.find(item=>item.id===target.id);
+        if(stair){const preferred=target.kind==='stair-part'&&target.part.includes('upper')?'upper':'lower';
+          for(const role of [preferred,preferred==='lower'?'upper':'lower'] as const){const endpoint=stair.endpoints[role];if(endpoint.state==='modeled')return {...make(endpoint.levelId,endpoint.roomId)!,stairId:target.id,endpointRole:role};}}
+      }else{
+        const opening=after.document.stairsContract.surfaceOpenings.find(item=>item.id===target.id)??prior?.surfaceOpenings.find(item=>item.id===target.id);
+        const attachment=opening?.attachments[0];if(attachment){const found=make(roomLevelId(after,attachment.roomId),attachment.roomId);if(found)return {...found,surfaceOpeningId:target.id,surface:attachment.surface};}
+      }
     }
     if (!('id' in target)) continue;
     if (target.kind.startsWith('room') || target.kind === 'applicability') {

@@ -13,7 +13,7 @@ export function projectPhysicalRooms(document: PhysicalDocument, levelId?: strin
   const originalObjects = legacy.success ? legacy.data.flatMap(room => room.objects ?? []) : [];
   let nextX = 0;
   for (const physical of document.rooms) {
-    if (document.schemaVersion === 3 && levelId != null && document.buildingLevels.roomLevels[physical.id] !== levelId) continue;
+    if (document.schemaVersion !== 2 && levelId != null && document.buildingLevels.roomLevels[physical.id] !== levelId) continue;
     if (physical.length.state !== 'known' || physical.width.state !== 'known') {
       notices.push(`${physical.name || 'Room'}: finish its plan dimensions to show its drawing.`);
       continue;

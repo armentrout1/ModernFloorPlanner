@@ -5,7 +5,8 @@ import { wallIndex, type QuantityOutput } from '../domain/geometryValidation';
 export const QUANTITY_POLICY_VERSION = 'rectangular-flat-v1' as const;
 export const QUANTITY_POLICY_VERSION_V2 = 'rectangular-flat-v2' as const;
 export const QUANTITY_POLICY_VERSION_V3 = 'rectangular-flat-v3' as const;
-export type QuantityPolicyVersion = typeof QUANTITY_POLICY_VERSION | typeof QUANTITY_POLICY_VERSION_V2 | typeof QUANTITY_POLICY_VERSION_V3;
+export const QUANTITY_POLICY_VERSION_V4 = 'rectangular-flat-v4' as const;
+export type QuantityPolicyVersion = typeof QUANTITY_POLICY_VERSION | typeof QUANTITY_POLICY_VERSION_V2 | typeof QUANTITY_POLICY_VERSION_V3 | typeof QUANTITY_POLICY_VERSION_V4;
 const id = z.string().refine(value => value.trim().length > 0 && !/[\u0000-\u001f\u007f]/.test(value), 'Invalid ID');
 const ids = z.array(id);
 const face = z.object({ wallFaceId: id, openingId: id }).strict();
@@ -25,7 +26,7 @@ const selection = z.discriminatedUnion('output', [
 ]);
 export const quantityRequestSchema = z.object({
   policy: z.object({
-    version: z.enum([QUANTITY_POLICY_VERSION, QUANTITY_POLICY_VERSION_V2, QUANTITY_POLICY_VERSION_V3]),
+    version: z.enum([QUANTITY_POLICY_VERSION, QUANTITY_POLICY_VERSION_V2, QUANTITY_POLICY_VERSION_V3, QUANTITY_POLICY_VERSION_V4]),
     openingMeasureBasis: z.enum(['nominal', 'clear', 'finished', 'rough']),
     crownFullHeightGaps: z.array(face),
   }).strict(),
@@ -55,8 +56,11 @@ export const QUANTITY_POLICY_RULES = Object.freeze({
 
 export function validateQuantityRequest(doc: PhysicalDocument, input: unknown): RequestResult {
   const suppliedVersion = (input as { policy?: { version?: unknown } } | null)?.policy?.version;
-  if (suppliedVersion !== QUANTITY_POLICY_VERSION && suppliedVersion !== QUANTITY_POLICY_VERSION_V2 && suppliedVersion !== QUANTITY_POLICY_VERSION_V3) return { ok: false, errors: [{
+  if (suppliedVersion !== QUANTITY_POLICY_VERSION && suppliedVersion !== QUANTITY_POLICY_VERSION_V2 && suppliedVersion !== QUANTITY_POLICY_VERSION_V3 && suppliedVersion !== QUANTITY_POLICY_VERSION_V4) return { ok: false, errors: [{
     code: 'UNSUPPORTED_POLICY_VERSION', path: ['policy', 'version'], message: 'Explicit supported policy version is required',
+  }] };
+  if ((doc.schemaVersion === 4) !== (suppliedVersion === QUANTITY_POLICY_VERSION_V4)) return { ok: false, errors: [{
+    code: 'STAIR_POLICY_MISMATCH', path: ['policy', 'version'], message: 'Schema4 stair and surface-opening content requires rectangular-flat-v4; historical policies cannot ignore it',
   }] };
   if ((doc.schemaVersion === 3) !== (suppliedVersion === QUANTITY_POLICY_VERSION_V3)) return { ok: false, errors: [{
     code: 'LEVEL_POLICY_MISMATCH', path: ['policy', 'version'], message: 'Version-3 level ownership requires the explicit rectangular-flat-v3 policy; historical documents retain their own policy',

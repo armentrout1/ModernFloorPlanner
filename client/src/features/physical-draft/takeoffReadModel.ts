@@ -17,6 +17,8 @@ export const OUTPUT_LABELS: Readonly<Record<QuantityOutput, string>> = Object.fr
 export interface DrawingSourceScope {
   roomIds: string[]; wallFaceIds: string[]; openingIds: string[];
   openingFaces: { openingId: string; wallFaceId: string }[];
+  surfaceOpenings?: { openingId:string; roomId:string; surface:'floor'|'ceiling' }[];
+  stairIds?: string[];
 }
 export interface DrawingSourceFocus { key: string; scope: DrawingSourceScope }
 export const emptySourceScope = (): DrawingSourceScope => ({ roomIds: [], wallFaceIds: [], openingIds: [], openingFaces: [] });
@@ -24,7 +26,7 @@ const unique = (values: string[]) => Array.from(new Set(values));
 export function roomLabel(document: PhysicalDocument, id: string) {
   const room = document.rooms.find(item => item.id === id);
   const name = room?.name?.trim() || (room ? 'Room ' + (document.rooms.indexOf(room) + 1) : 'Removed room');
-  return room && document.schemaVersion === 3 ? levelNameForRoom(document, id) + ' · ' + name : name;
+  return room && document.schemaVersion !== 2 ? levelNameForRoom(document, id) + ' · ' + name : name;
 }
 export function wallLabel(document: PhysicalDocument, id: string) {
   const room = document.rooms.find(item => item.wallFaces.some(wall => wall.id === id));
@@ -135,13 +137,16 @@ export interface TakeoffContribution {
   openingId: string; wallFaceId: string; label: string; source: DrawingSourceScope;
   raw: string; effectiveBeforeUnion: string; boundaryAdjustment: string; roundoffAdjustment: string;
 }
+export interface TakeoffSurfaceContribution { openingId:string; roomId:string; surface:'floor'|'ceiling'; label:string; raw:string; effectiveBeforeUnion:string; source:DrawingSourceScope }
 export interface TakeoffRow {
+  grossBasis?:string|null; grossBasisStatus?:'complete'|'provisional'|'unavailable'; surfaceContributions:TakeoffSurfaceContribution[];
   targetId: string; label: string; source: DrawingSourceScope; status: QuantityRecord['status'];
   readiness: DeepReadonly<QuantityRecord['readiness']>; amounts: TakeoffAmounts | null;
   contributions: TakeoffContribution[]; adjustments: { code: string; message: string; amount: string }[];
   formula: string; findings: TakeoffFinding[]; record: DeepReadonly<QuantityRecord>;
 }
 export interface TakeoffOutput {
+  grossBasis?:string|null; grossBasisStatus?:'complete'|'provisional'|'unavailable';
   output: QuantityOutput; label: string; targetCount: number; scope: DrawingSourceScope;
   status: QuantityRecord['status'] | 'empty'; completeness: QuantityAggregate['completeness']; subtotalStatus: QuantityAggregate['subtotalStatus'];
   total: TakeoffAmounts | null; subtotal: TakeoffAmounts | null;
@@ -163,9 +168,12 @@ export function buildTakeoffReadModel(draft: PhysicalDraft, options: TakeoffRead
     const findings = [...record.readiness.numericBasis.findings, ...record.readiness.geometry.findings,
       ...record.readiness.confirmation.findings, ...(record.readiness.applicability?.findings ?? [])];
     const deduped = Array.from(new Map(findings.map(finding => [JSON.stringify([finding.code, finding.paths, finding.openingIds, finding.wallFaceIds]), finding])).values());
-    return { targetId: record.targetId, label: sourceLabel(draft.document, source), source, status: record.status, readiness: record.readiness,
+    const surfaceFindings:TakeoffFinding[]=(record.readiness.surface?.findings??[]).map(finding=>({code:finding.code,category:finding.code==='SURFACE_OPENING_INVALID'?'invalid-geometry':'missing-or-unresolved',message:finding.message,detail:finding.message,paths:[[...finding.path]],source:{...emptySourceScope(),roomIds:[record.readiness.surface!.roomId],...(finding.path[1]==='stairs'&&finding.id?{stairIds:[finding.id]}:finding.id?{surfaceOpenings:[{openingId:finding.id,roomId:record.readiness.surface!.roomId,surface:record.readiness.surface!.surface}]}:{})}}));
+    return { ...(record.grossBasis!==undefined?{grossBasis:record.grossBasis===null?null:quantityText(record.grossBasis,record.unit,draft.displayUnit),grossBasisStatus:record.grossBasisStatus}:{}),
+      surfaceContributions:(record.trace.surfaceContributions??[]).map(item=>({openingId:item.openingId,roomId:item.roomId,surface:item.surface,label:roomLabel(draft.document,item.roomId)+' · '+item.surface+' · '+((draft.document.schemaVersion===4?draft.document.stairsContract.surfaceOpenings.find(opening=>opening.id===item.openingId)?.name:undefined)||'Surface opening'),raw:quantityText(item.raw,record.unit,draft.displayUnit),effectiveBeforeUnion:quantityText(item.effectiveBeforeUnion,record.unit,draft.displayUnit),source:{...emptySourceScope(),surfaceOpenings:[{openingId:item.openingId,roomId:item.roomId,surface:item.surface}]}})),
+      targetId: record.targetId, label: sourceLabel(draft.document, source), source, status: record.status, readiness: record.readiness,
       amounts: displayAmounts(record.amounts, record.unit, draft.displayUnit, pending), formula: record.trace.formula,
-      findings: deduped.map(finding => usefulFinding(draft, finding)), record,
+      findings: [...deduped.map(finding => usefulFinding(draft, finding)),...surfaceFindings], record,
       contributions: record.trace.contributions.map(contribution => ({ openingId: contribution.openingId, wallFaceId: contribution.wallFaceId,
         label: faceLabel(draft.document, contribution), source: { ...emptySourceScope(), openingFaces: [{ openingId: contribution.openingId, wallFaceId: contribution.wallFaceId }] },
         raw: quantityText(contribution.raw, record.unit, draft.displayUnit), effectiveBeforeUnion: quantityText(contribution.effectiveBeforeUnion, record.unit, draft.displayUnit),
@@ -182,7 +190,7 @@ export function buildTakeoffReadModel(draft: PhysicalDraft, options: TakeoffRead
     const targets = (ids: readonly string[]) => ids.map(id => ({ id, label: selectedRows.find(row => row.targetId === id)?.label ?? id }));
     const count = 'roomIds' in selection ? selection.roomIds.length : 'wallFaceIds' in selection ? selection.wallFaceIds.length
       : 'openingIds' in selection ? selection.openingIds.length : selection.faces.length;
-    return { output: selection.output, label: OUTPUT_LABELS[selection.output], targetCount: count, scope,
+    return { ...(aggregate?.grossBasis!==undefined?{grossBasis:aggregate.grossBasis===null?null:quantityText(aggregate.grossBasis,aggregate.unit,draft.displayUnit),grossBasisStatus:aggregate.grossBasisStatus}:{}), output: selection.output, label: OUTPUT_LABELS[selection.output], targetCount: count, scope,
       status: aggregate?.status ?? (count ? 'blocked' : 'empty'), completeness: aggregate?.completeness ?? 'none', subtotalStatus: aggregate?.subtotalStatus ?? 'unavailable',
       total: aggregate ? displayAmounts(aggregate.total, aggregate.unit, draft.displayUnit, pending) : null,
       subtotal: aggregate ? displayAmounts(aggregate.subtotal, aggregate.unit, draft.displayUnit, pending) : null,

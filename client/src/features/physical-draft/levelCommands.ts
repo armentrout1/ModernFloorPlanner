@@ -1,3 +1,4 @@
+import { stairRoomDependencies } from './stairCommands';
 import { createBuildingLevel, createBuildingLevels } from '@shared/domain/levels';
 import { upgradePhysicalDocumentToLevels } from '@shared/compatibility/levels';
 import { assertSupportedPhysicalDocument } from '@shared/compatibility/physicalDraft';
@@ -13,7 +14,7 @@ function nameValue(name: string): string {
   return name.trim();
 }
 function levels(draft: PhysicalDraft) {
-  if (draft.document.schemaVersion !== 3) fail('LEVEL_UPGRADE_REQUIRED', 'Create an explicit building-level copy before editing levels.');
+  if (draft.document.schemaVersion === 2) fail('LEVEL_UPGRADE_REQUIRED', 'Create an explicit building-level copy before editing levels.');
   return draft.document.buildingLevels;
 }
 function requireLevel(draft: PhysicalDraft, id: string) {
@@ -22,10 +23,10 @@ function requireLevel(draft: PhysicalDraft, id: string) {
   return found;
 }
 export function activeLevelId(draft: PhysicalDraft): string | null {
-  return draft.document.schemaVersion === 3 ? draft.levelView?.activeLevelId ?? null : null;
+  return draft.document.schemaVersion !== 2 ? draft.levelView?.activeLevelId ?? null : null;
 }
 export function roomLevelId(draft: PhysicalDraft, roomId: string): string | null {
-  return draft.document.schemaVersion === 3 && Object.hasOwn(draft.document.buildingLevels.roomLevels, roomId)
+  return draft.document.schemaVersion !== 2 && Object.hasOwn(draft.document.buildingLevels.roomLevels, roomId)
     ? draft.document.buildingLevels.roomLevels[roomId] : null;
 }
 export function roomsOnLevel(draft: PhysicalDraft, levelId: string) {
@@ -134,6 +135,8 @@ export function assignRoomLevel(draft: PhysicalDraft, roomId: string, levelId: s
 export function assertRoomReassignment(draft: PhysicalDraft, roomId: string): void {
   const room = draft.document.rooms.find(item => item.id === roomId);
   if (!room) fail('ROOM_NOT_FOUND', 'The selected room is no longer in this draft.');
+  const dependencies = stairRoomDependencies(draft, roomId);
+  if (dependencies.length) fail('STAIR_ROOM_DEPENDENCIES', 'Resolve these room dependencies before reassignment: ' + dependencies.join(', ') + '. No related ownership was moved.');
   const groups = draft.document.editorContract?.groups.filter(group => group.roomIds.includes(roomId) && group.roomIds.length > 1) ?? [];
   const walls = new Set(room.wallFaces.map(wall => wall.id));
   const shared = draft.document.openings.filter(opening => opening.attachments.length > 1 && opening.attachments.some(face => walls.has(face.wallFaceId)));

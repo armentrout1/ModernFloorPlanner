@@ -1,14 +1,15 @@
+import { calculateSurfaceDeductions } from './surfaceDeductions';
 import { adaptMeasurementDocument } from '../compatibility/legacyDocument';
-import { physicalDocumentV3Schema, type PhysicalDocument, type PhysicalOpening } from '../domain/document';
+import { physicalDocumentV3Schema, physicalDocumentV4Schema, type PhysicalDocument, type PhysicalOpening } from '../domain/document';
 import { levelOwnershipBasis } from '../domain/levels';
 import { atFloor, measurementAt, wallIndex, type QuantityOutput, type MeasurementRef } from '../domain/geometryValidation';
 import { evaluateQuantityReadiness, type OutputReadiness } from './readiness';
-import { validateQuantityRequest, QUANTITY_POLICY_VERSION_V2, QUANTITY_POLICY_VERSION_V3, type ContractError, type QuantityRequest } from './policy';
+import { validateQuantityRequest, QUANTITY_POLICY_VERSION_V2, QUANTITY_POLICY_VERSION_V3, QUANTITY_POLICY_VERSION_V4, type ContractError, type QuantityRequest } from './policy';
 import { ownFrozen, type DeepReadonly } from './immutability';
 import { copyJson } from './canonicalJson';
 import { add, subtract, multiply, sum, checked, nonnegative, limited, interval, elevatedInterval, intersect, span, unionLength, unionArea,
   ArithmeticFailure, type Interval, type Rectangle } from './arithmetic';
-import { RESULT_SCHEMA_VERSION, ENGINE_VERSION, RESULT_SCHEMA_VERSION_V2, ENGINE_VERSION_V2, RESULT_SCHEMA_VERSION_V3, ENGINE_VERSION_V3, calculationSchema,
+import { RESULT_SCHEMA_VERSION, ENGINE_VERSION, RESULT_SCHEMA_VERSION_V2, ENGINE_VERSION_V2, RESULT_SCHEMA_VERSION_V3, ENGINE_VERSION_V3, RESULT_SCHEMA_VERSION_V4, ENGINE_VERSION_V4, calculationSchema,
   type Calculation, type Amounts, type QuantityRecord, type QuantityAggregate, type QuantityTrace } from './result';
 
 export type CalculationResult = { ok: true; calculation: DeepReadonly<Calculation> } | { ok: false; errors: ContractError[] };
@@ -29,7 +30,7 @@ function amounts(gross: number, rawDeductions: number, effectiveDeductions: numb
     allowance, adjusted: nonnegative(add(net, allowance), 'adjusted quantity') };
 }
 function blockedReasons(readiness: OutputReadiness): ContractError[] {
-  const errors: ContractError[] = [];
+  const errors: ContractError[] = [...(readiness.surface?.findings ?? [])];
   if (readiness.applicability?.status === 'unknown' || readiness.applicability?.status === 'unsupported') {
     errors.push(...readiness.applicability.findings.filter(finding => finding.code !== 'APPLICABILITY_UNCONFIRMED')
       .map(finding => ({ code: finding.code, path: finding.paths[0] ?? [], message: finding.message })));
@@ -55,7 +56,7 @@ export function calculateQuantities(input: unknown, requested: unknown): Calcula
   try { input = copyJson(input); requested = copyJson(requested); }
   catch { return { ok: false, errors: [{ code: 'INVALID_JSON', path: [], message: 'Calculation inputs must be finite, acyclic plain JSON without accessors or omitted values' }] }; }
   const version = (input as { schemaVersion?: unknown } | null)?.schemaVersion;
-  if (version !== 2 && version !== 3) {
+  if (version !== 2 && version !== 3 && version !== 4) {
     return { ok: false, errors: [{ code: 'EXPLICIT_V2_REQUIRED', path: ['schemaVersion'], message: 'An explicit supported physical document is required; adapt legacy input separately' }] };
   }
   let document: PhysicalDocument;
@@ -66,7 +67,7 @@ export function calculateQuantities(input: unknown, requested: unknown): Calcula
       : [{ code: 'INVALID_DOCUMENT', path: [], message: 'Expected a structurally valid finite JSON v2 document' }] };
     document = adapted.document;
   } else {
-    const valid = physicalDocumentV3Schema.safeParse(input);
+    const valid = (version === 4 ? physicalDocumentV4Schema : physicalDocumentV3Schema).safeParse(input);
     if (!valid.success) return { ok: false, errors: valid.error.issues.map(issue => ({
       code: 'INVALID_DOCUMENT', path: issue.path, message: issue.message,
     })) };
@@ -81,14 +82,19 @@ export function calculateQuantities(input: unknown, requested: unknown): Calcula
   const outputs = Array.from(new Set(records.map(record => record.output))).sort(compare)
     .map(output => aggregate(output, records.filter(record => record.output === output)));
   const calculation: Calculation = {
-    schemaVersion: contract.request.policy.version === QUANTITY_POLICY_VERSION_V3 ? RESULT_SCHEMA_VERSION_V3
+    schemaVersion: contract.request.policy.version === QUANTITY_POLICY_VERSION_V4 ? RESULT_SCHEMA_VERSION_V4
+      : contract.request.policy.version === QUANTITY_POLICY_VERSION_V3 ? RESULT_SCHEMA_VERSION_V3
       : contract.request.policy.version === QUANTITY_POLICY_VERSION_V2 ? RESULT_SCHEMA_VERSION_V2 : RESULT_SCHEMA_VERSION,
-    engineVersion: contract.request.policy.version === QUANTITY_POLICY_VERSION_V3 ? ENGINE_VERSION_V3
+    engineVersion: contract.request.policy.version === QUANTITY_POLICY_VERSION_V4 ? ENGINE_VERSION_V4
+      : contract.request.policy.version === QUANTITY_POLICY_VERSION_V3 ? ENGINE_VERSION_V3
       : contract.request.policy.version === QUANTITY_POLICY_VERSION_V2 ? ENGINE_VERSION_V2 : ENGINE_VERSION,
     policyVersion: contract.request.policy.version,
     source: { documentId: document.id, revisionId: document.revisionId,
       revisionState: document.revisionId === null ? 'unsaved' : 'identified',
-      ...(document.schemaVersion === 3 ? { levelOwnership: levelOwnershipBasis(document.buildingLevels) } : {}) },
+      ...(document.schemaVersion === 3 || document.schemaVersion === 4 ? { levelOwnership: levelOwnershipBasis(document.buildingLevels) } : {}),
+      ...(document.schemaVersion === 4 ? { stairContent: { version: document.stairsContract.version,
+        stairIds: document.stairsContract.stairs.map(stair => stair.id).sort(compare),
+        surfaceOpeningIds: document.stairsContract.surfaceOpenings.map(opening => opening.id).sort(compare) } } : {}) },
     request: contract.request,
     status: !records.length ? 'empty' : outputs.some(output => output.status === 'blocked') ? 'blocked'
       : outputs.some(output => output.status === 'provisional') ? 'provisional' : 'complete',
@@ -113,6 +119,18 @@ function calculateRecord(document: PhysicalDocument, request: QuantityRequest, r
   const record: QuantityRecord = { targetId, output, unit: unitFor(output),
     status: errors.length ? 'blocked' : readiness.confirmation.status === 'provisional' ? 'provisional' : 'complete',
     readiness, evidence, amounts: null, trace, errors, inventory: null };
+  if (document.schemaVersion === 4 && (output === 'floor-area' || output === 'ceiling-area')) {
+    record.grossBasis = null; record.grossBasisStatus = 'unavailable'; trace.surfaceContributions = [];
+    const room = document.rooms.find(room => room.id === readiness.roomIds[0])!;
+    if (room.length.state === 'known' && room.width.state === 'known'
+        && readiness.applicability?.status !== 'unknown' && readiness.applicability?.status !== 'unsupported') {
+      try {
+        record.grossBasis = multiply(room.length.valueMm, room.width.valueMm);
+        record.grossBasisStatus = [room.length, room.width].some(measurement => measurement.provenance.confirmation.status !== 'confirmed')
+          || readiness.applicability?.status === 'provisional' ? 'provisional' : 'complete';
+      } catch (error) { record.errors.push(failure(error, targetId)); }
+    }
+  }
   if (errors.length) { trace.formula = 'Unavailable: see independent readiness and measurement evidence'; return record; }
   const value = (ref: MeasurementRef) => {
     const measurement = measurementAt(document, ref);
@@ -153,9 +171,15 @@ function calculateRecord(document: PhysicalDocument, request: QuantityRequest, r
     }
     const room = document.rooms.find(room => room.id === readiness.roomIds[0])!;
     if (output === 'floor-area' || output === 'ceiling-area') {
-      trace.formula = 'room.length * room.width; no opening deductions; net * wasteFraction once';
-      record.amounts = amounts(multiply(value({ entity: 'room', id: room.id, field: 'length' }),
-        value({ entity: 'room', id: room.id, field: 'width' })), 0, 0, readiness.wasteFraction);
+      const gross = multiply(value({ entity: 'room', id: room.id, field: 'length' }), value({ entity: 'room', id: room.id, field: 'width' }));
+      if (document.schemaVersion === 4) {
+        const deductions = calculateSurfaceDeductions(document, room.id, output === 'floor-area' ? 'floor' : 'ceiling', gross, trace);
+        trace.formula = 'room.length * room.width minus union of explicit internal finish-surface opening rectangles; waste once after net';
+        record.amounts = amounts(gross, deductions.raw, deductions.effective, readiness.wasteFraction);
+      } else {
+        trace.formula = 'room.length * room.width; no opening deductions; net * wasteFraction once';
+        record.amounts = amounts(gross, 0, 0, readiness.wasteFraction);
+      }
       return record;
     }
     const wallFaceId = readiness.wallFaceIds[0], wall = wallIndex(document).get(wallFaceId)!;
@@ -245,6 +269,15 @@ function aggregate(output: QuantityOutput, records: QuantityRecord[]): QuantityA
     includedTargetIds: included.map(record => record.targetId), excludedTargetIds: excluded.map(record => record.targetId),
     inventory: null, errors: excluded.flatMap(record => record.errors),
   };
+  if (records.some(record => record.grossBasis !== undefined)) {
+    result.grossBasis = null; result.grossBasisStatus = 'unavailable';
+    if (records.every(record => record.grossBasis !== null)) {
+      try {
+        result.grossBasis = sum(records.map(record => record.grossBasis!));
+        result.grossBasisStatus = records.some(record => record.grossBasisStatus === 'provisional') ? 'provisional' : 'complete';
+      } catch { /* A failed sum leaves gross unavailable while preserving every row. */ }
+    }
+  }
   if (!included.length) return result;
   try {
     const rows = included.map(record => record.amounts!);

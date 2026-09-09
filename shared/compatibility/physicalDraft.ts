@@ -11,7 +11,7 @@ export class PhysicalDraftImportError extends Error {
 
 export interface PhysicalDraftSource {
   kind: 'new' | 'quick-rooms' | 'legacy' | 'physical';
-  operation: 'new-physical-draft-v1' | 'new-physical-level-draft-v1' | 'legacy-pixels-v2' | 'physical-draft-upgrade-v1';
+  operation: 'new-physical-draft-v1' | 'new-physical-level-draft-v1' | 'new-physical-stair-draft-v1' | 'legacy-pixels-v2' | 'physical-draft-upgrade-v1';
   original: JsonValue;
   review: string[];
 }
@@ -29,7 +29,7 @@ export function assertSupportedPhysicalDocument(input: unknown): asserts input i
   const parsed = supportedPhysicalDocumentSchema.safeParse(input);
   if (!parsed.success) throw new PhysicalDraftImportError('INVALID_DOCUMENT', 'The physical document or its declared model is invalid.');
   const document = input as PhysicalDocument;
-  if (Object.keys(document).some(key => !documentKeys.has(key) && !(document.schemaVersion === 3 && key === 'buildingLevels'))
+  if (Object.keys(document).some(key => !documentKeys.has(key) && !((document.schemaVersion === 3 || document.schemaVersion === 4) && key === 'buildingLevels') && !(document.schemaVersion === 4 && key === 'stairsContract'))
       || document.rooms.some(room => Object.keys(room).some(key => !roomKeys.has(key)))
       || document.openings.some(opening => Object.keys(opening).some(key => !openingKeys.has(key)))) {
     throw new PhysicalDraftImportError('UNSUPPORTED_CONTENT', 'This document contains physical content this editor cannot safely edit. Keep the original unchanged.');

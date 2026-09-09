@@ -1,5 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'wouter';
+import { StairControls, type BuildingSelection } from '@/features/physical-draft/StairControls';
+import { StairInspector, SurfaceOpeningInspector } from '@/features/physical-draft/StairInspector';
+import { upgradeExistingDraftToStairs } from '@/features/physical-draft/stairCommands';
 import { LevelControls } from '@/features/physical-draft/LevelControls';
 import { activeLevelId, selectLevel, createLevelDraft, upgradeExistingDraftToLevels } from '@/features/physical-draft/levelCommands';
 import { levelForRoom, sourceRoomIds, type LevelCamera } from '@/features/physical-draft/levelView';
@@ -43,6 +46,13 @@ function DraftWorkspace() {
   const visibleWalls = new Set(visibleRooms.flatMap(room => room.wallFaces.map(wall => wall.id)));
   const contextKey = draft ? draft.id + ':' + (levelId ?? 'legacy') : '';
   const selections = useRef(new Map<string, { roomId: string; openingId: string | null }>());
+  const buildingSelections = useRef(new Map<string, BuildingSelection>());
+  const [buildingSelection, setBuildingSelection] = useState<{ key: string; value: BuildingSelection } | null>(null);
+  const rememberedBuilding = buildingSelection?.key === contextKey ? buildingSelection.value : buildingSelections.current.get(contextKey);
+  const selectedBuilding = rememberedBuilding && draft?.document.schemaVersion === 4 && (rememberedBuilding.kind === 'stair'
+    ? draft.document.stairsContract.stairs.some(stair => stair.id === rememberedBuilding.id && Object.values(stair.endpoints).some(endpoint => endpoint.state === 'modeled' && endpoint.levelId === levelId))
+    : draft.document.stairsContract.surfaceOpenings.some(opening => opening.id === rememberedBuilding.id && opening.attachments.some(a => visibleRooms.some(room => room.id === a.roomId)))) ? rememberedBuilding : null;
+  function clearBuildingSelection() { buildingSelections.current.delete(contextKey); setBuildingSelection(null); }
   const cameras = useRef(new Map<string, LevelCamera>());
   const [selected, setSelected] = useState<{ draftId: string; roomId: string } | null>(null);
   const [openingSelection, setOpeningSelection] = useState<{ draftId: string; openingId: string } | null>(null);
@@ -56,6 +66,7 @@ function DraftWorkspace() {
     : candidateRoom?.id ?? visibleRooms[0]?.id ?? null;
   function selectRoom(roomId: string) {
     if (!draft || !visibleRooms.some(room => room.id === roomId)) return;
+    clearBuildingSelection();
     selections.current.set(contextKey, { roomId, openingId: null });
     setSelected({ draftId: contextKey, roomId }); setOpeningSelection(null);
   }
@@ -66,8 +77,29 @@ function DraftWorkspace() {
     const roomId = openingId ? live.document.rooms.find(room => (!levelId || levelForRoom(live.document, room.id) === levelId)
       && room.wallFaces.some(wall => live.document.openings.find(opening => opening.id === openingId)?.attachments.some(a => a.wallFaceId === wall.id)))?.id : selectedRoomId;
     if (openingId && !roomId) return;
+    clearBuildingSelection();
     if (roomId) selections.current.set(contextKey, { roomId, openingId });
     setOpeningSelection(openingId ? { draftId: contextKey, openingId } : null);
+  }
+  function selectBuilding(value: BuildingSelection) {
+    if (!draft) return;
+    const live = selectedDraft(store.getSnapshot().registry);
+    if (!live || live.id !== draft.id || live.document.schemaVersion !== 4 || activeLevelId(live) !== levelId) return;
+    if (live.document.buildingLevels.roomLevels[value.roomId] !== levelId) return;
+    runInputLayoutTransition(() => {
+      buildingSelections.current.set(contextKey, value); setBuildingSelection({ key: contextKey, value });
+      selections.current.set(contextKey, { roomId: value.roomId, openingId: null });
+      setSelected({ draftId: contextKey, roomId: value.roomId }); setOpeningSelection(null);
+    });
+  }
+  function navigateEndpoint(nextLevel: string, roomId: string, stairId: string) {
+    if (!draft) return;
+    if (nextLevel !== levelId) changeLevel(nextLevel);
+    const key = draft.id + ':' + nextLevel;
+    const value: BuildingSelection = { kind: 'stair', id: stairId, roomId };
+    buildingSelections.current.set(key, value); setBuildingSelection({ key, value });
+    selections.current.set(key, { roomId, openingId: null }); setSelected({ draftId: key, roomId }); setOpeningSelection(null);
+    changeView('drawing');
   }
   const preview = useMemo(() => draft ? previewDocument(draft) : null, [draft]);
   const takeoffScope = useMemo(() => draft ? scopeForRequest(draft.document, draft.request) : undefined, [draft]);
@@ -102,6 +134,10 @@ function DraftWorkspace() {
       selections.current.set(key, { roomId, openingId });
       setSelected({ draftId: key, roomId }); setOpeningSelection(openingId ? { draftId: key, openingId } : null);
     }
+    const surface = scope.surfaceOpenings?.[0];
+    if (surface) { const value: BuildingSelection = { kind: 'surface-opening', id: surface.openingId, roomId: surface.roomId, surface: surface.surface };
+      buildingSelections.current.set(key, value); setBuildingSelection({ key, value }); }
+    else { buildingSelections.current.delete(key); setBuildingSelection(null); }
     changeView('drawing');
     setSourceFocus({ draftId: draft.id, key: crypto.randomUUID(), scope });
     if (narrow) changeInspector(true);
@@ -115,6 +151,11 @@ function DraftWorkspace() {
       setSelected({ draftId: key, roomId: reveal.roomId });
       setOpeningSelection(reveal.openingId ? { draftId: key, openingId: reveal.openingId } : null);
     }
+    if (reveal.roomId && (reveal.stairId || reveal.surfaceOpeningId)) {
+      const value: BuildingSelection = reveal.stairId ? { kind: 'stair', id: reveal.stairId, roomId: reveal.roomId, role: reveal.endpointRole }
+        : { kind: 'surface-opening', id: reveal.surfaceOpeningId!, roomId: reveal.roomId, surface: reveal.surface };
+      buildingSelections.current.set(key, value); setBuildingSelection({ key, value });
+    } else { buildingSelections.current.delete(key); setBuildingSelection(null); }
     runInputLayoutTransition(() => setInspectorOpen(false));
   }, [history.reveal, draft?.id, draft?.localEditRevision]);
   const blocked = ['uninitialized', 'corrupt', 'unsupported'].includes(cache);
@@ -155,9 +196,18 @@ function DraftWorkspace() {
       });
     });
   }
+  function upgradeStairs() {
+    if (!draft) return;
+    runInputLayoutTransition(() => { setInspectorOpen(false); store.dispatch(current => {
+      const live = selectedDraft(current);
+      if (!live || live.id !== draft.id || live.localEditRevision !== draft.localEditRevision) throw new Error('The draft changed. Try again.');
+      return insertDraft(current, upgradeExistingDraftToStairs(live, crypto.randomUUID(), new Date().toISOString()));
+    }); });
+  }
   function add() {
     if (!draft) return;
     const id = crypto.randomUUID();
+    clearBuildingSelection();
     if (store.updateDraft(draft.id, draft.localEditRevision, current => addRoom(current, id))) {
       selections.current.set(contextKey, { roomId: id, openingId: null }); setSelected({ draftId: contextKey, roomId: id }); setOpeningSelection(null);
     }
@@ -169,11 +219,14 @@ function DraftWorkspace() {
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
   const selectedRoom = draft?.document.rooms.find(room => room.id === selectedRoomId);
-  const selectedName = selectedOpening ? (selectedOpening.kind === 'door' ? 'Door' : selectedOpening.kind === 'window' ? 'Window' : 'Opening') + ' ' +
+  const selectedBuildingName = selectedBuilding && draft?.document.schemaVersion === 4 ? (selectedBuilding.kind === 'stair'
+    ? draft.document.stairsContract.stairs.find(item => item.id === selectedBuilding.id)?.name
+    : draft.document.stairsContract.surfaceOpenings.find(item => item.id === selectedBuilding.id)?.name) : null;
+  const selectedName = selectedBuildingName || (selectedOpening ? (selectedOpening.kind === 'door' ? 'Door' : selectedOpening.kind === 'window' ? 'Window' : 'Opening') + ' ' +
     (draft!.document.openings.filter(item => item.kind === selectedOpening.kind && item.attachments.some(a => selectedRoom?.wallFaces.some(w => w.id === a.wallFaceId))).findIndex(item => item.id === selectedOpening.id) + 1)
-    : selectedRoom?.name || 'Unnamed room';
-  const targetKey = draft ? draft.id + ':' + (selectedOpening?.id ?? selectedRoomId ?? '') : '';
-  const canInspect = Boolean(selectedRoomId && (view === 'drawing' || selectedOpening));
+    : selectedRoom?.name || 'Unnamed room');
+  const targetKey = draft ? draft.id + ':' + (selectedBuilding?.id ?? selectedOpening?.id ?? selectedRoomId ?? '') : '';
+  const canInspect = Boolean(selectedRoomId && (view === 'drawing' || selectedOpening || selectedBuilding));
   useEffect(() => {
     if (inspectorOpen && (!canInspect || (openingSelection && openingSelection.draftId === contextKey && !selectedOpening))) changeInspector(false);
   }, [canInspect, targetKey, draft?.id]);
@@ -181,10 +234,12 @@ function DraftWorkspace() {
   function inspector() {
     if (!draft || !selectedRoomId || !canInspect) return null;
     return <ResponsiveInspector narrow={narrow} open={inspectorOpen} onOpenChange={changeInspector}
-      targetKey={targetKey} title={'Edit ' + (selectedOpening?.kind ?? 'room') + ': ' + selectedName}
+      targetKey={targetKey} title={'Edit ' + (selectedBuilding?.kind ?? selectedOpening?.kind ?? 'room') + ': ' + selectedName}
       label={view === 'drawing' ? 'Drawing inspector' : 'Opening inspector'} openerRef={inspectorOpener} fallbackFocusRef={inspectorFallback}>
       <fieldset disabled={blocked} className="min-w-0"><legend className="sr-only">Inspector measurements</legend>
-        {selectedOpening ? <OpeningMeasurements key={selectedOpening.id} draft={draft} openingId={selectedOpening.id} update={update} commandError={error} onDeleted={deletedOpening} /> :
+        {selectedBuilding?.kind === 'stair' ? <StairInspector key={contextKey + selectedBuilding.id} draft={draft} stairId={selectedBuilding.id} update={update} onNavigate={navigateEndpoint} onDeleted={() => { changeInspector(false); clearBuildingSelection(); }} /> :
+          selectedBuilding?.kind === 'surface-opening' ? <SurfaceOpeningInspector key={contextKey + selectedBuilding.id} draft={draft} openingId={selectedBuilding.id} update={update} onDeleted={() => { changeInspector(false); clearBuildingSelection(); }} /> :
+          selectedOpening ? <OpeningMeasurements key={selectedOpening.id} draft={draft} openingId={selectedOpening.id} update={update} commandError={error} onDeleted={deletedOpening} /> :
           <><h2 className="mb-4 font-semibold">Room inspector</h2><RoomMeasurements draft={draft} roomId={selectedRoomId} update={update} /></>}
       </fieldset>
     </ResponsiveInspector>;
@@ -219,6 +274,7 @@ function DraftWorkspace() {
       </div>
       {draft && preview ? <>
         <LevelControls draft={draft} update={update} onSelect={changeLevel} onUpgrade={upgrade} blocked={blocked} />
+        <StairControls draft={draft} roomId={selectedRoomId} selected={selectedBuilding} update={update} onUpgrade={upgradeStairs} onSelect={selectBuilding} blocked={blocked} />
         <HistoryControls blocked={blocked} />
         <div className="flex flex-wrap items-center justify-between gap-3 border-b pb-3">
           <div><h2 className="text-lg font-semibold">{draft.document.name || 'Physical draft'}</h2>
@@ -238,24 +294,24 @@ function DraftWorkspace() {
         </div>
         {narrow && canInspect ? <Button ref={inspectorOpener} type="button" variant="outline" data-physical-layout-control
           className="h-auto min-h-10 max-w-full whitespace-normal text-left" aria-haspopup="dialog" aria-expanded={inspectorOpen}
-          onClick={() => changeInspector(true)}><span className="min-w-0 [overflow-wrap:anywhere]">Edit selected {selectedOpening ? 'opening' : 'room'}: {selectedName}</span></Button> : null}
+          onClick={() => changeInspector(true)}><span className="min-w-0 [overflow-wrap:anywhere]">Edit selected {selectedBuilding ? selectedBuilding.kind === 'stair' ? 'stair' : 'surface opening' : selectedOpening ? 'opening' : 'room'}: {selectedName}</span></Button> : null}
         {(['rooms', 'drawing'] as const).map(panel => <section key={panel} role="tabpanel" id={'physical-' + panel + '-panel'}
           ref={view === panel ? inspectorFallback : undefined} aria-labelledby={'physical-' + panel + '-tab'} hidden={view !== panel} tabIndex={view === panel ? 0 : -1}
           className="min-w-0 rounded-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-900">
           {view === panel ? <>
           {selectedRoomId ? <div className={view === 'drawing' ? 'grid min-w-0 items-start gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(300px,350px)]' : 'grid min-w-0 items-start gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]'}>
             <div className="min-w-0 space-y-4">
-              {view === 'drawing' ? <PhysicalDrawing key={contextKey + view} levelId={levelId} camera={cameras.current.get(contextKey)} onCamera={camera => cameras.current.set(contextKey, camera)} document={preview} draft={draft} selectedId={selectedRoomId} onSelect={selectRoom} selectedOpeningId={selectedOpening?.id ?? null} onSelectOpening={selectOpening} update={update} takeoffScope={showTakeoffScope ? takeoffScope : undefined} sourceFocus={focus} /> :
+              {view === 'drawing' ? <PhysicalDrawing key={contextKey + view} levelId={levelId} camera={cameras.current.get(contextKey)} onCamera={camera => cameras.current.set(contextKey, camera)} document={preview} draft={draft} selectedBuilding={selectedBuilding} onSelectBuilding={selectBuilding} selectedId={selectedRoomId} onSelect={selectRoom} selectedOpeningId={selectedOpening?.id ?? null} onSelectOpening={selectOpening} update={update} takeoffScope={showTakeoffScope ? takeoffScope : undefined} sourceFocus={focus} /> :
                 <fieldset disabled={blocked} className="min-w-0 rounded-lg border bg-white p-4 sm:p-5"><legend className="sr-only">Quick room measurements</legend><RoomMeasurements draft={draft} roomId={selectedRoomId} update={update} /></fieldset>}
               <PhysicalQuantities document={preview} roomId={selectedRoomId} unit={draft.displayUnit} />
               <OpeningList draft={draft} roomId={selectedRoomId} selectedId={selectedOpening?.id ?? null} onSelect={selectOpening} update={update} />
             </div>
-            {view === 'drawing' ? inspector() : <div className="min-w-0 space-y-4"><PhysicalDrawing key={contextKey + view} levelId={levelId} camera={cameras.current.get(contextKey)} onCamera={camera => cameras.current.set(contextKey, camera)} document={preview} draft={draft} selectedId={selectedRoomId} onSelect={selectRoom} selectedOpeningId={selectedOpening?.id ?? null} onSelectOpening={selectOpening} update={update} takeoffScope={showTakeoffScope ? takeoffScope : undefined} sourceFocus={focus} />
-              {selectedOpening ? inspector() : <p className="text-sm leading-6 text-slate-600">The drawing uses these same measurements. Select a room or opening to edit it.</p>}</div>}
+            {view === 'drawing' ? inspector() : <div className="min-w-0 space-y-4"><PhysicalDrawing key={contextKey + view} levelId={levelId} camera={cameras.current.get(contextKey)} onCamera={camera => cameras.current.set(contextKey, camera)} document={preview} draft={draft} selectedBuilding={selectedBuilding} onSelectBuilding={selectBuilding} selectedId={selectedRoomId} onSelect={selectRoom} selectedOpeningId={selectedOpening?.id ?? null} onSelectOpening={selectOpening} update={update} takeoffScope={showTakeoffScope ? takeoffScope : undefined} sourceFocus={focus} />
+              {selectedOpening || selectedBuilding ? inspector() : <p className="text-sm leading-6 text-slate-600">The drawing uses these same measurements. Select a room or opening to edit it.</p>}</div>}
           </div> : <p className="rounded-lg border border-dashed p-8 text-center text-slate-600">Add a room, then enter its measured dimensions. Ceiling height begins unknown.</p>}
           </> : null}
         </section>)}
-        <TakeoffPanel key={draft.id} draft={draft} update={update} onFocus={locateSource} showScope={showTakeoffScope} onShowScope={setShowTakeoffScope}
+        <TakeoffPanel key={draft.id} draft={draft} update={update} onFocus={locateSource} onEdit={editSource} showScope={showTakeoffScope} onShowScope={setShowTakeoffScope}
           review={<ReviewPanel draft={draft} update={update} onFocus={editSource} commandError={error} />} />
         {draft.source.review.length ? <section className="rounded-lg border bg-white p-4 text-sm" aria-label="Source review">
           <h2 className="font-semibold">Copied source review</h2><ul className="mt-2 list-disc space-y-1 pl-5 text-slate-600">{draft.source.review.map((note, index) => <li key={index}>{note}</li>)}</ul>

@@ -156,7 +156,7 @@ test('new recovery key falls back to v1 without altering bytes; first accepted w
   assert.ok(store.updateDraft(draft.id, draft.localEditRevision, d => editField(d, 'room', 'length', '12 ft -')));
   assert.equal(memory.values.get(OLD_KEY), raw); assert.deepEqual(memory.writes, [KEY]);
   const recovered = parseRegistry(memory.values.get(KEY)!); assert.equal(recovered.status, 'recovered');
-  if (recovered.status === 'recovered') { assert.equal(recovered.registry.version, 'mfp-editor-draft-v2'); assert.equal(recovered.registry.drafts[0].document.schemaVersion, 2); }
+  if (recovered.status === 'recovered') { assert.equal(recovered.registry.version, 'mfp-editor-draft-v3'); assert.equal(recovered.registry.drafts[0].document.schemaVersion, 2); }
 });
 test('new cache wins over v1 and corrupt new data never falls back or gets overwritten', () => {
   const memory = new Memory(); const old = serializeRegistry(insertDraft(createRegistry(), createDraft('old')));

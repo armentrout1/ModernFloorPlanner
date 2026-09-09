@@ -1,3 +1,4 @@
+import { stairsContractSchema, ENDPOINT_ROLES } from './stairs';
 import { z } from 'zod';
 import { dimensionSchema, elevationSchema } from './measurements';
 import { elevationMmSchema, mmSchema } from './units';
@@ -151,8 +152,65 @@ export const physicalDocumentV3Schema = physicalDocumentSchema.innerType().exten
   });
 });
 export type PhysicalDocumentV3 = z.infer<typeof physicalDocumentV3Schema>;
-export const supportedPhysicalDocumentSchema = z.union([physicalDocumentSchema, physicalDocumentV3Schema]);
-export type PhysicalDocument = PhysicalDocumentV2 | PhysicalDocumentV3;
+/** Historical schema3 remains frozen; stair features require explicit schema4. */
+export const physicalDocumentV4Schema = physicalDocumentV3Schema.innerType().extend({
+  schemaVersion: z.literal(4), quantityPolicyVersion: z.literal('rectangular-flat-v4'),
+  stairsContract: stairsContractSchema,
+}).strict().superRefine((document, ctx) => {
+  const { stairsContract, ...previousFields } = document;
+  const previous = physicalDocumentV3Schema.safeParse({ ...previousFields, schemaVersion: 3, quantityPolicyVersion: 'rectangular-flat-v3' });
+  if (!previous.success) previous.error.issues.forEach(issue => ctx.addIssue(issue));
+  const ids = new Set([...document.rooms.flatMap(room => [room.id, ...room.wallFaces.map(wall => wall.id)]),
+    ...document.openings.map(opening => opening.id), ...document.buildingLevels.levels.map(level => level.id),
+    ...document.editorContract.groups.map(group => group.id)]);
+  const unique = (id: string, path: (string | number)[]) => {
+    if (ids.has(id)) ctx.addIssue({ code: z.ZodIssueCode.custom, path, message: 'Stair, landing and surface-opening identities must not be reused' });
+    ids.add(id);
+  };
+  const rooms = new Set(document.rooms.map(room => room.id));
+  const stairs = new Map(stairsContract.stairs.map(stair => [stair.id, stair]));
+  const openings = new Map(stairsContract.surfaceOpenings.map(opening => [opening.id, opening]));
+  stairsContract.stairs.forEach((stair, index) => {
+    const base = ['stairsContract', 'stairs', index] as (string | number)[];
+    unique(stair.id, [...base, 'id']);
+    const { lower, upper } = stair.endpoints;
+    if (lower.state === 'modeled' && upper.state === 'modeled' && lower.levelId === upper.levelId)
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: [...base, 'endpoints'], message: 'Modeled lower and upper destinations must be different levels' });
+    for (const role of ENDPOINT_ROLES) {
+      const endpoint = stair.endpoints[role], landing = stair.landings[role];
+      if (endpoint.state === 'modeled' && (!rooms.has(endpoint.roomId)
+          || !Object.hasOwn(document.buildingLevels.roomLevels, endpoint.roomId)
+          || document.buildingLevels.roomLevels[endpoint.roomId] !== endpoint.levelId))
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: [...base, 'endpoints', role], message: 'Endpoint room must belong to its explicit existing level' });
+      if (landing) {
+        unique(landing.id, [...base, 'landings', role, 'id']);
+        if (endpoint.state !== 'modeled') ctx.addIssue({ code: z.ZodIssueCode.custom, path: [...base, 'landings', role], message: 'An endpoint landing requires a modeled host room' });
+      }
+      for (const surface of ['floor', 'ceiling'] as const) {
+        const impact = stair.surfaceImpacts[role][surface];
+        if (impact.state === 'deduct' && (endpoint.state !== 'modeled' || impact.openingIds.some(id =>
+            !openings.get(id)?.attachments.some(attachment => attachment.roomId === endpoint.roomId && attachment.surface === surface))))
+          ctx.addIssue({ code: z.ZodIssueCode.custom, path: [...base, 'surfaceImpacts', role, surface], message: 'Deduction must reference explicit openings attached to this endpoint room and finish surface' });
+      }
+    }
+  });
+  stairsContract.surfaceOpenings.forEach((opening, index) => {
+    const base = ['stairsContract', 'surfaceOpenings', index] as (string | number)[];
+    unique(opening.id, [...base, 'id']);
+    if (opening.associatedStairId !== null && !stairs.has(opening.associatedStairId))
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: [...base, 'associatedStairId'], message: 'Associated stair must exist or be explicitly unlinked' });
+    const attached = new Set<string>();
+    opening.attachments.forEach((attachment, ai) => {
+      const key = JSON.stringify([attachment.roomId, attachment.surface]);
+      if (!rooms.has(attachment.roomId) || attached.has(key)) ctx.addIssue({ code: z.ZodIssueCode.custom,
+        path: [...base, 'attachments', ai], message: 'Surface attachment must reference a distinct existing room and finish surface' });
+      attached.add(key);
+    });
+  });
+});
+export type PhysicalDocumentV4 = z.infer<typeof physicalDocumentV4Schema>;
+export const supportedPhysicalDocumentSchema = z.union([physicalDocumentSchema, physicalDocumentV3Schema, physicalDocumentV4Schema]);
+export type PhysicalDocument = PhysicalDocumentV2 | PhysicalDocumentV3 | PhysicalDocumentV4;
 export type PhysicalRoom = z.infer<typeof physicalRoomSchema>;
 export type PhysicalOpening = z.infer<typeof physicalOpeningSchema>;
 export type ReviewItem = z.infer<typeof reviewItemSchema>;

@@ -1,3 +1,5 @@
+import { StairDrawingOverlay } from './StairDrawingOverlay';
+import type { BuildingSelection } from './StairControls';
 import { useCallback, useEffect, useMemo, useRef, useState, useLayoutEffect, type PointerEvent as Pointer } from 'react';
 import type { PhysicalDocument, PhysicalOpening } from '@shared/domain/document';
 import { Button } from '@/components/ui/button';
@@ -24,7 +26,8 @@ const proposalOptions = (kind: Kind) => ({ widthMm: (kind === 'door' ? 32 : 36) 
   style: 'single' as const, swingDirection: 'inward' as const, swingSide: 'right' as const, metadata: { source: 'proposed' },
 } } : {}) });
 const kindLabel = (kind: Kind) => kind === 'floor-level-opening' ? 'opening' : kind;
-export function PhysicalDrawing({ document, selectedId, onSelect, draft, selectedOpeningId = null, onSelectOpening = noop, update, takeoffScope, sourceFocus, levelId, camera, onCamera }: {
+export function PhysicalDrawing({ document, selectedId, onSelect, draft, selectedOpeningId = null, onSelectOpening = noop, update, takeoffScope, sourceFocus, levelId, camera, onCamera, selectedBuilding = null, onSelectBuilding = noop }: {
+  selectedBuilding?: BuildingSelection | null; onSelectBuilding?: (selection: BuildingSelection) => void;
   levelId?: string | null; camera?: LevelCamera; onCamera?: (camera: LevelCamera) => void;
   document: PhysicalDocument; selectedId: string | null; onSelect: (id: string) => void;
   draft?: PhysicalDraft; selectedOpeningId?: string | null; onSelectOpening?: (id: string | null) => void;
@@ -123,8 +126,8 @@ export function PhysicalDrawing({ document, selectedId, onSelect, draft, selecte
       style={{ position: 'absolute', pointerEvents: 'none', zIndex: 6000,
         left: mark.x - (mark.width === 0 ? thickness / 2 : 0), top: mark.y - (mark.height === 0 ? thickness / 2 : 0),
         width: Math.max(mark.width, thickness), height: Math.max(mark.height, thickness),
-        border: mark.kind === 'room' ? thickness + 'px solid ' + color : undefined,
-        background: mark.kind === 'room' ? (focused ? '#a855f712' : '#0f766e12') : color,
+        border: ['room','surface-opening','stair'].includes(mark.kind) ? thickness + 'px solid ' + color : undefined,
+        background: ['room','surface-opening','stair'].includes(mark.kind) ? (focused ? '#a855f712' : '#0f766e12') : color,
         boxSizing: 'border-box', opacity: focused ? .8 : .6 }} />);
   }
   function fit() {
@@ -158,6 +161,7 @@ export function PhysicalDrawing({ document, selectedId, onSelect, draft, selecte
     } catch (error) { setMessage(error instanceof Error ? error.message : 'This opening cannot be moved safely.'); return null; }
   }
   function start(event: Pointer<HTMLDivElement>) {
+    if (event.target instanceof Element && event.target.closest('[data-building-object]')) return;
     if (gesture.current && gesture.current.pointerId !== event.pointerId) { cancel('Multitouch canceled the opening gesture.'); return; }
     if (!editable || !draft || event.button !== 0 || spaceHeld.current || event.altKey || event.ctrlKey || event.metaKey) {
       lastOpeningClick.current = null; return;
@@ -324,6 +328,7 @@ export function PhysicalDrawing({ document, selectedId, onSelect, draft, selecte
                 zIndex: 4000, fontSize: 11 / scale, background: 'white', color: '#1d4ed8', pointerEvents: 'none' }}>{activeWall} start (clockwise)</span>}
             </div>;
           })}
+          {draft && update && document.schemaVersion === 4 ? <StairDrawingOverlay document={document} draft={draft} rooms={projection.rooms} levelId={levelId} scale={scale} origin={view.origin} viewport={wrapper} selected={selectedBuilding} onSelect={onSelectBuilding} update={update} /> : null}
           {sourceOverlay(scopeMarks, false)}
           {sourceOverlay(focusMarks, true)}
           {preview && previewProjection && (() => {

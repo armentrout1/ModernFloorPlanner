@@ -1,3 +1,4 @@
+import { surfaceReadinessSchema } from './surfaceReadiness';
 import { z } from 'zod';
 import { elevationSchema } from '../domain/measurements';
 import { QUANTITY_OUTPUTS } from '../domain/geometryValidation';
@@ -12,6 +13,8 @@ export const RESULT_SCHEMA_VERSION_V2 = 'quantity-result-v2' as const;
 export const ENGINE_VERSION_V2 = 'rectangular-engine-v2' as const;
 export const RESULT_SCHEMA_VERSION_V3 = 'quantity-result-v3' as const;
 export const ENGINE_VERSION_V3 = 'rectangular-engine-v3' as const;
+export const RESULT_SCHEMA_VERSION_V4 = 'quantity-result-v4' as const;
+export const ENGINE_VERSION_V4 = 'rectangular-engine-v4' as const;
 // A supported decimal magnitude, not a promise of exact fixed-point arithmetic.
 export const MAX_QUANTITY_MAGNITUDE = Number.MAX_SAFE_INTEGER;
 const amount = z.number().finite().nonnegative().max(MAX_QUANTITY_MAGNITUDE);
@@ -50,8 +53,8 @@ const applicabilityReadinessSchema = z.object({
   if (new Set(keys).size !== keys.length) context.addIssue({ code: z.ZodIssueCode.custom,
     path: ['dependencies'], message: 'Applicability dependencies must be distinct' });
 });
-export const outputReadinessSchema: z.ZodType<OutputReadiness> = z.object({
-  applicability: applicabilityReadinessSchema.optional(),
+export const outputReadinessSchema: z.ZodType<OutputReadiness, z.ZodTypeDef, unknown> = z.object({
+  applicability: applicabilityReadinessSchema.optional(), surface: surfaceReadinessSchema.optional(),
   ...locationShape, output, wasteFraction: z.number().finite().nonnegative().nullable(),
   openingBases: z.array(z.object({ openingId: id, measureBasis: z.enum(['unknown', 'nominal', 'clear', 'finished', 'rough']) }).strict()),
   numericBasis: z.object({ status: z.enum(['sufficient', 'insufficient']), dependencies: z.array(measurementRefSchema), findings: z.array(finding) }).strict(),
@@ -85,6 +88,10 @@ const traceSchema = z.object({
     openingId: id, wallFaceId: id, raw: amount, effectiveBeforeUnion: amount,
     boundaryAdjustment: amount, roundoffAdjustment: coordinate, rawBounds: boundsSchema, effectiveBounds: boundsSchema,
   }).strict()),
+  surfaceContributions: z.array(z.object({
+    openingId: id, roomId: id, surface: z.enum(['floor', 'ceiling']), raw: amount, effectiveBeforeUnion: amount,
+    boundaryAdjustment: amount, roundoffAdjustment: coordinate, rawBounds: boundsSchema, effectiveBounds: boundsSchema,
+  }).strict()).optional(),
   boundaryAdjustment: amount, overlapAdjustment: amount, roundoffAdjustment: coordinate,
   adjustments: z.array(z.object({
     code: z.enum(['BOUNDARY_INTERSECTION', 'COVERAGE_UNION', 'FLOATING_POINT_ROUNDOFF']),
@@ -97,12 +104,20 @@ export const quantityRecordSchema = z.object({
   status: z.enum(['complete', 'provisional', 'blocked']),
   readiness: outputReadinessSchema,
   evidence: z.array(z.object({ ref: measurementRefSchema, measurement: elevationSchema }).strict()),
+  grossBasis: amount.nullable().optional(), grossBasisStatus: z.enum(['complete', 'provisional', 'unavailable']).optional(),
   amounts: amountsSchema.nullable(), trace: traceSchema, errors: z.array(contractErrorSchema),
   inventory: inventorySchema.nullable(),
 }).strict().superRefine((record, ctx) => {
   if ((record.status === 'blocked') !== (record.amounts === null)) {
     ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['amounts'], message: 'Blocked records have unavailable amounts; usable records require amounts' });
   }
+  if (record.grossBasis !== undefined && ((record.grossBasis === null) !== (record.grossBasisStatus === 'unavailable')
+      || (record.amounts && record.grossBasis !== record.amounts.gross))) ctx.addIssue({
+    code: z.ZodIssueCode.custom, path: ['grossBasis'], message: 'Gross basis must remain explicit and agree with usable gross amounts' });
+  const surface = record.readiness.surface;
+  if (surface && ((surface.status === 'blocked' && record.status !== 'blocked')
+      || (surface.status === 'provisional' && record.status === 'complete'))) ctx.addIssue({
+    code: z.ZodIssueCode.custom, path: ['status'], message: 'Surface-impact readiness cannot be promoted to a usable or confirmed net' });
   const applicability = record.readiness.applicability;
   if (applicability && ((['unknown', 'unsupported'].includes(applicability.status) && record.status !== 'blocked')
       || (applicability.status === 'provisional' && record.status === 'complete'))) {
@@ -145,6 +160,7 @@ export const quantityAggregateSchema = z.object({
   completeness: z.enum(['complete', 'partial', 'none']),
   subtotalStatus: z.enum(['complete', 'provisional', 'unavailable']),
   total: amountsSchema.nullable(), subtotal: amountsSchema.nullable(),
+  grossBasis: amount.nullable().optional(), grossBasisStatus: z.enum(['complete', 'provisional', 'unavailable']).optional(),
   includedTargetIds: z.array(id), excludedTargetIds: z.array(id),
   inventory: inventorySchema.nullable(), errors: z.array(contractErrorSchema),
 }).strict().superRefine((aggregate, ctx) => {
@@ -186,25 +202,73 @@ export const quantityAggregateSchema = z.object({
 });
 export type QuantityAggregate = z.infer<typeof quantityAggregateSchema>;
 export const calculationSchema = z.object({
-  schemaVersion: z.enum([RESULT_SCHEMA_VERSION, RESULT_SCHEMA_VERSION_V2, RESULT_SCHEMA_VERSION_V3]), engineVersion: z.enum([ENGINE_VERSION, ENGINE_VERSION_V2, ENGINE_VERSION_V3]),
-  policyVersion: z.enum(['rectangular-flat-v1', 'rectangular-flat-v2', 'rectangular-flat-v3']),
+  schemaVersion: z.enum([RESULT_SCHEMA_VERSION, RESULT_SCHEMA_VERSION_V2, RESULT_SCHEMA_VERSION_V3, RESULT_SCHEMA_VERSION_V4]), engineVersion: z.enum([ENGINE_VERSION, ENGINE_VERSION_V2, ENGINE_VERSION_V3, ENGINE_VERSION_V4]),
+  policyVersion: z.enum(['rectangular-flat-v1', 'rectangular-flat-v2', 'rectangular-flat-v3', 'rectangular-flat-v4']),
   source: z.object({
     documentId: z.union([id, z.number().int().positive().safe()]).nullable(),
     revisionId: id.nullable(), revisionState: z.enum(['unsaved', 'identified']),
     levelOwnership: levelOwnershipBasisSchema.optional(),
+    stairContent: z.object({ version: z.literal('straight-stairs-v1'), stairIds: z.array(id), surfaceOpeningIds: z.array(id) }).strict().optional(),
   }).strict(),
   request: quantityRequestSchema,
   status: z.enum(['complete', 'provisional', 'blocked', 'empty']),
   records: z.array(quantityRecordSchema), outputs: z.array(quantityAggregateSchema),
 }).strict().superRefine((calculation, ctx) => {
-  const v3 = calculation.policyVersion === 'rectangular-flat-v3';
+  const v4 = calculation.policyVersion === 'rectangular-flat-v4', v3 = calculation.policyVersion === 'rectangular-flat-v3';
   const applicability = calculation.policyVersion !== 'rectangular-flat-v1';
-  if (calculation.schemaVersion !== (v3 ? RESULT_SCHEMA_VERSION_V3 : applicability ? RESULT_SCHEMA_VERSION_V2 : RESULT_SCHEMA_VERSION)
-      || calculation.engineVersion !== (v3 ? ENGINE_VERSION_V3 : applicability ? ENGINE_VERSION_V2 : ENGINE_VERSION)
+  if (calculation.schemaVersion !== (v4 ? RESULT_SCHEMA_VERSION_V4 : v3 ? RESULT_SCHEMA_VERSION_V3 : applicability ? RESULT_SCHEMA_VERSION_V2 : RESULT_SCHEMA_VERSION)
+      || calculation.engineVersion !== (v4 ? ENGINE_VERSION_V4 : v3 ? ENGINE_VERSION_V3 : applicability ? ENGINE_VERSION_V2 : ENGINE_VERSION)
       || calculation.request.policy.version !== calculation.policyVersion
-      || Boolean(calculation.source.levelOwnership) !== v3
+      || Boolean(calculation.source.levelOwnership) !== (v3 || v4)
+      || Boolean(calculation.source.stairContent) !== v4
       || calculation.records.some(record => Boolean(record.readiness.applicability) !== applicability)) {
     ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['schemaVersion'], message: 'Result, engine, policy and applicability versions must agree' });
+  }
+  const stairSource = calculation.source.stairContent;
+  if (stairSource) {
+    for (const ids of [stairSource.stairIds, stairSource.surfaceOpeningIds]) if (new Set(ids).size !== ids.length
+        || ids.some((id, index) => index > 0 && ids[index - 1] >= id))
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['source', 'stairContent'], message: 'Stair and surface identities must be distinct and sorted' });
+    if (stairSource.stairIds.some(id => stairSource.surfaceOpeningIds.includes(id)))
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['source', 'stairContent'], message: 'Stair and surface-opening identities are separate' });
+  }
+  for (const record of calculation.records) {
+    const surface = v4 && (record.output === 'floor-area' || record.output === 'ceiling-area');
+    if (Boolean(record.readiness.surface) !== surface || (record.grossBasis !== undefined) !== surface
+        || Boolean(record.grossBasisStatus) !== surface || Boolean(record.trace.surfaceContributions) !== surface)
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['records'], message: 'Surface readiness, gross basis and deductions require version4 selected floor/ceiling semantics' });
+    if (surface) {
+      const readiness = record.readiness.surface!, contributions = record.trace.surfaceContributions!;
+      if (!stairSource || readiness.surfaceOpeningIds.some(id => !stairSource.surfaceOpeningIds.includes(id))
+          || readiness.stairIds.some(id => !stairSource.stairIds.includes(id))
+          || contributions.some(item => item.roomId !== readiness.roomId || item.surface !== readiness.surface
+            || !readiness.surfaceOpeningIds.includes(item.openingId))
+          || new Set(contributions.map(item => item.openingId)).size !== contributions.length)
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['records'], message: 'Surface deductions must retain distinct exact source identities and attachments' });
+      if (record.amounts && contributions.length !== readiness.surfaceOpeningIds.length)
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['records'], message: 'Every explicit attached opening contributes exactly once to a usable surface' });
+      if (record.amounts && (!coherent(contributions.reduce((sum, item) => sum + item.raw, 0), record.amounts.rawDeductions)
+          || !coherent(record.amounts.rawDeductions - record.trace.boundaryAdjustment - record.trace.overlapAdjustment - record.trace.roundoffAdjustment,
+            record.amounts.effectiveDeductions)))
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['records'], message: 'Surface trace must reconcile raw, boundary, union and roundoff deductions' });
+    }
+    if (surface && (record.readiness.surface!.roomId !== record.readiness.roomIds[0]
+        || record.readiness.surface!.surface !== (record.output === 'floor-area' ? 'floor' : 'ceiling')))
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['records'], message: 'Surface readiness must identify the selected room finish surface' });
+  }
+  for (const aggregate of calculation.outputs) {
+    const surface = v4 && (aggregate.output === 'floor-area' || aggregate.output === 'ceiling-area');
+    if ((aggregate.grossBasis !== undefined) !== surface || Boolean(aggregate.grossBasisStatus) !== surface)
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['outputs'], message: 'Gross surface basis requires version4' });
+    if (surface) {
+      const rows = calculation.records.filter(record => record.output === aggregate.output);
+      const known = rows.every(row => row.grossBasis !== null), gross = rows.reduce((sum, row) => sum + (row.grossBasis ?? 0), 0);
+      const status = !known || gross > MAX_QUANTITY_MAGNITUDE ? 'unavailable'
+        : rows.some(row => row.grossBasisStatus === 'provisional') ? 'provisional' : 'complete';
+      if (aggregate.grossBasisStatus !== status || (status === 'unavailable' ? aggregate.grossBasis !== null
+          : aggregate.grossBasis === null || !coherent(aggregate.grossBasis!, gross)))
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['outputs', 'grossBasis'], message: 'Gross basis covers every selected surface and retains its confirmation status' });
+    }
   }
   if (calculation.source.levelOwnership && calculation.records.some(record =>
       record.readiness.roomIds.some(id => !Object.hasOwn(calculation.source.levelOwnership!.roomLevels, id)))) {

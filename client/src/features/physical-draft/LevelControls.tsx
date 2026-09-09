@@ -8,7 +8,7 @@ type Change = (change: (draft: PhysicalDraft) => PhysicalDraft, expectedRevision
 export function LevelControls({ draft, update, onSelect, onUpgrade, blocked }: {
   draft: PhysicalDraft; update: Change; onSelect: (id: string) => void; onUpgrade: () => void; blocked: boolean;
 }) {
-  if (draft.document.schemaVersion !== 3) return <section aria-label="Building levels" className="rounded-lg border bg-white p-3">
+  if (draft.document.schemaVersion === 2) return <section aria-label="Building levels" className="rounded-lg border bg-white p-3">
     <div className="flex flex-wrap items-center justify-between gap-3"><p className="max-w-2xl text-sm text-slate-600">Use building levels in a separate working copy of this current draft. Its original and current edits remain preserved.</p>
       <Button disabled={blocked} variant="outline" data-physical-layout-control onClick={onUpgrade}>Upgrade to building levels</Button></div>
   </section>;
@@ -45,7 +45,7 @@ function LevelName({ value, text, disabled, onChange, onSave }: { value: string;
 export function RoomLevelAssignment({ draft, roomId, update }: { draft: PhysicalDraft; roomId: string; update: Change }) {
   const current = roomLevelId(draft, roomId);
   const [target, setTarget] = useState<{ from: string; to: string } | null>(null);
-  if (draft.document.schemaVersion !== 3 || !current) return null;
+  if (draft.document.schemaVersion === 2 || !current) return null;
   const levels = [...draft.document.buildingLevels.levels].sort((a, b) => a.displayOrder - b.displayOrder);
   const chosen = target?.from === current && levels.some(level => level.id === target.to) ? target.to : current;
   return <div className="space-y-2 border-b pb-3" data-physical-layout-control>

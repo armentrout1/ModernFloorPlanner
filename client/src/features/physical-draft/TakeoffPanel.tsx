@@ -33,7 +33,7 @@ export function openingLabel(draft: PhysicalDraft, id: string): string {
   const index = draft.document.openings.filter(item => item.kind === opening.kind).findIndex(item => item.id === id) + 1;
   const name = (opening.kind === 'door' ? 'Door' : opening.kind === 'window' ? 'Window' : 'Opening') + ' ' + index;
   const room = draft.document.rooms.find(room => room.wallFaces.some(wall => opening.attachments.some(a => a.wallFaceId === wall.id)));
-  return draft.document.schemaVersion === 3 && room ? roomLabel(draft.document, room.id) + ' · ' + name : name;
+  return draft.document.schemaVersion !== 2 && room ? roomLabel(draft.document, room.id) + ' · ' + name : name;
 }
 function openingFaces(draft: PhysicalDraft): Choice[] {
   return draft.document.openings.flatMap(opening => opening.attachments.map(face => {
@@ -47,8 +47,8 @@ function targets(selection: QuantitySelection): (string | Face)[] {
   return 'roomIds' in selection ? selection.roomIds : 'wallFaceIds' in selection ? selection.wallFaceIds : 'openingIds' in selection ? selection.openingIds : selection.faces;
 }
 function targetNoun(output: QuantityOutput) { return output === 'floor-area' || output === 'ceiling-area' ? 'rooms' : output.includes('casing') ? 'faces' : output === 'opening-inventory' ? 'openings' : 'walls'; }
-export function TakeoffPanel({ draft, update, onFocus, review, showScope, onShowScope }: {
-  draft: PhysicalDraft; update: Change; onFocus: (scope: DrawingSourceScope) => void; review: ReactNode;
+export function TakeoffPanel({ draft, update, onFocus, onEdit, review, showScope, onShowScope }: {
+  draft: PhysicalDraft; update: Change; onFocus: (scope: DrawingSourceScope) => void; onEdit?: (scope: DrawingSourceScope) => void; review: ReactNode;
   showScope: boolean; onShowScope: (show: boolean) => void;
 }) {
   const [active, setActive] = useState<QuantityOutput>('floor-area');
@@ -60,9 +60,9 @@ export function TakeoffPanel({ draft, update, onFocus, review, showScope, onShow
   const chosen = selection ? targets(selection) : [];
   const selectedKeys = new Set(chosen.map(keyOf));
   const waste = output && output !== 'opening-inventory' ? getWasteField(draft, output) : null;
-  const levelEnabled = draft.document.schemaVersion === 3;
+  const levelEnabled = draft.document.schemaVersion !== 2;
   const includedLevelIds = new Set(sourceRoomIds(draft.document, scopeForRequest(draft.document, draft.request)).map(id => levelForRoom(draft.document, id)));
-  const includedLevelNames = draft.document.schemaVersion === 3 ? [...draft.document.buildingLevels.levels]
+  const includedLevelNames = draft.document.schemaVersion !== 2 ? [...draft.document.buildingLevels.levels]
     .sort((a, b) => a.displayOrder - b.displayOrder).filter(level => includedLevelIds.has(level.id)).map(level => level.name) : [];
   function captureCurrentLevel() {
     if (!selection || !output) return;
@@ -126,7 +126,7 @@ export function TakeoffPanel({ draft, update, onFocus, review, showScope, onShow
     </fieldset> : null}
     {draft.takeoffState?.notice ? <p role="status" className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm">{draft.takeoffState.notice.message}</p> : null}
     {model.errors.length ? <ul className="space-y-1 text-sm text-amber-900">{model.errors.map((error, index) => <li key={error.code + index}>{error.message}</li>)}</ul> : null}
-    <TakeoffResults outputs={model.outputs} onFocus={onFocus} />
+    <TakeoffResults outputs={model.outputs} onFocus={onFocus} onEdit={onEdit} />
     {reviewVisible ? review : null}
     <p className="border-t pt-3 text-xs leading-5 text-slate-500">These are measured finish quantities. Waste-adjusted values are not boxes, sheets, gallons, prices or an order-ready construction materials list. Input review is not professional verification or code compliance. Recovery is temporary in this browser tab.</p>
   </section>;

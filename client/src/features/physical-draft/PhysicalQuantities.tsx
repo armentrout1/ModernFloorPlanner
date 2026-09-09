@@ -36,6 +36,7 @@ export function PhysicalQuantities({ document, roomId, unit }: { document: Physi
           <dd className="mt-1 text-xl font-semibold tabular-nums">{aggregate?.total ? display(aggregate.total.net) : unsupported ? 'Unsupported' : 'Incomplete'}</dd>
           <p className="mt-1 text-xs leading-5 text-amber-800">{aggregate?.total ? aggregate.status === 'provisional' ? 'Provisional · unconfirmed inputs/model' : 'Complete' :
             unsupported ? 'This room model needs a later supported calculation.' : unknownModel ? 'Review the room model in the inspector.' : 'Finish the required measurements; unapplied edits are excluded.'}</p>
+          {!aggregate?.total && aggregate?.grossBasis != null ? <p className="text-xs text-slate-600">Gross basis: {display(aggregate.grossBasis)} · {aggregate.grossBasisStatus === 'complete' ? 'Confirmed input basis' : 'Provisional'}; net finish remains incomplete.</p> : null}
           {!aggregate?.total && aggregate?.subtotal ? <p className="text-xs text-slate-600">Partial subtotal: {display(aggregate.subtotal.net)}; not a complete total.</p> : null}
         </div>;
       })}

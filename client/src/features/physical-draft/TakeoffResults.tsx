@@ -15,7 +15,7 @@ function Amounts({ amounts, testId, showWaste = true }: { amounts: TakeoffAmount
     </div>)}
   </dl>;
 }
-export function TakeoffResults({ outputs, onFocus }: { outputs: TakeoffOutput[]; onFocus: (source: DrawingSourceScope) => void }) {
+export function TakeoffResults({ outputs, onFocus, onEdit }: { outputs: TakeoffOutput[]; onFocus: (source: DrawingSourceScope) => void; onEdit?: (source: DrawingSourceScope) => void }) {
   if (!outputs.length) return <p className="rounded-md border border-dashed p-4 text-sm text-slate-600">No work selected. Choose the work to measure; this is not a zero-quantity project.</p>;
   return <div className="min-w-0 space-y-4 [overflow-wrap:anywhere]">{outputs.map(output => <section key={output.output} data-testid={'takeoff-output-' + output.output} className="min-w-0 rounded-lg border bg-white p-4">
     <div className="mb-4 flex flex-wrap items-start justify-between gap-2">
@@ -24,6 +24,7 @@ export function TakeoffResults({ outputs, onFocus }: { outputs: TakeoffOutput[];
     </div>
     {!output.targetCount ? <p data-testid="takeoff-total" className="text-sm text-slate-600">No targets selected. Choose explicit targets for this work.</p> : <>
       {output.total ? <Amounts amounts={output.total} testId="takeoff-total" showWaste={output.output !== 'opening-inventory'} /> : <p data-testid="takeoff-total" className="text-sm font-medium text-amber-900">Full selected total unavailable — required contributions are missing or blocked.</p>}
+      {!output.total && output.grossBasis ? <p data-testid="takeoff-gross-basis" className="mt-3 text-sm">Gross basis: <span data-amount="gross">{output.grossBasis}</span> · {output.grossBasisStatus === 'complete' ? 'Confirmed input basis' : 'Provisional'}. Net finish quantity remains unavailable until the affected surface is resolved.</p> : null}
       {output.wastePending ? <p role="status" className="mt-3 text-sm text-amber-900">{output.wasteError || 'Finish the waste percentage to calculate adjusted quantities.'} Net measured quantities remain separate.</p> : null}
       {!output.total && output.subtotal ? <div className="mt-4 rounded-md border border-amber-300 bg-amber-50 p-3">
         <h4 className="mb-3 text-sm font-semibold">Partial subtotal · {output.subtotalStatus === 'provisional' ? 'Provisional' : 'Confirmed input basis'} — not the full selected total</h4>
@@ -43,6 +44,11 @@ export function TakeoffResults({ outputs, onFocus }: { outputs: TakeoffOutput[];
             <Button size="sm" variant="outline" data-physical-layout-control="true" onClick={() => onFocus(row.source)}>Locate source</Button></div>
           <p className="mb-3 text-xs leading-5 text-slate-600">Numbers: {row.readiness.numericBasis.status} · Geometry: {row.readiness.geometry.status} · Input review: {row.readiness.confirmation.status} · Room model: {row.readiness.applicability?.status ?? 'not required'}</p>
           {row.amounts ? <Amounts amounts={row.amounts} showWaste={output.output !== 'opening-inventory'} /> : <p className="text-sm font-medium text-amber-900">Quantity unavailable for this target.</p>}
+          {!row.amounts && row.grossBasis ? <p className="mt-2 text-sm" data-testid="takeoff-record-gross-basis">Gross basis: <span data-amount="gross">{row.grossBasis}</span> · {row.grossBasisStatus === 'complete' ? 'Confirmed input basis' : 'Provisional'}</p> : null}
+          {row.surfaceContributions?.length ? <div className="mt-3 space-y-3 border-t pt-3"><h5 className="text-xs font-semibold">Surface opening deductions</h5>{row.surfaceContributions.map((item,index) => <div key={item.openingId + item.roomId + item.surface + index} className="space-y-2 text-xs" data-testid="takeoff-surface-deduction" data-surface-opening-id={item.openingId} data-surface={item.surface}>
+            <p className="font-medium">{item.label}</p><p>Raw: <span data-amount="raw">{item.raw}</span> · Effective before union: <span data-amount="effective-before-union">{item.effectiveBeforeUnion}</span></p>
+            <div className="flex flex-wrap gap-2"><Button size="sm" variant="outline" data-physical-layout-control onClick={() => onFocus(item.source)}>Locate opening</Button>{onEdit ? <Button size="sm" variant="outline" data-physical-layout-control onClick={() => onEdit(item.source)}>Edit opening</Button> : null}</div>
+          </div>)}</div> : null}
           {row.contributions.length ? <div className="mt-3 space-y-2 border-t pt-3"><h5 className="text-xs font-semibold">Opening deductions</h5>{row.contributions.map((item, index) => <div key={item.openingId + item.wallFaceId + index} className="flex flex-wrap items-start justify-between gap-2 text-xs" data-testid="takeoff-deduction" data-opening-id={item.openingId}>
             <button type="button" className="min-w-0 max-w-full text-left text-blue-700 underline underline-offset-2" data-physical-layout-control="true" onClick={() => onFocus(item.source)}>{item.label}</button>
             <span>Raw: <span data-amount="raw">{item.raw}</span> · Effective before union: <span data-amount="effective-before-union">{item.effectiveBeforeUnion}</span></span>

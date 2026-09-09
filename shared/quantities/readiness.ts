@@ -1,3 +1,5 @@
+import { validateStairGeometry } from '../domain/stairGeometry';
+import { evaluateSurfaceReadiness, type SurfaceReadiness } from './surfaceReadiness';
 import type { PhysicalDocument, PhysicalOpening } from '../domain/document';
 import type { AppDeclaration, ApplicabilityField } from '../domain/applicability';
 import {
@@ -5,7 +7,7 @@ import {
   measurementFinding, checkFinding, atFloor, exceedsTolerance,
   type MeasurementRef, type GeometryCheck, type GeometryReport, type Finding, type Location, type QuantityOutput,
 } from '../domain/geometryValidation';
-import { validateQuantityRequest, QUANTITY_POLICY_VERSION_V2, QUANTITY_POLICY_VERSION_V3, type QuantityPolicyVersion, type ContractError } from './policy';
+import { validateQuantityRequest, QUANTITY_POLICY_VERSION_V2, QUANTITY_POLICY_VERSION_V3, QUANTITY_POLICY_VERSION_V4, type QuantityPolicyVersion, type ContractError } from './policy';
 
 export interface ApplicabilityReadiness {
   status: 'supported' | 'provisional' | 'unknown' | 'unsupported';
@@ -15,6 +17,7 @@ export interface ApplicabilityReadiness {
 export interface OutputReadiness extends Location {
   /** Present only in v2 results; omitted from historical v1 content/hashes. */
   applicability?: ApplicabilityReadiness;
+  surface?: SurfaceReadiness;
   output: QuantityOutput;
   wasteFraction: number | null;
   openingBases: { openingId: string; measureBasis: PhysicalOpening['measureBasis'] }[];
@@ -36,6 +39,7 @@ export function evaluateQuantityReadiness(input: unknown, requested: unknown): R
   const doc = input as PhysicalDocument, contract = validateQuantityRequest(doc, requested);
   if (!contract.ok) return { ok: false, errors: contract.errors, validation };
   const request = contract.request, walls = wallIndex(doc), outputs: OutputReadiness[] = [];
+  const surfaceChecks = doc.schemaVersion === 4 ? validateStairGeometry(doc).checks : undefined;
   const known = (ref: MeasurementRef) => {
     const measurement = measurementAt(doc, ref);
     return measurement.state === 'known' ? measurement.valueMm : null;
@@ -68,7 +72,7 @@ export function evaluateQuantityReadiness(input: unknown, requested: unknown): R
       return measurement.state !== 'known' || measurement.provenance.confirmation.status === 'needs-review';
     }) || basisFindings.length > 0;
     let applicability: ApplicabilityReadiness | undefined;
-    if (request.policy.version === QUANTITY_POLICY_VERSION_V2 || request.policy.version === QUANTITY_POLICY_VERSION_V3) {
+    if (request.policy.version === QUANTITY_POLICY_VERSION_V2 || request.policy.version === QUANTITY_POLICY_VERSION_V3 || request.policy.version === QUANTITY_POLICY_VERSION_V4) {
       const refs: { roomId: string; field: ApplicabilityField }[] = [];
       const add = (roomId: string, field: ApplicabilityField) => {
         if (!refs.some(ref => ref.roomId === roomId && ref.field === field)) refs.push({ roomId, field });
@@ -105,14 +109,16 @@ export function evaluateQuantityReadiness(input: unknown, requested: unknown): R
           : appDependencies.some(ref => ref.declaration.value === 'unknown') ? 'unknown'
           : appFindings.length ? 'provisional' : 'supported' };
     }
+    const surface = doc.schemaVersion === 4 && (output === 'floor-area' || output === 'ceiling-area')
+      ? evaluateSurfaceReadiness(doc, location.roomIds[0], output === 'floor-area' ? 'floor' : 'ceiling', surfaceChecks) : undefined;
     const appBlocked = applicability?.status === 'unknown' || applicability?.status === 'unsupported';
     outputs.push({ ...location, output, wasteFraction,
-      ...(applicability ? { applicability } : {}),
+      ...(applicability ? { applicability } : {}), ...(surface ? { surface } : {}),
       openingBases: basisOpenings.map(opening => ({ openingId: opening.id, measureBasis: opening.measureBasis })),
       numericBasis: { status: missing.length || basisFindings.length ? 'insufficient' : 'sufficient',
         dependencies: numeric, findings: [...missing, ...basisFindings] },
       geometry: { status: geometryStatus, checks, findings: [...geometricFindings, ...missing] },
-      confirmation: { status: unresolved || appBlocked ? 'unresolved' : confirmationFindings.length || applicability?.status === 'provisional' ? 'provisional'
+      confirmation: { status: unresolved || appBlocked || surface?.status === 'blocked' ? 'unresolved' : confirmationFindings.length || applicability?.status === 'provisional' || surface?.status === 'provisional' ? 'provisional'
         : dependencies.length ? 'confirmed' : 'not-required', dependencies, findings: [...confirmationFindings, ...basisFindings, ...(applicability?.findings ?? [])] },
     });
   }

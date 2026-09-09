@@ -13,11 +13,12 @@ import { levelOwnershipBasis } from '../domain/levels';
 const hash = z.string().regex(/^[0-9a-f]{64}$/);
 export const fingerprintsSchema = z.object({
   algorithm: z.literal('SHA-256'), serialization: z.literal('mfp-json-v1'),
-  geometryScope: z.enum(['physical-geometry-v1', 'physical-geometry-v2', 'physical-geometry-v3']), contentScope: z.enum(['calculation-content-v1', 'calculation-content-v2', 'calculation-content-v3']),
+  geometryScope: z.enum(['physical-geometry-v1', 'physical-geometry-v2', 'physical-geometry-v3', 'physical-geometry-v4']), contentScope: z.enum(['calculation-content-v1', 'calculation-content-v2', 'calculation-content-v3', 'calculation-content-v4']),
   geometry: hash, content: hash,
 }).strict();
 export const evaluationSchema = z.object({ calculation: calculationSchema, fingerprints: fingerprintsSchema }).strict().superRefine((value, context) => {
-  const suffix = value.calculation.policyVersion === 'rectangular-flat-v3' ? 'v3'
+  const suffix = value.calculation.policyVersion === 'rectangular-flat-v4' ? 'v4'
+    : value.calculation.policyVersion === 'rectangular-flat-v3' ? 'v3'
     : value.calculation.policyVersion === 'rectangular-flat-v2' ? 'v2' : 'v1';
   if (value.fingerprints.geometryScope !== 'physical-geometry-' + suffix
       || value.fingerprints.contentScope !== 'calculation-content-' + suffix) {
@@ -57,7 +58,7 @@ export const snapshotMetadataSchema = z.object({
   createdAt: z.string().datetime({ offset: true }), kind: z.enum(['evaluation', 'confirmed']),
 }).strict();
 export const quantitySnapshotSchema = z.object({
-  snapshotSchemaVersion: z.enum(['quantity-snapshot-v1', 'quantity-snapshot-v2', 'quantity-snapshot-v3']),
+  snapshotSchemaVersion: z.enum(['quantity-snapshot-v1', 'quantity-snapshot-v2', 'quantity-snapshot-v3', 'quantity-snapshot-v4']),
   instance: snapshotMetadataSchema,
   sourceDocument: supportedPhysicalDocumentSchema,
   measurementEvents: z.array(measurementEventCaptureSchema),
@@ -65,9 +66,11 @@ export const quantitySnapshotSchema = z.object({
   captureFingerprint: hash,
 }).strict().superRefine((snapshot, context) => {
   const policy = snapshot.evaluation.calculation.policyVersion, document = snapshot.sourceDocument;
-  const expectedVersion = policy === 'rectangular-flat-v3' ? 'quantity-snapshot-v3'
+  const expectedVersion = policy === 'rectangular-flat-v4' ? 'quantity-snapshot-v4'
+    : policy === 'rectangular-flat-v3' ? 'quantity-snapshot-v3'
     : policy === 'rectangular-flat-v2' ? 'quantity-snapshot-v2' : 'quantity-snapshot-v1';
-  const sourceAgrees = policy === 'rectangular-flat-v3' ? document.schemaVersion === 3 && document.quantityPolicyVersion === policy
+  const sourceAgrees = policy === 'rectangular-flat-v4' ? document.schemaVersion === 4 && document.quantityPolicyVersion === policy
+    : policy === 'rectangular-flat-v3' ? document.schemaVersion === 3 && document.quantityPolicyVersion === policy
     : document.schemaVersion === 2 && (policy === 'rectangular-flat-v2'
       ? document.quantityPolicyVersion === policy && Boolean(document.calculationContract)
       : !document.calculationContract && (document.quantityPolicyVersion === null || document.quantityPolicyVersion === 'rectangular-flat-v1'));
@@ -89,6 +92,34 @@ const numericMeasurement = (measurement: Dimension) => measurement.state === 'kn
   : measurement.state === 'unknown' ? { state: measurement.state, valueMm: null }
     : { state: measurement.state, valueMm: null, candidates: measurement.candidates.map(candidate => candidate.valueMm) };
 
+function stairsGeometryBasis(document: Extract<PhysicalDocument, { schemaVersion: 4 }>) {
+  const placement = (value: import('../domain/stairs').StairPlacement) => ({ anchor: value.anchor,
+    x: numericMeasurement(value.x), y: numericMeasurement(value.y), rotation: value.rotation });
+  const endpoint = (value: import('../domain/stairs').StairEndpoint) => value.state === 'unresolved' ? { state: value.state }
+    : { state: value.state, roomId: value.roomId, levelId: value.levelId, placement: placement(value.placement) };
+  const landing = (value: import('../domain/stairs').Landing | null) => value ? { id: value.id,
+    width: numericMeasurement(value.width), depth: numericMeasurement(value.depth), placement: placement(value.placement) } : null;
+  const impact = (value: import('../domain/stairs').SurfaceImpact) => value.state === 'deduct'
+    ? { state: value.state, openingIds: [...value.openingIds].sort() } : { state: value.state };
+  return { version: document.stairsContract.version,
+    stairs: document.stairsContract.stairs.map(stair => ({ id: stair.id, width: numericMeasurement(stair.width),
+      run: numericMeasurement(stair.run), totalRise: numericMeasurement(stair.totalRise),
+      endpoints: { lower: endpoint(stair.endpoints.lower), upper: endpoint(stair.endpoints.upper) },
+      landings: { lower: landing(stair.landings.lower), upper: landing(stair.landings.upper) },
+      surfaceImpacts: { lower: { floor: impact(stair.surfaceImpacts.lower.floor), ceiling: impact(stair.surfaceImpacts.lower.ceiling) },
+        upper: { floor: impact(stair.surfaceImpacts.upper.floor), ceiling: impact(stair.surfaceImpacts.upper.ceiling) } },
+      alignment: { state: stair.alignment.state } })),
+    surfaceOpenings: document.stairsContract.surfaceOpenings.map(opening => ({ id: opening.id,
+      geometry: opening.geometry, width: numericMeasurement(opening.width), length: numericMeasurement(opening.length),
+      associatedStairId: opening.associatedStairId, attachments: opening.attachments.map(attachment => ({
+        roomId: attachment.roomId, surface: attachment.surface, placement: placement(attachment.placement) })) })) };
+}
+function stairsEvidenceBasis(document: Extract<PhysicalDocument, { schemaVersion: 4 }>) {
+  return { version: document.stairsContract.version,
+    stairs: document.stairsContract.stairs.map(({ name, ...evidence }) => evidence),
+    surfaceOpenings: document.stairsContract.surfaceOpenings.map(({ name, ...evidence }) => evidence) };
+}
+
 /** Whole physical document scope, including unselected geometry, but no names,
  * presentation, viewport, arbitrary metadata, compatibility originals or review history.
  * Candidate order remains meaningful and is never sorted.
@@ -96,7 +127,8 @@ const numericMeasurement = (measurement: Dimension) => measurement.state === 'kn
 function geometryBasis(document: PhysicalDocument) {
   return {
     schemaVersion: document.schemaVersion,
-    ...(document.schemaVersion === 3 ? { levelOwnership: levelOwnershipBasis(document.buildingLevels) } : {}),
+    ...(document.schemaVersion === 4 ? { stairs: stairsGeometryBasis(document) } : {}),
+    ...((document.schemaVersion === 3 || document.schemaVersion === 4) ? { levelOwnership: levelOwnershipBasis(document.buildingLevels) } : {}),
     ...(document.calculationContract ? { applicability: {
       version: document.calculationContract.version,
       rooms: Object.fromEntries(Object.entries(document.calculationContract.rooms).map(([id, profile]) => [id, {
@@ -116,7 +148,8 @@ function geometryBasis(document: PhysicalDocument) {
 }
 function evidenceBasis(document: PhysicalDocument) {
   return {
-    ...(document.schemaVersion === 3 ? { levelEvidence: document.buildingLevels.levels
+    ...(document.schemaVersion === 4 ? { stairs: stairsEvidenceBasis(document) } : {}),
+    ...((document.schemaVersion === 3 || document.schemaVersion === 4) ? { levelEvidence: document.buildingLevels.levels
       .map(level => ({ id: level.id, finishedFloorElevation: level.finishedFloorElevation }))
       .sort((a, b) => a.id < b.id ? -1 : a.id > b.id ? 1 : 0) } : {}),
     ...(document.calculationContract ? { applicability: document.calculationContract } : {}),
@@ -129,9 +162,9 @@ async function evaluateOwned(document: PhysicalDocument, requested: unknown): Pr
   const result = calculateQuantities(document, requested);
   if (!result.ok) return result;
   const geometry = geometryBasis(document), calculation = result.calculation;
-  const v3 = calculation.policyVersion === 'rectangular-flat-v3', v2 = calculation.policyVersion === 'rectangular-flat-v2';
-  const geometryScope = v3 ? 'physical-geometry-v3' as const : v2 ? 'physical-geometry-v2' as const : 'physical-geometry-v1' as const;
-  const contentScope = v3 ? 'calculation-content-v3' as const : v2 ? 'calculation-content-v2' as const : 'calculation-content-v1' as const;
+  const v4 = calculation.policyVersion === 'rectangular-flat-v4', v3 = calculation.policyVersion === 'rectangular-flat-v3', v2 = calculation.policyVersion === 'rectangular-flat-v2';
+  const geometryScope = v4 ? 'physical-geometry-v4' as const : v3 ? 'physical-geometry-v3' as const : v2 ? 'physical-geometry-v2' as const : 'physical-geometry-v1' as const;
+  const contentScope = v4 ? 'calculation-content-v4' as const : v3 ? 'calculation-content-v3' as const : v2 ? 'calculation-content-v2' as const : 'calculation-content-v1' as const;
   const [geometryHash, contentHash] = await Promise.all([
     sha256Canonical({ scope: geometryScope, geometry }),
     sha256Canonical({ scope: contentScope, geometry, evidence: evidenceBasis(document), calculation }),
@@ -179,7 +212,8 @@ export async function createQuantitySnapshot(documentInput: unknown, requestInpu
       return failure('CONFIRMED_SNAPSHOT_UNAVAILABLE', 'Every selected output must be complete with required measurements confirmed; empty is not confirmed');
     }
     const capture = {
-      snapshotSchemaVersion: result.evaluation.calculation.policyVersion === 'rectangular-flat-v3' ? 'quantity-snapshot-v3' as const
+      snapshotSchemaVersion: result.evaluation.calculation.policyVersion === 'rectangular-flat-v4' ? 'quantity-snapshot-v4' as const
+        : result.evaluation.calculation.policyVersion === 'rectangular-flat-v3' ? 'quantity-snapshot-v3' as const
         : result.evaluation.calculation.policyVersion === 'rectangular-flat-v2' ? 'quantity-snapshot-v2' as const : 'quantity-snapshot-v1' as const, instance: instance.data,
       sourceDocument: document as PhysicalDocument,
       measurementEvents: events as z.infer<typeof measurementEventCaptureSchema>[],
