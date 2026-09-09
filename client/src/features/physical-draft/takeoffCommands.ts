@@ -103,6 +103,30 @@ export function commitWaste(draft: PhysicalDraft, output: QuantityOutput): Physi
   next.takeoffState!.wasteFields[output] = { ...raw, dirty: false };
   return next;
 }
+function committedWasteText(fraction: number): string {
+  const text = String(fraction * 100);
+  if (!text.includes('e')) return text;
+  // Waste inputs accept plain decimal text. Expand scientific notation from
+  // the retained number so a valid tiny/large allowance recovers as clean.
+  const [coefficient, exponent] = text.split('e');
+  const [whole, decimal = ''] = coefficient.split('.');
+  const digits = whole + decimal, point = whole.length + Number(exponent);
+  if (point <= 0) return '0.' + '0'.repeat(-point) + digits;
+  if (point >= digits.length) return digits + '0'.repeat(point - digits.length);
+  return digits.slice(0, point) + '.' + digits.slice(point);
+}
+/** Called through the guarded field-Revert boundary; preserve the committed request. */
+export function revertWaste(draft: PhysicalDraft, output: QuantityOutput): PhysicalDraft {
+  const raw = getWasteField(draft, output);
+  if (!raw.dirty) return draft;
+  const selected = selection(draft, output);
+  if (!('wasteFraction' in selected)) fail('Opening inventory has no waste percentage.');
+  const next = copyDraftForEdit(draft); bump(next);
+  // Advancing the existing interaction guard prevents a later opening Undo
+  // from interpreting edit-then-Revert as untouched historical scope.
+  next.takeoffState!.wasteFields[output] = { text: committedWasteText(selected.wasteFraction), dirty: false };
+  return next;
+}
 export function pendingWasteOutputs(draft: PhysicalDraft): QuantityOutput[] {
   return draft.request.selections.filter(item => item.output !== 'opening-inventory'
     && getWasteField(draft, item.output).dirty).map(item => item.output);

@@ -6,6 +6,7 @@ import type { PhysicalOpening, WallSide } from '@shared/domain/document';
 import { formatMeasurement } from '@shared/domain/parseMeasurement';
 import type { PhysicalDraft } from './state';
 import * as commands from './openingCommands';
+import { captureFieldRevert, revertField } from './fieldRevert';
 
 export type PhysicalChange = (change: (draft: PhysicalDraft) => PhysicalDraft, expectedRevision?: number) => boolean;
 const names: Record<PhysicalOpening['kind'], string> = { door: 'Door', window: 'Window', 'floor-level-opening': 'Opening' };
@@ -72,6 +73,12 @@ export function OpeningMeasurements({ draft, openingId, update, onDeleted, comma
     const value = field === 'offset' ? null : opening[field];
     return <ControlledOpeningSizeField key={openingId + ':' + field} label={label}
       visibleLabel={(field === 'sillHeight' ? 'Sill / elevation' : field === 'offset' ? 'Center from start' : field === 'width' ? 'Width' : 'Height') + ' (' + input.unit + ')'}
+      revert={{ name: 'Revert ' + label.toLowerCase(), identity: draft.id + ':' + openingId + ':' + field,
+        revision: draft.localEditRevision, pending: input.dirty,
+        onRevert: () => {
+          const token = captureFieldRevert(draft, { kind: 'opening', id: openingId, field });
+          return update(current => revertField(current, token), token.revision);
+        } }}
       text={input.text} choices={choices} disabled={shared && field === 'offset'}
       error={input.dirty ? commands.openingFieldError(input, field) : null}
       hint={input.dirty ? 'Unapplied edit' + (input.unit !== draft.displayUnit ? ' · original unit context' : '') : value && value.state !== 'known' ? 'Not measured / needs review' : undefined}

@@ -1,6 +1,8 @@
 import { useMemo, useRef, useState, type ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { useInputRevert } from '@/components/InputRevert';
+import { captureFieldRevert, revertField } from './fieldRevert';
 import type { PhysicalDraft } from './state';
 import { QUANTITY_OUTPUTS, type QuantityOutput } from '@shared/domain/geometryValidation';
 import type { QuantitySelection } from '@shared/quantities/policy';
@@ -45,7 +47,6 @@ export function TakeoffPanel({ draft, update, onFocus, review, showScope, onShow
   draft: PhysicalDraft; update: Change; onFocus: (scope: DrawingSourceScope) => void; review: ReactNode;
   showScope: boolean; onShowScope: (show: boolean) => void;
 }) {
-  const composing = useRef(false);
   const [active, setActive] = useState<QuantityOutput>('floor-area');
   const [reviewVisible, setReviewVisible] = useState(false);
   const model = useMemo(() => buildTakeoffReadModel(draft), [draft]);
@@ -55,12 +56,6 @@ export function TakeoffPanel({ draft, update, onFocus, review, showScope, onShow
   const chosen = selection ? targets(selection) : [];
   const selectedKeys = new Set(chosen.map(keyOf));
   const waste = output && output !== 'opening-inventory' ? getWasteField(draft, output) : null;
-  const error = waste?.dirty ? wasteError(waste) : null;
-  function applyWaste(output: QuantityOutput) {
-    // Invalid text already has an inline error. Keep it pending without inserting
-    // a page-level alert during blur, which can move the next click's target.
-    update(current => wasteError(getWasteField(current, output)) ? current : commitWaste(current, output));
-  }
   function toggleTarget(choice: Choice, include: boolean) {
     if (!output || !selection) return;
     const values = include ? [...chosen, choice.value] : chosen.filter(value => keyOf(value) !== choice.key);
@@ -97,14 +92,7 @@ export function TakeoffPanel({ draft, update, onFocus, review, showScope, onShow
       <div className="grid max-h-52 gap-2 overflow-y-auto sm:grid-cols-2">{choices.map(choice => <label key={choice.key} className="flex items-start gap-2 text-sm">
         <input className="mt-1" type="checkbox" aria-label={'Include ' + choice.label} checked={selectedKeys.has(choice.key)} onChange={event => toggleTarget(choice, event.target.checked)} />{choice.label}
       </label>)}{!choices.length ? <p className="text-sm text-slate-600">No available {targetNoun(output)} yet.</p> : null}</div>
-      {waste ? <div className="mt-4 max-w-xs"><label className="text-sm font-medium" htmlFor="takeoff-waste">Waste percentage</label>
-        <Input id="takeoff-waste" type="text" className="mt-1 bg-white" value={waste.text} aria-invalid={Boolean(error)} aria-describedby="takeoff-waste-help"
-          onChange={event => { const text = event.target.value; update(current => editWaste(current, output, text)); }}
-          onBlur={event => { if (!composing.current) applyWaste(output); }}
-          onCompositionStart={() => { composing.current = true; }} onCompositionEnd={event => { composing.current = false; if (document.activeElement !== event.currentTarget) applyWaste(output); }}
-          onKeyDown={event => { if (event.key === 'Enter' && !composing.current && !event.nativeEvent.isComposing && !event.repeat) { event.preventDefault(); applyWaste(output); } }} />
-        <p id="takeoff-waste-help" className={'mt-1 text-xs leading-5 ' + (error ? 'text-red-700' : 'text-slate-600')}>{error || '0% by default. 10% means 0.10, applied once to the net measured quantity.'}</p>
-      </div> : <p className="mt-3 text-xs text-slate-600">Inventory counts physical identities; no waste is applied.</p>}
+      {waste ? <WasteInput key={output} draft={draft} output={output} update={update} /> : <p className="mt-3 text-xs text-slate-600">Inventory counts physical identities; no waste is applied.</p>}
       {output === 'crown' ? <fieldset className="mt-4 border-t pt-3"><legend className="text-sm font-medium">Explicit full-height gaps</legend>
         <p className="mb-2 text-xs leading-5 text-slate-600">Only deduct selected, measured floor-to-ceiling gaps. The engine checks their full height; ordinary doors are not deducted automatically.</p>
         <div className="grid max-h-44 gap-2 overflow-y-auto sm:grid-cols-2">{openingFaces(draft).map(choice => <label key={choice.key} className="flex items-start gap-2 text-sm">
@@ -119,4 +107,39 @@ export function TakeoffPanel({ draft, update, onFocus, review, showScope, onShow
     {reviewVisible ? review : null}
     <p className="border-t pt-3 text-xs leading-5 text-slate-500">These are measured finish quantities. Waste-adjusted values are not boxes, sheets, gallons, prices or an order-ready construction materials list. Input review is not professional verification or code compliance. Recovery is temporary in this browser tab.</p>
   </section>;
+}
+
+function WasteInput({ draft, output, update }: { draft: PhysicalDraft; output: QuantityOutput; update: Change }) {
+  const composing = useRef(false), inputRef = useRef<HTMLInputElement>(null);
+  const waste = getWasteField(draft, output), error = waste.dirty ? wasteError(waste) : null;
+  const revert = useInputRevert(inputRef, {
+    name: 'Revert ' + OUTPUT_LABELS[output].replace(/ area$/, '').toLowerCase() + ' waste',
+    identity: draft.id + ':' + output, revision: draft.localEditRevision, pending: waste.dirty,
+    onLeave: () => { if (!composing.current) applyWaste(); },
+    onRevert: () => {
+      const token = captureFieldRevert(draft, { kind: 'waste', output });
+      return update(current => revertField(current, token), token.revision);
+    },
+  });
+  function applyWaste() {
+    // Keep malformed text inline; a second error at the page top would move the next click.
+    update(current => wasteError(getWasteField(current, output)) ? current : commitWaste(current, output));
+  }
+  return <div className="relative mt-4 max-w-xs"><label className="block min-h-7 pr-16 text-sm font-medium" htmlFor="takeoff-waste">Waste percentage</label>
+    <Input ref={inputRef} id="takeoff-waste" type="text" className="mt-1 bg-white" value={waste.text} aria-invalid={Boolean(error)} aria-describedby="takeoff-waste-help"
+      onChange={event => { const text = event.target.value; update(current => editWaste(current, output, text)); }}
+      onBlur={event => { if (!composing.current && !revert.skipBlur(event)) applyWaste(); }}
+      onCompositionStart={() => { composing.current = true; }} onCompositionEnd={event => {
+        composing.current = false;
+        if (document.activeElement !== event.currentTarget && !revert.isRevertFocus(document.activeElement)) applyWaste();
+      }}
+      onKeyDown={event => {
+        if (revert.onInputKeyDown(event, composing.current)) return;
+        if (event.key === 'Enter' && !composing.current && !event.nativeEvent.isComposing && !event.repeat) {
+          event.preventDefault(); applyWaste();
+        }
+      }} />
+    {revert.control}
+    <p id="takeoff-waste-help" className={'mt-1 text-xs leading-5 ' + (error ? 'text-red-700' : 'text-slate-600')}>{error || '0% by default. 10% means 0.10, applied once to the net measured quantity.'}</p>
+  </div>;
 }

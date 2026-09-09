@@ -1,3 +1,4 @@
+import { useInputRevert, type InputRevertOptions } from '@/components/InputRevert';
 import { useEffect, useId, useRef, useState } from 'react';
 import { ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -132,33 +133,37 @@ export default function OpeningSizeField({ label, visibleLabel, value, choices, 
 /** The same compact common/custom control with raw text owned by a physical draft.
  * Conversion, validation and persistence belong to its typed commands. */
 export function ControlledOpeningSizeField({ label, visibleLabel, text, choices = [], error, hint,
-  disabled, onChange, onCommit, onPreset }: {
+  disabled, onChange, onCommit, onPreset, revert: revertOptions }: {
   label: string; visibleLabel: string; text: string; choices?: number[];
   error?: string | null; hint?: string; disabled?: boolean;
+  revert?: Omit<InputRevertOptions, 'onLeave'>;
   onChange: (text: string) => void; onCommit: () => void; onPreset?: (inches: number) => void;
 }) {
   const id = useId(), inputRef = useRef<HTMLInputElement>(null);
   const composing = useRef(false), menuOpening = useRef(false);
-  return <div className="min-w-0 space-y-1">
-    <Label htmlFor={id} className="text-xs">{visibleLabel}</Label>
+  const revert = useInputRevert(inputRef, revertOptions ? { ...revertOptions, onLeave: () => { if (!composing.current && !menuOpening.current) onCommit(); } } : undefined);
+  return <div className={"min-w-0 space-y-1" + (revertOptions ? " relative" : "")}>
+    <Label htmlFor={id} className={"text-xs" + (revertOptions ? " block min-h-7 pr-16" : "")}>{visibleLabel}</Label>
     <div className="flex min-w-0">
       <Input ref={inputRef} id={id} type="text" value={text} disabled={disabled}
         placeholder="Not entered" autoComplete="off" spellCheck={false}
         aria-label={label} aria-invalid={Boolean(error)} aria-describedby={id + '-help'}
         className={'h-9 min-w-0 px-2 text-sm focus-visible:z-10' + (choices.length ? ' rounded-r-none' : '')}
         onChange={event => onChange(event.target.value)}
-        onBlur={() => { if (!composing.current && !menuOpening.current) onCommit(); }}
+        onBlur={event => { if (!composing.current && !menuOpening.current && !revert.skipBlur(event)) onCommit(); }}
         onCompositionStart={() => { composing.current = true; }}
-        onCompositionEnd={event => { composing.current = false; if (document.activeElement !== event.currentTarget) onCommit(); }}
+        onCompositionEnd={event => { composing.current = false; if (document.activeElement !== event.currentTarget && !menuOpening.current && !revert.isRevertFocus(document.activeElement)) onCommit(); }}
         onKeyDown={event => {
+          if (revert.onInputKeyDown(event, composing.current || menuOpening.current)) return;
           if (composing.current || event.nativeEvent.isComposing || event.keyCode === 229 || event.repeat) return;
           if (event.key === 'Enter') { event.preventDefault(); event.stopPropagation(); onCommit(); }
         }} />
+      {revert.control}
       {choices.length && onPreset ? <DropdownMenu onOpenChange={open => { menuOpening.current = open; }}>
         <DropdownMenuTrigger asChild>
           <Button type="button" variant="outline" size="icon" disabled={disabled}
             className="h-9 w-9 shrink-0 rounded-l-none border-l-0" aria-label={'Common ' + label.toLowerCase()}
-            onPointerDownCapture={event => { if (event.button === 0 && document.activeElement === inputRef.current) menuOpening.current = true; }}>
+            onPointerDownCapture={event => { if (event.button === 0 && (document.activeElement === inputRef.current || revert.isRevertFocus(document.activeElement))) menuOpening.current = true; }}>
             <ChevronDown className="h-4 w-4" aria-hidden="true" />
           </Button>
         </DropdownMenuTrigger>
