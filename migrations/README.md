@@ -1,4 +1,4 @@
-# M4A additive authorization and account migrations
+# Additive authorization, accounts and physical-plan migrations
 
 `0001_workspace_authorization.sql` creates application principals, verified external-identity links, workspaces and active/revoked owner/editor/viewer memberships. It adds nullable `floor_plans.workspace_id` and a scoped-list index. Existing plan rows remain null-owned and inaccessible through ordinary repository methods. Existing `users`, passwords and room JSON are neither activated nor changed.
 
@@ -17,3 +17,11 @@ The browser cookie contains only an opaque express-session ID. Session-store JSO
 Configured, verified issuer/subject pairs provision one application principal atomically without email merging, default workspaces, legacy plan claims or revoked-link restoration. Explicit workspace creation atomically creates one workspace and owner membership. Principal-bound UUID idempotency receipts preserve retries; changed request names conflict. Five fresh workspaces per principal per hour are allowed. Existing revoked memberships are never reactivated by a retry. Account context locking precedes the existing workspace/identity/membership locks, serializing logout and workspace switching with protected writes. Callback finalization validates and holds that same context lock before express-session regenerates its SID, so a stale callback cannot destroy a newer pending login session.
 
 Run `node --import tsx --test tests/database/accounts.test.ts` only with the same explicit `MFP_TEST_DATABASE_URL` and `MFP_TEST_DATA_DIRECTORY` guards as the existing authorization suite. The account suite verifies the real server identity, then creates and removes only its own unique synthetic schema. The separate protocol/browser runner applies both migrations to its own synthetic database and uses the normal production composition with an HTTPS local test issuer. It does not configure a live identity provider or authorize production migration/customer access.
+
+## 0003: complete physical plans and immutable revisions
+
+`0003_physical_plans.sql` runs once after 0002. It adds workspace-owned physical plans, append-only immutable revisions and principal/workspace/operation/resource-scoped save receipts. Composite foreign keys keep revisions and receipts within their plan/workspace; a deferred current-pointer constraint permits atomic plan + first revision creation without a dangling committed pointer. Update/delete triggers reject changes to stored revision or receipt history. Legacy floor_plans, its NULL ownership and all old content remain unchanged.
+
+Only verified disposable fixtures apply this migration for M4B. The normal server never applies SQL or creates these tables. A live application needs separate verified binding, migration authorization, operational retention and deployment. Do not use db:push, destructive rollback or an unidentified DATABASE_URL. Session-row pruning and database backup/restore operations remain pre-live readiness work.
+
+Run `npm run test:physical:db` with the explicit test database URL and data-directory variables described above. It verifies actual database/user/loopback/data-directory before creating its unique schema. `npm run test:physical` uses a fresh disposable database and the real fixture OIDC/HTTPS account composition for HTTP and browser acceptance; it applies 0001–0003 only there and drops only its generated database afterward. No provider credentials or session contents belong in committed evidence.

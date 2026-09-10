@@ -11,6 +11,7 @@ if (origin.protocol !== 'https:' || origin.hostname !== '127.0.0.2') throw new E
 const app = express();
 app.disable('x-powered-by');
 app.use('/api', privateApiResponses);
+app.use('/api/physical-plans', express.json({ limit: '4mb' }));
 app.use(express.json()); app.use(express.urlencoded({ extended: false }));
 await registerRoutes(app);
 app.use(express.static(resolve('dist/public')));

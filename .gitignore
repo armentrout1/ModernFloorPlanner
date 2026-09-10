@@ -7,3 +7,7 @@ vite.config.ts.*
 # Local automated acceptance evidence
 /test-results/
 /playwright-report/
+
+# Separate authenticated synthetic acceptance output
+/test-results-accounts/
+/test-results-physical/

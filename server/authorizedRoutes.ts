@@ -16,6 +16,10 @@ type Dependencies = {
   storage: () => AuthorizationStorage | Promise<AuthorizationStorage>;
   allowedOrigin: string | null;
 };
+type RouteDependencies<Storage> = Omit<Dependencies, 'storage'> & {
+  storage: () => Storage | Promise<Storage>;
+  onError?: (error: unknown, res: Response) => boolean;
+};
 const uuid = z.string().uuid();
 const workspacePatch = z.object({ name: z.string().trim().min(1).max(200) }).strict();
 const membershipPatch = z.object({
@@ -26,11 +30,9 @@ const fail = (res: Response, status: number, code: string, message: string) => r
 
 // Only trusted server composition selects these dependencies. The normal app
 // never imports or enables the separate synthetic test entrypoint.
-export function mountAuthorizedRoutes(app: Express, dependencies: Dependencies): void {
-  app.disable('etag');
-  app.use('/api', privateApiResponses);
+export function createProtectedRoute<Storage>(dependencies: RouteDependencies<Storage>) {
   const allowedOrigin = configuredApplicationOrigin(dependencies.allowedOrigin ?? undefined);
-  const protectedRoute = (action: (req: Request, res: Response, storage: AuthorizationStorage,
+  return (action: (req: Request, res: Response, storage: Storage,
     identity: VerifiedIdentity, workspaceId: string) => Promise<unknown>): RequestHandler => async (req, res) => {
     const identity = await resolveIdentity(dependencies.identityResolver, req);
     if (identity.status !== 'authenticated') {
@@ -50,6 +52,7 @@ export function mountAuthorizedRoutes(app: Express, dependencies: Dependencies):
     try {
       await action(req, res, await dependencies.storage(), identity.identity, selection.data);
     } catch (error) {
+      if (dependencies.onError?.(error, res)) return;
       if (error instanceof AccountStorageError) {
         fail(res, error.status, error.code === 'STALE_CONTEXT' ? 'ACCOUNT_CONTEXT_CHANGED' : error.code, 'Account access could not be confirmed.');
       } else if (error instanceof AuthorizationError) {
@@ -60,6 +63,11 @@ export function mountAuthorizedRoutes(app: Express, dependencies: Dependencies):
       }
     }
   };
+}
+export function mountAuthorizedRoutes(app: Express, dependencies: Dependencies): void {
+  app.disable('etag');
+  app.use('/api', privateApiResponses);
+  const protectedRoute = createProtectedRoute(dependencies);
   const invalid = (res: Response) => fail(res, 400, 'INVALID_REQUEST', 'Invalid request.');
   const missing = (res: Response) => fail(res, 404, 'RESOURCE_NOT_FOUND', 'Resource not found.');
   app.get('/api/floor-plans', protectedRoute(async (_req, res, storage, identity, workspace) => {

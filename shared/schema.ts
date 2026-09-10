@@ -10,7 +10,7 @@
  * Last verified: June 1, 2025
  */
 
-import { pgTable, text, serial, integer, boolean, json, jsonb, varchar, uuid, timestamp, primaryKey, index, check } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, json, jsonb, varchar, uuid, timestamp, primaryKey, index, check, unique, foreignKey, type AnyPgColumn } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -83,6 +83,46 @@ export const serverSessions = pgTable("mfp_sessions", {
   sid: varchar("sid").primaryKey(), sess: json("sess").notNull(),
   expire: timestamp("expire", { precision: 6, mode: 'date' }).notNull(),
 }, table => [index("mfp_sessions_expire_idx").on(table.expire)]);
+
+// Full physical documents are separate from the preserved legacy room-only table.
+// The migration makes the current-revision FK deferred to create plan+revision
+// atomically; immutable SQL triggers prohibit updates/deletes of history/receipts.
+function physicalRevisionIdentityColumns(): [AnyPgColumn, AnyPgColumn, AnyPgColumn] {
+  return [physicalPlanRevisions.workspaceId, physicalPlanRevisions.planId, physicalPlanRevisions.id];
+}
+export const physicalPlans = pgTable('physical_plans', {
+  id: uuid('id').primaryKey(),
+  workspaceId: uuid('workspace_id').notNull().references(() => workspaces.id, { onDelete: 'restrict' }),
+  currentRevisionId: uuid('current_revision_id').notNull(),
+  createdBy: uuid('created_by').notNull().references(() => applicationPrincipals.id, { onDelete: 'restrict' }),
+  createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'string' }).notNull().defaultNow(),
+}, table => [unique('physical_plans_workspace_id_key').on(table.workspaceId, table.id),
+  index('physical_plans_workspace_id_idx').on(table.workspaceId, table.id),
+  foreignKey({ name: 'physical_plans_current_revision_fk', columns: [table.workspaceId, table.id, table.currentRevisionId], foreignColumns: physicalRevisionIdentityColumns() })]);
+export const physicalPlanRevisions = pgTable('physical_plan_revisions', {
+  id: uuid('id').primaryKey(), workspaceId: uuid('workspace_id').notNull(), planId: uuid('plan_id').notNull(),
+  revisionNumber: integer('revision_number').notNull(), name: text('name').notNull(),
+  envelope: jsonb('envelope').notNull(), evaluation: jsonb('evaluation').notNull(),
+  payloadHash: text('payload_hash').notNull(),
+  createdBy: uuid('created_by').notNull().references(() => applicationPrincipals.id, { onDelete: 'restrict' }),
+  createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' }).notNull().defaultNow(),
+}, table => [unique('physical_revisions_identity_key').on(table.workspaceId, table.planId, table.id),
+  unique('physical_revisions_number_key').on(table.workspaceId, table.planId, table.revisionNumber),
+  foreignKey({ name: 'physical_revisions_plan_fk', columns: [table.workspaceId, table.planId], foreignColumns: [physicalPlans.workspaceId, physicalPlans.id] }),
+  check('physical_revisions_positive_number', sql`${table.revisionNumber} > 0`),
+  check('physical_revisions_hash', sql`${table.payloadHash} ~ '^[0-9a-f]{64}$'`)]);
+export const physicalSaveReceipts = pgTable('physical_save_receipts', {
+  principalId: uuid('principal_id').notNull().references(() => applicationPrincipals.id, { onDelete: 'restrict' }),
+  workspaceId: uuid('workspace_id').notNull(), operation: text('operation').$type<'create' | 'append'>().notNull(),
+  resource: text('resource').notNull(), idempotencyKey: uuid('idempotency_key').notNull(), requestHash: text('request_hash').notNull(),
+  planId: uuid('plan_id').notNull(), revisionId: uuid('revision_id').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' }).notNull().defaultNow(),
+}, table => [primaryKey({ columns: [table.principalId, table.workspaceId, table.operation, table.resource, table.idempotencyKey] }),
+  foreignKey({ name: 'physical_receipts_revision_fk', columns: [table.workspaceId, table.planId, table.revisionId], foreignColumns: physicalRevisionIdentityColumns() }),
+  check('physical_receipts_operation', sql`${table.operation} in ('create', 'append')`),
+  check('physical_receipts_resource', sql`(${table.operation} = 'create' and ${table.resource} = 'collection') or (${table.operation} = 'append' and ${table.resource} = ${table.planId}::text)`),
+  check('physical_receipts_hash', sql`${table.requestHash} ~ '^[0-9a-f]{64}$'`)]);
 
 export const floorPlans = pgTable("floor_plans", {
   id: serial("id").primaryKey(),

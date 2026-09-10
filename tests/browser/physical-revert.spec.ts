@@ -281,7 +281,7 @@ test.describe('touch Revert', () => {
     await field(page, 'Length').fill('12 ft -'); await revert(page, 'length').tap();
     await expect(field(page, 'Length')).toHaveValue('12 ft'); await expect(revert(page, 'length')).toHaveCount(0);
     await expect(page.getByTestId('physical-floor')).toContainText('120.00 sq ft');
-    await closeResponsiveInspector(page); await expect(page.getByRole('status')).toContainText(/held in memory|could not be saved/i);
+    await closeResponsiveInspector(page); await expect(page.locator('[role="status"]:not([data-testid="physical-save-status"])')).toContainText(/held in memory|could not be saved/i);
     expect(await page.evaluate(key => sessionStorage.getItem(key), KEY)).toBe(priorBytes);
   });
 });

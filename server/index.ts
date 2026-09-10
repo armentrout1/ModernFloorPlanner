@@ -6,6 +6,7 @@ import { httpErrorHandler } from "./httpErrors";
 import { privateApiResponses } from './authorizedRoutes';
 const app = express();
 app.use('/api', privateApiResponses);
+app.use('/api/physical-plans', express.json({ limit: '4mb' }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 

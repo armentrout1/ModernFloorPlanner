@@ -93,10 +93,10 @@ export async function captureRequestContext(): Promise<RequestContext> {
 export function assertRequestContext(context: RequestContext) {
   if (snapshot.checking || context.generation !== snapshot.generation || context.token !== snapshot.session.contextToken) throw new AccountContextChanged();
 }
-export async function contextFetch(method: string, url: string, data?: unknown, captured?: RequestContext): Promise<Response> {
+export async function contextFetch(method: string, url: string, data?: unknown, captured?: RequestContext, extraHeaders?: Record<string, string>): Promise<Response> {
   const context = captured ?? await captureRequestContext();
   assertRequestContext(context);
-  if (url.startsWith('/api/floor-plans') && snapshot.session.status === 'authenticated' &&
+  if ((url.startsWith('/api/floor-plans') || url.startsWith('/api/physical-plans')) && snapshot.session.status === 'authenticated' &&
       (!snapshot.session.principal || !snapshot.session.workspace ||
        snapshot.editorContext !== workspaceContext(snapshot.session.principal.id, snapshot.session.workspace.id))) {
     throw new WorkspaceContextRequired('Select and resume the verified workspace local context before accessing server-saved sketches. Unassigned drafts remain separate.');
@@ -104,7 +104,7 @@ export async function contextFetch(method: string, url: string, data?: unknown, 
   const controller = new AbortController(); controllers.add(controller);
   try {
     const response = await fetch(url, { method, credentials: 'include', cache: 'no-store', signal: controller.signal,
-      headers: { ...(data !== undefined ? { 'Content-Type': 'application/json' } : {}),
+      headers: { ...extraHeaders, ...(data !== undefined ? { 'Content-Type': 'application/json' } : {}),
         ...(!['GET','HEAD','OPTIONS'].includes(method.toUpperCase()) ? { 'X-MFP-Request': '1' } : {}),
         ...(context.token ? { 'X-MFP-Context': context.token } : {}), ...(context.workspace ? { 'X-MFP-Workspace-Id': context.workspace } : {}) },
       body: data === undefined ? undefined : JSON.stringify(data) });
@@ -112,7 +112,16 @@ export async function contextFetch(method: string, url: string, data?: unknown, 
     // Recheck after body consumption too. Fetch fulfillment is not the end of an operation.
     const originalJson = response.json.bind(response);
     response.json = async () => { const value = await originalJson(); assertRequestContext(context); return value; };
-    if ([401,403,404,409].includes(response.status) && snapshot.session.status === 'authenticated') {
+    if (response.status === 409 && url.startsWith('/api/physical-plans')) {
+      const failure = await response.clone().json().catch(() => null);
+      assertRequestContext(context);
+      if (failure?.code === 'ACCOUNT_CONTEXT_CHANGED') {
+        invalidateAccount('Account context changed. Your previous draft is preserved separately.');
+        void refreshAccount().catch(() => {});
+        throw new AccountContextChanged();
+      }
+    }
+    if (([401,403,404].includes(response.status) || (response.status === 409 && !url.startsWith('/api/physical-plans'))) && snapshot.session.status === 'authenticated') {
       invalidateAccount('Server access changed. Previous private work is preserved separately.');
       void refreshAccount().catch(() => {});
     }

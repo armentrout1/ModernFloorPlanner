@@ -50,11 +50,12 @@ export function RoomLevelAssignment({ draft, roomId, update }: { draft: Physical
   const chosen = target?.from === current && levels.some(level => level.id === target.to) ? target.to : current;
   return <div className="space-y-2 border-b pb-3" data-physical-layout-control>
     <label className="grid gap-1 text-sm font-medium">Room level
-      <select className="h-10 min-w-0 rounded-md border bg-white px-2" value={chosen} onChange={event => setTarget({ from: current, to: event.target.value })}>
+      <select className="h-10 min-w-0 rounded-md border bg-white px-2" value={chosen} data-physical-unapplied-action={chosen !== current ? "Room level: use Assign room or Revert room level before saving." : undefined} onChange={event => setTarget({ from: current, to: event.target.value })}>
         {levels.map(level => <option key={level.id} value={level.id}>{level.name}</option>)}
       </select>
     </label>
     <Button size="sm" variant="outline" disabled={chosen === current} onClick={() => update(value => assignRoomLevel(value, roomId, chosen, current), draft.localEditRevision)}>Assign room</Button>
+    {chosen !== current ? <Button size="sm" variant="ghost" onClick={() => setTarget(null)}>Revert room level</Button> : null}
     <p className="text-xs leading-5 text-slate-500">Moves ownership only. Dimensions, plan position, openings and selected takeoff IDs stay intact.</p>
   </div>;
 }

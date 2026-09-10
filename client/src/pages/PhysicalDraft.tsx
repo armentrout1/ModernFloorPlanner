@@ -1,3 +1,4 @@
+import { AccountSavePanel } from '@/features/physical-draft/AccountSavePanel';
 import { useTransientLocalState } from '@/features/account/useLocalState';
 import { LayoutControls } from '@/features/physical-draft/LayoutControls';
 import { LayoutInspector } from '@/features/physical-draft/LayoutInspector';
@@ -280,7 +281,7 @@ function DraftWorkspace() {
     <div className="mx-auto min-w-0 max-w-7xl space-y-4 p-3 sm:p-6">
       <div className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm leading-6 text-blue-950">
         One selected physical document powers both views below. Original standalone drafts remain separate.
-        <p className="text-xs">Temporary recovery in this browser tab only. No account saving, cross-device recovery or database persistence.</p>
+        <p className="text-xs">Temporary recovery stays in this browser tab. Account Save / Open below is explicit and requires a verified workspace.</p>
       </div>
       {message || error ? <div role={error || blocked ? 'alert' : 'status'} className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm">
         {error || message}{rawRecovery ? <Button className="ml-3" size="sm" variant="outline" onClick={downloadRecovery}>Download original recovery data</Button> : null}
@@ -294,6 +295,7 @@ function DraftWorkspace() {
         <div className="flex flex-wrap gap-2"><Button onClick={create} variant="outline" disabled={blocked}>New physical draft</Button>
           <Button onClick={createBuilding} data-physical-layout-control disabled={blocked}>New building draft</Button></div>
       </div>
+      <AccountSavePanel />
       {draft && preview ? <>
         <LevelControls draft={draft} update={update} onSelect={changeLevel} onUpgrade={upgrade} blocked={blocked} />
         <StairControls draft={draft} roomId={selectedRoomId} selected={selectedBuilding} update={update} onUpgrade={upgradeStairs} onSelect={selectBuilding} blocked={blocked} />
