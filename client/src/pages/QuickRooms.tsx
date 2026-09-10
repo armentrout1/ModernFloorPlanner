@@ -1,3 +1,4 @@
+import { isInputLayoutTransition, isInputLayoutControl } from '@/utils/inputLayout';
 import { useEffect, useMemo, useRef, useState, type ComponentProps, type KeyboardEvent } from 'react';
 import { Link } from 'wouter';
 import { openQuickPhysicalCopy } from '@/features/physical-draft/adoption';
@@ -43,12 +44,12 @@ function DimensionInput({ roomId, field, draft, onEdit, onCommit }: {
         className={'mt-2 bg-white ' + (error ? 'border-red-400 focus-visible:ring-red-500' : '')}
         placeholder={input.unit === 'ft' ? 'e.g. 12 ft 6 in' : 'e.g. 3.81 m'}
         onChange={event => onEdit(event.target.value)}
-        onBlur={() => { if (!composing.current) onCommit(); }}
+        onBlur={event => { if (!composing.current && !isInputLayoutTransition(event.currentTarget) && !isInputLayoutControl(event.relatedTarget)) onCommit(); }}
         onKeyDown={commitOnEnter}
         onCompositionStart={() => { composing.current = true; }}
         onCompositionEnd={event => {
           composing.current = false;
-          if (document.activeElement !== event.currentTarget) onCommit();
+          if (document.activeElement !== event.currentTarget && !isInputLayoutTransition(event.currentTarget) && !isInputLayoutControl(document.activeElement)) onCommit();
         }} />
       <p id={id + '-help'} className={'mt-1.5 text-xs leading-5 ' + (error ? 'text-red-700' : 'text-slate-500')}>
         {error ?? (input.dirty ? 'Editing — press Enter or leave the field to apply.' :

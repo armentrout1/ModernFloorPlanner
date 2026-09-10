@@ -36,7 +36,19 @@ async function seedAndLoad(page: Page, rooms: Room[], history = false) {
   await page.getByRole('button', { name: 'Load Sketch', exact: true }).click();
   const dialog = page.getByRole('dialog', { name: 'Load Sketch', exact: true });
   await dialog.getByText(name, { exact: true }).click();
+  // Redirect recovery intentionally retains the prior sketch. A second fixture
+  // load must explicitly accept its existing replacement confirmation.
+  const replacement = await page.locator('.room-box').count() ? page.waitForEvent('dialog').then(async confirmation => {
+    expect(confirmation.type()).toBe('confirm');
+    expect(confirmation.message()).toBe('Replace the current sketch? Save any changes you want to keep first.');
+    await confirmation.accept();
+  }) : Promise.resolve();
   await dialog.getByRole('button', { name: 'Load Selected Sketch', exact: true }).click();
+  await replacement;
+  await expect.poll(() => page.evaluate(() => {
+    const raw = sessionStorage.getItem('modern-floor-planner:local-fields:v1:unassigned');
+    return raw ? JSON.parse(raw).values['legacy:server-id'] : null;
+  })).toBe(saved.id);
   await expect(page.locator('[role="dialog"]')).toHaveCount(0);
   for (const room of rooms) await expect(page.getByTestId('room-' + room.id)).toHaveCount(1);
   await page.getByRole('button', { name: 'Select & Move', exact: true }).click();

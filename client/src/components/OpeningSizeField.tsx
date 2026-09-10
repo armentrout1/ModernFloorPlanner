@@ -1,3 +1,5 @@
+import { useLocalState } from '@/features/account/useLocalState';
+import { isInputLayoutTransition, isInputLayoutControl } from '@/utils/inputLayout';
 import { useInputRevert, type InputRevertOptions } from '@/components/InputRevert';
 import { useEffect, useId, useRef, useState } from 'react';
 import { ChevronDown } from 'lucide-react';
@@ -12,6 +14,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 
 export interface OpeningSizeFieldProps {
+  draftKey?: string;
   /** Accessible name, for example "Door width" or "Window height". */
   label: string;
   visibleLabel?: string;
@@ -25,18 +28,21 @@ const sizeError = 'Enter a positive size in inches. This edit has not been appli
 const savedText = (value: number | undefined) => value === undefined ? '' : String(value);
 
 /** One independent draft per dimension; the parent keys fields by opening ID. */
-export default function OpeningSizeField({ label, visibleLabel, value, choices, onCommit }: OpeningSizeFieldProps) {
+export default function OpeningSizeField({ label, visibleLabel, value, choices, onCommit, draftKey }: OpeningSizeFieldProps) {
   const id = useId();
   const inputRef = useRef<HTMLInputElement>(null);
-  const dirty = useRef(false);
+  const [pending, setPending] = useLocalState('legacy:opening-pending:' + (draftKey ?? label), false);
+  const dirty = useRef(pending);
+  const mounted = useRef(false);
   const menuOpening = useRef(false);
   const committedValue = useRef(value);
-  const [text, setText] = useState(() => savedText(value));
-  const [error, setError] = useState<string | null>(null);
+  const [text, setText] = useLocalState('legacy:opening-text:' + (draftKey ?? label), () => savedText(value));
+  const [error, setError] = useLocalState<string | null>('legacy:opening-error:' + (draftKey ?? label), null);
 
   useEffect(() => {
+    if (!mounted.current) { mounted.current = true; return; }
     committedValue.current = value;
-    dirty.current = false;
+    dirty.current = false; setPending(false);
     setText(savedText(value));
     setError(null);
   }, [value]);
@@ -52,7 +58,7 @@ export default function OpeningSizeField({ label, visibleLabel, value, choices, 
       return false;
     }
     committedValue.current = number;
-    dirty.current = false;
+    dirty.current = false; setPending(false);
     setText(String(number));
     setError(null);
     return true;
@@ -68,7 +74,7 @@ export default function OpeningSizeField({ label, visibleLabel, value, choices, 
   };
 
   const restore = () => {
-    dirty.current = false;
+    dirty.current = false; setPending(false);
     setText(savedText(committedValue.current));
     setError(null);
   };
@@ -86,12 +92,12 @@ export default function OpeningSizeField({ label, visibleLabel, value, choices, 
         className="h-9 min-w-0 rounded-r-none px-2 text-sm focus-visible:z-10"
         onChange={event => {
           setText(event.target.value);
-          dirty.current = true;
+          dirty.current = true; setPending(true);
           setError(null);
         }}
-        onBlur={() => {
+        onBlur={event => {
           // Menu focus should not apply a custom draft before the chosen preset.
-          if (!menuOpening.current) commitDraft();
+          if (!menuOpening.current && !isInputLayoutTransition(inputRef.current) && !isInputLayoutControl(event.relatedTarget)) commitDraft();
         }}
         onKeyDown={event => {
           if (event.nativeEvent.isComposing || event.nativeEvent.keyCode === 229 || event.repeat

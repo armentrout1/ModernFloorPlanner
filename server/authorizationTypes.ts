@@ -1,6 +1,7 @@
 import type { FloorPlan, InsertFloorPlan } from '@shared/schema';
 /** Established only by the server verified-identity adapter. */
-export interface VerifiedIdentity { issuer: string; subject: string }
+export interface SessionBinding { browserId: string; contextToken: string; sessionIdHash: string }
+export interface VerifiedIdentity { issuer: string; subject: string; sessionBinding?: SessionBinding }
 export type WorkspaceRole = 'owner' | 'editor' | 'viewer';
 export type MembershipStatus = 'active' | 'revoked';
 export interface Workspace { id: string; name: string; createdAt: string; updatedAt: string }

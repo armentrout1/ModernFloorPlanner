@@ -2,12 +2,13 @@ import type { Express, Request, Response, RequestHandler } from 'express';
 import { z } from 'zod';
 import { createLegacyFloorPlanSchema, updateLegacyFloorPlanSchema, floorPlanIdSchema } from '@shared/legacyValidation';
 import { AuthorizationError, type AuthorizationStorage, type VerifiedIdentity } from './authorizationTypes';
+import { AccountStorageError } from './accountStorage';
 import { configuredApplicationOrigin, resolveIdentity, type IdentityResolver } from './identity';
 
 export const privateApiResponses: RequestHandler = (_req, res, next) => {
   res.setHeader('Cache-Control', 'no-store, private');
   res.setHeader('Pragma', 'no-cache');
-  res.vary('Cookie'); res.vary('Authorization'); res.vary('x-mfp-workspace-id');
+  res.vary('Cookie'); res.vary('Authorization'); res.vary('x-mfp-workspace-id'); res.vary('x-mfp-context');
   next();
 };
 type Dependencies = {
@@ -41,12 +42,17 @@ export function mountAuthorizedRoutes(app: Express, dependencies: Dependencies):
       (!allowedOrigin || req.get('Origin') !== allowedOrigin || req.get('X-MFP-Request') !== '1')) {
       return void fail(res, 403, 'REQUEST_ORIGIN_DENIED', 'Request origin could not be verified.');
     }
+    if (identity.identity.sessionBinding && req.get('X-MFP-Context') !== identity.identity.sessionBinding.contextToken) {
+      return void fail(res, 409, 'ACCOUNT_CONTEXT_CHANGED', 'Your account context changed. Review the current account before continuing.');
+    }
     const selection = uuid.safeParse(req.params.workspaceId ?? req.get('x-mfp-workspace-id'));
     if (!selection.success) return void fail(res, 400, 'INVALID_REQUEST', 'Select a valid workspace.');
     try {
       await action(req, res, await dependencies.storage(), identity.identity, selection.data);
     } catch (error) {
-      if (error instanceof AuthorizationError) {
+      if (error instanceof AccountStorageError) {
+        fail(res, error.status, error.code === 'STALE_CONTEXT' ? 'ACCOUNT_CONTEXT_CHANGED' : error.code, 'Account access could not be confirmed.');
+      } else if (error instanceof AuthorizationError) {
         if (error.status === 403) fail(res, 403, 'ACCESS_DENIED', 'This action is not permitted.');
         else fail(res, 404, 'RESOURCE_NOT_FOUND', 'Resource not found.');
       } else {

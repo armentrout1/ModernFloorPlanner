@@ -10,7 +10,7 @@
  * Last verified: June 1, 2025
  */
 
-import { pgTable, text, serial, integer, boolean, jsonb, uuid, timestamp, primaryKey, index, check } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, json, jsonb, varchar, uuid, timestamp, primaryKey, index, check } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -41,6 +41,48 @@ export const workspaceMemberships = pgTable("workspace_memberships", {
 }, table => [primaryKey({ columns: [table.workspaceId, table.principalId] }), index("workspace_memberships_principal_idx").on(table.principalId),
   check("workspace_memberships_role", sql`${table.role} in ('owner', 'editor', 'viewer')`),
   check("workspace_memberships_status", sql`${table.status} in ('active', 'revoked')`)]);
+
+// Durable OIDC/browser state; no identity, token or workspace authority in the cookie.
+export const browserContexts = pgTable("auth_browser_contexts", {
+  browserId: uuid("browser_id").primaryKey(),
+  sessionIdHash: text("session_id_hash").notNull(),
+  contextToken: uuid("context_token").notNull(),
+  status: text("status").$type<'anonymous' | 'authenticated' | 'revoked'>().notNull(),
+  issuer: text("issuer"), subject: text("subject"),
+  principalId: uuid("principal_id").references(() => applicationPrincipals.id, { onDelete: 'restrict' }),
+  selectedWorkspaceId: uuid("selected_workspace_id").references(() => workspaces.id, { onDelete: 'restrict' }),
+  authenticatedAt: timestamp("authenticated_at", { withTimezone: true, mode: 'date' }),
+  lastSeenAt: timestamp("last_seen_at", { withTimezone: true, mode: 'date' }).notNull(),
+  absoluteExpiresAt: timestamp("absolute_expires_at", { withTimezone: true, mode: 'date' }).notNull(),
+  idleExpiresAt: timestamp("idle_expires_at", { withTimezone: true, mode: 'date' }).notNull(),
+}, table => [index("auth_browser_contexts_expiry_idx").on(table.absoluteExpiresAt),
+  check("auth_browser_contexts_status", sql`${table.status} in ('anonymous','authenticated','revoked')`),
+  check("auth_browser_contexts_hash", sql`${table.sessionIdHash} ~ '^[0-9a-f]{64}$'`),
+  check("auth_browser_contexts_identity", sql`(${table.status} = 'authenticated' and ${table.issuer} is not null and ${table.subject} is not null and ${table.principalId} is not null and ${table.authenticatedAt} is not null) or (${table.status} <> 'authenticated' and ${table.issuer} is null and ${table.subject} is null and ${table.principalId} is null and ${table.authenticatedAt} is null and ${table.selectedWorkspaceId} is null)`)]);
+export const loginTransactions = pgTable("oidc_login_transactions", {
+  stateHash: text("state_hash").primaryKey(),
+  browserId: uuid("browser_id").notNull().references(() => browserContexts.browserId, { onDelete: 'restrict' }),
+  contextToken: uuid("context_token").notNull(), sessionIdHash: text("session_id_hash").notNull(),
+  nonce: text("nonce"), codeVerifier: text("code_verifier"), returnPath: text("return_path").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true, mode: 'date' }).notNull(),
+  expiresAt: timestamp("expires_at", { withTimezone: true, mode: 'date' }).notNull(),
+  consumedAt: timestamp("consumed_at", { withTimezone: true, mode: 'date' }),
+  completedAt: timestamp("completed_at", { withTimezone: true, mode: 'date' }),
+}, table => [index("oidc_login_transactions_browser_created_idx").on(table.browserId, table.createdAt),
+  index("oidc_login_transactions_expiry_idx").on(table.expiresAt),
+  check("oidc_login_transactions_hashes", sql`${table.stateHash} ~ '^[0-9a-f]{64}$' and ${table.sessionIdHash} ~ '^[0-9a-f]{64}$'`)]);
+export const workspaceCreationReceipts = pgTable("workspace_creation_receipts", {
+  principalId: uuid("principal_id").notNull().references(() => applicationPrincipals.id, { onDelete: 'restrict' }),
+  idempotencyKey: uuid("idempotency_key").notNull(),
+  workspaceId: uuid("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'restrict' }),
+  name: text("name").notNull(), createdAt: timestamp("created_at", { withTimezone: true, mode: 'date' }).notNull(),
+}, table => [primaryKey({ columns: [table.principalId, table.idempotencyKey] }),
+  index("workspace_creation_receipts_rate_idx").on(table.principalId, table.createdAt)]);
+// The standard connect-pg-simple schema. The established library owns SID/JSON.
+export const serverSessions = pgTable("mfp_sessions", {
+  sid: varchar("sid").primaryKey(), sess: json("sess").notNull(),
+  expire: timestamp("expire", { precision: 6, mode: 'date' }).notNull(),
+}, table => [index("mfp_sessions_expire_idx").on(table.expire)]);
 
 export const floorPlans = pgTable("floor_plans", {
   id: serial("id").primaryKey(),

@@ -1,3 +1,4 @@
+import { useLocalState } from '@/features/account/useLocalState';
 /**
  * CRITICAL: DOORS & WINDOWS FUNCTIONALITY
  * 
@@ -37,20 +38,20 @@ import {
 } from '@/utils/canvas';
 
 const FloorPlanner: React.FC<{ active?: boolean }> = ({ active = true }) => {
-  const [rooms, setRooms] = useState<Room[]>([]);
-  const [deletions, setDeletions] = useState<DeletedItem[]>([]);
-  const [roomSelectionId, setSelectedRoomId] = useState<string | null>(null);
-  const [selectedRoomIds, setSelectedRoomIds] = useState<string[]>([]);
+  const [rooms, setRooms] = useLocalState<Room[]>('legacy:rooms', []);
+  const [deletions, setDeletions] = useLocalState<DeletedItem[]>('legacy:deletions', []);
+  const [roomSelectionId, setSelectedRoomId] = useLocalState<string | null>('legacy:room-selection', null);
+  const [selectedRoomIds, setSelectedRoomIds] = useLocalState<string[]>('legacy:room-selections', []);
   const [showRoomNames, setShowRoomNames] = useState(true);
-  const [selectedObjectId, setSelectedObjectId] = useState<string | null>(null);
+  const [selectedObjectId, setSelectedObjectId] = useLocalState<string | null>('legacy:opening-selection', null);
   // An opening's current parent remains authoritative after a cross-room drag.
   const selectedRoomId = selectedObjectId
     ? rooms.find(room => room.objects?.some(object => object.id === selectedObjectId))?.id ?? null
     : roomSelectionId;
   const [activeTool, setActiveTool] = useState<string>('room');
   const [placingObjectType, setPlacingObjectType] = useState<ObjectType | null>(null);
-  const [currentSketchId, setCurrentSketchId] = useState<number | undefined>(undefined);
-  const [currentSketchName, setCurrentSketchName] = useState<string>('');
+  const [currentSketchId, setCurrentSketchId] = useLocalState<number | undefined>('legacy:server-id', undefined);
+  const [currentSketchName, setCurrentSketchName] = useLocalState<string>('legacy:server-name', '');
   const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
   const [isLoadDialogOpen, setIsLoadDialogOpen] = useState(false);
   const [showMaterialPanel, setShowMaterialPanel] = useState(false);

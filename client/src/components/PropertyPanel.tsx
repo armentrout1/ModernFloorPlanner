@@ -242,10 +242,10 @@ const PropertyPanel: React.FC<PropertyPanelProps> = ({
               </div>
 
               <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,120px),1fr))] gap-2">
-                <OpeningSizeField key={selectedObject.id + ':door-width'} label="Door width"
+                <OpeningSizeField key={selectedObject.id + ':door-width'} draftKey={selectedObject.id + ':door-width'} label="Door width"
                   value={selectedObject.doorProperties.width} choices={getStandardDoorSizes().map(size => size.width)}
                   onCommit={handleDoorSizeChange} />
-                <OpeningSizeField key={selectedObject.id + ':door-height'} label="Door height"
+                <OpeningSizeField key={selectedObject.id + ':door-height'} draftKey={selectedObject.id + ':door-height'} label="Door height"
                   value={selectedObject.doorProperties.height} choices={[80, 84, 96]}
                   onCommit={height => handleDoorPropertyChange('height', height)} />
               </div>
@@ -275,10 +275,10 @@ const PropertyPanel: React.FC<PropertyPanelProps> = ({
           {selectedObject.type === 'window' && (
             <>
               <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,120px),1fr))] gap-2">
-                <OpeningSizeField key={selectedObject.id + ':window-width'} label="Window width"
+                <OpeningSizeField key={selectedObject.id + ':window-width'} draftKey={selectedObject.id + ':window-width'} label="Window width"
                   value={pixelsToInches(selectedObject.size)} choices={COMMON_WINDOW_WIDTHS}
                   onCommit={handleWindowWidthChange} />
-                <OpeningSizeField key={selectedObject.id + ':window-height'} label="Window height"
+                <OpeningSizeField key={selectedObject.id + ':window-height'} draftKey={selectedObject.id + ':window-height'} label="Window height"
                   value={selectedObject.windowProperties?.height} choices={COMMON_WINDOW_HEIGHTS}
                   onCommit={handleWindowHeightChange} />
               </div>

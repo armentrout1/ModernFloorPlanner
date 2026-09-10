@@ -1,4 +1,5 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
+import { contextFetch, type RequestContext } from '@/features/account/runtime';
 
 export class ApiError extends Error {
   constructor(public readonly status: number) {
@@ -16,15 +17,9 @@ export async function apiRequest(
   method: string,
   url: string,
   data?: unknown | undefined,
+  context?: RequestContext,
 ): Promise<Response> {
-  const res = await fetch(url, {
-    method,
-    headers: { ...(data ? { "Content-Type": "application/json" } : {}),
-      ...(!["GET", "HEAD", "OPTIONS"].includes(method.toUpperCase()) ? { "X-MFP-Request": "1" } : {}) },
-    body: data ? JSON.stringify(data) : undefined,
-    credentials: "include",
-    cache: "no-store",
-  });
+  const res = await contextFetch(method, url, data, context);
 
   await throwIfResNotOk(res);
   return res;
@@ -36,10 +31,7 @@ export const getQueryFn: <T>(options: {
 }) => QueryFunction<T> =
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
-    const res = await fetch(queryKey[0] as string, {
-      credentials: "include",
-      cache: "no-store",
-    });
+    const res = await contextFetch('GET', queryKey[0] as string);
 
     if (unauthorizedBehavior === "returnNull" && res.status === 401) {
       return null;

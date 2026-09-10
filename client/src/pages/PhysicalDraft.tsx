@@ -1,3 +1,4 @@
+import { useTransientLocalState } from '@/features/account/useLocalState';
 import { LayoutControls } from '@/features/physical-draft/LayoutControls';
 import { LayoutInspector } from '@/features/physical-draft/LayoutInspector';
 import { upgradeExistingDraftToLayout } from '@/features/physical-draft/layoutCommands';
@@ -30,9 +31,9 @@ import { createDraft, insertDraft, selectDraft, selectedDraft, addRoom, switchUn
 function DraftWorkspace() {
   const { registry, cache, message, error, rawRecovery, history, store } = usePhysicalDraft();
   const draft = selectedDraft(registry);
-  const [showTakeoffScope, setShowTakeoffScope] = useState(true);
+  const [showTakeoffScope, setShowTakeoffScope] = useTransientLocalState('physical:show-scope', true);
   const [sourceFocus, setSourceFocus] = useState<{ draftId: string; key: string; scope: DrawingSourceScope } | null>(null);
-  const [view, setView] = useState<PhysicalView>('rooms');
+  const [view, setView] = useTransientLocalState<PhysicalView>('physical:view', 'rooms');
   const narrow = useInspectorLayout();
   const [inspectorOpen, setInspectorOpen] = useState(false);
   const inspectorOpener = useRef<HTMLButtonElement>(null);
@@ -50,7 +51,7 @@ function DraftWorkspace() {
   const contextKey = draft ? draft.id + ':' + (levelId ?? 'legacy') : '';
   const selections = useRef(new Map<string, { roomId: string; openingId: string | null }>());
   const buildingSelections = useRef(new Map<string, BuildingSelection>());
-  const [buildingSelection, setBuildingSelection] = useState<{ key: string; value: BuildingSelection } | null>(null);
+  const [buildingSelection, setBuildingSelection] = useTransientLocalState<{ key: string; value: BuildingSelection } | null>('physical:building-selection', null);
   const rememberedBuilding = buildingSelection?.key === contextKey ? buildingSelection.value : buildingSelections.current.get(contextKey);
   const selectedBuilding = rememberedBuilding && draft && (draft.document.schemaVersion === 4 || draft.document.schemaVersion === 5) && (rememberedBuilding.kind === 'stair'
     ? draft.document.stairsContract.stairs.some(stair => stair.id === rememberedBuilding.id && Object.values(stair.endpoints).some(endpoint => endpoint.state === 'modeled' && endpoint.levelId === levelId))
@@ -58,8 +59,8 @@ function DraftWorkspace() {
     : draft.document.schemaVersion === 5 && (rememberedBuilding.kind === 'zone' ? draft.document.layoutContract.zones : draft.document.layoutContract.cabinetBlocks).some(item => item.id === rememberedBuilding.id && visibleRooms.some(room => room.id === item.roomId))) ? rememberedBuilding : null;
   function clearBuildingSelection() { buildingSelections.current.delete(contextKey); setBuildingSelection(null); }
   const cameras = useRef(new Map<string, LevelCamera>());
-  const [selected, setSelected] = useState<{ draftId: string; roomId: string } | null>(null);
-  const [openingSelection, setOpeningSelection] = useState<{ draftId: string; openingId: string } | null>(null);
+  const [selected, setSelected] = useTransientLocalState<{ draftId: string; roomId: string } | null>('physical:room-selection', null);
+  const [openingSelection, setOpeningSelection] = useTransientLocalState<{ draftId: string; openingId: string } | null>('physical:opening-selection', null);
   const remembered = selections.current.get(contextKey);
   const openingId = openingSelection?.draftId === contextKey ? openingSelection.openingId : remembered?.openingId;
   const selectedOpening = draft?.document.openings.find(item => item.id === openingId && item.attachments.some(a => visibleWalls.has(a.wallFaceId))) ?? null;

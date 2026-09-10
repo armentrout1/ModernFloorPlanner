@@ -1,3 +1,5 @@
+import { useLocalState } from '@/features/account/useLocalState';
+import { isInputLayoutTransition, isInputLayoutControl } from '@/utils/inputLayout';
 import React, { useState, useEffect, useRef } from 'react';
 import {
   Dialog,
@@ -34,8 +36,8 @@ const LoadSketchDialog: React.FC<LoadSketchDialogProps> = ({
   const { toast } = useToast();
   const [sketches, setSketches] = useState<SavedSketch[]>([]);
   const [selectedSketchId, setSelectedSketchId] = useState<number | null>(null);
-  const [editingId, setEditingId] = useState<number | null>(null);
-  const [newName, setNewName] = useState('');
+  const [editingId, setEditingId] = useLocalState<number | null>('legacy:rename-id', null);
+  const [newName, setNewName] = useLocalState('legacy:rename-name', '');
   const renaming = useRef(false);
   const [isRenaming, setIsRenaming] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -73,6 +75,11 @@ const LoadSketchDialog: React.FC<LoadSketchDialogProps> = ({
     }
   };
 
+  useEffect(() => {
+    const invalidated = () => { requestGeneration.current++; setSketches([]); setSelectedSketchId(null); setIsLoading(false); };
+    window.addEventListener('mfp-account-invalidated', invalidated);
+    return () => { requestGeneration.current++; window.removeEventListener('mfp-account-invalidated', invalidated); };
+  }, []);
   const selectedSketch = sketches.find(sketch => sketch.id === selectedSketchId);
 
   const handleRename = (id: number, name: string) => {
@@ -166,7 +173,7 @@ const LoadSketchDialog: React.FC<LoadSketchDialogProps> = ({
               onKeyDown={event => { if (event.key === 'Enter' && !event.repeat && !composing.current && !event.nativeEvent.isComposing && event.keyCode !== 229) { event.preventDefault(); void saveNewName(editingId); } }}
               onCompositionStart={() => { composing.current = true; }}
               onCompositionEnd={() => { composing.current = false; }}
-              onBlur={() => { if (!composing.current) void saveNewName(editingId); }} autoFocus />
+              onBlur={event => { if (!composing.current && !isInputLayoutTransition(event.currentTarget) && !isInputLayoutControl(event.relatedTarget)) void saveNewName(editingId); }} autoFocus />
           </div>}
           {isLoading ? <p role="status" className="py-10 text-center text-slate-500">Loading saved sketches...</p> : !errorMessage && sketches.length === 0 ? (
             <div className="text-center py-10">

@@ -1,0 +1,22 @@
+// Normal production route composition, wrapped in a fixture-only HTTPS listener.
+import express from 'express';
+import { createServer } from 'node:https';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { registerRoutes } from '../../server/routes';
+import { privateApiResponses } from '../../server/authorizedRoutes';
+import { httpErrorHandler } from '../../server/httpErrors';
+const origin = new URL(process.env.MFP_ACCOUNTS_APP_ORIGIN!);
+if (origin.protocol !== 'https:' || origin.hostname !== '127.0.0.2') throw new Error('Invalid isolated application binding');
+const app = express();
+app.disable('x-powered-by');
+app.use('/api', privateApiResponses);
+app.use(express.json()); app.use(express.urlencoded({ extended: false }));
+await registerRoutes(app);
+app.use(express.static(resolve('dist/public')));
+app.get('*', (_req, res) => res.sendFile(resolve('dist/public/index.html')));
+app.use(httpErrorHandler);
+const server = createServer({ key: readFileSync(process.env.MFP_ACCOUNTS_TLS_KEY!), cert: readFileSync(process.env.MFP_ACCOUNTS_TLS_CERT!) }, app);
+server.listen(Number(origin.port), origin.hostname, () => console.log('MFP_TEST_APP_READY'));
+process.on('SIGTERM', () => server.close(() => process.exit(0)));
+process.on('SIGINT', () => server.close(() => process.exit(0)));

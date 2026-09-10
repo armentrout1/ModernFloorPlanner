@@ -24,6 +24,7 @@ function freeze<T>(value: T): T {
 export function createPhysicalDraftStore(storageFactory: () => DraftStorage = () => window.sessionStorage) {
   let storage: DraftStorage | null = null, lastGoodRaw: string | null = null;
   let recoveryKey = PHYSICAL_DRAFT_STORAGE_KEY;
+  let initialRecoveryReadCompleted = false;
   let fallbackReads: {key:string;raw:string|null}[] = [];
   const histories = new Map<string, DraftHistory>();
   const currentHistory = (id: string) => histories.get(id) ?? emptyHistory();
@@ -50,6 +51,7 @@ export function createPhysicalDraftStore(storageFactory: () => DraftStorage = ()
       publish({ ...snapshot, cache: 'unavailable', message: 'Temporary recovery storage is unavailable. Keep this page open; edits are held only in memory.' });
       return;
     }
+    initialRecoveryReadCompleted = true;
     const result = parseRegistry(raw);
     if (result.status === 'corrupt' || result.status === 'unsupported') {
       publish({ ...snapshot, cache: result.status, message: result.message, rawRecovery: raw });
@@ -109,6 +111,7 @@ export function createPhysicalDraftStore(storageFactory: () => DraftStorage = ()
       storage = activeStorage;
       lastGoodRaw = null;
       fallbackReads=[]; recoveryKey = PHYSICAL_DRAFT_STORAGE_KEY;
+      initialRecoveryReadCompleted = true;
       histories.clear();
       publish({ history: historySummary(null, emptyHistory()), registry: freeze(createRegistry()), cache: 'ready', message: '', error: '', rawRecovery: null });
       return true;
@@ -129,6 +132,21 @@ export function createPhysicalDraftStore(storageFactory: () => DraftStorage = ()
     getSnapshot: () => snapshot,
     subscribe: (listener: () => void) => { listeners.add(listener); return () => { listeners.delete(listener); }; },
     hydrate, dispatch, discardRecovery,
+    checkpoint: (): boolean => {
+      if (snapshot.cache === 'uninitialized') return true;
+      if (!initialRecoveryReadCompleted || !['ready', 'unavailable'].includes(snapshot.cache)) return false;
+      try {
+        storage ??= storageFactory();
+        if (storage.getItem(PHYSICAL_DRAFT_STORAGE_KEY) !== lastGoodRaw ||
+            fallbackReads.some(item => storage!.getItem(item.key) !== item.raw)) return false;
+        const raw = serializeRegistry(snapshot.registry);
+        storage.setItem(PHYSICAL_DRAFT_STORAGE_KEY, raw);
+        if (storage.getItem(PHYSICAL_DRAFT_STORAGE_KEY) !== raw) return false;
+        lastGoodRaw = raw; fallbackReads = []; recoveryKey = PHYSICAL_DRAFT_STORAGE_KEY;
+        if (snapshot.cache === 'unavailable') publish({ ...snapshot, cache: 'ready', message: 'Temporary recovery is available again.' });
+        return true;
+      } catch { return false; }
+    },
     updateDraft: (id: string, expectedRevision: number, change: (draft: PhysicalDraft) => PhysicalDraft, options: HistoryUpdateOptions = {}): boolean => {
       let acceptedHistory: DraftHistory | undefined;
       return dispatch(registry => updateDraft(registry, id, expectedRevision, before => {

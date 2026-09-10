@@ -1,3 +1,4 @@
+import { useLocalState } from '@/features/account/useLocalState';
 import React, { useState, useEffect, useRef } from 'react';
 import {
   Dialog,
@@ -32,12 +33,13 @@ const SaveSketchModal: React.FC<SaveSketchModalProps> = ({
   onSave,
 }) => {
   const { toast } = useToast();
-  const [sketchName, setSketchName] = useState(currentSketchName);
+  const [sketchName, setSketchName] = useLocalState('legacy:save-name', currentSketchName);
+  const mounted = useRef(false);
 
   const saving = useRef(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   // Reset only when changing sketches; reopening a failed save preserves the draft name.
-  useEffect(() => { setSketchName(currentSketchName); }, [currentSketchId, currentSketchName]);
+  useEffect(() => { if (!mounted.current) { mounted.current = true; return; } setSketchName(currentSketchName); }, [currentSketchId, currentSketchName]);
   const [isSaving, setIsSaving] = useState(false);
 
   const handleSave = async () => {

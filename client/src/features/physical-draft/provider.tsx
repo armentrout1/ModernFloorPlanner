@@ -1,9 +1,12 @@
 import { createContext, useContext, useEffect, useSyncExternalStore, type ReactNode } from 'react';
 import { physicalDraftStore } from './store';
+import { getPhysicalDraftStore } from '../account/physicalStores';
+import { useLocalEditorContext } from '../account/useLocalState';
 
 const PhysicalContext = createContext<typeof physicalDraftStore | null>(null);
 export function PhysicalDraftProvider({ children }: { children: ReactNode }) {
-  return <PhysicalContext.Provider value={physicalDraftStore}>{children}</PhysicalContext.Provider>;
+  const context = useLocalEditorContext();
+  return <PhysicalContext.Provider value={getPhysicalDraftStore(context)}>{children}</PhysicalContext.Provider>;
 }
 export function usePhysicalDraft() {
   const store = useContext(PhysicalContext);

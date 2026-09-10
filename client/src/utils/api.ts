@@ -1,6 +1,7 @@
 import { FloorPlan } from '@shared/schema';
 import { Room } from './types';
 import { apiRequest, ApiError } from '@/lib/queryClient';
+import { AccountContextChanged, WorkspaceContextRequired, captureRequestContext, type RequestContext } from '@/features/account/runtime';
 
 export interface SavedSketch {
   id: number;
@@ -39,9 +40,10 @@ export const savedSketchToFloorPlan = (
 // No workspace is inferred here. The account/workspace integration must provide
 // an explicit selection; the server still verifies current membership.
 export const isSketchAccessError = (error: unknown): boolean =>
-  error instanceof ApiError && [401, 403, 404, 503].includes(error.status);
+  error instanceof AccountContextChanged || error instanceof ApiError && [401, 403, 404, 409, 503].includes(error.status);
 
 export const sketchErrorMessage = (error: unknown): string => {
+  if (error instanceof AccountContextChanged || error instanceof WorkspaceContextRequired) return error.message;
   if (error instanceof ApiError) {
     if (error.status === 401) return 'Sign in is required to access server-saved sketches. Your local drawing is unchanged.';
     if (error.status === 403) return 'You do not have permission to access these server-saved sketches. Your local drawing is unchanged.';
@@ -57,15 +59,16 @@ export const fetchSavedSketches = async (): Promise<SavedSketch[]> => {
   return ((await response.json()) as FloorPlan[]).map(floorPlanToSavedSketch);
 };
 
-export const fetchSketch = async (id: number): Promise<SavedSketch> => {
-  const response = await apiRequest('GET', `/api/floor-plans/${id}`);
+export const fetchSketch = async (id: number, context?: RequestContext): Promise<SavedSketch> => {
+  const response = await apiRequest('GET', `/api/floor-plans/${id}`, undefined, context);
   return floorPlanToSavedSketch(await response.json());
 };
 
 export const saveSketch = async (name: string, rooms: Room[], id?: number): Promise<SavedSketch> => {
-  const existing = id ? await fetchSketch(id) : null;
+  const context = await captureRequestContext();
+  const existing = id ? await fetchSketch(id, context) : null;
   const data = savedSketchToFloorPlan({ name, rooms }, existing?.createdAt);
-  const response = await apiRequest(id ? 'PATCH' : 'POST', id ? `/api/floor-plans/${id}` : '/api/floor-plans', data);
+  const response = await apiRequest(id ? 'PATCH' : 'POST', id ? `/api/floor-plans/${id}` : '/api/floor-plans', data, context);
   return floorPlanToSavedSketch(await response.json());
 };
 

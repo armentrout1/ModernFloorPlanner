@@ -4,12 +4,12 @@ import { applicationPrincipals, externalIdentities, workspaces, workspaceMembers
   type FloorPlan, type StoredFloorPlan, type InsertFloorPlan } from '@shared/schema';
 import { createLegacyFloorPlanSchema, updateLegacyFloorPlanSchema } from '@shared/legacyValidation';
 import { getDatabase, type Database } from './db';
+import { assertSessionBinding, verifiedAccountIdentitySchema } from './accountStorage';
 import { AuthorizationError, type AuthorizationStorage, type VerifiedIdentity, type Membership, type MembershipUpdate } from './authorizationTypes';
 export type IStorage = AuthorizationStorage;
 export type { AuthorizationStorage } from './authorizationTypes';
 type Transaction = Parameters<Parameters<Database['transaction']>[0]>[0];
-const identityPart = z.string().max(2048).refine(value => value.trim().length > 0 && !/[\u0000-\u001f\u007f]/.test(value));
-const uuid = z.string().uuid(), identitySchema = z.object({ issuer: identityPart, subject: identityPart }).strict();
+const uuid = z.string().uuid(), identitySchema = verifiedAccountIdentitySchema;
 const membershipUpdate = z.object({ role: z.enum(['owner', 'editor', 'viewer']).optional(), status: z.enum(['active', 'revoked']).optional() }).strict().refine(value => Object.keys(value).length > 0);
 const workspaceName = z.string().trim().min(1).max(200);
 const planId = z.number().int().positive().max(2147483647);
@@ -17,19 +17,20 @@ const dto = ({ workspaceId: _ownership, ...record }: StoredFloorPlan): FloorPlan
 const denied = (): never => { throw new AuthorizationError(403); };
 const missing = (): never => { throw new AuthorizationError(404); };
 /** Authorization and scoped SQL share a transaction. Lock order is always
- * workspace, identity/principal, membership. Membership administration obtains
+ * browser context (when session-bound), workspace, identity/principal, membership. Membership administration obtains
  * the conflicting workspace lock, never trusting an earlier browser role. */
 export class DatabaseStorage implements AuthorizationStorage {
   constructor(private readonly database: () => Database = getDatabase) {}
   private async authorized<T>(identity: VerifiedIdentity, workspaceId: string, permission: 'read' | 'write' | 'owner', operation: (tx: Transaction, principalId: string) => Promise<T>, exclusiveWorkspace = false): Promise<T> {
     if (!identitySchema.safeParse(identity).success || !uuid.safeParse(workspaceId).success) return missing();
     return this.database().transaction(async tx => {
+      const sessionPrincipalId = await assertSessionBinding(tx, identity, workspaceId);
       const [workspace] = await tx.select({ id: workspaces.id }).from(workspaces).where(eq(workspaces.id, workspaceId)).for(exclusiveWorkspace ? 'update' : 'share');
       if (!workspace) return missing();
       const [principal] = await tx.select({ id: applicationPrincipals.id }).from(externalIdentities)
         .innerJoin(applicationPrincipals, eq(externalIdentities.principalId, applicationPrincipals.id))
         .where(and(eq(externalIdentities.issuer, identity.issuer), eq(externalIdentities.subject, identity.subject), eq(externalIdentities.status, 'active'), eq(applicationPrincipals.status, 'active'))).for('share');
-      if (!principal) return missing();
+      if (!principal || sessionPrincipalId !== undefined && sessionPrincipalId !== principal.id) return missing();
       const [membership] = await tx.select({ role: workspaceMemberships.role }).from(workspaceMemberships)
         .where(and(eq(workspaceMemberships.workspaceId, workspaceId), eq(workspaceMemberships.principalId, principal.id), eq(workspaceMemberships.status, 'active'))).for('share');
       if (!membership) return missing();

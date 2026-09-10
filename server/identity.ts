@@ -8,10 +8,6 @@ export type IdentityResolution = {
 } | { status: IdentityFailure };
 export type IdentityResolver = (request: Request) => Promise<IdentityResolution>;
 
-// No selected provider yet. Never trust arbitrary headers, old password tables,
-// synthetic users or environment flags as production identity.
-export const resolveProductionIdentity: IdentityResolver = async () => ({ status: 'unavailable' });
-
 export async function resolveIdentity(resolver: IdentityResolver, request: Request): Promise<IdentityResolution> {
   try {
     const result = await resolver(request);
@@ -28,8 +24,7 @@ export async function resolveIdentity(resolver: IdentityResolver, request: Reque
   } catch { return { status: 'unavailable' }; }
 }
 
-// Required policy for a future verified session integration. No cookies or
-// credentials are issued in this slice.
+// The configured server session integration honors this policy without HTTP fallbacks.
 export const sessionCookiePolicy = Object.freeze({
   name: '__Host-mfp-session', httpOnly: true, secure: true, sameSite: 'lax' as const, path: '/',
 });

@@ -1,9 +1,10 @@
 import { navigate } from 'wouter/use-browser-location';
-import { physicalDraftStore } from './store';
+import { getPhysicalDraftStore } from '../account/physicalStores';
 import { adoptLegacyDraft, adoptQuickDraft, insertDraft, type PhysicalDraft } from './state';
 import type { QuickRoomDraft } from '../quick-room/state';
 
 function openCopy(create: () => PhysicalDraft) {
+  const physicalDraftStore = getPhysicalDraftStore();
   physicalDraftStore.hydrate();
   const applied = physicalDraftStore.dispatch(registry => insertDraft(registry, create()));
   if (applied) navigate('/physical-draft');
