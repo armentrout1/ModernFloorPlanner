@@ -1,0 +1,7 @@
+{
+  "command": "node ../evidence/run-supplemental-accounts.mjs",
+  "exitCode": 0,
+  "durationSeconds": 7.635,
+  "completedAt": "2026-09-10T03:04:09.353Z",
+  "scope": "Separate synthetic HTTPS browser and PostgreSQL acceptance; not part of the eight-case suite."
+}

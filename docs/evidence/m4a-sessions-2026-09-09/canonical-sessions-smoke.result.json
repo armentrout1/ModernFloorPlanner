@@ -1,0 +1,88 @@
+{
+  "ok": true,
+  "smokeCases": 1,
+  "origin": "http://127.0.0.4:5188",
+  "sourceCommit": "c79e458a634131f9e25ed0e4b0bb7497fc07d7ae",
+  "startedAtUtc": "2026-09-10T03:14:21.906Z",
+  "node": "v20.20.2",
+  "composition": "normal-registerRoutes",
+  "authentication": "unconfigured",
+  "checks": [
+    {
+      "name": "Exact integrated source and normal unavailable account composition",
+      "passed": true,
+      "status": "unavailable",
+      "sessionCookieIssued": false
+    },
+    {
+      "name": "Anonymous local room, opening and takeoff remain usable",
+      "passed": true,
+      "roomDimensionsFeet": [
+        12,
+        10,
+        8
+      ],
+      "openingHeightFeet": 3,
+      "wastePercent": 10,
+      "protectedMutations": 0
+    },
+    {
+      "name": "Unavailable Account preserves pending dimension, opening and waste without cookies or writes",
+      "passed": true,
+      "sessionCookieIssued": false
+    },
+    {
+      "name": "Denied Save/Load preserve local legacy geometry and unfinished save name",
+      "passed": true,
+      "status": 503,
+      "saveRequests": 1
+    },
+    {
+      "name": "Seven private API requests reject forged identity/workspace/context hints",
+      "passed": true,
+      "deniedRequests": 7,
+      "status": 503
+    },
+    {
+      "name": "Same local draft recovers pending dimension, opening and waste plus exact measurement/evidence state",
+      "passed": true,
+      "automaticUpload": false
+    }
+  ],
+  "pageErrorCount": 0,
+  "apiResponses": [
+    {
+      "method": "GET",
+      "path": "/api/auth/session",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/auth/session",
+      "status": 200
+    },
+    {
+      "method": "POST",
+      "path": "/api/floor-plans",
+      "status": 503
+    },
+    {
+      "method": "GET",
+      "path": "/api/auth/session",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/floor-plans",
+      "status": 503
+    }
+  ],
+  "screenshots": [
+    "canonical-sessions-local-draft.png",
+    "canonical-sessions-account-unavailable.png",
+    "canonical-sessions-local-recovery.png"
+  ],
+  "ownerOriginsVisited": false,
+  "finishedAtUtc": "2026-09-10T03:14:25.147Z",
+  "durationSeconds": 3.24
+}

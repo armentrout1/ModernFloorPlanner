@@ -1,0 +1,188 @@
+
+> rest-express@1.0.0 test:accounts
+> node scripts/run-accounts-tests.mjs
+
+Running separate OIDC protocol/session suite (synthetic HTTPS and PostgreSQL).
+TAP version 13
+# Subtest: real HTTPS discovery, S256 code exchange and verified signing keys create exact issuer/subject and rotate opaque session
+ok 1 - real HTTPS discovery, S256 code exchange and verified signing keys create exact issuer/subject and rotate opaque session
+  ---
+  duration_ms: 731.2692
+  ...
+# Subtest: production OIDC client rejects wrong-issuer without creating an authenticated session
+ok 2 - production OIDC client rejects wrong-issuer without creating an authenticated session
+  ---
+  duration_ms: 25.7882
+  ...
+# Subtest: production OIDC client rejects wrong-audience without creating an authenticated session
+ok 3 - production OIDC client rejects wrong-audience without creating an authenticated session
+  ---
+  duration_ms: 23.7378
+  ...
+# Subtest: production OIDC client rejects wrong-azp without creating an authenticated session
+ok 4 - production OIDC client rejects wrong-azp without creating an authenticated session
+  ---
+  duration_ms: 21.7119
+  ...
+# Subtest: production OIDC client rejects wrong-nonce without creating an authenticated session
+ok 5 - production OIDC client rejects wrong-nonce without creating an authenticated session
+  ---
+  duration_ms: 20.6128
+  ...
+# Subtest: production OIDC client rejects wrong-signature without creating an authenticated session
+ok 6 - production OIDC client rejects wrong-signature without creating an authenticated session
+  ---
+  duration_ms: 20.3012
+  ...
+# Subtest: production OIDC client rejects expired-token without creating an authenticated session
+ok 7 - production OIDC client rejects expired-token without creating an authenticated session
+  ---
+  duration_ms: 19.1526
+  ...
+# Subtest: production OIDC client rejects expired-code without creating an authenticated session
+ok 8 - production OIDC client rejects expired-code without creating an authenticated session
+  ---
+  duration_ms: 22.2795
+  ...
+# Subtest: production OIDC client rejects wrong-pkce without creating an authenticated session
+ok 9 - production OIDC client rejects wrong-pkce without creating an authenticated session
+  ---
+  duration_ms: 21.1764
+  ...
+# Subtest: production OIDC client rejects wrong-state without creating an authenticated session
+ok 10 - production OIDC client rejects wrong-state without creating an authenticated session
+  ---
+  duration_ms: 14.0653
+  ...
+# Subtest: production OIDC client rejects token-failure without creating an authenticated session
+ok 11 - production OIDC client rejects token-failure without creating an authenticated session
+  ---
+  duration_ms: 17.4956
+  ...
+# Subtest: production OIDC client rejects missing-id-token without creating an authenticated session
+ok 12 - production OIDC client rejects missing-id-token without creating an authenticated session
+  ---
+  duration_ms: 19.157
+  ...
+# Subtest: production OIDC client rejects malformed-token without creating an authenticated session
+ok 13 - production OIDC client rejects malformed-token without creating an authenticated session
+  ---
+  duration_ms: 17.1734
+  ...
+# Subtest: provider cancellation and malformed/repeated callback parameters return only sanitized local outcomes
+ok 14 - provider cancellation and malformed/repeated callback parameters return only sanitized local outcomes
+  ---
+  duration_ms: 32.2812
+  ...
+# Subtest: callback is one-time and concurrent callbacks cannot both authenticate or overwrite the winning cookie
+ok 15 - callback is one-time and concurrent callbacks cannot both authenticate or overwrite the winning cookie
+  ---
+  duration_ms: 47.7751
+  ...
+# Subtest: concurrent independent login attempts retain distinct correlation and stale success cannot replace newer identity
+ok 16 - concurrent independent login attempts retain distinct correlation and stale success cannot replace newer identity
+  ---
+  duration_ms: 39.7276
+  ...
+# Subtest: logout revokes the server context and stale pre-logout callback cannot restore it
+ok 17 - logout revokes the server context and stale pre-logout callback cannot restore it
+  ---
+  duration_ms: 40.9682
+  ...
+# Subtest: session and outstanding login correlation survive actual application-process recreation
+ok 18 - session and outstanding login correlation survive actual application-process recreation
+  ---
+  duration_ms: 684.8064
+  ...
+# Subtest: server enforces idle_expires_at independently of browser cookie
+ok 19 - server enforces idle_expires_at independently of browser cookie
+  ---
+  duration_ms: 49.0017
+  ...
+# Subtest: server enforces absolute_expires_at independently of browser cookie
+ok 20 - server enforces absolute_expires_at independently of browser cookie
+  ---
+  duration_ms: 29.0665
+  ...
+# Subtest: same email from a different configured issuer does not merge principals
+ok 21 - same email from a different configured issuer does not merge principals
+  ---
+  duration_ms: 1200.6824
+  ...
+# Subtest: workspace creation retries are atomic, selection explicit, and old context/forged role cannot write
+ok 22 - workspace creation retries are atomic, selection explicit, and old context/forged role cannot write
+  ---
+  duration_ms: 187.2885
+  ...
+# Subtest: principal disablement and active membership revocation remain effective for real signed-in sessions
+ok 23 - principal disablement and active membership revocation remain effective for real signed-in sessions
+  ---
+  duration_ms: 67.8676
+  ...
+# Subtest: login and logout require exact trusted Origin, request marker and current context; return paths are allowlisted
+ok 24 - login and logout require exact trusted Origin, request marker and current context; return paths are allowlisted
+  ---
+  duration_ms: 20.4548
+  ...
+# Subtest: discovery outage and mismatched metadata fail closed and a later valid discovery recovers
+ok 25 - discovery outage and mismatched metadata fail closed and a later valid discovery recovers
+  ---
+  duration_ms: 1283.4856
+  ...
+# Subtest: unconfigured normal composition remains unavailable and cannot use synthetic headers or ambient database access
+ok 26 - unconfigured normal composition remains unavailable and cannot use synthetic headers or ambient database access
+  ---
+  duration_ms: 1010.409
+  ...
+# Subtest: fixture certificate is not trusted outside the scoped Node process trust configuration
+ok 27 - fixture certificate is not trusted outside the scoped Node process trust configuration
+  ---
+  duration_ms: 91.2786
+  ...
+# Subtest: actual mismatched S256 challenge is rejected by issuer rather than a synthetic token error
+ok 28 - actual mismatched S256 challenge is rejected by issuer rather than a synthetic token error
+  ---
+  duration_ms: 127.7289
+  ...
+# Subtest: expired durable login transaction rejects callback before exchanging the issuer code
+ok 29 - expired durable login transaction rejects callback before exchanging the issuer code
+  ---
+  duration_ms: 20.6432
+  ...
+# Subtest: logout during a real token exchange defeats its late success without overwriting the logout cookie
+ok 30 - logout during a real token exchange defeats its late success without overwriting the logout cookie
+  ---
+  duration_ms: 445.3613
+  ...
+# Subtest: a stale exchange cannot destroy the shared anonymous session of a newer pending login
+ok 31 - a stale exchange cannot destroy the shared anonymous session of a newer pending login
+  ---
+  duration_ms: 440.9977
+  ...
+# Subtest: actual OIDC owner/editor/viewer sessions retain server-enforced legacy CRUD and cross-workspace denials
+ok 32 - actual OIDC owner/editor/viewer sessions retain server-enforced legacy CRUD and cross-workspace denials
+  ---
+  duration_ms: 209.5348
+  ...
+1..32
+# tests 32
+# suites 0
+# pass 32
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 7263.0962
+Running separate account browser suite (synthetic HTTPS and PostgreSQL).
+
+Running 8 tests using 1 worker
+
+[1/8] tests\accounts\account-sessions.spec.ts:90:1 › real OIDC redirect preserves unapplied local dimensions, opening and waste without assigning or uploading them
+[2/8] tests\accounts\account-sessions.spec.ts:108:1 › private legacy records cannot enter unassigned recovery or reappear after A signs out and B signs in
+[3/8] tests\accounts\account-sessions.spec.ts:127:1 › same-page workspace switches preserve exact raw fields, evidence and committed Undo history in separate contexts
+[4/8] tests\accounts\account-sessions.spec.ts:140:1 › cross-tab logout and identity change hide old private rows and reject an old session-context operation
+[5/8] tests\accounts\account-sessions.spec.ts:159:1 › provider cancellation and token failure return to local recovery without exposing protocol parameters
+[6/8] tests\accounts\account-sessions.spec.ts:171:1 › failed recovery prevents redirect and logout while preserving current pending input in memory
+[7/8] tests\accounts\account-sessions.spec.ts:182:1 › phone account controls preserve a valid unapplied field on pointer and keyboard focus transfer
+[8/8] tests\accounts\account-sessions.spec.ts:204:1 › only the fixture certificate pin permits the isolated HTTPS origin
+  8 passed (22.0s)
