@@ -1,0 +1,18 @@
+
+> rest-express@1.0.0 test:physical
+> node scripts/run-physical-tests.mjs --browser-only
+
+Running separate physical Save/Open browser suite (synthetic HTTPS and PostgreSQL).
+
+Running 9 tests using 1 worker
+
+[1/9] tests\persistence\physical-save-guards.spec.ts:18:1 › all visible pending families block Save with field-specific Apply/Revert and preserve committed SQL revision
+[2/9] tests\persistence\physical-save-guards.spec.ts:48:1 › pending room-level assignment blocks Save without changing ownership and offers explicit Revert
+[3/9] tests\persistence\physical-save-guards.spec.ts:56:1 › edits during actual committed save stay unsaved; next revision contains those edits
+[4/9] tests\persistence\physical-save-guards.spec.ts:67:1 › response loss after SQL commit retries same payload and key without creating another plan
+[5/9] tests\persistence\physical-save-guards.spec.ts:81:1 › late SQL Save response after logout cannot repaint prior private revision or modify unassigned draft
+[6/9] tests\persistence\physical-save-guards.spec.ts:91:1 › late Save after switching workspaces cannot acknowledge another draft and both local contexts survive
+[7/9] tests\persistence\physical-save-open.spec.ts:11:1 › real sign-in, explicit schema5 Save/Open and fresh empty browser context retrieve SQL content
+[8/9] tests\persistence\physical-save-open.spec.ts:26:1 › two real browser clients conflict visibly and preserve the candidate while opening latest separately
+[9/9] tests\persistence\physical-save-open.spec.ts:41:1 › opening a server plan preserves a different draft with unfinished text and no implicit upload
+  9 passed (30.1s)

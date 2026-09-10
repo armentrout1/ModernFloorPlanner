@@ -1,0 +1,28 @@
+
+> rest-express@1.0.0 build
+> vite build && esbuild server/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist
+
+vite v5.4.14 building for production...
+transforming...
+Browserslist: browsers data (caniuse-lite) is 23 months old. Please run:
+  npx update-browserslist-db@latest
+  Why you should do it regularly: https://github.com/browserslist/update-db#readme
+✓ 1865 modules transformed.
+rendering chunks...
+computing gzip size...
+../dist/public/index.html                          1.80 kB │ gzip:   0.73 kB
+../dist/public/assets/index-CKI8ZSLY.css          72.83 kB │ gzip:  12.93 kB
+../dist/public/assets/QuickRooms-DgNy1oAW.js      15.39 kB │ gzip:   5.58 kB
+../dist/public/assets/display-BkYdqR6i.js         21.96 kB │ gzip:   7.75 kB
+../dist/public/assets/PhysicalDraft-XOTWT2Uq.js  177.20 kB │ gzip:  49.33 kB
+../dist/public/assets/index-BScGy5O-.js          816.75 kB │ gzip: 241.22 kB
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 4.02s
+
+  dist\index.js  323.6kb
+
+Done in 15ms

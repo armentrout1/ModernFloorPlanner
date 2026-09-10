@@ -1,0 +1,124 @@
+
+> rest-express@1.0.0 test:physical:db
+> node --import tsx --test tests/database/physical-plans.test.ts
+
+TAP version 13
+# Subtest: additive physical migration leaves legacy ownership and old account tables unchanged
+ok 1 - additive physical migration leaves legacy ownership and old account tables unchanged
+  ---
+  duration_ms: 108.1626
+  ...
+# Subtest: create persists complete schema5 envelope and server-authored evaluated identity atomically
+ok 2 - create persists complete schema5 envelope and server-authored evaluated identity atomically
+  ---
+  duration_ms: 159.1635
+  ...
+# Subtest: 12x10x8 quantities and later 9ft revision preserve original geometry, totals and snapshot
+ok 3 - 12x10x8 quantities and later 9ft revision preserve original geometry, totals and snapshot
+  ---
+  duration_ms: 146.8409
+  ...
+# Subtest: a fresh repository connection retrieves committed plans and revisions without local cache
+ok 4 - a fresh repository connection retrieves committed plans and revisions without local cache
+  ---
+  duration_ms: 207.789
+  ...
+# Subtest: two different writes against one base serialize: one succeeds and one conflicts with no partial row
+ok 5 - two different writes against one base serialize: one succeeds and one conflicts with no partial row
+  ---
+  duration_ms: 167.5562
+  ...
+# Subtest: concurrent identical create keys and lost-response retries return exactly one committed result
+ok 6 - concurrent identical create keys and lost-response retries return exactly one committed result
+  ---
+  duration_ms: 188.3086
+  ...
+# Subtest: UUID case variants serialize against the same scoped key and append resource identity
+ok 7 - UUID case variants serialize against the same scoped key and append resource identity
+  ---
+  duration_ms: 148.507
+  ...
+# Subtest: concurrent identical append keys replay the original outcome even after newer revisions exist
+ok 8 - concurrent identical append keys replay the original outcome even after newer revisions exist
+  ---
+  duration_ms: 279.3634
+  ...
+# Subtest: full-content idempotency includes names and expected base, not just calculation geometry
+ok 9 - full-content idempotency includes names and expected base, not just calculation geometry
+  ---
+  duration_ms: 150.7222
+  ...
+# Subtest: same key is independently scoped to principal and workspace
+ok 10 - same key is independently scoped to principal and workspace
+  ---
+  duration_ms: 142.8568
+  ...
+# Subtest: foreign IDs never expose list, current, immutable revision or mutation content
+ok 11 - foreign IDs never expose list, current, immutable revision or mutation content
+  ---
+  duration_ms: 123.6235
+  ...
+# Subtest: viewer cannot create or append and revoked successful actor cannot replay a receipt
+ok 12 - viewer cannot create or append and revoked successful actor cannot replay a receipt
+  ---
+  duration_ms: 71.9775
+  ...
+# Subtest: missing If-Match, wildcard, weak/multiple ETags and stale versions never create revisions
+ok 13 - missing If-Match, wildcard, weak/multiple ETags and stale versions never create revisions
+  ---
+  duration_ms: 177.2267
+  ...
+# Subtest: supported unknowns save as incomplete and unsupported/malformed references fail without mutation
+ok 14 - supported unknowns save as incomplete and unsupported/malformed references fail without mutation
+  ---
+  duration_ms: 142.5899
+  ...
+# Subtest: bounded keyset pagination lists only workspace summaries once and rejects unbounded requests
+ok 15 - bounded keyset pagination lists only workspace summaries once and rejects unbounded requests
+  ---
+  duration_ms: 309.5481
+  ...
+# Subtest: SQL foreign keys reject dangling pointers and cross-workspace plan/revision relationships
+ok 16 - SQL foreign keys reject dangling pointers and cross-workspace plan/revision relationships
+  ---
+  duration_ms: 153.6045
+  ...
+# Subtest: saved revision contents and accepted receipts are append-only at the SQL boundary
+ok 17 - saved revision contents and accepted receipts are append-only at the SQL boundary
+  ---
+  duration_ms: 81.5685
+  ...
+# Subtest: failure after revision insertion rolls back plan, revision, receipt and current pointer together
+ok 18 - failure after revision insertion rolls back plan, revision, receipt and current pointer together
+  ---
+  duration_ms: 197.576
+  ...
+# Subtest: membership change ahead of a waiting save is checked inside its eventual SQL transaction
+ok 19 - membership change ahead of a waiting save is checked inside its eventual SQL transaction
+  ---
+  duration_ms: 22.7582
+  ...
+# Subtest: logout and workspace switching invalidate the original session before receipt replay
+ok 20 - logout and workspace switching invalidate the original session before receipt replay
+  ---
+  duration_ms: 117.7334
+  ...
+# Subtest: in-flight save holds session authorization until commit, then workspace switch invalidates subsequent use
+ok 21 - in-flight save holds session authorization until commit, then workspace switch invalidates subsequent use
+  ---
+  duration_ms: 146.8425
+  ...
+# Subtest: rich levels/stairs/landings/holes/uses/zones/cabinets/opening evidence roundtrips with unchanged252 takeoff
+ok 22 - rich levels/stairs/landings/holes/uses/zones/cabinets/opening evidence roundtrips with unchanged252 takeoff
+  ---
+  duration_ms: 650.7837
+  ...
+1..22
+# tests 22
+# suites 0
+# pass 22
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 4376.9805

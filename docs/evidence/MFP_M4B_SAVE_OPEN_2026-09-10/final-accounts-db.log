@@ -1,0 +1,114 @@
+
+> rest-express@1.0.0 test:accounts:db
+> node --import tsx --test tests/database/accounts.test.ts
+
+TAP version 13
+# Subtest: additive session migration leaves all legacy rows unclaimed and old user scaffolding inert
+ok 1 - additive session migration leaves all legacy rows unclaimed and old user scaffolding inert
+  ---
+  duration_ms: 119.0698
+  ...
+# Subtest: anonymous state is repeat-safe without overwriting an existing or revoked browser context
+ok 2 - anonymous state is repeat-safe without overwriting an existing or revoked browser context
+  ---
+  duration_ms: 15.4705
+  ...
+# Subtest: durable login state is one-use and exact-browser bound across repository instances
+ok 3 - durable login state is one-use and exact-browser bound across repository instances
+  ---
+  duration_ms: 36.0519
+  ...
+# Subtest: a newer login invalidates older attempts and stale cancellation cannot cancel the newer one
+ok 4 - a newer login invalidates older attempts and stale cancellation cannot cancel the newer one
+  ---
+  duration_ms: 11.4071
+  ...
+# Subtest: logout or a newer initiation during token exchange prevents the delayed callback from authenticating
+ok 5 - logout or a newer initiation during token exchange prevents the delayed callback from authenticating
+  ---
+  duration_ms: 16.3045
+  ...
+# Subtest: login cancellation retains the previous identity and selected workspace without restoring stale tokens
+ok 6 - login cancellation retains the previous identity and selected workspace without restoring stale tokens
+  ---
+  duration_ms: 24.8136
+  ...
+# Subtest: expired/unsafe login attempts fail closed and initiating repeatedly is bounded
+ok 7 - expired/unsafe login attempts fail closed and initiating repeatedly is bounded
+  ---
+  duration_ms: 36.5453
+  ...
+# Subtest: issuer plus subject provisioning is concurrent/repeat-safe without email merge or membership creation
+ok 8 - issuer plus subject provisioning is concurrent/repeat-safe without email merge or membership creation
+  ---
+  duration_ms: 34.2948
+  ...
+# Subtest: revoked identities and principals never re-provision or resolve an existing session
+ok 9 - revoked identities and principals never re-provision or resolve an existing session
+  ---
+  duration_ms: 26.1308
+  ...
+# Subtest: session touches are bounded; idle and absolute expiry cannot be extended or revived
+ok 10 - session touches are bounded; idle and absolute expiry cannot be extended or revived
+  ---
+  duration_ms: 18.3266
+  ...
+# Subtest: workspace creation is atomic/idempotent and never implicitly selects or claims legacy records
+ok 11 - workspace creation is atomic/idempotent and never implicitly selects or claims legacy records
+  ---
+  duration_ms: 27.9314
+  ...
+# Subtest: workspace creation rate bound counts fresh receipts and never restores revoked memberships on retry
+ok 12 - workspace creation rate bound counts fresh receipts and never restores revoked memberships on retry
+  ---
+  duration_ms: 28.166
+  ...
+# Subtest: selection is explicit, role-aware, current and atomically rotates the workspace context
+ok 13 - selection is explicit, role-aware, current and atomically rotates the workspace context
+  ---
+  duration_ms: 30.0742
+  ...
+# Subtest: the same cookie after another person signs in cannot reuse an old context or identity
+ok 14 - the same cookie after another person signs in cannot reuse an old context or identity
+  ---
+  duration_ms: 18.2329
+  ...
+# Subtest: a revoked membership is excluded from listing and cannot be used by a formerly selected session
+ok 15 - a revoked membership is excluded from listing and cannot be used by a formerly selected session
+  ---
+  duration_ms: 15.4277
+  ...
+# Subtest: a request queued behind logout rechecks the browser context inside its SQL transaction
+ok 16 - a request queued behind logout rechecks the browser context inside its SQL transaction
+  ---
+  duration_ms: 15.2456
+  ...
+# Subtest: a mutation already holding session authority commits before logout, which then blocks future mutations
+ok 17 - a mutation already holding session authority commits before logout, which then blocks future mutations
+  ---
+  duration_ms: 72.6836
+  ...
+# Subtest: session context and lifecycle schema reject malformed bindings; storage failures do not authorize
+ok 18 - session context and lifecycle schema reject malformed bindings; storage failures do not authorize
+  ---
+  duration_ms: 15.6411
+  ...
+# Subtest: stale callbacks cannot invoke destructive SID rotation for a newer pending login
+ok 19 - stale callbacks cannot invoke destructive SID rotation for a newer pending login
+  ---
+  duration_ms: 11.8219
+  ...
+# Subtest: SID rotation failure rolls back identity provisioning and context finalization
+ok 20 - SID rotation failure rolls back identity provisioning and context finalization
+  ---
+  duration_ms: 9.7716
+  ...
+1..20
+# tests 20
+# suites 0
+# pass 20
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 936.1309

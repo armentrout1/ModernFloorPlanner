@@ -1,0 +1,119 @@
+
+> rest-express@1.0.0 test:physical
+> node scripts/run-physical-tests.mjs
+
+Running separate physical persistence HTTP/SQL suite (synthetic HTTPS and PostgreSQL).
+TAP version 13
+# Subtest: normal OIDC/session route creates complete physical revision and authoritative evaluation, distinct from local IDs
+ok 1 - normal OIDC/session route creates complete physical revision and authoritative evaluation, distinct from local IDs
+  ---
+  duration_ms: 1017.7204
+  ...
+# Subtest: second real session and actual application process restart recover the same SQL revision with no local cache
+ok 2 - second real session and actual application process restart recover the same SQL revision with no local cache
+  ---
+  duration_ms: 889.8262
+  ...
+# Subtest: height revision recomputes walls only and old revision stays byte-equivalent canonical content
+ok 3 - height revision recomputes walls only and old revision stays byte-equivalent canonical content
+  ---
+  duration_ms: 276.5214
+  ...
+# Subtest: two real sessions on the same base commit exactly one revision and return412 to the stale writer
+ok 4 - two real sessions on the same base commit exactly one revision and return412 to the stale writer
+  ---
+  duration_ms: 248.6067
+  ...
+# Subtest: lost create response and concurrent identical keys replay one accepted plan, while changed names conflict
+ok 5 - lost create response and concurrent identical keys replay one accepted plan, while changed names conflict
+  ---
+  duration_ms: 184.915
+  ...
+# Subtest: accepted append retries recover original outcome even after current has advanced, never duplicate revisions
+ok 6 - accepted append retries recover original outcome even after current has advanced, never duplicate revisions
+  ---
+  duration_ms: 276.457
+  ...
+# Subtest: missing or invalid If-Match missing never inserts a revision
+ok 7 - missing or invalid If-Match missing never inserts a revision
+  ---
+  duration_ms: 140.5991
+  ...
+# Subtest: missing or invalid If-Match * never inserts a revision
+ok 8 - missing or invalid If-Match * never inserts a revision
+  ---
+  duration_ms: 125.0531
+  ...
+# Subtest: missing or invalid If-Match W/"anything" never inserts a revision
+ok 9 - missing or invalid If-Match W/"anything" never inserts a revision
+  ---
+  duration_ms: 129.22
+  ...
+# Subtest: missing or invalid If-Match "not-a-revision" never inserts a revision
+ok 10 - missing or invalid If-Match "not-a-revision" never inserts a revision
+  ---
+  duration_ms: 158.3044
+  ...
+# Subtest: two workspaces cannot list, read, revise or replay each other’s private records
+ok 11 - two workspaces cannot list, read, revise or replay each other’s private records
+  ---
+  duration_ms: 188.5324
+  ...
+# Subtest: viewer can read but cannot save; revoked access cannot replay an old successful receipt
+ok 12 - viewer can read but cannot save; revoked access cannot replay an old successful receipt
+  ---
+  duration_ms: 158.3956
+  ...
+# Subtest: exact Origin, request marker and context are enforced before physical mutations
+ok 13 - exact Origin, request marker and context are enforced before physical mutations
+  ---
+  duration_ms: 65.1364
+  ...
+# Subtest: supported unknown measurements save without fabricated complete quantities
+ok 14 - supported unknown measurements save without fabricated complete quantities
+  ---
+  duration_ms: 101.1976
+  ...
+# Subtest: malformed, forged output, unsupported, invalid references and unbounded bodies fail without SQL mutations
+ok 15 - malformed, forged output, unsupported, invalid references and unbounded bodies fail without SQL mutations
+  ---
+  duration_ms: 118.0436
+  ...
+# Subtest: bounded pagination returns accessible summaries only and rejects unsupported controls
+ok 16 - bounded pagination returns accessible summaries only and rejects unsupported controls
+  ---
+  duration_ms: 203.6935
+  ...
+# Subtest: legacy authorized API remains separate and does not accept physical envelope or claim unowned records
+ok 17 - legacy authorized API remains separate and does not accept physical envelope or claim unowned records
+  ---
+  duration_ms: 72.5076
+  ...
+# Subtest: rich schema5 with stairs,landings,holes,zones,cabinets,appearance and evidence round trips through SQL without changing quantities
+ok 18 - rich schema5 with stairs,landings,holes,zones,cabinets,appearance and evidence round trips through SQL without changing quantities
+  ---
+  duration_ms: 757.8205
+  ...
+1..18
+# tests 18
+# suites 0
+# pass 18
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 5509.8862
+Running separate physical Save/Open browser suite (synthetic HTTPS and PostgreSQL).
+
+Running 9 tests using 1 worker
+
+[1/9] tests\persistence\physical-save-guards.spec.ts:18:1 › all visible pending families block Save with field-specific Apply/Revert and preserve committed SQL revision
+[2/9] tests\persistence\physical-save-guards.spec.ts:48:1 › pending room-level assignment blocks Save without changing ownership and offers explicit Revert
+[3/9] tests\persistence\physical-save-guards.spec.ts:56:1 › edits during actual committed save stay unsaved; next revision contains those edits
+[4/9] tests\persistence\physical-save-guards.spec.ts:67:1 › response loss after SQL commit retries same payload and key without creating another plan
+[5/9] tests\persistence\physical-save-guards.spec.ts:81:1 › late SQL Save response after logout cannot repaint prior private revision or modify unassigned draft
+[6/9] tests\persistence\physical-save-guards.spec.ts:91:1 › late Save after switching workspaces cannot acknowledge another draft and both local contexts survive
+[7/9] tests\persistence\physical-save-open.spec.ts:11:1 › real sign-in, explicit schema5 Save/Open and fresh empty browser context retrieve SQL content
+[8/9] tests\persistence\physical-save-open.spec.ts:26:1 › two real browser clients conflict visibly and preserve the candidate while opening latest separately
+[9/9] tests\persistence\physical-save-open.spec.ts:41:1 › opening a server plan preserves a different draft with unfinished text and no implicit upload
+  9 passed (30.1s)

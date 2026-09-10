@@ -1,0 +1,211 @@
+
+[WebServer] (node:35600) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:35680) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:27856) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[WebServer] (node:14740) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+[WebServer] (node:33240) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:29172) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+[WebServer] (node:35684) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+[WebServer] (node:4328) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+[WebServer] (node:30900) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 180 tests using 1 worker
+
+[1/180] tests\browser\authorization.spec.ts:47:1 › normal production composition denies Save and Load while preserving a real unsaved drawing and save name
+[2/180] tests\browser\authorization.spec.ts:75:1 › client distinguishes401 and403 without clearing local input or disguising denial as an empty list
+[3/180] tests\browser\authorization.spec.ts:92:42 › Load rechecks a selected private record and clears cached rows after denial 403
+[4/180] tests\browser\authorization.spec.ts:92:42 › Load rechecks a selected private record and clears cached rows after denial 404
+[5/180] tests\browser\authorization.spec.ts:108:1 › denied rename preserves its raw name, respects composition and removes stale private previews
+[6/180] tests\browser\authorization.spec.ts:129:1 › a late list response cannot repopulate private previews after a newer denied reopen
+[7/180] tests\browser\canvas-view.spec.ts:98:3 › fitting three rooms near origin centers real bounds without changing geometry or openings
+[8/180] tests\browser\canvas-view.spec.ts:98:3 › fitting three rooms far from origin centers real bounds without changing geometry or openings
+[9/180] tests\browser\canvas-view.spec.ts:98:3 › fitting three rooms negative coordinates centers real bounds without changing geometry or openings
+[10/180] tests\browser\canvas-view.spec.ts:157:3 › canvas and its top/bottom controls stay on screen at 820×720
+[11/180] tests\browser\canvas-view.spec.ts:157:3 › canvas and its top/bottom controls stay on screen at 390×844
+[12/180] tests\browser\canvas-view.spec.ts:182:1 › opening placement after a scaled fit and later viewport resize uses the unchanged room coordinate system
+[13/180] tests\browser\canvas-view.spec.ts:249:3 › middle-button pan cancels native autoscroll and keeps steady screen pixels at width 1600
+[14/180] tests\browser\canvas-view.spec.ts:249:3 › middle-button pan cancels native autoscroll and keeps steady screen pixels at width 820
+[15/180] tests\browser\canvas-view.spec.ts:278:1 › mouse pan continues outside the grid, stops on release and reverses immediately at scroll limits
+[16/180] tests\browser\canvas-view.spec.ts:315:1 › Hand and Space wait for a held drag and never draw, select or place an opening
+[17/180] tests\browser\canvas-view.spec.ts:340:1 › blur, Escape, missing held button and inactive navigation cancel mouse pan; wheel scrolling remains available
+[18/180] tests\browser\canvas-view.spec.ts:375:1 › cancelled pan consumes its later release instead of placing the pending opening
+[19/180] tests\browser\canvas-view.spec.ts:458:1 › Ctrl-wheel zoom anchors at the pointer in both directions while ordinary/outside wheel keeps its scope
+[20/180] tests\browser\canvas-view.spec.ts:517:3 › two-finger zoom through browser touch input › pinches over rooms and openings follow the distance ratio; one remaining finger cannot edit or pan
+[21/180] tests\browser\canvas-view.spec.ts:568:3 › two-finger zoom through browser touch input › a second finger cancels pending room drawing until all fingers are lifted and a fresh gesture starts
+[22/180] tests\browser\canvas-view.spec.ts:635:3 › two panel toggles stay fixed and resize the usable canvas through both close orders at width 1440
+[23/180] tests\browser\canvas-view.spec.ts:635:3 › two panel toggles stay fixed and resize the usable canvas through both close orders at width 820
+[24/180] tests\browser\canvas-view.spec.ts:689:1 › panel toggles restore resized widths with Enter and Space while retaining the inspector tab and invalid draft
+[25/180] tests\browser\editor.spec.ts:131:5 › door placement on top wall survives save and reload
+[26/180] tests\browser\editor.spec.ts:131:5 › door placement on right wall survives save and reload
+[27/180] tests\browser\editor.spec.ts:131:5 › door placement on bottom wall survives save and reload
+[28/180] tests\browser\editor.spec.ts:131:5 › door placement on left wall survives save and reload
+[29/180] tests\browser\editor.spec.ts:131:5 › window placement on top wall survives save and reload
+[30/180] tests\browser\editor.spec.ts:131:5 › window placement on right wall survives save and reload
+[31/180] tests\browser\editor.spec.ts:131:5 › window placement on bottom wall survives save and reload
+[32/180] tests\browser\editor.spec.ts:131:5 › window placement on left wall survives save and reload
+[33/180] tests\browser\editor.spec.ts:175:3 › door dragging between walls and rooms preserves legacy properties through resize
+[34/180] tests\browser\editor.spec.ts:175:3 › window dragging between walls and rooms preserves legacy properties through resize
+[35/180] tests\browser\editor.spec.ts:206:1 › 32-inch width, all door styles and swing properties remain editable and persist exactly
+[36/180] tests\browser\editor.spec.ts:231:1 › window width updates retain its legacy attachment and persist
+[37/180] tests\browser\editor.spec.ts:252:1 › Delete targets the selected opening before its room, and Undo delete restores all properties
+[38/180] tests\browser\editor.spec.ts:277:1 › typing, contenteditable, dialogs, repeat and handled keys do not delete geometry
+[39/180] tests\browser\editor.spec.ts:319:1 › a failed save retains the entered name and geometry and can be retried
+[40/180] tests\browser\editor.spec.ts:352:1 › conflicting saved widths remain untouched until the entered width is confirmed
+[41/180] tests\browser\editor.spec.ts:366:1 › failed rename keeps the draft and Enter plus blur sends one pending request
+[42/180] tests\browser\editor.spec.ts:404:1 › declining New Sketch and replacement Load keeps the unsaved current draft
+[43/180] tests\browser\editor.spec.ts:430:1 › tooltip timers cannot dismiss a save dialog or erase its draft
+[44/180] tests\browser\editor.spec.ts:446:3 › door sector selects and double-click flips both swing directions on top without moving attachment
+[45/180] tests\browser\editor.spec.ts:446:3 › door sector selects and double-click flips both swing directions on right without moving attachment
+[46/180] tests\browser\editor.spec.ts:446:3 › door sector selects and double-click flips both swing directions on bottom without moving attachment
+[47/180] tests\browser\editor.spec.ts:446:3 › door sector selects and double-click flips both swing directions on left without moving attachment
+[48/180] tests\browser\editor.spec.ts:483:1 › door leaf and arc select, outside the swept quarter-circle does not, and bar double-click flips once
+[49/180] tests\browser\editor.spec.ts:510:1 › an outward door sector over an adjoining grouped room selects and flips only its own door
+[50/180] tests\browser\editor.spec.ts:531:1 › custom opening dimensions preserve fractions, reject empty/overlap, and keep unknown window height until chosen
+[51/180] tests\browser\editor.spec.ts:557:3 › opening touch ownership › touch drag releases on a new wall and touchcancel/Escape/blur discard pending opening moves
+[52/180] tests\browser\editor.spec.ts:595:1 › pan-owned double-clicks and subthreshold presses never flip or relocate a door
+[53/180] tests\browser\editor.spec.ts:617:1 › window height presets and custom height preserve exact legacy width, attachment and metadata despite existing overlap
+[54/180] tests\browser\editor.spec.ts:650:1 › rejected window width preset preserves both dimensions and custom fractional dimensions remain independent
+[55/180] tests\browser\editor.spec.ts:686:1 › reselecting the current window preset clears only that dimension invalid draft
+[56/180] tests\browser\editor.spec.ts:722:1 › compact door size menus recover invalid drafts independently and accept fractional custom values
+[57/180] tests\browser\editor.spec.ts:789:1 › a valid door preset clears a rejected legacy width confirmation without changing other metadata
+[58/180] tests\browser\panel-materials.spec.ts:6:1 › Materials fits a narrow sidebar and scrolls to its bottom totals at a short viewport height
+[59/180] tests\browser\physical-draft.spec.ts:62:1 › one physical draft synchronizes room identity, dimensions and ceiling quantities between both views
+[60/180] tests\browser\physical-draft.spec.ts:132:1 › fractional and metric inputs, pending unit context, one commit action and view controls retain canonical measurements
+[61/180] tests\browser\physical-draft.spec.ts:162:1 › unsupported ceiling and wall applicability block only their actual dependent quantities
+[62/180] tests\browser\physical-draft.spec.ts:177:1 › explicit Quick Rooms copies keep original bytes and separate draft identities through edits and same-tab recovery
+[63/180] tests\browser\physical-draft.spec.ts:232:1 › legacy adoption preserves groups, recorded window height and door appearance; room-only gestures never edit the original
+[64/180] tests\browser\physical-draft.spec.ts:282:3 › corrupt physical recovery preserves its bytes and unrelated original storage
+[65/180] tests\browser\physical-draft.spec.ts:282:3 › unsupported physical recovery preserves its bytes and unrelated original storage
+[66/180] tests\browser\physical-draft.spec.ts:301:1 › blocked browser storage permits an honest memory-only physical draft without API saving
+[67/180] tests\browser\physical-draft.spec.ts:316:1 › quota failure preserves the previous full registry and original keys while newer measurements remain usable
+[68/180] tests\browser\physical-history.spec.ts:91:1 › committed height, clearing and coalesced room names undo chronologically across both views
+[69/180] tests\browser\physical-history.spec.ts:122:1 › opening moves and fractional sizes are single reversible transactions, with coordinated delete recovery
+[70/180] tests\browser\physical-history.spec.ts:165:1 › waste and target Undo preserve unrelated raw input, block conflicting edits and invalidate redo only on commit
+[71/180] tests\browser\physical-history.spec.ts:199:1 › confirmed corrections undo provisionally without erasing review snapshots, then recover with empty session history
+[72/180] tests\browser\physical-history.spec.ts:232:1 › histories remain draft-local and room creation unwinds safely; failed cache writes retain in-memory Undo
+[73/180] tests\browser\physical-history.spec.ts:260:1 › history shortcuts respect native editing, dialogs, IME, stale targets and active gestures
+[74/180] tests\browser\physical-history.spec.ts:313:3 › touch committed history › phone history controls support touch and keyboard without committing unrelated pending text
+[75/180] tests\browser\physical-journey.spec.ts:106:1 › one UI-built physical journey preserves identity from adoption through takeoff review undo and recovery
+[76/180] tests\browser\physical-journey.spec.ts:257:1 › populated long-label review and takeoff stay usable with keyboard focus on desktop tablet and phone
+[77/180] tests\browser\physical-layout.spec.ts:116:1 › docked inspectors retain the populated fixture at desktop widths and enlarged text
+[78/180] tests\browser\physical-layout.spec.ts:156:1 › narrow inspector edits synchronize fields and drawing with one focus trap and one Escape owner
+[79/180] tests\browser\physical-layout.spec.ts:189:1 › breakpoint transitions preserve pending text caret units and redo, then reload the latest temporary draft
+[80/180] tests\browser\physical-layout.spec.ts:225:1 › opening gestures use current resized bounds on every wall and cancel when the surface changes
+[81/180] tests\browser\physical-layout.spec.ts:255:1 › Locate source preserves selection and scope while Edit source opens the intended narrow inspector
+[82/180] tests\browser\physical-layout.spec.ts:277:1 › deleting a drawer target restores logical focus and both guarded opening recovery paths
+[83/180] tests\browser\physical-layout.spec.ts:294:1 › 320px and short-landscape reflow keep invalid drawer fields, focus and explicit partial takeoff reachable
+[84/180] tests\browser\physical-levels.spec.ts:162:1 › UI-built levels filter the same draft and show independent complete level and project quantities
+[85/180] tests\browser\physical-levels.spec.ts:198:1 › explicit target IDs survive level switches and new room creation without live-filter expansion or repeated waste
+[86/180] tests\browser\physical-levels.spec.ts:230:1 › renaming ordering and assignment have chronological level-aware Undo without changing geometry or elevations
+[87/180] tests\browser\physical-levels.spec.ts:257:1 › pending fields units evidence and Redo survive levels responsive inspectors Revert and recovery
+[88/180] tests\browser\physical-levels.spec.ts:289:1 › coincident plan positions stay level-local and a held opening gesture cannot survive a level switch
+[89/180] tests\browser\physical-levels.spec.ts:314:1 › grouped and shared-opening rooms block partial level reassignment with every relationship preserved
+[90/180] tests\browser\physical-levels.spec.ts:329:1 › upgrading the latest physical and legacy copies preserves originals unknown ownership and historical snapshots
+[91/180] tests\browser\physical-levels.spec.ts:368:1 › level fingerprints agree in the actual browser while presentation changes and rejected recovery preserve their boundaries
+[92/180] tests\browser\physical-objects-zones.spec.ts:149:1 › UI room use, virtual Kitchenette and one cabinet block retain the measured 300 square foot parent
+[93/180] tests\browser\physical-objects-zones.spec.ts:176:1 › functional use stays separate from room names and confirmed measured geometry
+[94/180] tests\browser\physical-objects-zones.spec.ts:214:1 › zone and cabinet selection, rotation and one-command drags use current reflowed room coordinates
+[95/180] tests\browser\physical-objects-zones.spec.ts:261:1 › unknown, overlapping and out-of-bounds zones remain explicit without altering parent finish quantities
+[96/180] tests\browser\physical-objects-zones.spec.ts:282:1 › level changes, phone IME and reload preserve unrelated room zone cabinet stair and waste drafts
+[97/180] tests\browser\physical-objects-zones.spec.ts:322:1 › zone unlink and cabinet deletion stay chronological while room reassignment carries the same children
+[98/180] tests\browser\physical-objects-zones.spec.ts:351:1 › validated layout recovery retains original bytes for future contracts and missing room or zone references
+[99/180] tests\browser\physical-objects-zones.spec.ts:378:1 › current stair and surface-opening source upgrades losslessly and layout leaves 252 net plus 10 percent waste unchanged
+[100/180] tests\browser\physical-openings.spec.ts:118:1 › UI-built physical door and window share exact form, drawing and engine quantities
+[101/180] tests\browser\physical-openings.spec.ts:165:1 › drawing placement uses clockwise center offsets on all four walls and keeps missing measurements unknown
+[102/180] tests\browser\physical-openings.spec.ts:188:1 › along-wall, cross-wall and cross-room drags retain exact opening data and commit one action per gesture
+[103/180] tests\browser\physical-openings.spec.ts:220:1 › exact fractional and metric widths, independent sill and height, and invalid raw edits preserve the opening
+[104/180] tests\browser\physical-openings.spec.ts:256:1 › door appearance and exact-target delete undo preserve measurements, rooms and unrelated edits
+[105/180] tests\browser\physical-openings.spec.ts:288:1 › canceled and stale gestures never move or duplicate an opening
+[106/180] tests\browser\physical-openings.spec.ts:316:1 › opening recovery retains pending unit context, source originals and selected draft without legacy saving
+[107/180] tests\browser\physical-openings.spec.ts:338:1 › populated opening views retain controls and precise placement through zoom, pan and desktop tablet phone reflow
+[108/180] tests\browser\physical-openings.spec.ts:359:1 › a recovered two-face opening retains one identity and blocks uncoordinated moves and invalid dimensions
+[109/180] tests\browser\physical-revert.spec.ts:84:1 › room Revert cancels pointer and keyboard drafts without committing, preserving review, units and recovery
+[110/180] tests\browser\physical-revert.spec.ts:140:1 › opening Revert preserves identity and appearance for rejected geometry, valid pending edits and zero sill
+[111/180] tests\browser\physical-revert.spec.ts:167:1 › waste Revert restores its committed percentage and retains intervening scope protection for opening Undo
+[112/180] tests\browser\physical-revert.spec.ts:194:1 › Escape respects composition, handled events, menus, dialogs and stale or inactive inputs
+[113/180] tests\browser\physical-revert.spec.ts:232:1 › supported recovered candidates and a zero center remain exact when unfinished fields are reverted
+[114/180] tests\browser\physical-revert.spec.ts:255:3 › touch Revert › unknown fields, visible desktop and phone actions, and failed recovery writes retain a usable draft
+[115/180] tests\browser\physical-stairs.spec.ts:172:1 › UI straight stair and landing link both levels while explicit surface holes alone change finish quantities
+[116/180] tests\browser\physical-stairs.spec.ts:204:1 › endpoint roles remain explicit through shared edits, level renaming and unresolved destinations
+[117/180] tests\browser\physical-stairs.spec.ts:224:1 › surface readiness is local and overlapping internal rectangles use one union in browser and Node
+[118/180] tests\browser\physical-stairs.spec.ts:245:1 › stair landing and independent void deletion share one chronological history with guarded room dependencies
+[119/180] tests\browser\physical-stairs.spec.ts:268:1 › room-local stair dragging uses current zoom and drawer bounds and cancels stale endpoint gestures
+[120/180] tests\browser\physical-stairs.spec.ts:304:1 › new stair and surface raw fields retain unit context through phone drawer IME Revert and reload
+[121/180] tests\browser\physical-stairs.spec.ts:332:1 › versioned recovery rejects duplicate surface attachments and unknown features while old snapshots and quota bytes survive
+[122/180] tests\browser\physical-stairs.spec.ts:363:1 › surface deduction Locate and Edit reveal the correct level and finish without altering work or pending stair text
+[123/180] tests\browser\physical-takeoff.spec.ts:84:1 › UI-built takeoff visibly reconciles all ten outputs, opening deductions and one waste allowance
+[124/180] tests\browser\physical-takeoff.spec.ts:110:1 › top-wall scope and incomplete opening height show explicit partial results without a stale full total
+[125/180] tests\browser\physical-takeoff.spec.ts:138:1 › custom targets survive room additions, inspection, unit changes and camera movement; empty means nothing selected
+[126/180] tests\browser\physical-takeoff.spec.ts:172:1 › multi-room waste is applied once and raw invalid waste masks adjusted results through recovery
+[127/180] tests\browser\physical-takeoff.spec.ts:215:1 › explicit measurement and model review confirms only seen inputs and stale review cannot confirm a newer value
+[128/180] tests\browser\physical-takeoff.spec.ts:260:1 › basis mismatch stays explicit and candidate resolution is separate from confirmation with original evidence retained
+[129/180] tests\browser\physical-takeoff.spec.ts:303:1 › shared inventory counts once, casing counts selected faces, and delete undo preserves a later scope decision
+[130/180] tests\browser\physical-takeoff.spec.ts:336:1 › crown deducts only an explicitly selected validated full-height gap and displays a valid zero
+[131/180] tests\browser\physical-takeoff.spec.ts:355:1 › populated desktop tablet and phone takeoff controls remain usable without mutating measurements or scope
+[132/180] tests\browser\physical-view-tabs.spec.ts:93:1 › physical view tabs rove focus, activate manually, and leave one accessible editor without a keyboard trap
+[133/180] tests\browser\physical-view-tabs.spec.ts:141:1 › pending room opening and waste fields retain exact evidence source and scope through manual views and recovery
+[134/180] tests\browser\physical-view-tabs.spec.ts:180:1 › tab navigation leaves text editing selectors review menus and composition to their own controls
+[135/180] tests\browser\physical-view-tabs.spec.ts:227:1 › Locate source and explicit Edit in inspector select the matching panel while keeping invocation focus and scope separate
+[136/180] tests\browser\physical-view-tabs.spec.ts:251:3 › physical view tab touch and focus › populated desktop and phone distinguish keyboard focus from selection and retain native touch activation
+[137/180] tests\browser\plan-preview.spec.ts:123:1 › far and negative plans fit independently of editor zoom and preserve saved coordinates
+[138/180] tests\browser\plan-preview.spec.ts:144:1 › preview preserves room proportions, colors, unequal window widths and all four door outlines
+[139/180] tests\browser\plan-preview.spec.ts:189:1 › preview clicks, double-clicks, dragging and editor shortcuts cannot mutate the sketch or editor zoom
+[140/180] tests\browser\plan-preview.spec.ts:223:1 › P, Escape and the explicit close button dismiss preview and restore focus to its trigger
+[141/180] tests\browser\plan-preview.spec.ts:238:1 › empty preview is usable and a populated preview refits when the browser viewport narrows
+[142/180] tests\browser\plan-preview.spec.ts:263:1 › browser Back closes preview on the inactive route and does not reopen it on return
+[143/180] tests\browser\quantity-parity.spec.ts:67:1 › actual browser and Node independently satisfy all confirmed Q-001 answers and hashes
+[144/180] tests\browser\quantity-parity.spec.ts:73:1 › actual browser and Node retain Q-001 values as provisional for unconfirmed measurements
+[145/180] tests\browser\quantity-parity.spec.ts:84:1 › selected top wall independently gives 96 gross, 63 net and 9 baseboard in both runtimes
+[146/180] tests\browser\quantity-parity.spec.ts:104:1 › missing window height leaves 256 sqft partial walls, never a complete selected total
+[147/180] tests\browser\quantity-parity.spec.ts:119:1 › tolerance clipping and viewport independence agree in both runtimes without changing source
+[148/180] tests\browser\quantity-parity.spec.ts:142:1 › real browser captures frozen confirmed snapshots and rejects empty confirmed selection
+[149/180] tests\browser\quick-room-navigation.spec.ts:67:1 › browser Back removes editor delete/style portals and cannot mutate the hidden sketch
+[150/180] tests\browser\quick-room-navigation.spec.ts:95:1 › browser Back cancels pending draw, room drag and resize before later mouse movement/up
+[151/180] tests\browser\quick-room.spec.ts:70:1 › actual entry starts unknown; 12×10×8 gives provisional 120/120/352 and missing height only blocks walls
+[152/180] tests\browser\quick-room.spec.ts:107:1 › duplicate identities and edits are independent; removal is protected and preserves the original
+[153/180] tests\browser\quick-room.spec.ts:144:1 › project labels an unavailable full total separately from a provisional partial subtotal
+[154/180] tests\browser\quick-room.spec.ts:160:1 › equivalent fractional, decimal and metric input plus unit switching retain dimensions and provenance
+[155/180] tests\browser\quick-room.spec.ts:184:1 › invalid and partial text immediately masks stale quantities, remains visible and recovers on correction
+[156/180] tests\browser\quick-room.spec.ts:209:1 › pending bare input keeps its original unit context and incomplete text survives same-tab refresh
+[157/180] tests\browser\quick-room.spec.ts:236:1 › clearing an old-unit edit releases its context for the next bare measurement
+[158/180] tests\browser\quick-room.spec.ts:253:1 › Enter plus blur commits once; composition and repeated keys do not duplicate actions or delete rooms
+[159/180] tests\browser\quick-room.spec.ts:316:1 › unsaved sketch state and zoom survive navigation; inactive shortcuts and Quick Rooms saving stay separate
+[160/180] tests\browser\quick-room.spec.ts:350:3 › corrupt cache stays byte-for-byte intact until confirmed draft-only discard
+[161/180] tests\browser\quick-room.spec.ts:350:3 › unsupported cache stays byte-for-byte intact until confirmed draft-only discard
+[162/180] tests\browser\quick-room.spec.ts:376:1 › blocked sessionStorage getter leaves a usable memory draft and honest refresh warning
+[163/180] tests\browser\quick-room.spec.ts:388:1 › quota failure preserves the previous cache and unrelated storage while newer results remain usable
+[164/180] tests\browser\quick-room.spec.ts:413:3 › populated desktop viewport has usable labels, long names and results without horizontal overflow
+[165/180] tests\browser\quick-room.spec.ts:413:3 › populated tablet viewport has usable labels, long names and results without horizontal overflow
+[166/180] tests\browser\quick-room.spec.ts:413:3 › populated phone viewport has usable labels, long names and results without horizontal overflow
+[167/180] tests\browser\selection.spec.ts:132:1 › Select all moves three adjoining fractional rooms together without changing openings or metadata
+[168/180] tests\browser\selection.spec.ts:146:1 › persistent group survives reload; ungroup and Shift-click restore independent partial movement
+[169/180] tests\browser\selection.spec.ts:178:1 › marquee selects its intersected rooms and moving one selected member leaves the third untouched
+[170/180] tests\browser\selection.spec.ts:193:1 › room-name visibility toggles only presentation and keeps exact names and saved geometry
+[171/180] tests\browser\selection.spec.ts:204:1 › Doors tab selects the exact opening; repeated Delete cannot remove its parent and Undo restores it
+[172/180] tests\browser\selection.spec.ts:227:1 › Ctrl+A respects room-name input, open dialogs and inactive sketch, and selects all only in the active editor
+[173/180] tests\browser\selection.spec.ts:262:1 › individual room editing keeps grouped dragging together; deleting a group is one recoverable action
+[174/180] tests\browser\selection.spec.ts:280:1 › room tabs list only that room, number openings by type, and preserve geometry through a round trip
+[175/180] tests\browser\selection.spec.ts:335:1 › sidebar tabs support arrow, Home and End keyboard navigation without selecting a hidden item
+[176/180] tests\browser\selection.spec.ts:364:1 › canvas selection opens the matching room tab and shows properties for the exact opening
+[177/180] tests\browser\selection.spec.ts:388:1 › empty opening tabs remain usable and Delete cannot remove their room context
+[178/180] tests\browser\selection.spec.ts:411:1 › changing tabs commits valid size drafts and superseded room browsing cannot return
+[179/180] tests\browser\selection.spec.ts:436:1 › narrow sidebar keeps tab labels and selected-opening actions inside its bounds
+[180/180] tests\browser\selection.spec.ts:457:1 › compact opening inspector has one size pair and keeps wall location visible without duplicate controls
+  180 passed (9.0m)

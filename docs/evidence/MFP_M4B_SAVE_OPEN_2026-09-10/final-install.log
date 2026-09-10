@@ -1,0 +1,17 @@
+npm warn deprecated @esbuild-kit/esm-loader@2.6.5: Merged into tsx: https://tsx.is
+npm warn deprecated @esbuild-kit/core-utils@3.3.2: Merged into tsx: https://tsx.is
+
+added 508 packages, and audited 509 packages in 11s
+
+67 packages are looking for funding
+  run `npm fund` for details
+
+26 vulnerabilities (2 low, 10 moderate, 14 high)
+
+To address issues that do not require attention, run:
+  npm audit fix
+
+To address all issues (including breaking changes), run:
+  npm audit fix --force
+
+Run `npm audit` for details.
