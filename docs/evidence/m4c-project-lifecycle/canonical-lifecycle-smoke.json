@@ -1,0 +1,8 @@
+{
+  "ok": true,
+  "sourceCommit": "4a3a321e23726ac13ad20185f5a17429af0ae601",
+  "tests": 3,
+  "fixture": "Normal canonical registerRoutes, isolated synthetic OIDC and HTTPS, verified disposable PostgreSQL, fresh browser contexts",
+  "ownerOriginsVisited": false,
+  "liveBindingVerified": false
+}

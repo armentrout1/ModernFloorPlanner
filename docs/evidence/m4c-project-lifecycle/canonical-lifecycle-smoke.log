@@ -1,0 +1,7 @@
+
+Running 3 tests using 1 worker
+
+[1/3] tests\persistence\project-lifecycle.spec.ts:44:1 › duplicate uses the listed saved schema5 revision and preserves current unfinished local work
+[2/3] tests\persistence\project-lifecycle.spec.ts:62:1 › archive and restore preserve saved revisions, raw local fields and paused autosave
+[3/3] tests\persistence\project-lifecycle.spec.ts:157:1 › viewer can open archived projects but cannot mutate them; long names remain usable on a phone
+  3 passed (12.2s)

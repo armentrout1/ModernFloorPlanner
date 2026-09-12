@@ -1,0 +1,89 @@
+
+> rest-express@1.0.0 test:authorization:db
+> node --import tsx --test tests/database/authorization.test.ts
+
+TAP version 13
+# Subtest: additive migration preserves old users and every legacy payload field without assigning ownership
+ok 1 - additive migration preserves old users and every legacy payload field without assigning ownership
+  ---
+  duration_ms: 131.1229
+  ...
+# Subtest: actual PostgreSQL CRUD enforces roles and assigns validated workspace outside the legacy DTO
+ok 2 - actual PostgreSQL CRUD enforces roles and assigns validated workspace outside the legacy DTO
+  ---
+  duration_ms: 32.8207
+  ...
+# Subtest: known other-workspace IDs and workspace selections never disclose or mutate B records
+ok 3 - known other-workspace IDs and workspace selections never disclose or mutate B records
+  ---
+  duration_ms: 29.6022
+  ...
+# Subtest: viewer reads succeed but all writes and editor membership administration fail
+ok 4 - viewer reads succeed but all writes and editor membership administration fail
+  ---
+  duration_ms: 21.626
+  ...
+# Subtest: issuer and subject jointly identify a current principal; malformed, forged and nonmember identities deny
+ok 5 - issuer and subject jointly identify a current principal; malformed, forged and nonmember identities deny
+  ---
+  duration_ms: 16.2445
+  ...
+# Subtest: membership revocation/demotion and principal/identity revocation take effect on the next operation
+ok 6 - membership revocation/demotion and principal/identity revocation take effect on the next operation
+  ---
+  duration_ms: 20.6798
+  ...
+# Subtest: mass-assigned authority is rejected while nested drawing metadata remains inert and compatible
+ok 7 - mass-assigned authority is rejected while nested drawing metadata remains inert and compatible
+  ---
+  duration_ms: 36.4678
+  ...
+# Subtest: unowned legacy records stay inaccessible despite known IDs and remain unmodified
+ok 8 - unowned legacy records stay inaccessible despite known IDs and remain unmodified
+  ---
+  duration_ms: 26.5252
+  ...
+# Subtest: only current owners administer existing memberships and cannot remove the last active owner
+ok 9 - only current owners administer existing memberships and cannot remove the last active owner
+  ---
+  duration_ms: 24.802
+  ...
+# Subtest: database constraints reject dangling ownership, duplicate identity and invalid roles
+ok 10 - database constraints reject dangling ownership, duplicate identity and invalid roles
+  ---
+  duration_ms: 51.6722
+  ...
+# Subtest: an in-flight mutation waits for workspace membership changes and rechecks the committed role
+ok 11 - an in-flight mutation waits for workspace membership changes and rechecks the committed role
+  ---
+  duration_ms: 17.9898
+  ...
+# Subtest: a protected write holds its authorization lock until commit and revocation waits, then denies subsequent writes
+ok 12 - a protected write holds its authorization lock until commit and revocation waits, then denies subsequent writes
+  ---
+  duration_ms: 89.1416
+  ...
+# Subtest: simultaneous owner demotions serialize and leave one active owner
+ok 13 - simultaneous owner demotions serialize and leave one active owner
+  ---
+  duration_ms: 14.7041
+  ...
+# Subtest: missing or malformed database binding and repository failures never fall back to unscoped data
+ok 14 - missing or malformed database binding and repository failures never fall back to unscoped data
+  ---
+  duration_ms: 11.302
+  ...
+# Subtest: actual HTTP middleware and routes enforce scoped PostgreSQL persistence with private responses
+ok 15 - actual HTTP middleware and routes enforce scoped PostgreSQL persistence with private responses
+  ---
+  duration_ms: 72.4827
+  ...
+1..15
+# tests 15
+# suites 0
+# pass 15
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1137.4028

@@ -1,0 +1,13 @@
+{
+  "status": "MATCH",
+  "files": 7,
+  "hashes": {
+    "index.js": "b5b144c651fdd24e8fac1a6ed4eb29f4a332b848ae8e3dd967ececcf40e66c10",
+    "public/assets/display-B9tm52Fi.js": "a4a8d770ba713172f7aef0843ec59fb8202eeda34a35b42111ee5d389f8daf45",
+    "public/assets/index-BqU-R2vP.css": "43b639a6b6d376ae3bb1feb8524bbc42e513079d54b7c9575ac40a73d5ddd4a4",
+    "public/assets/index-DxtnR7wa.js": "1e1d01d5c4acf3235a34e12036c3023885576595e5a67eda382fdd7dd0b3804f",
+    "public/assets/PhysicalDraft-Dlk-59H9.js": "b3c988c01ab2236b4586e83796a27499426eb63560038d3460557daf9750c59e",
+    "public/assets/QuickRooms-DqstFEyE.js": "5067809faf14311c8c7a29058357d0fc8d5a439811d9daa0231b8581516c2497",
+    "public/index.html": "4fdf6d6636ec20813f5ed02add3ccfccbbdd99c516b9585e8fe1b9754d9ea602"
+  }
+}

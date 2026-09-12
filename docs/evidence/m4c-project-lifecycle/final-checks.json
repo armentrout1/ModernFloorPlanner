@@ -1,0 +1,74 @@
+[
+  {
+    "seconds": 11.114,
+    "exitCode": 0,
+    "name": "install",
+    "command": "npm ci"
+  },
+  {
+    "seconds": 9.439,
+    "exitCode": 0,
+    "name": "unit",
+    "command": "npm test"
+  },
+  {
+    "seconds": 7.459,
+    "exitCode": 0,
+    "name": "typecheck",
+    "command": "npm run check"
+  },
+  {
+    "seconds": 4.905,
+    "exitCode": 0,
+    "name": "build",
+    "command": "npm run build"
+  },
+  {
+    "seconds": 559.816,
+    "exitCode": 0,
+    "name": "browser",
+    "command": "npx playwright test --reporter=line"
+  },
+  {
+    "seconds": 1.528,
+    "exitCode": 0,
+    "name": "authorization-db",
+    "command": "npm run test:authorization:db"
+  },
+  {
+    "seconds": 1.451,
+    "exitCode": 0,
+    "name": "accounts-db",
+    "command": "npm run test:accounts:db"
+  },
+  {
+    "seconds": 36.683,
+    "exitCode": 0,
+    "name": "accounts",
+    "command": "npm run test:accounts"
+  },
+  {
+    "seconds": 7.652,
+    "exitCode": 0,
+    "name": "physical-db",
+    "command": "npm run test:physical:db"
+  },
+  {
+    "seconds": 89.079,
+    "exitCode": 0,
+    "name": "physical",
+    "command": "npm run test:physical"
+  },
+  {
+    "seconds": 6.936,
+    "exitCode": 0,
+    "name": "journal",
+    "command": "npm run test:journal"
+  },
+  {
+    "seconds": 91.517,
+    "exitCode": 0,
+    "name": "autosave",
+    "command": "npm run test:autosave"
+  }
+]

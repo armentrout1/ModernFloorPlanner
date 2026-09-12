@@ -1,0 +1,92 @@
+Running separate physical Save/Open browser suite (synthetic HTTPS and PostgreSQL).
+
+Running 23 tests using 1 worker
+
+[1/23] tests\persistence\physical-drawing-export.spec.ts:18:1 › saved drawing report retains captured labels and quantities despite newer local changes
+[2/23] tests\persistence\physical-drawing-export.spec.ts:34:1 › logout during a held real drawing response discards the private printable report
+[3/23] tests\persistence\physical-export.spec.ts:73:1 › saved CSV and preview use the authorized immutable revision while newer height edits remain local
+[4/23] tests\persistence\physical-export.spec.ts:95:1 › revocation after preview preparation prevents another saved download and preserves workspace draft recovery
+[5/23] tests\persistence\physical-export.spec.ts:109:1 › logout during a held real export response cancels delivery and removes the previous private preview
+[6/23] tests\persistence\physical-save-guards.spec.ts:18:1 › all visible pending families block Save with field-specific Apply/Revert and preserve committed SQL revision
+[7/23] tests\persistence\physical-save-guards.spec.ts:48:1 › pending room-level assignment blocks Save without changing ownership and offers explicit Revert
+[8/23] tests\persistence\physical-save-guards.spec.ts:56:1 › edits during actual committed save stay unsaved; next revision contains those edits
+[9/23] tests\persistence\physical-save-guards.spec.ts:67:1 › response loss after SQL commit retries same payload and key without creating another plan
+[10/23] tests\persistence\physical-save-guards.spec.ts:81:1 › late SQL Save response after logout cannot repaint prior private revision or modify unassigned draft
+[11/23] tests\persistence\physical-save-guards.spec.ts:91:1 › late Save after switching workspaces cannot acknowledge another draft and both local contexts survive
+[12/23] tests\persistence\physical-save-open.spec.ts:19:1 › real sign-in, explicit schema5 Save/Open and fresh empty browser context retrieve SQL content
+[13/23] tests\persistence\physical-save-open.spec.ts:34:1 › two real browser clients conflict visibly and preserve the candidate while opening latest separately
+  1) tests\persistence\physical-save-open.spec.ts:34:1 › two real browser clients conflict visibly and preserve the candidate while opening latest separately
+
+    Test timeout of 90000ms exceeded.
+
+    Error: page.waitForResponse: Test ended.
+
+      55 |   await savePanel(p).getByRole('button',{name:'Open latest as separate copy',exact:true}).click();await expect(p.getByTestId('physical-save-status')).toHaveText('Saved revision 2');await expect(roomField(p,'Ceiling height')).toHaveValue('9 ft');
+      56 |   await p.getByRole('combobox',{name:'Selected physical draft',exact:true}).selectOption(candidateId);expect(capturePhysicalSaveEnvelope(await selectedPhysical(p))).toEqual(candidate);
+    > 57 |   const create=p.waitForResponse(r=>r.request().method()==='POST'&&new URL(r.url()).pathname==='/api/physical-plans');await savePanel(p).getByRole('button',{name:'Save candidate as new plan',exact:true}).click();const copy=await(await create).json();expect(copy.planId).not.toBe(first.planId);expect(copy.envelope).toEqual(candidate);
+         |                  ^
+      58 |  }finally{await context.close();}
+      59 | });
+      60 |
+        at <isolated-source>\tests\persistence\physical-save-open.spec.ts:57:18
+
+    Error: browserContext.close: Target page, context or browser has been closed
+
+      56 |   await p.getByRole('combobox',{name:'Selected physical draft',exact:true}).selectOption(candidateId);expect(capturePhysicalSaveEnvelope(await selectedPhysical(p))).toEqual(candidate);
+      57 |   const create=p.waitForResponse(r=>r.request().method()==='POST'&&new URL(r.url()).pathname==='/api/physical-plans');await savePanel(p).getByRole('button',{name:'Save candidate as new plan',exact:true}).click();const copy=await(await create).json();expect(copy.planId).not.toBe(first.planId);expect(copy.envelope).toEqual(candidate);
+    > 58 |  }finally{await context.close();}
+         |           ^
+      59 | });
+      60 |
+      61 | test('opening a server plan preserves a different draft with unfinished text and no implicit upload',async({page})=>{
+        at <isolated-source>\tests\persistence\physical-save-open.spec.ts:58:11
+
+    Error Context: test-results-physical\physical-save-open-two-rea-3297b-e-opening-latest-separately\error-context.md
+
+
+[14/23] tests\persistence\physical-save-open.spec.ts:61:1 › opening a server plan preserves a different draft with unfinished text and no implicit upload
+[15/23] tests\persistence\project-lifecycle.spec.ts:44:1 › duplicate uses the listed saved schema5 revision and preserves current unfinished local work
+[16/23] tests\persistence\project-lifecycle.spec.ts:62:1 › archive and restore preserve saved revisions, raw local fields and paused autosave
+[17/23] tests\persistence\project-lifecycle.spec.ts:81:1 › a lost duplicate response retains exact request across same-tab reload and resolves one receipt
+[18/23] tests\persistence\project-lifecycle.spec.ts:103:1 › denied action-intent storage refuses mutation and preserves current local fields
+[19/23] tests\persistence\project-lifecycle.spec.ts:117:1 › late active-list responses cannot replace archived results or reopen a closed list
+[20/23] tests\persistence\project-lifecycle.spec.ts:142:1 › logout during an accepted project action cannot repaint private lists or replace unassigned drafts
+[21/23] tests\persistence\project-lifecycle.spec.ts:157:1 › viewer can open archived projects but cannot mutate them; long names remain usable on a phone
+  2) tests\persistence\project-lifecycle.spec.ts:157:1 › viewer can open archived projects but cannot mutate them; long names remain usable on a phone
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: "recovered"
+    Received: "empty"
+
+       at browser-helpers.ts:52
+
+      50 |  const context = await p.evaluate(() => sessionStorage.getItem('modern-floor-planner:working-context:v1') || 'unassigned');
+      51 |  const value = parseRegistry(await p.evaluate(key=>sessionStorage.getItem(key),currentKey(context)));
+    > 52 |  expect(value.status).toBe('recovered'); if(value.status!=='recovered')throw Error('No supported physical draft');
+         |                       ^
+      53 |  const draft=value.registry.drafts.find(d=>d.id===value.registry.selectedDraftId);expect(draft).toBeTruthy();return draft!;
+      54 | }
+      55 | export const savePanel=(p:Page)=>p.getByRole('region',{name:'Account Save and Open',exact:true});
+        at selectedPhysical (<isolated-source>\tests\persistence\browser-helpers.ts:52:23)
+        at <isolated-source>\tests\persistence\project-lifecycle.spec.ts:174:87
+
+    Error Context: test-results-physical\project-lifecycle-viewer-c-5303e-es-remain-usable-on-a-phone\error-context.md
+
+
+[22/23] tests\persistence\project-lifecycle.spec.ts:181:1 › accepted action with denied receipt cleanup keeps the exact key and retries without duplicating again
+[23/23] tests\persistence\project-lifecycle.spec.ts:200:1 › unsupported action recovery bytes stay intact and block new lifecycle mutations
+  2 failed
+    tests\persistence\physical-save-open.spec.ts:34:1 › two real browser clients conflict visibly and preserve the candidate while opening latest separately
+    tests\persistence\project-lifecycle.spec.ts:157:1 › viewer can open archived projects but cannot mutate them; long names remain usable on a phone
+  21 passed (2.7m)
+file:///C:/Users/aaron/Documents/Codex/2026-09-06/do-we-have-a-local-folder/work/m4c-projects/implementation/scripts/run-physical-tests.mjs:10
+  process_.on('exit', code => code === 0 ? resolve() : reject(new Error(`${label} suite failed`)));
+                                                              ^
+
+Error: physical Save/Open browser suite failed
+    at ChildProcess.<anonymous> (file:///C:/Users/aaron/Documents/Codex/2026-09-06/do-we-have-a-local-folder/work/m4c-projects/implementation/scripts/run-physical-tests.mjs:10:63)
+    at ChildProcess.emit (node:events:524:28)
+    at ChildProcess._handle.onexit (node:internal/child_process:293:12)
+
+Node.js v20.20.2

@@ -1,0 +1,229 @@
+
+> rest-express@1.0.0 test:physical
+> node scripts/run-physical-tests.mjs
+
+Running separate physical persistence HTTP/SQL suite (synthetic HTTPS and PostgreSQL).
+TAP version 13
+# Subtest: normal OIDC/session route creates complete physical revision and authoritative evaluation, distinct from local IDs
+ok 1 - normal OIDC/session route creates complete physical revision and authoritative evaluation, distinct from local IDs
+  ---
+  duration_ms: 1126.4121
+  ...
+# Subtest: second real session and actual application process restart recover the same SQL revision with no local cache
+ok 2 - second real session and actual application process restart recover the same SQL revision with no local cache
+  ---
+  duration_ms: 968.4121
+  ...
+# Subtest: height revision recomputes walls only and old revision stays byte-equivalent canonical content
+ok 3 - height revision recomputes walls only and old revision stays byte-equivalent canonical content
+  ---
+  duration_ms: 292.7004
+  ...
+# Subtest: two real sessions on the same base commit exactly one revision and return412 to the stale writer
+ok 4 - two real sessions on the same base commit exactly one revision and return412 to the stale writer
+  ---
+  duration_ms: 272.3329
+  ...
+# Subtest: lost create response and concurrent identical keys replay one accepted plan, while changed names conflict
+ok 5 - lost create response and concurrent identical keys replay one accepted plan, while changed names conflict
+  ---
+  duration_ms: 203.4078
+  ...
+# Subtest: accepted append retries recover original outcome even after current has advanced, never duplicate revisions
+ok 6 - accepted append retries recover original outcome even after current has advanced, never duplicate revisions
+  ---
+  duration_ms: 290.6303
+  ...
+# Subtest: missing or invalid If-Match missing never inserts a revision
+ok 7 - missing or invalid If-Match missing never inserts a revision
+  ---
+  duration_ms: 139.8382
+  ...
+# Subtest: missing or invalid If-Match * never inserts a revision
+ok 8 - missing or invalid If-Match * never inserts a revision
+  ---
+  duration_ms: 121.6142
+  ...
+# Subtest: missing or invalid If-Match W/"anything" never inserts a revision
+ok 9 - missing or invalid If-Match W/"anything" never inserts a revision
+  ---
+  duration_ms: 126.5089
+  ...
+# Subtest: missing or invalid If-Match "not-a-revision" never inserts a revision
+ok 10 - missing or invalid If-Match "not-a-revision" never inserts a revision
+  ---
+  duration_ms: 123.1725
+  ...
+# Subtest: two workspaces cannot list, read, revise or replay each other’s private records
+ok 11 - two workspaces cannot list, read, revise or replay each other’s private records
+  ---
+  duration_ms: 187.0394
+  ...
+# Subtest: viewer can read but cannot save; revoked access cannot replay an old successful receipt
+ok 12 - viewer can read but cannot save; revoked access cannot replay an old successful receipt
+  ---
+  duration_ms: 158.6165
+  ...
+# Subtest: exact Origin, request marker and context are enforced before physical mutations
+ok 13 - exact Origin, request marker and context are enforced before physical mutations
+  ---
+  duration_ms: 57.6113
+  ...
+# Subtest: supported unknown measurements save without fabricated complete quantities
+ok 14 - supported unknown measurements save without fabricated complete quantities
+  ---
+  duration_ms: 103.9918
+  ...
+# Subtest: malformed, forged output, unsupported, invalid references and unbounded bodies fail without SQL mutations
+ok 15 - malformed, forged output, unsupported, invalid references and unbounded bodies fail without SQL mutations
+  ---
+  duration_ms: 118.8513
+  ...
+# Subtest: bounded pagination returns accessible summaries only and rejects unsupported controls
+ok 16 - bounded pagination returns accessible summaries only and rejects unsupported controls
+  ---
+  duration_ms: 188.9531
+  ...
+# Subtest: legacy authorized API remains separate and does not accept physical envelope or claim unowned records
+ok 17 - legacy authorized API remains separate and does not accept physical envelope or claim unowned records
+  ---
+  duration_ms: 67.4612
+  ...
+# Subtest: rich schema5 with stairs,landings,holes,zones,cabinets,appearance and evidence round trips through SQL without changing quantities
+ok 18 - rich schema5 with stairs,landings,holes,zones,cabinets,appearance and evidence round trips through SQL without changing quantities
+  ---
+  duration_ms: 658.1598
+  ...
+# Subtest: saved exports retain exact captured quantities and bytes after a newer server revision exists
+ok 19 - saved exports retain exact captured quantities and bytes after a newer server revision exists
+  ---
+  duration_ms: 229.2559
+  ...
+# Subtest: viewer downloads are read-only and a later membership revocation denies another download
+ok 20 - viewer downloads are read-only and a later membership revocation denies another download
+  ---
+  duration_ms: 196.8458
+  ...
+# Subtest: foreign and mismatched plan/revision identifiers never reveal an export even when IDs are known
+ok 21 - foreign and mismatched plan/revision identifiers never reveal an export even when IDs are known
+  ---
+  duration_ms: 247.2252
+  ...
+# Subtest: export rechecks current session/context and never accepts a naked link or a logged-out cookie
+ok 22 - export rechecks current session/context and never accepts a naked link or a logged-out cookie
+  ---
+  duration_ms: 123.8936
+  ...
+# Subtest: export denies server-expired idle_expires_at even with retained session headers
+ok 23 - export denies server-expired idle_expires_at even with retained session headers
+  ---
+  duration_ms: 100.1162
+  ...
+# Subtest: export denies server-expired absolute_expires_at even with retained session headers
+ok 24 - export denies server-expired absolute_expires_at even with retained session headers
+  ---
+  duration_ms: 100.8758
+  ...
+# Subtest: export rejects missing, repeated and unsupported format/unit controls instead of falling through to HTML
+ok 25 - export rejects missing, repeated and unsupported format/unit controls instead of falling through to HTML
+  ---
+  duration_ms: 121.4613
+  ...
+# Subtest: saved export neutralizes formula labels and escapes executable markup without changing the source
+ok 26 - saved export neutralizes formula labels and escapes executable markup without changing the source
+  ---
+  duration_ms: 112.5947
+  ...
+# Subtest: saved unknown ceiling height exports explicit incompleteness without replacing wall totals with zero
+ok 27 - saved unknown ceiling height exports explicit incompleteness without replacing wall totals with zero
+  ---
+  duration_ms: 95.5236
+  ...
+# Subtest: saved schematic sheets use exact captured levels and geometry after later server edits
+ok 28 - saved schematic sheets use exact captured levels and geometry after later server edits
+  ---
+  duration_ms: 768.6496
+  ...
+# Subtest: schematic labels remain inert markup and invalid print controls fail closed
+ok 29 - schematic labels remain inert markup and invalid print controls fail closed
+  ---
+  duration_ms: 113.8457
+  ...
+# Subtest: project duplicate preserves rich captured evidence and quantities while later copy edits are independent
+ok 30 - project duplicate preserves rich captured evidence and quantities while later copy edits are independent
+  ---
+  duration_ms: 813.2859
+  ...
+# Subtest: archive retains saved captures and accepted receipt replay while rejecting fresh appends; restore changes only lifecycle metadata
+ok 31 - archive retains saved captures and accepted receipt replay while rejecting fresh appends; restore changes only lifecycle metadata
+  ---
+  duration_ms: 310.8321
+  ...
+# Subtest: concurrent identical lifecycle retries produce one duplicate and old archive receipts cannot reapply after restore
+ok 32 - concurrent identical lifecycle retries produce one duplicate and old archive receipts cannot reapply after restore
+  ---
+  duration_ms: 154.8499
+  ...
+# Subtest: lifecycle preconditions reject stale saved heads and archive-restore ABA without touching physical history
+ok 33 - lifecycle preconditions reject stale saved heads and archive-restore ABA without touching physical history
+  ---
+  duration_ms: 200.6443
+  ...
+# Subtest: project routes validate exact preconditions, bodies, filters and query shapes before writes
+ok 34 - project routes validate exact preconditions, bodies, filters and query shapes before writes
+  ---
+  duration_ms: 135.5863
+  ...
+# Subtest: project lifecycle is denied to viewers, foreign workspaces, stale sessions and untrusted origins
+ok 35 - project lifecycle is denied to viewers, foreign workspaces, stale sessions and untrusted origins
+  ---
+  duration_ms: 182.4809
+  ...
+# Subtest: archive and append race resolves against one locked project head without hidden writes
+ok 36 - archive and append race resolves against one locked project head without hidden writes
+  ---
+  duration_ms: 171.776
+  ...
+# Subtest: active and archived pagination remain separate and duplication of a copy retains original capture provenance
+ok 37 - active and archived pagination remain separate and duplication of a copy retains original capture provenance
+  ---
+  duration_ms: 139.3016
+  ...
+1..37
+# tests 37
+# suites 0
+# pass 37
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 9934.0938
+Running separate physical Save/Open browser suite (synthetic HTTPS and PostgreSQL).
+
+Running 24 tests using 1 worker
+
+[1/24] tests\persistence\physical-drawing-export.spec.ts:18:1 › saved drawing report retains captured labels and quantities despite newer local changes
+[2/24] tests\persistence\physical-drawing-export.spec.ts:34:1 › logout during a held real drawing response discards the private printable report
+[3/24] tests\persistence\physical-export.spec.ts:73:1 › saved CSV and preview use the authorized immutable revision while newer height edits remain local
+[4/24] tests\persistence\physical-export.spec.ts:95:1 › revocation after preview preparation prevents another saved download and preserves workspace draft recovery
+[5/24] tests\persistence\physical-export.spec.ts:109:1 › logout during a held real export response cancels delivery and removes the previous private preview
+[6/24] tests\persistence\physical-save-guards.spec.ts:18:1 › all visible pending families block Save with field-specific Apply/Revert and preserve committed SQL revision
+[7/24] tests\persistence\physical-save-guards.spec.ts:48:1 › pending room-level assignment blocks Save without changing ownership and offers explicit Revert
+[8/24] tests\persistence\physical-save-guards.spec.ts:56:1 › edits during actual committed save stay unsaved; next revision contains those edits
+[9/24] tests\persistence\physical-save-guards.spec.ts:67:1 › response loss after SQL commit retries same payload and key without creating another plan
+[10/24] tests\persistence\physical-save-guards.spec.ts:81:1 › late SQL Save response after logout cannot repaint prior private revision or modify unassigned draft
+[11/24] tests\persistence\physical-save-guards.spec.ts:91:1 › late Save after switching workspaces cannot acknowledge another draft and both local contexts survive
+[12/24] tests\persistence\physical-save-open.spec.ts:19:1 › real sign-in, explicit schema5 Save/Open and fresh empty browser context retrieve SQL content
+[13/24] tests\persistence\physical-save-open.spec.ts:34:1 › two real browser clients conflict visibly and preserve the candidate while opening latest separately
+[14/24] tests\persistence\physical-save-open.spec.ts:61:1 › opening a server plan preserves a different draft with unfinished text and no implicit upload
+[15/24] tests\persistence\project-lifecycle.spec.ts:44:1 › duplicate uses the listed saved schema5 revision and preserves current unfinished local work
+[16/24] tests\persistence\project-lifecycle.spec.ts:62:1 › archive and restore preserve saved revisions, raw local fields and paused autosave
+[17/24] tests\persistence\project-lifecycle.spec.ts:81:1 › a lost duplicate response retains exact request across same-tab reload and resolves one receipt
+[18/24] tests\persistence\project-lifecycle.spec.ts:103:1 › denied action-intent storage refuses mutation and preserves current local fields
+[19/24] tests\persistence\project-lifecycle.spec.ts:117:1 › late active-list responses cannot replace archived results or reopen a closed list
+[20/24] tests\persistence\project-lifecycle.spec.ts:142:1 › logout during an accepted project action cannot repaint private lists or replace unassigned drafts
+[21/24] tests\persistence\project-lifecycle.spec.ts:157:1 › viewer can open archived projects but cannot mutate them; long names remain usable on a phone
+[22/24] tests\persistence\project-lifecycle.spec.ts:182:1 › accepted action with denied receipt cleanup keeps the exact key and retries without duplicating again
+[23/24] tests\persistence\project-lifecycle.spec.ts:201:1 › unsupported action recovery bytes stay intact and block new lifecycle mutations
+[24/24] tests\persistence\project-lifecycle.spec.ts:214:1 › a restore accepted after closing the project list updates archived status without replacing local work
+  24 passed (1.2m)

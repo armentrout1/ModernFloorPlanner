@@ -1,0 +1,33 @@
+{
+  "status": "PRODUCER_VERIFIED locally; NOT DEPLOYED",
+  "scope": "Synthetic data and fresh isolated contexts only; no owner tabs or live credentials",
+  "files": {
+    "canonical-build.log": "027f719ccb9d9bcc70cdd4f2507887ee365a7ccd5ea1c029e0eef6cc149759b0",
+    "canonical-lifecycle-smoke.json": "9acd4b11ce64d98a3839851c859a85f202c7fe4b994f7c2a4b8f29cc22ac0f84",
+    "canonical-lifecycle-smoke.log": "4803198c4e5c2b12e49ffb2a8fe4b9aed35a27f0d7680835f93b4d1f9e1f7c52",
+    "committed-source.json": "ea3d29f21d45097ca288349e73c4114c388c451c93fc7cca0f8f1903beedacdb",
+    "final-accounts-db.log": "8a59588900fe338b1d1eaf9d9e200a0b4aa57f0d8bbcfd523bcf2ffacefd6264",
+    "final-accounts.log": "e55ee0f96b3e7da3acd6478849532cbb759bd34e1fa7400081aab6080ede28a3",
+    "final-authorization-db.log": "672129fe3234f981163acde72379b6baaf2b2d17d0d53754fc837475df76c522",
+    "final-autosave.log": "8a6b7637168f0540efe583775ecc19800b8df431b26708f95fd7d08e3d9dbd88",
+    "final-browser.log": "66cea00fe0b13a175cab9f5df07823816ed3819f5797c982e65820d25b389d1c",
+    "final-build.log": "5aad7218c04d5219852c29bfa6359745495cc9e699ccfac1ad9a1a09363e64c6",
+    "final-checks.json": "b5d3830fc2cb1fd2a1648f17737b3c0551b1a0db8ab105c6d40db9c169bb9096",
+    "final-install.log": "fee546e0140675532c254ec45bc411b1a6f02cac841a0e826cb5be92c5341f08",
+    "final-journal.log": "d70993b59d585376077dfc2617b4aa72cb5b09310d8b0b609b50d3db070c4bd1",
+    "final-physical-db.log": "c509f6f3b75304dad220b8c36a59980e911fed616df093c17389939ebb03c829",
+    "final-physical.log": "ed903e42ce4bbbb05f0f685ff8ae2ccddbb05202bbe96c045b2f55ab48dfceef",
+    "final-source.json": "4b10d6ddaf4fdbae30a4359b8a6420703f723c7a022b0744c6fead3d7d4e35ea",
+    "final-typecheck.log": "629fc9de154e3108c85ac98c515d6bd33adb7a7b10bfe62f3476253db0bce9a9",
+    "final-unit.log": "d8d753377490bbb42fa8dee40d01c0c9490adfa0e6c44cc33917baa36f99f404",
+    "implementation-files.json": "eacd7ec01943f479c6410da226d303d338a85b95ca4e60eac16e55ccc3df2f33",
+    "integrated-build.json": "61bb57927a3ec654d31f3d487ac4ae0741e7419bbe9ccb8055e3e272f7e438d6",
+    "normal-review-smoke.json": "9b302b4aa2379aa138b9f2645d3d5f57b07dc1796b2e09bc028de97d259563ef",
+    "normal-review-unavailable.png": "a5db4b4d565732b862a9841c5443f3ebe307347d8ef5bb9b42360a4a2a39925a",
+    "projects-active-copy.png": "f100294432c4ad39fec76e50cf5c0b7f5395a08003814112268db014bd7eec99",
+    "projects-phone-archived-viewer.png": "c464edb8ae7a4781803cf3ad39ca8b3dfe222b73191a33e9afdaf74dfde460ad",
+    "targeted-physical-browser.log": "39c6c9c2e6d936ea0e8c52c185bb8d0d32cf5796c58ee51e77887adf175ff494",
+    "tested-build.json": "f3d0b85d8c4fc2690d832a745d4868feda4094df57bfcfedecd5d7fac80f8836",
+    "verification-summary.json": "bfbf0b9991c65e928683827e36db20630a09cd4c206d747bd59b534432abb7a9"
+  }
+}

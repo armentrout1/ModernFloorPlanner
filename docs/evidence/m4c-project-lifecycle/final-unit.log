@@ -1,0 +1,3454 @@
+
+> rest-express@1.0.0 test
+> node scripts/run-tests.mjs
+
+TAP version 13
+# Subtest: server-saved records cannot be fetched into an unassigned local context
+ok 1 - server-saved records cannot be fetched into an unassigned local context
+  ---
+  duration_ms: 24.6109
+  ...
+# Subtest: a protected operation binds both workspace and the noncredential session epoch
+ok 2 - a protected operation binds both workspace and the noncredential session epoch
+  ---
+  duration_ms: 2.256
+  ...
+# Subtest: a multi-step save cannot use a fresh cookie to finish a previous account operation
+ok 3 - a multi-step save cannot use a fresh cookie to finish a previous account operation
+  ---
+  duration_ms: 1.6186
+  ...
+# Subtest: a response body resolving after an account change cannot become a private record
+ok 4 - a response body resolving after an account change cannot become a private record
+  ---
+  duration_ms: 2.0068
+  ...
+# Subtest: invalidation supersedes an in-flight session read without leaving the account permanently checking
+ok 5 - invalidation supersedes an in-flight session read without leaving the account permanently checking
+  ---
+  duration_ms: 1.6274
+  ...
+# Subtest: an account button initiated as A never performs the action after preflight discovers B
+ok 6 - an account button initiated as A never performs the action after preflight discovers B
+  ---
+  duration_ms: 0.889
+  ...
+# Subtest: same-identity revalidation resumes only the context suspended in this page
+ok 7 - same-identity revalidation resumes only the context suspended in this page
+  ---
+  duration_ms: 1.1869
+  ...
+# Subtest: failed local checkpoint retains memory and original bytes without clearing another draft
+ok 8 - failed local checkpoint retains memory and original bytes without clearing another draft
+  ---
+  duration_ms: 1.5089
+  ...
+# Subtest: context storage cannot silently read the unassigned draft or a different principal workspace
+ok 9 - context storage cannot silently read the unassigned draft or a different principal workspace
+  ---
+  duration_ms: 0.8133
+  ...
+# Subtest: a protected action waiting for revalidation cannot acquire a newly resumed context
+ok 10 - a protected action waiting for revalidation cannot acquire a newly resumed context
+  ---
+  duration_ms: 0.7958
+  ...
+# Subtest: a checkpoint after an initially denied storage read cannot mask an unread older recovery key
+ok 11 - a checkpoint after an initially denied storage read cannot mask an unread older recovery key
+  ---
+  duration_ms: 0.8455
+  ...
+# Subtest: a quota-only failure after validated hydration can checkpoint the exact retained draft when storage recovers
+ok 12 - a quota-only failure after validated hydration can checkpoint the exact retained draft when storage recovers
+  ---
+  duration_ms: 10.4529
+  ...
+# Subtest: OIDC configuration requires every trusted server binding and never uses ambient identity hints
+ok 13 - OIDC configuration requires every trusted server binding and never uses ambient identity hints
+  ---
+  duration_ms: 2.3023
+  ...
+# Subtest: OIDC configuration rejects insecure URLs, dynamic discovery, redirects and invalid credentials
+ok 14 - OIDC configuration rejects insecure URLs, dynamic discovery, redirects and invalid credentials
+  ---
+  duration_ms: 0.7585
+  ...
+# Subtest: confidential client methods require an explicit secret and retain exact issuer/subject trust
+ok 15 - confidential client methods require an explicit secret and retain exact issuer/subject trust
+  ---
+  duration_ms: 0.2212
+  ...
+# Subtest: OIDC return targets are a fixed application route allowlist
+ok 16 - OIDC return targets are a fixed application route allowlist
+  ---
+  duration_ms: 0.1776
+  ...
+# Subtest: door hand follows back-to-hinge facing-latch convention and encodes losslessly
+ok 17 - door hand follows back-to-hinge facing-latch convention and encodes losslessly
+  ---
+  duration_ms: 0.7887
+  ...
+# Subtest: reversing swing keeps the stored hinge while displayed hand changes
+ok 18 - reversing swing keeps the stored hinge while displayed hand changes
+  ---
+  duration_ms: 0.1654
+  ...
+# Subtest: top wall preserves saved opening bar, swing origin and rotation
+ok 19 - top wall preserves saved opening bar, swing origin and rotation
+  ---
+  duration_ms: 0.7111
+  ...
+# Subtest: right wall preserves saved opening bar, swing origin and rotation
+ok 20 - right wall preserves saved opening bar, swing origin and rotation
+  ---
+  duration_ms: 0.1058
+  ...
+# Subtest: bottom wall preserves saved opening bar, swing origin and rotation
+ok 21 - bottom wall preserves saved opening bar, swing origin and rotation
+  ---
+  duration_ms: 0.0942
+  ...
+# Subtest: left wall preserves saved opening bar, swing origin and rotation
+ok 22 - left wall preserves saved opening bar, swing origin and rotation
+  ---
+  duration_ms: 0.0809
+  ...
+# Subtest: stored right / inward keeps the leaf and closes only its actual quarter-circle sector
+ok 23 - stored right / inward keeps the leaf and closes only its actual quarter-circle sector
+  ---
+  duration_ms: 0.2187
+  ...
+# Subtest: stored right / outward keeps the leaf and closes only its actual quarter-circle sector
+ok 24 - stored right / outward keeps the leaf and closes only its actual quarter-circle sector
+  ---
+  duration_ms: 0.213
+  ...
+# Subtest: stored left / inward keeps the leaf and closes only its actual quarter-circle sector
+ok 25 - stored left / inward keeps the leaf and closes only its actual quarter-circle sector
+  ---
+  duration_ms: 0.214
+  ...
+# Subtest: stored left / outward keeps the leaf and closes only its actual quarter-circle sector
+ok 26 - stored left / outward keeps the leaf and closes only its actual quarter-circle sector
+  ---
+  duration_ms: 0.2085
+  ...
+# Subtest: top wall puts both hinges and open leaves on the correct physical sides
+ok 27 - top wall puts both hinges and open leaves on the correct physical sides
+  ---
+  duration_ms: 0.3749
+  ...
+# Subtest: right wall puts both hinges and open leaves on the correct physical sides
+ok 28 - right wall puts both hinges and open leaves on the correct physical sides
+  ---
+  duration_ms: 0.3005
+  ...
+# Subtest: bottom wall puts both hinges and open leaves on the correct physical sides
+ok 29 - bottom wall puts both hinges and open leaves on the correct physical sides
+  ---
+  duration_ms: 0.2273
+  ...
+# Subtest: left wall puts both hinges and open leaves on the correct physical sides
+ok 30 - left wall puts both hinges and open leaves on the correct physical sides
+  ---
+  duration_ms: 0.202
+  ...
+# Subtest: legacy doors keep the historical 40-pixel bar and 60-pixel swing without adding metadata
+ok 31 - legacy doors keep the historical 40-pixel bar and 60-pixel swing without adding metadata
+  ---
+  duration_ms: 0.3008
+  ...
+# Subtest: fractional explicit widths control geometry without normalizing saved size, position or metadata
+ok 32 - fractional explicit widths control geometry without normalizing saved size, position or metadata
+  ---
+  duration_ms: 0.2521
+  ...
+# Subtest: all existing door styles retain the same stored geometry and style metadata
+ok 33 - all existing door styles retain the same stored geometry and style metadata
+  ---
+  duration_ms: 0.2018
+  ...
+# Subtest: default door properties are fresh objects so previews cannot mutate later doors
+ok 34 - default door properties are fresh objects so previews cannot mutate later doors
+  ---
+  duration_ms: 0.2403
+  ...
+# Subtest: opening wins over its selected parent; undo restores every property and leaves later edits
+ok 35 - opening wins over its selected parent; undo restores every property and leaves later edits
+  ---
+  duration_ms: 2.7005
+  ...
+# Subtest: room recovery restores original ordering and all nested openings without replacing other edits
+ok 36 - room recovery restores original ordering and all nested openings without replacing other edits
+  ---
+  duration_ms: 0.2354
+  ...
+# Subtest: stale opening selection cannot fall through to deleting a room
+ok 37 - stale opening selection cannot fall through to deleting a room
+  ---
+  duration_ms: 0.262
+  ...
+# Subtest: Q-001 is fully specified, non-overlapping geometry without calculating totals
+ok 38 - Q-001 is fully specified, non-overlapping geometry without calculating totals
+  ---
+  duration_ms: 10.3673
+  ...
+# Subtest: top uses clockwise center and the correct axis at noncentral/tolerance bounds
+ok 39 - top uses clockwise center and the correct axis at noncentral/tolerance bounds
+  ---
+  duration_ms: 8.1647
+  ...
+# Subtest: right uses clockwise center and the correct axis at noncentral/tolerance bounds
+ok 40 - right uses clockwise center and the correct axis at noncentral/tolerance bounds
+  ---
+  duration_ms: 5.3543
+  ...
+# Subtest: bottom uses clockwise center and the correct axis at noncentral/tolerance bounds
+ok 41 - bottom uses clockwise center and the correct axis at noncentral/tolerance bounds
+  ---
+  duration_ms: 5.0308
+  ...
+# Subtest: left uses clockwise center and the correct axis at noncentral/tolerance bounds
+ok 42 - left uses clockwise center and the correct axis at noncentral/tolerance bounds
+  ---
+  duration_ms: 22.9742
+  ...
+# Subtest: opening top at ceiling, inside tolerance and outside tolerance
+ok 43 - opening top at ceiling, inside tolerance and outside tolerance
+  ---
+  duration_ms: 2.5558
+  ...
+# Subtest: zero, missing and negative sill remain distinct
+ok 44 - zero, missing and negative sill remain distinct
+  ---
+  duration_ms: 5.0318
+  ...
+# Subtest: explicit floor-level opening requires zero sill within tolerance
+ok 45 - explicit floor-level opening requires zero sill within tolerance
+  ---
+  duration_ms: 2.9139
+  ...
+# Subtest: actual overlap requires horizontal AND vertical intersection
+ok 46 - actual overlap requires horizontal AND vertical intersection
+  ---
+  duration_ms: 3.7679
+  ...
+# Subtest: horizontal touching and overlap tolerance boundaries
+ok 47 - horizontal touching and overlap tolerance boundaries
+  ---
+  duration_ms: 2.9211
+  ...
+# Subtest: vertical touching and overlap tolerance boundaries
+ok 48 - vertical touching and overlap tolerance boundaries
+  ---
+  duration_ms: 3.1622
+  ...
+# Subtest: missing or unresolved extents yield undetermined fit and overlap
+ok 49 - missing or unresolved extents yield undetermined fit and overlap
+  ---
+  duration_ms: 3.5732
+  ...
+# Subtest: shared opening validates each room independently without layout adjacency
+ok 50 - shared opening validates each room independently without layout adjacency
+  ---
+  duration_ms: 3.2874
+  ...
+# Subtest: two faces of the same room are an unsupported shared relationship
+ok 51 - two faces of the same room are an unsupported shared relationship
+  ---
+  duration_ms: 1.3931
+  ...
+# Subtest: resize recomputes geometry without moving openings or changing evidence
+ok 52 - resize recomputes geometry without moving openings or changing evidence
+  ---
+  duration_ms: 2.2521
+  ...
+# Subtest: structural invalid dimensions, references and duplicate attachments are findings
+ok 53 - structural invalid dimensions, references and duplicate attachments are findings
+  ---
+  duration_ms: 18.5788
+  ...
+# Subtest: malformed attachments return diagnostics rather than throwing
+ok 54 - malformed attachments return diagnostics rather than throwing
+  ---
+  duration_ms: 2.2544
+  ...
+# Subtest: nonfinite derived horizontal/vertical extents cannot pass
+ok 55 - nonfinite derived horizontal/vertical extents cannot pass
+  ---
+  duration_ms: 2.7572
+  ...
+# Subtest: legacy out-of-bounds and unknown measurements remain preserved and v2 reprocessable
+ok 56 - legacy out-of-bounds and unknown measurements remain preserved and v2 reprocessable
+  ---
+  duration_ms: 4.0085
+  ...
+# Subtest: validation of frozen input is deterministic and separate from confirmation
+ok 57 - validation of frozen input is deterministic and separate from confirmation
+  ---
+  duration_ms: 2.2233
+  ...
+# Subtest: small-coordinate horizontal and vertical overlap honor the exact 0.01mm boundary
+ok 58 - small-coordinate horizontal and vertical overlap honor the exact 0.01mm boundary
+  ---
+  duration_ms: 7.6165
+  ...
+# Subtest: mutating a report cannot change later validation scopes or the document
+ok 59 - mutating a report cannot change later validation scopes or the document
+  ---
+  duration_ms: 1.8736
+  ...
+# Subtest: small-coordinate start bounds honor exact tolerance on every wall orientation
+ok 60 - small-coordinate start bounds honor exact tolerance on every wall orientation
+  ---
+  duration_ms: 19.0506
+  ...
+# Subtest: legacy POST, GET, partial rename, geometry update and delete round-trip without normalization
+ok 61 - legacy POST, GET, partial rename, geometry update and delete round-trip without normalization
+  ---
+  duration_ms: 161.9671
+  ...
+# Subtest: empty sketches and legacy date strings remain supported
+ok 62 - empty sketches and legacy date strings remain supported
+  ---
+  duration_ms: 10.7636
+  ...
+# Subtest: invalid nested creates and updates never reach storage or mutate saved sketches
+ok 63 - invalid nested creates and updates never reach storage or mutate saved sketches
+  ---
+  duration_ms: 147.1995
+  ...
+# Subtest: NaN and infinity are rejected by the adapter and overflowing JSON numbers by HTTP routes
+ok 64 - NaN and infinity are rejected by the adapter and overflowing JSON numbers by HTTP routes
+  ---
+  duration_ms: 13.8017
+  ...
+# Subtest: malformed route IDs cannot read, update or delete a different plan
+ok 65 - malformed route IDs cannot read, update or delete a different plan
+  ---
+  duration_ms: 31.7063
+  ...
+# Subtest: storage failures report retryable server failure without exposing internals or losing existing data
+ok 66 - storage failures report retryable server failure without exposing internals or losing existing data
+  ---
+  duration_ms: 11.9313
+  ...
+# Subtest: malformed JSON and oversized bodies do not write, expose input or stop the service
+ok 67 - malformed JSON and oversized bodies do not write, expose input or stop the service
+  ---
+  duration_ms: 22.7615
+  ...
+# Subtest: unexpected middleware errors return a generic response and the service continues
+ok 68 - unexpected middleware errors return a generic response and the service continues
+  ---
+  duration_ms: 8.6814
+  ...
+# Subtest: legacy 240 by 200 pixels converts to 12 by 10 feet independently of ceiling height
+ok 69 - legacy 240 by 200 pixels converts to 12 by 10 feet independently of ceiling height
+  ---
+  duration_ms: 14.2826
+  ...
+# Subtest: entered 32-inch door uses inches and imported provenance stays unconfirmed
+ok 70 - entered 32-inch door uses inches and imported provenance stays unconfirmed
+  ---
+  duration_ms: 3.4739
+  ...
+# Subtest: missing opening heights and all unrecorded sills remain unknown
+ok 71 - missing opening heights and all unrecorded sills remain unknown
+  ---
+  duration_ms: 4.8618
+  ...
+# Subtest: conflicting widths yield review candidates without selecting or mutating a width
+ok 72 - conflicting widths yield review candidates without selecting or mutating a width
+  ---
+  duration_ms: 4.3572
+  ...
+# Subtest: clockwise physical center preserves legacy top wall position and width
+ok 73 - clockwise physical center preserves legacy top wall position and width
+  ---
+  duration_ms: 3.0925
+  ...
+# Subtest: clockwise physical center preserves legacy right wall position and width
+ok 74 - clockwise physical center preserves legacy right wall position and width
+  ---
+  duration_ms: 3.7659
+  ...
+# Subtest: clockwise physical center preserves legacy bottom wall position and width
+ok 75 - clockwise physical center preserves legacy bottom wall position and width
+  ---
+  duration_ms: 1.8656
+  ...
+# Subtest: clockwise physical center preserves legacy left wall position and width
+ok 76 - clockwise physical center preserves legacy left wall position and width
+  ---
+  duration_ms: 1.9529
+  ...
+# Subtest: legacy corner positions are preserved without clamping or rejecting old sketches
+ok 77 - legacy corner positions are preserved without clamping or rejecting old sketches
+  ---
+  duration_ms: 7.5055
+  ...
+# Subtest: IDs, ordering, names, metadata, all styles and both swings survive
+ok 78 - IDs, ordering, names, metadata, all styles and both swings survive
+  ---
+  duration_ms: 3.9894
+  ...
+# Subtest: original and output metadata are detached from input and from each other
+ok 79 - original and output metadata are detached from input and from each other
+  ---
+  duration_ms: 1.9391
+  ...
+# Subtest: own __proto__ JSON keys survive every legacy metadata level without prototype pollution
+ok 80 - own __proto__ JSON keys survive every legacy metadata level without prototype pollution
+  ---
+  duration_ms: 1.5225
+  ...
+# Subtest: older doors without properties retain size basis and flag renderer fallbacks
+ok 81 - older doors without properties retain size basis and flag renderer fallbacks
+  ---
+  duration_ms: 0.7178
+  ...
+# Subtest: v2 reruns retain edited physical values, zero sill, IDs and review state without rescaling
+ok 82 - v2 reruns retain edited physical values, zero sill, IDs and review state without rescaling
+  ---
+  duration_ms: 6.9448
+  ...
+# Subtest: version dispatch supports unversioned/1 and explicitly rejects unknown versions
+ok 83 - version dispatch supports unversioned/1 and explicitly rejects unknown versions
+  ---
+  duration_ms: 3.3323
+  ...
+# Subtest: non-JSON, malformed legacy input and overflow return explicit invalid results
+ok 84 - non-JSON, malformed legacy input and overflow return explicit invalid results
+  ---
+  duration_ms: 2.8908
+  ...
+# Subtest: v2 structural schemas reject invalid IDs, wall order and attachment references
+ok 85 - v2 structural schemas reject invalid IDs, wall order and attachment references
+  ---
+  duration_ms: 40.5174
+  ...
+# Subtest: wall IDs are deterministic, distinct and do not collide with preserved IDs
+ok 86 - wall IDs are deterministic, distinct and do not collide with preserved IDs
+  ---
+  duration_ms: 7.1158
+  ...
+# Subtest: viewport zoom/pan metadata does not affect physical conversion
+ok 87 - viewport zoom/pan metadata does not affect physical conversion
+  ---
+  duration_ms: 6.4948
+  ...
+# Subtest: conversion quantity comparison reuses the verified M1 calculator
+ok 88 - conversion quantity comparison reuses the verified M1 calculator
+  ---
+  duration_ms: 2.0437
+  ...
+# Subtest: JSON depth limits cannot produce a v2 document that fails on reprocessing
+ok 89 - JSON depth limits cannot produce a v2 document that fails on reprocessing
+  ---
+  duration_ms: 1.4953
+  ...
+# Subtest: M3B frozen v1 calculation and captured snapshot remain byte/content identical and verifiable
+ok 90 - M3B frozen v1 calculation and captured snapshot remain byte/content identical and verifiable
+  ---
+  duration_ms: 197.9231
+  ...
+# Subtest: M3B exact 12 by 10 ceiling-height acceptance keeps independent 120 square-foot surfaces
+ok 91 - M3B exact 12 by 10 ceiling-height acceptance keeps independent 120 square-foot surfaces
+  ---
+  duration_ms: 49.7108
+  ...
+# Subtest: M3B proposed supported models keep dependent outputs provisional even with confirmed measurements
+ok 92 - M3B proposed supported models keep dependent outputs provisional even with confirmed measurements
+  ---
+  duration_ms: 19.3416
+  ...
+# Subtest: M3B unknown imported applicability blocks only dependent work and names exact room/profile paths
+ok 93 - M3B unknown imported applicability blocks only dependent work and names exact room/profile paths
+  ---
+  duration_ms: 11.4188
+  ...
+# Subtest: M3B unsupported ceiling never reuses projected floor area and preserves independent supported walls/casing
+ok 94 - M3B unsupported ceiling never reuses projected floor area and preserves independent supported walls/casing
+  ---
+  duration_ms: 10.3747
+  ...
+# Subtest: M3B nonuniform walls block walls/casing and full-height crown gaps, not ordinary crown/floor runs
+ok 95 - M3B nonuniform walls block walls/casing and full-height crown gaps, not ordinary crown/floor runs
+  ---
+  duration_ms: 118.5671
+  ...
+# Subtest: M3B crown-path declaration is independent of ceiling and wall applicability
+ok 96 - M3B crown-path declaration is independent of ceiling and wall applicability
+  ---
+  duration_ms: 50.2064
+  ...
+# Subtest: M3B partial selected totals expose unsupported rooms and retain provisional included subtotal
+ok 97 - M3B partial selected totals expose unsupported rooms and retain provisional included subtotal
+  ---
+  duration_ms: 2.366
+  ...
+# Subtest: M3B applicability and group contracts validate exact room ownership without inferring topology
+ok 98 - M3B applicability and group contracts validate exact room ownership without inferring topology
+  ---
+  duration_ms: 7.1137
+  ...
+# Subtest: M3B special own room IDs retain typed applicability and prototype safety
+ok 99 - M3B special own room IDs retain typed applicability and prototype safety
+  ---
+  duration_ms: 8.8057
+  ...
+# Subtest: M3B policy dispatch rejects missing, mismatched and downgrade attempts without source rewrites
+ok 100 - M3B policy dispatch rejects missing, mismatched and downgrade attempts without source rewrites
+  ---
+  duration_ms: 20.7844
+  ...
+# Subtest: M3B applicability readiness is detached and frozen engine results cannot mutate source declarations
+ok 101 - M3B applicability readiness is detached and frozen engine results cannot mutate source declarations
+  ---
+  duration_ms: 15.712
+  ...
+# Subtest: M3B fingerprints bind applicability values to geometry and declaration evidence only to content
+ok 102 - M3B fingerprints bind applicability values to geometry and declaration evidence only to content
+  ---
+  duration_ms: 143.644
+  ...
+# Subtest: M3B v2 snapshot confirmation gate, version agreement and independent integrity verification
+ok 103 - M3B v2 snapshot confirmation gate, version agreement and independent integrity verification
+  ---
+  duration_ms: 384.2912
+  ...
+# Subtest: M3B shared openings use only the selected attachment wall applicability
+ok 104 - M3B shared openings use only the selected attachment wall applicability
+  ---
+  duration_ms: 20.5774
+  ...
+# Subtest: legacy-pixels-v2 retains original bytes, IDs, groups, style/hinge and promotes only recorded window height
+ok 105 - legacy-pixels-v2 retains original bytes, IDs, groups, style/hinge and promotes only recorded window height
+  ---
+  duration_ms: 15.906
+  ...
+# Subtest: legacy v2 preserves width conflicts and clockwise non-midpoint bottom/left positions without altering v1
+ok 106 - legacy v2 preserves width conflicts and clockwise non-midpoint bottom/left positions without altering v1
+  ---
+  duration_ms: 7.7933
+  ...
+# Subtest: unsupported or invalid import is rejected instead of partially edited
+ok 107 - unsupported or invalid import is rejected instead of partially edited
+  ---
+  duration_ms: 16.215
+  ...
+# Subtest: captured-v2 upgrade preserves current physical data and never reinterprets compatibility originals
+ok 108 - captured-v2 upgrade preserves current physical data and never reinterprets compatibility originals
+  ---
+  duration_ms: 8.6405
+  ...
+# Subtest: Quick Rooms explicit copy retains raw pending text, old-unit context and measurement events independently
+ok 109 - Quick Rooms explicit copy retains raw pending text, old-unit context and measurement events independently
+  ---
+  duration_ms: 5.131
+  ...
+# Subtest: independent adopted drafts never merge equal room IDs or room names
+ok 110 - independent adopted drafts never merge equal room IDs or room names
+  ---
+  duration_ms: 10.2826
+  ...
+# Subtest: room dimensions and height share one command/evidence stream and yield 120/120/352 then 396 walls
+ok 111 - room dimensions and height share one command/evidence stream and yield 120/120/352 then 396 walls
+  ---
+  duration_ms: 39.6845
+  ...
+# Subtest: dirty raw text masks every dependent result, and clearing height preserves independent floor/ceiling
+ok 112 - dirty raw text masks every dependent result, and clearing height preserves independent floor/ceiling
+  ---
+  duration_ms: 23.5619
+  ...
+# Subtest: switching units preserves raw context until valid commit/clear then releases it without changing evidence
+ok 113 - switching units preserves raw context until valid commit/clear then releases it without changing evidence
+  ---
+  duration_ms: 17.8988
+  ...
+# Subtest: unsupported ceiling blocks its output independently of explicitly supported walls
+ok 114 - unsupported ceiling blocks its output independently of explicitly supported walls
+  ---
+  duration_ms: 22.075
+  ...
+# Subtest: stale revision or changed selection rejects the entire edit without changing either draft
+ok 115 - stale revision or changed selection rejects the entire edit without changing either draft
+  ---
+  duration_ms: 1.0591
+  ...
+# Subtest: full registry recovery retains metadata, groups, openings, source evidence, raw context and settings
+ok 116 - full registry recovery retains metadata, groups, openings, source evidence, raw context and settings
+  ---
+  duration_ms: 19.4728
+  ...
+# Subtest: own special IDs/metadata keys survive recovery without normalization or prototype mutation
+ok 117 - own special IDs/metadata keys survive recovery without normalization or prototype mutation
+  ---
+  duration_ms: 1.4097
+  ...
+# Subtest: recovery rejects forged clean text, omitted fields, unknown authoritative totals and tampered action evidence
+ok 118 - recovery rejects forged clean text, omitted fields, unknown authoritative totals and tampered action evidence
+  ---
+  duration_ms: 12.552
+  ...
+# Subtest: physical snapshot identity cannot be presented as an active temporary revision
+ok 119 - physical snapshot identity cannot be presented as an active temporary revision
+  ---
+  duration_ms: 8.253
+  ...
+# Subtest: store initializes lazily, touches only its own key and publishes stable immutable snapshots
+ok 120 - store initializes lazily, touches only its own key and publishes stable immutable snapshots
+  ---
+  duration_ms: 19.5353
+  ...
+# Subtest: corrupt/unsupported recovery blocks adoption and preserves exact original bytes until explicit discard
+ok 121 - corrupt/unsupported recovery blocks adoption and preserves exact original bytes until explicit discard
+  ---
+  duration_ms: 19.6512
+  ...
+# Subtest: denied reads allow memory use without writing unseen recovery bytes
+ok 122 - denied reads allow memory use without writing unseen recovery bytes
+  ---
+  duration_ms: 17.5027
+  ...
+# Subtest: quota failure keeps newest edit in memory and old valid recovery intact
+ok 123 - quota failure keeps newest edit in memory and old valid recovery intact
+  ---
+  duration_ms: 17.4353
+  ...
+# Subtest: external stored changes are detected before write and never overwritten by stale in-memory registry
+ok 124 - external stored changes are detected before write and never overwritten by stale in-memory registry
+  ---
+  duration_ms: 7.2476
+  ...
+# Subtest: failed discard preserves current memory and recovery; stale callback failure is visible and atomic
+ok 125 - failed discard preserves current memory and recovery; stale callback failure is visible and atomic
+  ---
+  duration_ms: 17.0723
+  ...
+# Subtest: new-policy physical copies preserve valid declaration evidence and original source separately
+ok 126 - new-policy physical copies preserve valid declaration evidence and original source separately
+  ---
+  duration_ms: 5.3554
+  ...
+# Subtest: deleted Quick Rooms targets retain their historical action captures through adoption and recovery
+ok 127 - deleted Quick Rooms targets retain their historical action captures through adoption and recovery
+  ---
+  duration_ms: 2.4648
+  ...
+# Subtest: M3B pointer transform accounts for current viewport borders, scroll, gutters and scale
+ok 128 - M3B pointer transform accounts for current viewport borders, scroll, gutters and scale
+  ---
+  duration_ms: 1.3386
+  ...
+# Subtest: M3B pointer transform rejects invalid scale and nonfinite coordinates rather than placing a default
+ok 129 - M3B pointer transform rejects invalid scale and nonfinite coordinates rather than placing a default
+  ---
+  duration_ms: 0.1997
+  ...
+# Subtest: M3B noncentral wall placement converts bottom and left exactly once into clockwise center distance
+ok 130 - M3B noncentral wall placement converts bottom and left exactly once into clockwise center distance
+  ---
+  duration_ms: 6.638
+  ...
+# Subtest: M3B zoom/pan/reflow transform followed by wall targeting retains fractional physical offset
+ok 131 - M3B zoom/pan/reflow transform followed by wall targeting retains fractional physical offset
+  ---
+  duration_ms: 1.7423
+  ...
+# Subtest: M3B cross-room target uses auto-layout only for hit location and writes no physical presentation
+ok 132 - M3B cross-room target uses auto-layout only for hit location and writes no physical presentation
+  ---
+  duration_ms: 3.9837
+  ...
+# Subtest: M3B adjoining room wall hit prefers the room interior under the pointer without inferring a shared link
+ok 133 - M3B adjoining room wall hit prefers the room interior under the pointer without inferring a shared link
+  ---
+  duration_ms: 1.0899
+  ...
+# Subtest: M3B pointer corner positions are not clamped and demonstrated invalid width remains rejected
+ok 134 - M3B pointer corner positions are not clamped and demonstrated invalid width remains rejected
+  ---
+  duration_ms: 9.4505
+  ...
+# Subtest: M3B move preview preserves unknown dimensions, provenance, appearance and original nested data
+ok 135 - M3B move preview preserves unknown dimensions, provenance, appearance and original nested data
+  ---
+  duration_ms: 1.5876
+  ...
+# Subtest: M3B two-face shared opening cannot be detached by a pointer preview
+ok 136 - M3B two-face shared opening cannot be detached by a pointer preview
+  ---
+  duration_ms: 1.5465
+  ...
+# Subtest: M3B opening gesture stamp rejects newer edits and draft switches even with identical room IDs
+ok 137 - M3B opening gesture stamp rejects newer edits and draft switches even with identical room IDs
+  ---
+  duration_ms: 0.4806
+  ...
+# Subtest: M3B floor-level opening projects a measured wall gap without door or window fabrication
+ok 138 - M3B floor-level opening projects a measured wall gap without door or window fabrication
+  ---
+  duration_ms: 1.6076
+  ...
+# Subtest: new opening presets are explicit unconfirmed proposals with no invented height/sill/basis
+ok 139 - new opening presets are explicit unconfirmed proposals with no invented height/sill/basis
+  ---
+  duration_ms: 19.1742
+  ...
+# Subtest: actual physical fixture yields 120/120/352/319 square feet, 41 feet trim and two distinct openings
+ok 140 - actual physical fixture yields 120/120/352/319 square feet, 41 feet trim and two distinct openings
+  ---
+  duration_ms: 61.4063
+  ...
+# Subtest: all four wall center offsets stay physical and clockwise with exact fractional and metric input
+ok 141 - all four wall center offsets stay physical and clockwise with exact fractional and metric input
+  ---
+  duration_ms: 78.0196
+  ...
+# Subtest: Enter plus blur commits once and common presets use one atomic independent dimension action
+ok 142 - Enter plus blur commits once and common presets use one atomic independent dimension action
+  ---
+  duration_ms: 17.2655
+  ...
+# Subtest: window height and sill edits remain independent including explicitly entered zero sill
+ok 143 - window height and sill edits remain independent including explicitly entered zero sill
+  ---
+  duration_ms: 38.6274
+  ...
+# Subtest: invalid syntax and demonstrated corner/overlap/above-ceiling edits preserve canonical values and visible raw drafts
+ok 144 - invalid syntax and demonstrated corner/overlap/above-ceiling edits preserve canonical values and visible raw drafts
+  ---
+  duration_ms: 79.4
+  ...
+# Subtest: unknown dimensions permit explicitly incomplete placement but never claim verified fit
+ok 145 - unknown dimensions permit explicitly incomplete placement but never claim verified fit
+  ---
+  duration_ms: 9.5131
+  ...
+# Subtest: along-wall/cross-wall/cross-room move preserves identity, dimensions, appearance, unrelated raw fields and room overview positions
+ok 146 - along-wall/cross-wall/cross-room move preserves identity, dimensions, appearance, unrelated raw fields and room overview positions
+  ---
+  duration_ms: 51.8923
+  ...
+# Subtest: invalid move rejects atomically and unchanged placement is a no-op
+ok 147 - invalid move rejects atomically and unchanged placement is a no-op
+  ---
+  duration_ms: 41.2814
+  ...
+# Subtest: stale drag revision and switched draft cannot commit duplicate/newer geometry
+ok 148 - stale drag revision and switched draft cannot commit duplicate/newer geometry
+  ---
+  duration_ms: 15.4645
+  ...
+# Subtest: appearance/basis changes cannot change dimensions and never fabricate appearance on floor openings
+ok 149 - appearance/basis changes cannot change dimensions and never fabricate appearance on floor openings
+  ---
+  duration_ms: 23.7324
+  ...
+# Subtest: shared opening dimensional edits validate both faces while movement/offset remain specifically protected
+ok 150 - shared opening dimensional edits validate both faces while movement/offset remain specifically protected
+  ---
+  duration_ms: 24.2755
+  ...
+# Subtest: delete targets one opening, undo restores attachment order/raw/evidence while retaining unrelated edits
+ok 151 - delete targets one opening, undo restores attachment order/raw/evidence while retaining unrelated edits
+  ---
+  duration_ms: 29.9596
+  ...
+# Subtest: deletion undo rejects missing parents or reused identity and retains recovery for retry
+ok 152 - deletion undo rejects missing parents or reused identity and retains recovery for retry
+  ---
+  duration_ms: 11.9392
+  ...
+# Subtest: delete/undo preserves shared identity and attachment order and scoped requests remain valid
+ok 153 - delete/undo preserves shared identity and attachment order and scoped requests remain valid
+  ---
+  duration_ms: 46.0191
+  ...
+# Subtest: pending dimension/offset masks dependent outputs without altering canonical values or independent room totals
+ok 154 - pending dimension/offset masks dependent outputs without altering canonical values or independent room totals
+  ---
+  duration_ms: 83.1369
+  ...
+# Subtest: unit switching retains unfinished opening context then releases it on commit/clear without rounding geometry
+ok 155 - unit switching retains unfinished opening context then releases it on commit/clear without rounding geometry
+  ---
+  duration_ms: 23.7458
+  ...
+# Subtest: recovery preserves raw opening fields, typed actions, undo and independent originals exactly
+ok 156 - recovery preserves raw opening fields, typed actions, undo and independent originals exactly
+  ---
+  duration_ms: 49.4481
+  ...
+# Subtest: recovery rejects forged clean opening values and malformed identity/action evidence
+ok 157 - recovery rejects forged clean opening values and malformed identity/action evidence
+  ---
+  duration_ms: 73.9459
+  ...
+# Subtest: room dimension edits leave openings intact and immediately expose newly invalid fit
+ok 158 - room dimension edits leave openings intact and immediately expose newly invalid fit
+  ---
+  duration_ms: 26.4121
+  ...
+# Subtest: registry store preserves rejected opening raw edits and never writes a stale gesture
+ok 159 - registry store preserves rejected opening raw edits and never writes a stale gesture
+  ---
+  duration_ms: 72.6914
+  ...
+# Subtest: pending center text blocks dragging and stays intact while other pending fields make prospective fit unverified
+ok 160 - pending center text blocks dragging and stays intact while other pending fields make prospective fit unverified
+  ---
+  duration_ms: 24.2163
+  ...
+# Subtest: unknown or unsupported wall models and unknown appearance never report verified opening placement
+ok 161 - unknown or unsupported wall models and unknown appearance never report verified opening placement
+  ---
+  duration_ms: 32.5296
+  ...
+# Subtest: position input evidence retains original fractional syntax/unit after a display-unit change
+ok 162 - position input evidence retains original fractional syntax/unit after a display-unit change
+  ---
+  duration_ms: 23.5972
+  ...
+# Subtest: recovery rejects a disguised geometry mutation in appearance history and forged deletion raw text
+ok 163 - recovery rejects a disguised geometry mutation in appearance history and forged deletion raw text
+  ---
+  duration_ms: 35.9018
+  ...
+# Subtest: special opening IDs derive missing legacy fields safely and survive commands and recovery
+ok 164 - special opening IDs derive missing legacy fields safely and survive commands and recovery
+  ---
+  duration_ms: 9.9646
+  ...
+# Subtest: M3B projection preserves clockwise all-wall offsets, saved door hinges and typed group authority
+ok 165 - M3B projection preserves clockwise all-wall offsets, saved door hinges and typed group authority
+  ---
+  duration_ms: 11.7847
+  ...
+# Subtest: M3B unresolved legacy width renders only original symbol evidence and preserves unresolved candidates
+ok 166 - M3B unresolved legacy width renders only original symbol evidence and preserves unresolved candidates
+  ---
+  duration_ms: 5.4144
+  ...
+# Subtest: M3B known physical door without appearance cannot use legacy guessed bar or swing widths
+ok 167 - M3B known physical door without appearance cannot use legacy guessed bar or swing widths
+  ---
+  duration_ms: 2.5437
+  ...
+# Subtest: M3B legacy missing-properties door retains source rendering with an explicit limitation
+ok 168 - M3B legacy missing-properties door retains source rendering with an explicit limitation
+  ---
+  duration_ms: 14.5292
+  ...
+# Subtest: M3B projection deeply detaches unresolved source symbols and known appearance metadata
+ok 169 - M3B projection deeply detaches unresolved source symbols and known appearance metadata
+  ---
+  duration_ms: 4.4318
+  ...
+# Subtest: M3B unsupported room range cannot hide later normal rooms or poison derived layout positions
+ok 170 - M3B unsupported room range cannot hide later normal rooms or poison derived layout positions
+  ---
+  duration_ms: 3.4175
+  ...
+# Subtest: M3B missing room dimensions do not receive a measured-looking placeholder; physical edits update derived offsets
+ok 171 - M3B missing room dimensions do not receive a measured-looking placeholder; physical edits update derived offsets
+  ---
+  duration_ms: 8.8886
+  ...
+# Subtest: new and empty work scope means none; enable creates empty targets and explicit all captures current IDs only
+ok 172 - new and empty work scope means none; enable creates empty targets and explicit all captures current IDs only
+  ---
+  duration_ms: 28.0664
+  ...
+# Subtest: custom scope, basis and waste survive room/name/dimension/unit edits and addRoom
+ok 173 - custom scope, basis and waste survive room/name/dimension/unit edits and addRoom
+  ---
+  duration_ms: 188.7612
+  ...
+# Subtest: wrong-kind, missing, duplicate and non-attached targets are rejected atomically
+ok 174 - wrong-kind, missing, duplicate and non-attached targets are rejected atomically
+  ---
+  duration_ms: 90.4934
+  ...
+# Subtest: explicit UI fixture preserves engine gross, deductions, net, casing, trim and inventory arithmetic
+ok 175 - explicit UI fixture preserves engine gross, deductions, net, casing, trim and inventory arithmetic
+  ---
+  duration_ms: 277.2223
+  ...
+# Subtest: 10 percent commits as 0.1 and engine applies allowance once after aggregate net
+ok 176 - 10 percent commits as 0.1 and engine applies allowance once after aggregate net
+  ---
+  duration_ms: 87.8496
+  ...
+# Subtest: unfinished or invalid percent is retained and never replaces committed waste or other output edits
+ok 177 - unfinished or invalid percent is retained and never replaces committed waste or other output edits
+  ---
+  duration_ms: 351.5626
+  ...
+# Subtest: missing window height keeps independent results and exposes only a partial 256-square-foot wall subtotal
+ok 178 - missing window height keeps independent results and exposes only a partial 256-square-foot wall subtotal
+  ---
+  duration_ms: 133.7708
+  ...
+# Subtest: explicit measurement review then independent model review changes provisional quantities to complete
+ok 179 - explicit measurement review then independent model review changes provisional quantities to complete
+  ---
+  duration_ms: 165.8719
+  ...
+# Subtest: measurement confirmation is blocked for unknown or dirty fields and stale draft/revision/snapshot tokens
+ok 180 - measurement confirmation is blocked for unknown or dirty fields and stale draft/revision/snapshot tokens
+  ---
+  duration_ms: 3.9241
+  ...
+# Subtest: candidate resolution retains alternatives, is never automatically confirmed, and rejects stale candidate review
+ok 181 - candidate resolution retains alternatives, is never automatically confirmed, and rejects stale candidate review
+  ---
+  duration_ms: 13.3655
+  ...
+# Subtest: correction clears only the changed confirmation and never removes geometry or application blockers
+ok 182 - correction clears only the changed confirmation and never removes geometry or application blockers
+  ---
+  duration_ms: 177.3228
+  ...
+# Subtest: room and opening raw corrections preserve review history and require separate reconfirmation
+ok 183 - room and opening raw corrections preserve review history and require separate reconfirmation
+  ---
+  duration_ms: 202.9965
+  ...
+# Subtest: separate unknown/unsupported model declarations cannot be confirmed and leave independent floor quantities usable
+ok 184 - separate unknown/unsupported model declarations cannot be confirmed and leave independent floor quantities usable
+  ---
+  duration_ms: 175.2702
+  ...
+# Subtest: model review tokens are stale after dimension or declaration edits and changing model evidence requires new confirmation
+ok 185 - model review tokens are stale after dimension or declaration edits and changing model evidence requires new confirmation
+  ---
+  duration_ms: 110.6992
+  ...
+# Subtest: deleting selected opening prunes inventory, casing and crown targets atomically with a visible notice
+ok 186 - deleting selected opening prunes inventory, casing and crown targets atomically with a visible notice
+  ---
+  duration_ms: 87.6576
+  ...
+# Subtest: bounded deletion undo never overwrites later scope choices even when changed away and back
+ok 187 - bounded deletion undo never overwrites later scope choices even when changed away and back
+  ---
+  duration_ms: 103.6724
+  ...
+# Subtest: bounded deletion undo preserves later unfinished waste and does not silently restore stale scope
+ok 188 - bounded deletion undo preserves later unfinished waste and does not silently restore stale scope
+  ---
+  duration_ms: 94.4151
+  ...
+# Subtest: cross-wall moves prune old face targets but retain selected physical inventory ID, work, waste and unrelated targets
+ok 189 - cross-wall moves prune old face targets but retain selected physical inventory ID, work, waste and unrelated targets
+  ---
+  duration_ms: 107.4437
+  ...
+# Subtest: shared opening all-current casing selects both attachment faces while inventory counts its identity once
+ok 190 - shared opening all-current casing selects both attachment faces while inventory counts its identity once
+  ---
+  duration_ms: 127.5581
+  ...
+# Subtest: explicit crown gaps cannot invent full-height deductions and mismatched basis never gets relabeled
+ok 191 - explicit crown gaps cannot invent full-height deductions and mismatched basis never gets relabeled
+  ---
+  duration_ms: 122.9042
+  ...
+# Subtest: recovery rejects forged current confirmations, altered review events, declared models and clean waste text
+ok 192 - recovery rejects forged current confirmations, altered review events, declared models and clean waste text
+  ---
+  duration_ms: 172.7926
+  ...
+# Subtest: older supported caches round-trip without adding scope/review state; confirmed physical imports require matching source
+ok 193 - older supported caches round-trip without adding scope/review state; confirmed physical imports require matching source
+  ---
+  duration_ms: 127.7807
+  ...
+# Subtest: confirmed opening review survives deletion and bounded restore with its historical actions and raw fields
+ok 194 - confirmed opening review survives deletion and bounded restore with its historical actions and raw fields
+  ---
+  duration_ms: 154.7428
+  ...
+# Subtest: new rooms can be reviewed after existing review evidence without rewriting prior origins
+ok 195 - new rooms can be reviewed after existing review evidence without rewriting prior origins
+  ---
+  duration_ms: 132.4143
+  ...
+# Subtest: Slice 3 read model exposes exact shared-engine fixture totals and individual door/window deductions
+ok 196 - Slice 3 read model exposes exact shared-engine fixture totals and individual door/window deductions
+  ---
+  duration_ms: 61.2947
+  ...
+# Subtest: Slice 3 partial wall results identify excluded top wall without replacing unavailable selected total
+ok 197 - Slice 3 partial wall results identify excluded top wall without replacing unavailable selected total
+  ---
+  duration_ms: 91.4193
+  ...
+# Subtest: Slice 3 pending width height sill and offset mask dependent totals and retain useful field-specific messages
+ok 198 - Slice 3 pending width height sill and offset mask dependent totals and retain useful field-specific messages
+  ---
+  duration_ms: 177.5969
+  ...
+# Subtest: Slice 3 waste comes from engine once; dirty invalid or uncommitted waste never exposes older adjusted quantities
+ok 199 - Slice 3 waste comes from engine once; dirty invalid or uncommitted waste never exposes older adjusted quantities
+  ---
+  duration_ms: 75.5614
+  ...
+# Subtest: Slice 3 empty work and explicit empty targets remain empty and never display a complete zero project
+ok 200 - Slice 3 empty work and explicit empty targets remain empty and never display a complete zero project
+  ---
+  duration_ms: 18.3172
+  ...
+# Subtest: Slice 3 measurement, model, geometry and basis findings remain independent
+ok 201 - Slice 3 measurement, model, geometry and basis findings remain independent
+  ---
+  duration_ms: 76.7002
+  ...
+# Subtest: Slice 3 shared physical inventory counts once while selected casing faces remain independent in full-document engine input
+ok 202 - Slice 3 shared physical inventory counts once while selected casing faces remain independent in full-document engine input
+  ---
+  duration_ms: 4.5115
+  ...
+# Subtest: Slice 3 metric formatting and detached source scopes do not modify request quantities or caller measurements
+ok 203 - Slice 3 metric formatting and detached source scopes do not modify request quantities or caller measurements
+  ---
+  duration_ms: 11.7393
+  ...
+# Subtest: Slice 3 drawing source highlights preserve exact selected room, wall and shared-opening face identities
+ok 204 - Slice 3 drawing source highlights preserve exact selected room, wall and shared-opening face identities
+  ---
+  duration_ms: 5.343
+  ...
+# Subtest: Slice 3 unknown physical opening widths highlight a point instead of inventing a measured span
+ok 205 - Slice 3 unknown physical opening widths highlight a point instead of inventing a measured span
+  ---
+  duration_ms: 1.8105
+  ...
+# Subtest: invalid room Revert restores 12 ft and independent 120 sq ft without changing domain or evidence
+ok 206 - invalid room Revert restores 12 ft and independent 120 sq ft without changing domain or evidence
+  ---
+  duration_ms: 97.2703
+  ...
+# Subtest: valid but uncommitted text is cancelled without a correction event or confirmation change
+ok 207 - valid but uncommitted text is cancelled without a correction event or confirmation change
+  ---
+  duration_ms: 62.4268
+  ...
+# Subtest: reverting each room field leaves another unfinished field and its dependent totals blocked
+ok 208 - reverting each room field leaves another unfinished field and its dependent totals blocked
+  ---
+  duration_ms: 170.6573
+  ...
+# Subtest: active-unit Revert formats the retained measurement rather than parsing pending text or replacing provenance
+ok 209 - active-unit Revert formats the retained measurement rather than parsing pending text or replacing provenance
+  ---
+  duration_ms: 21.9835
+  ...
+# Subtest: all opening dimensions and center offset cancel raw edits while preserving identity, attachments and history
+ok 210 - all opening dimensions and center offset cancel raw edits while preserving identity, attachments and history
+  ---
+  duration_ms: 95.9237
+  ...
+# Subtest: syntactically valid geometry-rejected opening values can be cancelled with no physical correction or move
+ok 211 - syntactically valid geometry-rejected opening values can be cancelled with no physical correction or move
+  ---
+  duration_ms: 191.9552
+  ...
+# Subtest: unknown room/opening values and needs-review candidates restore blank text without resolving domain state
+ok 212 - unknown room/opening values and needs-review candidates restore blank text without resolving domain state
+  ---
+  duration_ms: 53.4753
+  ...
+# Subtest: zero center offset and zero sill remain measured zeros when their pending text is reverted
+ok 213 - zero center offset and zero sill remain measured zeros when their pending text is reverted
+  ---
+  duration_ms: 10.507
+  ...
+# Subtest: committed 10 percent waste is restored exactly while unrelated pending fields and scope remain
+ok 214 - committed 10 percent waste is restored exactly while unrelated pending fields and scope remain
+  ---
+  duration_ms: 81.9143
+  ...
+# Subtest: tiny and large committed decimal waste restores plain text and remains valid recovery without changing the fraction
+ok 215 - tiny and large committed decimal waste restores plain text and remains valid recovery without changing the fraction
+  ---
+  duration_ms: 92.738
+  ...
+# Subtest: zero committed waste restores zero and clean fields cannot roll back committed values
+ok 216 - zero committed waste restores zero and clean fields cannot roll back committed values
+  ---
+  duration_ms: 39.2418
+  ...
+# Subtest: captured actions reject another draft, newer edit, unit change and duplicate application atomically
+ok 217 - captured actions reject another draft, newer edit, unit change and duplicate application atomically
+  ---
+  duration_ms: 34.4969
+  ...
+# Subtest: missing/deleted/disabled targets and malformed tokens never fall back to another field
+ok 218 - missing/deleted/disabled targets and malformed tokens never fall back to another field
+  ---
+  duration_ms: 24.7261
+  ...
+# Subtest: registry selection guard rejects a held Revert after switching to another draft with no writes
+ok 219 - registry selection guard rejects a held Revert after switching to another draft with no writes
+  ---
+  duration_ms: 30.8292
+  ...
+# Subtest: opening delete then raw waste edit and Revert cannot resurrect stale casing or inventory scope on Undo
+ok 220 - opening delete then raw waste edit and Revert cannot resurrect stale casing or inventory scope on Undo
+  ---
+  duration_ms: 55.5184
+  ...
+# Subtest: special room/opening IDs and unrelated field maps survive exact Revert and recovery
+ok 221 - special room/opening IDs and unrelated field maps survive exact Revert and recovery
+  ---
+  duration_ms: 5.7825
+  ...
+# Subtest: guarded Revert survives exact storage recovery with other unfinished text and confirmation evidence
+ok 222 - guarded Revert survives exact storage recovery with other unfinished text and confirmation evidence
+  ---
+  duration_ms: 95.5502
+  ...
+# Subtest: failed recovery write keeps the reverted memory draft, prior raw bytes and visible limitation
+ok 223 - failed recovery write keeps the reverted memory draft, prior raw bytes and visible limitation
+  ---
+  duration_ms: 60.9577
+  ...
+# Subtest: stale store Revert leaves newer memory and recoverable bytes untouched and reports the rejected action
+ok 224 - stale store Revert leaves newer memory and recoverable bytes untouched and reports the rejected action
+  ---
+  duration_ms: 42.592
+  ...
+# Subtest: schema5 strictly owns explicit room uses, unique physical IDs, same-room zone associations and layout-only effects
+ok 225 - schema5 strictly owns explicit room uses, unique physical IDs, same-room zone associations and layout-only effects
+  ---
+  duration_ms: 41.7563
+  ...
+# Subtest: explicit current4 upgrade is detached, keeps stairs/source metadata, never infers use from names and freezes older consumers
+ok 226 - explicit current4 upgrade is detached, keeps stairs/source metadata, never infers use from names and freezes older consumers
+  ---
+  duration_ms: 36.7354
+  ...
+# Subtest: prototype-like room and layout IDs remain own keys through validation and capture
+ok 227 - prototype-like room and layout IDs remain own keys through validation and capture
+  ---
+  duration_ms: 108.6781
+  ...
+# Subtest: room use is explicit intent with preserved custom text, no fake labels or measurement approval
+ok 228 - room use is explicit intent with preserved custom text, no fake labels or measurement approval
+  ---
+  duration_ms: 32.7201
+  ...
+# Subtest: shared gross footprint is 48/12 sq ft, non-additive and independent of unknown cabinet height
+ok 229 - shared gross footprint is 48/12 sq ft, non-additive and independent of unknown cabinet height
+  ---
+  duration_ms: 6.3166
+  ...
+# Subtest: all 90 degree rotations preserve dimensions and explicit top-left anchors without changing measurements
+ok 230 - all 90 degree rotations preserve dimensions and explicit top-left anchors without changing measurements
+  ---
+  duration_ms: 3.7801
+  ...
+# Subtest: edge-touching fits; .01mm tolerance cannot turn .011mm overrun into valid or silently clamp values
+ok 231 - edge-touching fits; .01mm tolerance cannot turn .011mm overrun into valid or silently clamp values
+  ---
+  duration_ms: 13.1662
+  ...
+# Subtest: overlapping zones produce ambiguity only, touching edges do not, and other parent rooms never overlap
+ok 232 - overlapping zones produce ambiguity only, touching edges do not, and other parent rooms never overlap
+  ---
+  duration_ms: 7.0388
+  ...
+# Subtest: cabinet leaving an explicitly associated zone keeps association and flags review without blocking finish quantities
+ok 233 - cabinet leaving an explicitly associated zone keeps association and flags review without blocking finish quantities
+  ---
+  duration_ms: 25.2219
+  ...
+# Subtest: range and extent loss fail safely while unknown dimensions stay unknown and no geometry is mutated
+ok 234 - range and extent loss fail safely while unknown dimensions stay unknown and no geometry is mutated
+  ---
+  duration_ms: 6.2513
+  ...
+# Subtest: layout5 evaluates through unchanged policy/engine/result4 and preserves 300/300/560 with no double counting
+ok 235 - layout5 evaluates through unchanged policy/engine/result4 and preserves 300/300/560 with no double counting
+  ---
+  duration_ms: 14.864
+  ...
+# Subtest: retained stair voids remain 252 net / 25.2 waste / 277.2 adjusted after adding layout-only data
+ok 236 - retained stair voids remain 252 net / 25.2 waste / 277.2 adjusted after adding layout-only data
+  ---
+  duration_ms: 31.3633
+  ...
+# Subtest: layout geometry and content hashes detect distinct changes while room names, camera and unrelated presentation remain excluded
+ok 237 - layout geometry and content hashes detect distinct changes while room names, camera and unrelated presentation remain excluded
+  ---
+  duration_ms: 69.4882
+  ...
+# Subtest: snapshot5 captures layout with policy4, is detached and rejects downgraded/mixed scopes or altered source evidence
+ok 238 - snapshot5 captures layout with policy4, is detached and rejects downgraded/mixed scopes or altered source evidence
+  ---
+  duration_ms: 99.3562
+  ...
+# Subtest: historical v1-v4 snapshots regenerate exactly with unchanged policy and hashes
+ok 239 - historical v1-v4 snapshots regenerate exactly with unchanged policy and hashes
+  ---
+  duration_ms: 716.1166
+  ...
+# Subtest: explicit layout upgrade preserves the full current source, pending fields, request and immutable schema4 lineage
+ok 240 - explicit layout upgrade preserves the full current source, pending fields, request and immutable schema4 lineage
+  ---
+  duration_ms: 109.8731
+  ...
+# Subtest: room name never infers use; deliberate room and zone uses remain independent through history
+ok 241 - room name never infers use; deliberate room and zone uses remain independent through history
+  ---
+  duration_ms: 354.5783
+  ...
+# Subtest: adding rooms to schema5 creates explicit unspecified use with prototype-safe exact ownership
+ok 242 - adding rooms to schema5 creates explicit unspecified use with prototype-safe exact ownership
+  ---
+  duration_ms: 213.9147
+  ...
+# Subtest: layout-only 48 and12 square-foot footprints never inflate300/300/560 finish quantities
+ok 243 - layout-only 48 and12 square-foot footprints never inflate300/300/560 finish quantities
+  ---
+  duration_ms: 187.5017
+  ...
+# Subtest: existing explicit stair holes and measured waste stay252/25.2/277.2 after layout upgrade
+ok 244 - existing explicit stair holes and measured waste stay252/25.2/277.2 after layout upgrade
+  ---
+  duration_ms: 187.4347
+  ...
+# Subtest: unknown geometry remains unknown; explicit origin is unconfirmed and zero stays valid
+ok 245 - unknown geometry remains unknown; explicit origin is unconfirmed and zero stays valid
+  ---
+  duration_ms: 43.4671
+  ...
+# Subtest: invalid raw syntax stays pending and Enter followed by blur commits exactly once
+ok 246 - invalid raw syntax stays pending and Enter followed by blur commits exactly once
+  ---
+  duration_ms: 47.0211
+  ...
+# Subtest: pending layout masks only its footprint and never unrelated finish results
+ok 247 - pending layout masks only its footprint and never unrelated finish results
+  ---
+  duration_ms: 117.643
+  ...
+# Subtest: units preserve pending raw context; Revert restores active units without changing document or evidence
+ok 248 - units preserve pending raw context; Revert restores active units without changing document or evidence
+  ---
+  duration_ms: 55.5072
+  ...
+# Subtest: edge-touching placement fits; outside placement rejects atomically while dimension edits retain invalid findings
+ok 249 - edge-touching placement fits; outside placement rejects atomically while dimension edits retain invalid findings
+  ---
+  duration_ms: 74.8819
+  ...
+# Subtest: pending position prevents drag takeover while unrelated dimension/name drafts survive valid movement
+ok 250 - pending position prevents drag takeover while unrelated dimension/name drafts survive valid movement
+  ---
+  duration_ms: 49.3547
+  ...
+# Subtest: retained creation history accepts pending name and custom labels, which recover exactly without new history
+ok 251 - retained creation history accepts pending name and custom labels, which recover exactly without new history
+  ---
+  duration_ms: 135.8322
+  ...
+# Subtest: Custom explicitly permits blank unfinished label; Apply makes one semantic history and Revert keeps saved use
+ok 252 - Custom explicitly permits blank unfinished label; Apply makes one semantic history and Revert keeps saved use
+  ---
+  duration_ms: 284.1974
+  ...
+# Subtest: zone deletion unlinks retained cabinet atomically and Undo preserves unrelated pending waste and scope
+ok 253 - zone deletion unlinks retained cabinet atomically and Undo preserves unrelated pending waste and scope
+  ---
+  duration_ms: 304.9
+  ...
+# Subtest: delete and restore keeps clean name drafts, unit formatting and stable ordering
+ok 254 - delete and restore keeps clean name drafts, unit formatting and stable ordering
+  ---
+  duration_ms: 293.3537
+  ...
+# Subtest: cabinet association only accepts the same room and room-level assignment carries both children
+ok 255 - cabinet association only accepts the same room and room-level assignment carries both children
+  ---
+  duration_ms: 243.6225
+  ...
+# Subtest: an older room-creation inverse is blocked by later layout dependents without touching them
+ok 256 - an older room-creation inverse is blocked by later layout dependents without touching them
+  ---
+  duration_ms: 11.4858
+  ...
+# Subtest: layout history restores changed measures unconfirmed while rotation retains unrelated approvals
+ok 257 - layout history restores changed measures unconfirmed while rotation retains unrelated approvals
+  ---
+  duration_ms: 314.5871
+  ...
+# Subtest: creation/deletion, dimension and drag actions share one chronological history with exact target reveal
+ok 258 - creation/deletion, dimension and drag actions share one chronological history with exact target reveal
+  ---
+  duration_ms: 349.0375
+  ...
+# Subtest: same physical numeric or pointer values and unchanged names create no duplicate committed history
+ok 259 - same physical numeric or pointer values and unchanged names create no duplicate committed history
+  ---
+  duration_ms: 82.7516
+  ...
+# Subtest: large coordinates do not silently erase a representable half-millimeter move
+ok 260 - large coordinates do not silently erase a representable half-millimeter move
+  ---
+  duration_ms: 22.4237
+  ...
+# Subtest: stale revisions and pending target conflicts reject without popping the history branch
+ok 261 - stale revisions and pending target conflicts reject without popping the history branch
+  ---
+  duration_ms: 208.9781
+  ...
+# Subtest: v4 recovery reads v3 without rewriting source bytes and detects fallback changes before saving
+ok 262 - v4 recovery reads v3 without rewriting source bytes and detects fallback changes before saving
+  ---
+  duration_ms: 13.1188
+  ...
+# Subtest: older keys remain byte-exact, cache failures retain memory/history, and reload has no session Undo
+ok 263 - older keys remain byte-exact, cache failures retain memory/history, and reload has no session Undo
+  ---
+  duration_ms: 101.7544
+  ...
+# Subtest: corrupt, future, dangling and forged layout recovery cannot overwrite retained bytes
+ok 264 - corrupt, future, dangling and forged layout recovery cannot overwrite retained bytes
+  ---
+  duration_ms: 77.7886
+  ...
+# Subtest: mixed registries remain v4 and old envelopes cannot pretend to contain schema5 layout
+ok 265 - mixed registries remain v4 and old envelopes cannot pretend to contain schema5 layout
+  ---
+  duration_ms: 15.4726
+  ...
+# Subtest: new building draft has one editable Main floor with unknown elevation; legacy constructor stays v2
+ok 266 - new building draft has one editable Main floor with unknown elevation; legacy constructor stays v2
+  ---
+  duration_ms: 13.3122
+  ...
+# Subtest: add rooms follows active level, including empty levels, without expanding explicit takeoff scope
+ok 267 - add rooms follows active level, including empty levels, without expanding explicit takeoff scope
+  ---
+  duration_ms: 38.4161
+  ...
+# Subtest: switch level retains document, pending fields, units, request and evidence, increments revision and preserves redo
+ok 268 - switch level retains document, pending fields, units, request and evidence, increments revision and preserves redo
+  ---
+  duration_ms: 120.6948
+  ...
+# Subtest: level creation, rename and order are one chronological history with stable IDs and unknown elevations
+ok 269 - level creation, rename and order are one chronological history with stable IDs and unknown elevations
+  ---
+  duration_ms: 53.3622
+  ...
+# Subtest: room assignment preserves physical identity/raw/request, and direct assignment plus Undo/Redo reveal the exact room even on a populated destination
+ok 270 - room assignment preserves physical identity/raw/request, and direct assignment plus Undo/Redo reveal the exact room even on a populated destination
+  ---
+  duration_ms: 78.9431
+  ...
+# Subtest: existing measurement history reveals a hidden room level without filtering the chronological stack
+ok 271 - existing measurement history reveals a hidden room level without filtering the chronological stack
+  ---
+  duration_ms: 62.3348
+  ...
+# Subtest: room creation inverse includes membership, and a populated level cannot be undone out of order
+ok 272 - room creation inverse includes membership, and a populated level cannot be undone out of order
+  ---
+  duration_ms: 61.7743
+  ...
+# Subtest: grouped room assignment is rejected with dependent room name and has no partial state change
+ok 273 - grouped room assignment is rejected with dependent room name and has no partial state change
+  ---
+  duration_ms: 16.7076
+  ...
+# Subtest: shared opening room assignment is rejected by attachment dependency without changing IDs or geometry
+ok 274 - shared opening room assignment is rejected by attachment dependency without changing IDs or geometry
+  ---
+  duration_ms: 48.4674
+  ...
+# Subtest: level switch makes captured edits stale and failed assignment leaves both history stacks untouched
+ok 275 - level switch makes captured edits stale and failed assignment leaves both history stacks untouched
+  ---
+  duration_ms: 35.8337
+  ...
+# Subtest: invalid IDs, blank names, unknown levels and partial/duplicate order do not mutate the draft
+ok 276 - invalid IDs, blank names, unknown levels and partial/duplicate order do not mutate the draft
+  ---
+  duration_ms: 0.7479
+  ...
+# Subtest: explicit old draft upgrade preserves the FULL live state, confirmed events, source originals and unknown ownership
+ok 277 - explicit old draft upgrade preserves the FULL live state, confirmed events, source originals and unknown ownership
+  ---
+  duration_ms: 21.0686
+  ...
+# Subtest: upgrade retains typed history captures and accepts new level evidence without rewriting the old capture
+ok 278 - upgrade retains typed history captures and accepts new level evidence without rewriting the old capture
+  ---
+  duration_ms: 61.912
+  ...
+# Subtest: upgraded deletion recovery adapts active policy snapshots and preserves original tombstone in lineage
+ok 279 - upgraded deletion recovery adapts active policy snapshots and preserves original tombstone in lineage
+  ---
+  duration_ms: 14.9106
+  ...
+# Subtest: upgrade retains independent source entry and blocks already-upgraded or reused identities
+ok 280 - upgrade retains independent source entry and blocks already-upgraded or reused identities
+  ---
+  duration_ms: 23.0022
+  ...
+# Subtest: new recovery key falls back to v1 without altering bytes; first accepted write migrates envelope only
+ok 281 - new recovery key falls back to v1 without altering bytes; first accepted write migrates envelope only
+  ---
+  duration_ms: 11.1856
+  ...
+# Subtest: new cache wins over v1 and corrupt new data never falls back or gets overwritten
+ok 282 - new cache wins over v1 and corrupt new data never falls back or gets overwritten
+  ---
+  duration_ms: 0.612
+  ...
+# Subtest: changed legacy source or newly appeared v2 cache blocks fallback overwrite while retaining accepted memory
+ok 283 - changed legacy source or newly appeared v2 cache blocks fallback overwrite while retaining accepted memory
+  ---
+  duration_ms: 2.838
+  ...
+# Subtest: failed new-key storage write preserves v1 source and latest level change/history in memory
+ok 284 - failed new-key storage write preserves v1 source and latest level change/history in memory
+  ---
+  duration_ms: 8.8471
+  ...
+# Subtest: reload restores active level and all pending field contexts but initializes empty session history
+ok 285 - reload restores active level and all pending field contexts but initializes empty session history
+  ---
+  duration_ms: 57.8854
+  ...
+# Subtest: recovery rejects missing/dangling/extra room membership, stale active level and unsupported envelope
+ok 286 - recovery rejects missing/dangling/extra room membership, stale active level and unsupported envelope
+  ---
+  duration_ms: 23.7128
+  ...
+# Subtest: level history evidence rejects v1 relabeling, altered restored ownership and forged lineage
+ok 287 - level history evidence rejects v1 relabeling, altered restored ownership and forged lineage
+  ---
+  duration_ms: 44.2242
+  ...
+# Subtest: prototype-like room/level IDs are retained as own memberships through upgrade, history and recovery
+ok 288 - prototype-like room/level IDs are retained as own memberships through upgrade, history and recovery
+  ---
+  duration_ms: 86.2401
+  ...
+# Subtest: global takeoff history is labeled project-wide and does not reveal or switch to an arbitrary level
+ok 289 - global takeoff history is labeled project-wide and does not reveal or switch to an arbitrary level
+  ---
+  duration_ms: 28.853
+  ...
+# Subtest: pending level names survive level changes/reload, preserve redo and block removal until explicitly applied
+ok 290 - pending level names survive level changes/reload, preserve redo and block removal until explicitly applied
+  ---
+  duration_ms: 20.429
+  ...
+# Subtest: M3D schema3 has exactly one own membership, explicit unknown elevation and distinct versioned identities
+ok 291 - M3D schema3 has exactly one own membership, explicit unknown elevation and distinct versioned identities
+  ---
+  duration_ms: 129.1354
+  ...
+# Subtest: M3D groups and shared openings must stay on one level without inventing plan-collision rules
+ok 292 - M3D groups and shared openings must stay on one level without inventing plan-collision rules
+  ---
+  duration_ms: 10.7271
+  ...
+# Subtest: M3D upgrade detaches current physical values and preserves originals, IDs, profiles, groups and opening evidence
+ok 293 - M3D upgrade detaches current physical values and preserves originals, IDs, profiles, groups and opening evidence
+  ---
+  duration_ms: 6.7077
+  ...
+# Subtest: M3D unknown ownership upgrade never invents supported models when historical declarations are absent
+ok 294 - M3D unknown ownership upgrade never invents supported models when historical declarations are absent
+  ---
+  duration_ms: 20.8697
+  ...
+# Subtest: M3D own prototype-like room and level IDs survive constructor, validator, calculation and captured snapshot
+ok 295 - M3D own prototype-like room and level IDs survive constructor, validator, calculation and captured snapshot
+  ---
+  duration_ms: 93.163
+  ...
+# Subtest: M3D full-document explicit project and level requests produce independent 270/802 and 120/352 quantities
+ok 296 - M3D full-document explicit project and level requests produce independent 270/802 and 120/352 quantities
+  ---
+  duration_ms: 21.7561
+  ...
+# Subtest: M3D saved explicit target IDs remain fixed when rooms are added or reassigned between levels
+ok 297 - M3D saved explicit target IDs remain fixed when rooms are added or reassigned between levels
+  ---
+  duration_ms: 26.3751
+  ...
+# Subtest: M3D level ownership affects version3 hashes while names, order and camera remain presentation
+ok 298 - M3D level ownership affects version3 hashes while names, order and camera remain presentation
+  ---
+  duration_ms: 139.6879
+  ...
+# Subtest: M3D level-aware snapshots enforce version dispatch, ownership integrity and synchronous detached capture
+ok 299 - M3D level-aware snapshots enforce version dispatch, ownership integrity and synchronous detached capture
+  ---
+  duration_ms: 125.0816
+  ...
+# Subtest: M3D unchanged version1 and version2 historical snapshot bytes and hashes remain verifiable
+ok 300 - M3D unchanged version1 and version2 historical snapshot bytes and hashes remain verifiable
+  ---
+  duration_ms: 306.7076
+  ...
+# Subtest: M3D independent ceiling/wall applicability and confirmation gates reuse existing engine semantics
+ok 301 - M3D independent ceiling/wall applicability and confirmation gates reuse existing engine semantics
+  ---
+  duration_ms: 35.9706
+  ...
+# Subtest: M3D physical measurement actions retain level ownership and original evidence without mutation
+ok 302 - M3D physical measurement actions retain level ownership and original evidence without mutation
+  ---
+  duration_ms: 6.5022
+  ...
+# Subtest: M3D active-level projection and wall hit inputs exclude coincident hidden rooms and empty-level fit geometry
+ok 303 - M3D active-level projection and wall hit inputs exclude coincident hidden rooms and empty-level fit geometry
+  ---
+  duration_ms: 25.8449
+  ...
+# Subtest: explicit schema4 upgrade retains full current draft and immutable schema3 lineage with pending room/waste edits
+ok 304 - explicit schema4 upgrade retains full current draft and immutable schema3 lineage with pending room/waste edits
+  ---
+  duration_ms: 107.3306
+  ...
+# Subtest: new stair keeps one stable identity shared width/run and unresolved rise without deriving level elevations
+ok 305 - new stair keeps one stable identity shared width/run and unresolved rise without deriving level elevations
+  ---
+  duration_ms: 72.6612
+  ...
+# Subtest: invalid dimension raw retains exact text while zero coordinates commit and Enter then blur emits once
+ok 306 - invalid dimension raw retains exact text while zero coordinates commit and Enter then blur emits once
+  ---
+  duration_ms: 106.2801
+  ...
+# Subtest: dirty unit context survives switch and Revert uses current display while preserving physical provenance
+ok 307 - dirty unit context survives switch and Revert uses current display while preserving physical provenance
+  ---
+  duration_ms: 72.7867
+  ...
+# Subtest: pending hole size masks only affected net surface while keeping gross basis and unrelated wall quantities
+ok 308 - pending hole size masks only affected net surface while keeping gross basis and unrelated wall quantities
+  ---
+  duration_ms: 147.1491
+  ...
+# Subtest: explicit floor and ceiling holes deduct independently once and have exact source attachment read model
+ok 309 - explicit floor and ceiling holes deduct independently once and have exact source attachment read model
+  ---
+  duration_ms: 190.91
+  ...
+# Subtest: numeric and pointer placements reject demonstrated invalid fit without replacing pending text or canonical position
+ok 310 - numeric and pointer placements reject demonstrated invalid fit without replacing pending text or canonical position
+  ---
+  duration_ms: 91.9722
+  ...
+# Subtest: dimension correction may retain invalid fit, never silently move endpoints, and pending coordinates block pointer takeover
+ok 311 - dimension correction may retain invalid fit, never silently move endpoints, and pending coordinates block pointer takeover
+  ---
+  duration_ms: 56.7295
+  ...
+# Subtest: landing dimensions and placement remain independent of stair run and no-deduction areas
+ok 312 - landing dimensions and placement remain independent of stair run and no-deduction areas
+  ---
+  duration_ms: 171.619
+  ...
+# Subtest: host ownership guards name dependent endpoints/landings and surface openings; invalid same-level endpoints are rejected
+ok 313 - host ownership guards name dependent endpoints/landings and surface openings; invalid same-level endpoints are rejected
+  ---
+  duration_ms: 47.6931
+  ...
+# Subtest: endpoint host changes cannot strand an explicit linked deduction
+ok 314 - endpoint host changes cannot strand an explicit linked deduction
+  ---
+  duration_ms: 97.0144
+  ...
+# Subtest: shared surface attachments reject duplicates and invalid retargeting without partial writes
+ok 315 - shared surface attachments reject duplicates and invalid retargeting without partial writes
+  ---
+  duration_ms: 50.9645
+  ...
+# Subtest: stair deletion unlinks but preserves holes and Undo/Redo restores exact coordinated identities
+ok 316 - stair deletion unlinks but preserves holes and Undo/Redo restores exact coordinated identities
+  ---
+  duration_ms: 298.8447
+  ...
+# Subtest: surface opening deletion makes referenced impacts unresolved and one Undo restores hole and impact atomically
+ok 317 - surface opening deletion makes referenced impacts unresolved and one Undo restores hole and impact atomically
+  ---
+  duration_ms: 304.1375
+  ...
+# Subtest: field/move/landing Undo uses the existing chronological history, preserves unrelated pending fields and reveals target level
+ok 318 - field/move/landing Undo uses the existing chronological history, preserves unrelated pending fields and reveals target level
+  ---
+  duration_ms: 461.0562
+  ...
+# Subtest: conflicting pending field blocks history without popping and view/unit changes preserve redo
+ok 319 - conflicting pending field blocks history without popping and view/unit changes preserve redo
+  ---
+  duration_ms: 352.616
+  ...
+# Subtest: same-value raw resolution, no-op rename and failed placement do not create duplicate committed history
+ok 320 - same-value raw resolution, no-op rename and failed placement do not create duplicate committed history
+  ---
+  duration_ms: 104.3158
+  ...
+# Subtest: stale draft revision and unsupported recovery bytes cannot overwrite the selected draft
+ok 321 - stale draft revision and unsupported recovery bytes cannot overwrite the selected draft
+  ---
+  duration_ms: 49.5725
+  ...
+# Subtest: v3 recovery falls back to v2 without rewriting it and detects fallback races before first accepted write
+ok 322 - v3 recovery falls back to v2 without rewriting it and detects fallback races before first accepted write
+  ---
+  duration_ms: 16.168
+  ...
+# Subtest: v3 fallback to v1 preserves all older bytes; failed writes retain accepted memory/history and reload empties only session history
+ok 323 - v3 fallback to v1 preserves all older bytes; failed writes retain accepted memory/history and reload empties only session history
+  ---
+  duration_ms: 102.6429
+  ...
+# Subtest: malformed raw target/current text and forged history source are rejected without normalizing captured data
+ok 324 - malformed raw target/current text and forged history source are rejected without normalizing captured data
+  ---
+  duration_ms: 119.1849
+  ...
+# Subtest: rotation-only and single-attachment Undo preserve unrelated confirmed measurements and exact evidence
+ok 325 - rotation-only and single-attachment Undo preserve unrelated confirmed measurements and exact evidence
+  ---
+  duration_ms: 323.5776
+  ...
+# Subtest: same physical pointer placement preserves typed provenance and creates no committed history
+ok 326 - same physical pointer placement preserves typed provenance and creates no committed history
+  ---
+  duration_ms: 57.9117
+  ...
+# Subtest: adding older-format drafts never downgrades a mixed schema4 recovery envelope
+ok 327 - adding older-format drafts never downgrades a mixed schema4 recovery envelope
+  ---
+  duration_ms: 30.2931
+  ...
+# Subtest: M3D stairs schema4 rejects reused identities, stale endpoints, same-level connections and duplicate exact surface attachments
+ok 328 - M3D stairs schema4 rejects reused identities, stale endpoints, same-level connections and duplicate exact surface attachments
+  ---
+  duration_ms: 75.4911
+  ...
+# Subtest: M3D stair upgrade preserves current schema3 values, originals, ownership, profiles and old captures without mutation
+ok 329 - M3D stair upgrade preserves current schema3 values, originals, ownership, profiles and old captures without mutation
+  ---
+  duration_ms: 12.0343
+  ...
+# Subtest: M3D unresolved destinations and missing stair rise remain explicit without inventing elevations or blocking independent reviewed finishes
+ok 330 - M3D unresolved destinations and missing stair rise remain explicit without inventing elevations or blocking independent reviewed finishes
+  ---
+  duration_ms: 43.6345
+  ...
+# Subtest: M3D run excludes independent landings and 90-degree endpoint rotation retains room-local anchors
+ok 331 - M3D run excludes independent landings and 90-degree endpoint rotation retains room-local anchors
+  ---
+  duration_ms: 12.2604
+  ...
+# Subtest: M3D unresolved impacts block only affected selected net surfaces and preserve complete gross basis
+ok 332 - M3D unresolved impacts block only affected selected net surfaces and preserve complete gross basis
+  ---
+  duration_ms: 38.9693
+  ...
+# Subtest: M3D explicit upper floor and lower ceiling 18 square-foot openings deduct once and apply floor waste after net
+ok 333 - M3D explicit upper floor and lower ceiling 18 square-foot openings deduct once and apply floor waste after net
+  ---
+  duration_ms: 124.2601
+  ...
+# Subtest: M3D overlapping independent rectangular holes use exact coverage union and no-deduction impact never hides explicit attached holes
+ok 334 - M3D overlapping independent rectangular holes use exact coverage union and no-deduction impact never hides explicit attached holes
+  ---
+  duration_ms: 43.7368
+  ...
+# Subtest: M3D invalid or unresolved surface measurements keep affected gross and leave other surfaces/walls usable without clamping
+ok 335 - M3D invalid or unresolved surface measurements keep affected gross and leave other surfaces/walls usable without clamping
+  ---
+  duration_ms: 42.9682
+  ...
+# Subtest: M3D invalid stair/landing fit remains visible but does not fabricate or block an independent known surface area
+ok 336 - M3D invalid stair/landing fit remains visible but does not fabricate or block an independent known surface area
+  ---
+  duration_ms: 10.5675
+  ...
+# Subtest: M3D unconfirmed opening measurements retain provisional net and prevent confirmed snapshot while gross remains independently confirmed
+ok 337 - M3D unconfirmed opening measurements retain provisional net and prevent confirmed snapshot while gross remains independently confirmed
+  ---
+  duration_ms: 53.9608
+  ...
+# Subtest: M3D narrow numerical gaps are not bridged and extreme lost extents fail without a usable net
+ok 338 - M3D narrow numerical gaps are not bridged and extreme lost extents fail without a usable net
+  ---
+  duration_ms: 15.2952
+  ...
+# Subtest: M3D fingerprints bind stair connections, geometry, impacts and evidence while labels/order/camera are presentation
+ok 339 - M3D fingerprints bind stair connections, geometry, impacts and evidence while labels/order/camera are presentation
+  ---
+  duration_ms: 191.1826
+  ...
+# Subtest: M3D stair snapshots capture synchronously, detach, verify integrity and reject incompatible old policies/results
+ok 340 - M3D stair snapshots capture synchronously, detach, verify integrity and reject incompatible old policies/results
+  ---
+  duration_ms: 118.8447
+  ...
+# Subtest: M3D frozen historical v1/v2/v3 snapshot bytes and calculation hashes remain identical
+ok 341 - M3D frozen historical v1/v2/v3 snapshot bytes and calculation hashes remain identical
+  ---
+  duration_ms: 505.7212
+  ...
+# Subtest: normal production composition denies every legacy route and cannot activate injected fixture identities
+ok 342 - normal production composition denies every legacy route and cannot activate injected fixture identities
+  ---
+  duration_ms: 129.0703
+  ...
+# Subtest: absent, expired, revoked and invalid identities deny before accessing storage
+ok 343 - absent, expired, revoked and invalid identities deny before accessing storage
+  ---
+  duration_ms: 26.4406
+  ...
+# Subtest: malformed or expired authenticated results do not become principals
+ok 344 - malformed or expired authenticated results do not become principals
+  ---
+  duration_ms: 40.2608
+  ...
+# Subtest: provider exceptions fail closed and never expose provider credentials
+ok 345 - provider exceptions fail closed and never expose provider credentials
+  ---
+  duration_ms: 5.9983
+  ...
+# Subtest: verified owner and editor round trips retain authorized legacy payload and server-owned workspace
+ok 346 - verified owner and editor round trips retain authorized legacy payload and server-owned workspace
+  ---
+  duration_ms: 20.1071
+  ...
+# Subtest: workspace A cannot select, list, read, patch or delete B by known workspace and record IDs
+ok 347 - workspace A cannot select, list, read, patch or delete B by known workspace and record IDs
+  ---
+  duration_ms: 25.2763
+  ...
+# Subtest: viewer reads succeed while forged role, owner and user headers cannot authorize direct writes
+ok 348 - viewer reads succeed while forged role, owner and user headers cannot authorize direct writes
+  ---
+  duration_ms: 13.7693
+  ...
+# Subtest: workspace owner administration is scoped and editor cannot elevate membership or rename workspace
+ok 349 - workspace owner administration is scoped and editor cannot elevate membership or rename workspace
+  ---
+  duration_ms: 24.2684
+  ...
+# Subtest: revoked membership and demoted role take effect on the next operation using the same verified session
+ok 350 - revoked membership and demoted role take effect on the next operation using the same verified session
+  ---
+  duration_ms: 14.874
+  ...
+# Subtest: membership changes before repository access cannot rely on identity-time permission
+ok 351 - membership changes before repository access cannot rely on identity-time permission
+  ---
+  duration_ms: 5.829
+  ...
+# Subtest: verified outsider and same subject from another issuer cannot access workspace records
+ok 352 - verified outsider and same subject from another issuer cannot access workspace records
+  ---
+  duration_ms: 8.5534
+  ...
+# Subtest: explicit workspace selection is required and malformed IDs never select the first workspace
+ok 353 - explicit workspace selection is required and malformed IDs never select the first workspace
+  ---
+  duration_ms: 14.6665
+  ...
+# Subtest: mass-assignment fields cannot create ownership, move plans or elevate authorization
+ok 354 - mass-assignment fields cannot create ownership, move plans or elevate authorization
+  ---
+  duration_ms: 39.7174
+  ...
+# Subtest: unowned legacy records remain intact and inaccessible with non-disclosing missing-record responses
+ok 355 - unowned legacy records remain intact and inaccessible with non-disclosing missing-record responses
+  ---
+  duration_ms: 15.2587
+  ...
+# Subtest: storage read, write and lazy-construction failures are generic, fail closed and do not poison later requests
+ok 356 - storage read, write and lazy-construction failures are generic, fail closed and do not poison later requests
+  ---
+  duration_ms: 14.4267
+  ...
+# Subtest: all cookie and bearer mutations require exact trusted origin and explicit request header
+ok 357 - all cookie and bearer mutations require exact trusted origin and explicit request header
+  ---
+  duration_ms: 132.8867
+  ...
+# Subtest: missing trusted origin configuration denies writes without silently trusting request Host
+ok 358 - missing trusted origin configuration denies writes without silently trusting request Host
+  ---
+  duration_ms: 7.1571
+  ...
+# Subtest: private responses cannot serve a previous principal or revoked member through conditional cache reuse
+ok 359 - private responses cannot serve a previous principal or revoked member through conditional cache reuse
+  ---
+  duration_ms: 9.0899
+  ...
+# Subtest: normal composition keeps parser errors private without echoing input or invoking storage
+ok 360 - normal composition keeps parser errors private without echoing input or invoking storage
+  ---
+  duration_ms: 12.4126
+  ...
+# Subtest: physical routes require verified workspace local context before any request
+ok 361 - physical routes require verified workspace local context before any request
+  ---
+  duration_ms: 26.8626
+  ...
+# Subtest: physical revision requests carry exact If-Match/idempotency while authority headers remain runtime-owned
+ok 362 - physical revision requests carry exact If-Match/idempotency while authority headers remain runtime-owned
+  ---
+  duration_ms: 1.5861
+  ...
+# Subtest: idempotency conflicts remain actionable without discarding the verified editor context
+ok 363 - idempotency conflicts remain actionable without discarding the verified editor context
+  ---
+  duration_ms: 2.5403
+  ...
+# Subtest: physical context conflicts invalidate old account generation before any private response can apply
+ok 364 - physical context conflicts invalidate old account generation before any private response can apply
+  ---
+  duration_ms: 2.1083
+  ...
+# Subtest: autosave starts off; opening or observing an anonymous draft never performs its first upload
+ok 365 - autosave starts off; opening or observing an anonymous draft never performs its first upload
+  ---
+  duration_ms: 117.5226
+  ...
+# Subtest: 1500 ms committed debounce coalesces edits and identity detects names even with the same counter
+ok 366 - 1500 ms committed debounce coalesces edits and identity detects names even with the same counter
+  ---
+  duration_ms: 442.7037
+  ...
+# Subtest: view-only revision counters and repeated mount observations do not create revisions
+ok 367 - view-only revision counters and repeated mount observations do not create revisions
+  ---
+  duration_ms: 403.7711
+  ...
+# Subtest: raw text checkpoints exactly, pauses candidates, and Apply resumes without confirmation or scope changes
+ok 368 - raw text checkpoints exactly, pauses candidates, and Apply resumes without confirmation or scope changes
+  ---
+  duration_ms: 417.4874
+  ...
+# Subtest: slow response acknowledges its candidate while newer raw work remains checkpointed and unsaved
+ok 369 - slow response acknowledges its candidate while newer raw work remains checkpointed and unsaved
+  ---
+  duration_ms: 324.4681
+  ...
+# Subtest: lost response retries immutable key/body/base before sending the newer committed candidate
+ok 370 - lost response retries immutable key/body/base before sending the newer committed candidate
+  ---
+  duration_ms: 490.9159
+  ...
+# Subtest: quota failure prevents autosave dispatch while explicit Save retains an accurate recovery warning
+ok 371 - quota failure prevents autosave dispatch while explicit Save retains an accurate recovery warning
+  ---
+  duration_ms: 231.8061
+  ...
+# Subtest: acknowledgement transaction failure keeps the exact request for receipt replay
+ok 372 - acknowledgement transaction failure keeps the exact request for receipt replay
+  ---
+  duration_ms: 233.9079
+  ...
+# Subtest: context invalidation suspends in-flight work and stale responses cannot advance a local binding
+ok 373 - context invalidation suspends in-flight work and stale responses cannot advance a local binding
+  ---
+  duration_ms: 187.5334
+  ...
+# Subtest: Autosave off cancels scheduling before a fresh authorization request resolves
+ok 374 - Autosave off cancels scheduling before a fresh authorization request resolves
+  ---
+  duration_ms: 128.07
+  ...
+# Subtest: recovery forks a fresh branch, preserves raw inputs, and replays only the original uncertain intent
+ok 375 - recovery forks a fresh branch, preserves raw inputs, and replays only the original uncertain intent
+  ---
+  duration_ms: 334.0534
+  ...
+# Subtest: unsent recovered stale base is a persistent conflict, including after raw Apply
+ok 376 - unsent recovered stale base is a persistent conflict, including after raw Apply
+  ---
+  duration_ms: 246.9601
+  ...
+# Subtest: retry budget counts actual sends; observer churn cannot exhaust or duplicate retry timers
+ok 377 - retry budget counts actual sends; observer churn cannot exhaust or duplicate retry timers
+  ---
+  duration_ms: 452.0781
+  ...
+# Subtest: permanent invalid-payload errors never auto-retry or silently resume after view edits
+ok 378 - permanent invalid-payload errors never auto-retry or silently resume after view edits
+  ---
+  duration_ms: 216.9894
+  ...
+# Subtest: continuous raw typing checkpoints within the two-second maximum wait without sending
+ok 379 - continuous raw typing checkpoints within the two-second maximum wait without sending
+  ---
+  duration_ms: 435.4637
+  ...
+# Subtest: Save as a new plan retains the old branch, durably prepares a create, and starts Autosave off
+ok 380 - Save as a new plan retains the old branch, durably prepares a create, and starts Autosave off
+  ---
+  duration_ms: 66.5861
+  ...
+# Subtest: permission loss preserves the uncertain intent and pauses automatic transmission
+ok 381 - permission loss preserves the uncertain intent and pauses automatic transmission
+  ---
+  duration_ms: 164.1988
+  ...
+# Subtest: discovery authorizes each saved plan before returning any associated recovery content
+ok 382 - discovery authorizes each saved plan before returning any associated recovery content
+  ---
+  duration_ms: 33.0664
+  ...
+# Subtest: fresh-session identity stays suspended while same verified session refresh can reactivate
+ok 383 - fresh-session identity stays suspended while same verified session refresh can reactivate
+  ---
+  duration_ms: 229.8442
+  ...
+# Subtest: recovery discovery excludes current in-use branches without altering older checkpoints
+ok 384 - recovery discovery excludes current in-use branches without altering older checkpoints
+  ---
+  duration_ms: 123.9977
+  ...
+# Subtest: Apply with Autosave off clears stale unfinished-input pause while preserving unsaved status
+ok 385 - Apply with Autosave off clears stale unfinished-input pause while preserving unsaved status
+  ---
+  duration_ms: 170.9118
+  ...
+# Subtest: a delayed Autosave toggle never replaces newer canonical edits with its captured draft
+ok 386 - a delayed Autosave toggle never replaces newer canonical edits with its captured draft
+  ---
+  duration_ms: 76.1744
+  ...
+# Subtest: a slower enable response cannot reverse a newer explicit Autosave off choice
+ok 387 - a slower enable response cannot reverse a newer explicit Autosave off choice
+  ---
+  duration_ms: 33.5502
+  ...
+# Subtest: archive pause preserves raw fields and every local branch while stopping pending Autosave
+ok 388 - archive pause preserves raw fields and every local branch while stopping pending Autosave
+  ---
+  duration_ms: 216.203
+  ...
+# Subtest: archive leaves an uncertain accepted save retryable with the exact key and raw newer work
+ok 389 - archive leaves an uncertain accepted save retryable with the exact key and raw newer work
+  ---
+  duration_ms: 236.2423
+  ...
+# Subtest: a fresh archived-save rejection leaves no false retry but permits an explicit independent Save as new
+ok 390 - a fresh archived-save rejection leaves no false retry but permits an explicit independent Save as new
+  ---
+  duration_ms: 93.09
+  ...
+# Subtest: enabling Autosave checks current archived state even when the local binding predates archive
+ok 391 - enabling Autosave checks current archived state even when the local binding predates archive
+  ---
+  duration_ms: 89.1338
+  ...
+# Subtest: archived recovery forks exact evidence with Autosave off and leaves its original checkpoint intact
+ok 392 - archived recovery forks exact evidence with Autosave off and leaves its original checkpoint intact
+  ---
+  duration_ms: 91.6021
+  ...
+# Subtest: a delayed enable cannot undo a newer lifecycle pause and recovery failure refuses archive preparation
+ok 393 - a delayed enable cannot undo a newer lifecycle pause and recovery failure refuses archive preparation
+  ---
+  duration_ms: 32.3903
+  ...
+# Subtest: an older archived receipt cannot reverse a newer restore and still acknowledges the exact saved request
+ok 394 - an older archived receipt cannot reverse a newer restore and still acknowledges the exact saved request
+  ---
+  duration_ms: 202.5252
+  ...
+# Subtest: a stale archived preflight read cannot reverse restore or discard a fresh save candidate
+ok 395 - a stale archived preflight read cannot reverse restore or discard a fresh save candidate
+  ---
+  duration_ms: 81.657
+  ...
+# Subtest: a delayed archived rejection cannot reverse a newer restore or leave a falsely retryable request
+ok 396 - a delayed archived rejection cannot reverse a newer restore or leave a falsely retryable request
+  ---
+  duration_ms: 61.7243
+  ...
+# Subtest: Open observation preserves a newer restore while keeping the opened revision separate and current active drafts enabled
+ok 397 - Open observation preserves a newer restore while keeping the opened revision separate and current active drafts enabled
+  ---
+  duration_ms: 31.424
+  ...
+# Subtest: a recovery read delayed across restore preserves the original journal and cannot revive its old Autosave preference
+ok 398 - a recovery read delayed across restore preserves the original journal and cannot revive its old Autosave preference
+  ---
+  duration_ms: 88.3239
+  ...
+# Subtest: room-name typing is raw, independently recoverable and excluded from the outgoing envelope until explicit Apply
+ok 399 - room-name typing is raw, independently recoverable and excluded from the outgoing envelope until explicit Apply
+  ---
+  duration_ms: 31.1527
+  ...
+# Subtest: all new name and assignment raw values survive together without committing geometry, quantities or evidence
+ok 400 - all new name and assignment raw values survive together without committing geometry, quantities or evidence
+  ---
+  duration_ms: 33.6925
+  ...
+# Subtest: invalid object names remain raw and deletion cannot discard them
+ok 401 - invalid object names remain raw and deletion cannot discard them
+  ---
+  duration_ms: 42.4866
+  ...
+# Subtest: room assignments are draft-owned pending actions and Apply/Revert preserve other raw inputs
+ok 402 - room assignments are draft-owned pending actions and Apply/Revert preserve other raw inputs
+  ---
+  duration_ms: 3.6066
+  ...
+# Subtest: typing adds no history while one explicit room-name Apply gives one guarded Undo transaction
+ok 403 - typing adds no history while one explicit room-name Apply gives one guarded Undo transaction
+  ---
+  duration_ms: 35.6437
+  ...
+# Subtest: pending room assignment blocks Undo of that assignment and level removal while preserving the candidate
+ok 404 - pending room assignment blocks Undo of that assignment and level removal while preserving the candidate
+  ---
+  duration_ms: 27.492
+  ...
+# Subtest: pending names guard object history, and unrelated name raw survives other committed edits
+ok 405 - pending names guard object history, and unrelated name raw survives other committed edits
+  ---
+  duration_ms: 79.6877
+  ...
+# Subtest: legacy draft caches remain compatible while impossible pending ownership is rejected without reinterpretation
+ok 406 - legacy draft caches remain compatible while impossible pending ownership is rejected without reinterpretation
+  ---
+  duration_ms: 6.3406
+  ...
+# Subtest: Save blocks every room measurement family; applying unknown is deliberate and does not confirm
+ok 407 - Save blocks every room measurement family; applying unknown is deliberate and does not confirm
+  ---
+  duration_ms: 197.2234
+  ...
+# Subtest: Save sees all opening width height sill and offset edits and reverts only the targeted raw field
+ok 408 - Save sees all opening width height sill and offset edits and reverts only the targeted raw field
+  ---
+  duration_ms: 242.1154
+  ...
+# Subtest: Save sees pending names on hidden levels and preserves invalid text until Apply or Revert
+ok 409 - Save sees pending names on hidden levels and preserves invalid text until Apply or Revert
+  ---
+  duration_ms: 54.4883
+  ...
+# Subtest: Save sees stair, endpoint, landing, hole and surface-placement pending fields
+ok 410 - Save sees stair, endpoint, landing, hole and surface-placement pending fields
+  ---
+  duration_ms: 619.457
+  ...
+# Subtest: Save sees all zone and cabinet dimension and placement fields
+ok 411 - Save sees all zone and cabinet dimension and placement fields
+  ---
+  duration_ms: 478.8562
+  ...
+# Subtest: Save sees room/zone custom-use and zone/cabinet labels without auto-applying them
+ok 412 - Save sees room/zone custom-use and zone/cabinet labels without auto-applying them
+  ---
+  duration_ms: 198.4208
+  ...
+# Subtest: Save sees waste edits separately from the previously committed request
+ok 413 - Save sees waste edits separately from the previously committed request
+  ---
+  duration_ms: 36.5088
+  ...
+# Subtest: duplicate Save clicks serialize and acknowledge only the submitted local revision
+ok 414 - duplicate Save clicks serialize and acknowledge only the submitted local revision
+  ---
+  duration_ms: 189.3483
+  ...
+# Subtest: loss after commit retries exact original payload/key even after local edits
+ok 415 - loss after commit retries exact original payload/key even after local edits
+  ---
+  duration_ms: 249.0975
+  ...
+# Subtest: conflict preserves candidate/base and only explicit Save as new removes If-Match binding
+ok 416 - conflict preserves candidate/base and only explicit Save as new removes If-Match binding
+  ---
+  duration_ms: 247.1534
+  ...
+# Subtest: late Save response after logout cannot acknowledge or persist old private metadata
+ok 417 - late Save response after logout cannot acknowledge or persist old private metadata
+  ---
+  duration_ms: 128.0449
+  ...
+# Subtest: a pending field blocks even retry and sends nothing; captured draft is never mutated
+ok 418 - a pending field blocks even retry and sends nothing; captured draft is never mutated
+  ---
+  duration_ms: 21.7145
+  ...
+# Subtest: accepted revision becomes next save condition; changed-key errors are not network retries
+ok 419 - accepted revision becomes next save condition; changed-key errors are not network retries
+  ---
+  duration_ms: 128.5704
+  ...
+# Subtest: a second click after successful acknowledgement of the same local revision is a no-op
+ok 420 - a second click after successful acknowledgement of the same local revision is a no-op
+  ---
+  duration_ms: 106.6208
+  ...
+# Subtest: physical save opens full schema5 geometry, identity, committed request and all retained lineage without mutating source
+ok 421 - physical save opens full schema5 geometry, identity, committed request and all retained lineage without mutating source
+  ---
+  duration_ms: 1193.1594
+  ...
+# Subtest: server evaluation binds exact schema5 source, selected work and server revision; stair quantity remains252/25.2/277.2
+ok 422 - server evaluation binds exact schema5 source, selected work and server revision; stair quantity remains252/25.2/277.2
+  ---
+  duration_ms: 763.2445
+  ...
+# Subtest: 12x10x8 and later9ft evaluation leave floor120/ceiling120 while walls change352to396; original capture immutable
+ok 423 - 12x10x8 and later9ft evaluation leave floor120/ceiling120 while walls change352to396; original capture immutable
+  ---
+  duration_ms: 47.4521
+  ...
+# Subtest: unknown cleared ceiling height remains saved unknown; independent floor/ceiling stay available and walls blocked
+ok 424 - unknown cleared ceiling height remains saved unknown; independent floor/ceiling stay available and walls blocked
+  ---
+  duration_ms: 26.5645
+  ...
+# Subtest: empty and incomplete supported drafts can save without fabricated confirmation
+ok 425 - empty and incomplete supported drafts can save without fabricated confirmation
+  ---
+  duration_ms: 14.3036
+  ...
+# Subtest: full persisted content hash detects names and metadata omitted by geometry fingerprints; JSON object key order is irrelevant
+ok 426 - full persisted content hash detects names and metadata omitted by geometry fingerprints; JSON object key order is irrelevant
+  ---
+  duration_ms: 29.1832
+  ...
+# Subtest: captured source text and measurement precision survive exact; no legacy metadata reinterpretation
+ok 427 - captured source text and measurement precision survive exact; no legacy metadata reinterpretation
+  ---
+  duration_ms: 6.665
+  ...
+# Subtest: explicit review and restoration action evidence survives Save/Open without becoming a fresh confirmation
+ok 428 - explicit review and restoration action evidence survives Save/Open without becoming a fresh confirmation
+  ---
+  duration_ms: 20.6008
+  ...
+# Subtest: projection omits current editor registry, raw fields, display/view and history stacks, preserving source originals
+ok 429 - projection omits current editor registry, raw fields, display/view and history stacks, preserving source originals
+  ---
+  duration_ms: 236.773
+  ...
+# Subtest: all current pending field families fail capture explicitly and leave originals unchanged
+ok 430 - all current pending field families fail capture explicitly and leave originals unchanged
+  ---
+  duration_ms: 259.9262
+  ...
+# Subtest: malformed envelopes, server identity spoofing, invalid references and unsupported versions reject without mutation
+ok 431 - malformed envelopes, server identity spoofing, invalid references and unsupported versions reject without mutation
+  ---
+  duration_ms: 393.8223
+  ...
+# Subtest: invented confirmation or modified restoration evidence cannot pass merely by submitting a status flag
+ok 432 - invented confirmation or modified restoration evidence cannot pass merely by submitting a status flag
+  ---
+  duration_ms: 5.0083
+  ...
+# Subtest: credential fields, unbounded payloads, accessors, cycles and non-finite values explicitly reject
+ok 433 - credential fields, unbounded payloads, accessors, cycles and non-finite values explicitly reject
+  ---
+  duration_ms: 4.5119
+  ...
+# Subtest: legacy schema2/3 save remains explicit unchanged and does not auto-adopt newer document contracts
+ok 434 - legacy schema2/3 save remains explicit unchanged and does not auto-adopt newer document contracts
+  ---
+  duration_ms: 8.2989
+  ...
+# Subtest: historical snapshot versions and their original serialized source text survive without recalculation or upgrade
+ok 435 - historical snapshot versions and their original serialized source text survive without recalculation or upgrade
+  ---
+  duration_ms: 162.3291
+  ...
+# Subtest: async evaluation owns the submitted payload and server binding before awaiting fingerprints
+ok 436 - async evaluation owns the submitted payload and server binding before awaiting fingerprints
+  ---
+  duration_ms: 17.705
+  ...
+# Subtest: JSONB-incompatible NUL or lone-surrogate content rejects explicitly while valid Unicode remains exact
+ok 437 - JSONB-incompatible NUL or lone-surrogate content rejects explicitly while valid Unicode remains exact
+  ---
+  duration_ms: 24.1179
+  ...
+# Subtest: pending opening-delete command slot is omitted while deleted geometry and performed action evidence remain exact
+ok 438 - pending opening-delete command slot is omitted while deleted geometry and performed action evidence remain exact
+  ---
+  duration_ms: 234.7764
+  ...
+# Subtest: captured rectangular layout has actual room and window geometry, room dimensions and source identity
+ok 439 - captured rectangular layout has actual room and window geometry, room dimensions and source identity
+  ---
+  duration_ms: 58.9287
+  ...
+# Subtest: door top left inward preserves editor clockwise handing and swing path
+ok 440 - door top left inward preserves editor clockwise handing and swing path
+  ---
+  duration_ms: 16.3899
+  ...
+# Subtest: door top left outward preserves editor clockwise handing and swing path
+ok 441 - door top left outward preserves editor clockwise handing and swing path
+  ---
+  duration_ms: 5.3838
+  ...
+# Subtest: door top right inward preserves editor clockwise handing and swing path
+ok 442 - door top right inward preserves editor clockwise handing and swing path
+  ---
+  duration_ms: 6.1383
+  ...
+# Subtest: door top right outward preserves editor clockwise handing and swing path
+ok 443 - door top right outward preserves editor clockwise handing and swing path
+  ---
+  duration_ms: 25.436
+  ...
+# Subtest: door right left inward preserves editor clockwise handing and swing path
+ok 444 - door right left inward preserves editor clockwise handing and swing path
+  ---
+  duration_ms: 5.9039
+  ...
+# Subtest: door right left outward preserves editor clockwise handing and swing path
+ok 445 - door right left outward preserves editor clockwise handing and swing path
+  ---
+  duration_ms: 4.3173
+  ...
+# Subtest: door right right inward preserves editor clockwise handing and swing path
+ok 446 - door right right inward preserves editor clockwise handing and swing path
+  ---
+  duration_ms: 4.7711
+  ...
+# Subtest: door right right outward preserves editor clockwise handing and swing path
+ok 447 - door right right outward preserves editor clockwise handing and swing path
+  ---
+  duration_ms: 4.721
+  ...
+# Subtest: door bottom left inward preserves editor clockwise handing and swing path
+ok 448 - door bottom left inward preserves editor clockwise handing and swing path
+  ---
+  duration_ms: 6.2086
+  ...
+# Subtest: door bottom left outward preserves editor clockwise handing and swing path
+ok 449 - door bottom left outward preserves editor clockwise handing and swing path
+  ---
+  duration_ms: 3.7791
+  ...
+# Subtest: door bottom right inward preserves editor clockwise handing and swing path
+ok 450 - door bottom right inward preserves editor clockwise handing and swing path
+  ---
+  duration_ms: 7.466
+  ...
+# Subtest: door bottom right outward preserves editor clockwise handing and swing path
+ok 451 - door bottom right outward preserves editor clockwise handing and swing path
+  ---
+  duration_ms: 6.682
+  ...
+# Subtest: door left left inward preserves editor clockwise handing and swing path
+ok 452 - door left left inward preserves editor clockwise handing and swing path
+  ---
+  duration_ms: 7.1262
+  ...
+# Subtest: door left left outward preserves editor clockwise handing and swing path
+ok 453 - door left left outward preserves editor clockwise handing and swing path
+  ---
+  duration_ms: 4.134
+  ...
+# Subtest: door left right inward preserves editor clockwise handing and swing path
+ok 454 - door left right inward preserves editor clockwise handing and swing path
+  ---
+  duration_ms: 4.9564
+  ...
+# Subtest: door left right outward preserves editor clockwise handing and swing path
+ok 455 - door left right outward preserves editor clockwise handing and swing path
+  ---
+  duration_ms: 5.9535
+  ...
+# Subtest: asymmetric top opening center uses captured clockwise wall offset
+ok 456 - asymmetric top opening center uses captured clockwise wall offset
+  ---
+  duration_ms: 5.0216
+  ...
+# Subtest: asymmetric right opening center uses captured clockwise wall offset
+ok 457 - asymmetric right opening center uses captured clockwise wall offset
+  ---
+  duration_ms: 4.5187
+  ...
+# Subtest: asymmetric bottom opening center uses captured clockwise wall offset
+ok 458 - asymmetric bottom opening center uses captured clockwise wall offset
+  ---
+  duration_ms: 3.2936
+  ...
+# Subtest: asymmetric left opening center uses captured clockwise wall offset
+ok 459 - asymmetric left opening center uses captured clockwise wall offset
+  ---
+  duration_ms: 4.0457
+  ...
+# Subtest: sliding doors keep captured style without adding a hinged swing
+ok 460 - sliding doors keep captured style without adding a hinged swing
+  ---
+  duration_ms: 6.721
+  ...
+# Subtest: shared door has a gap on each attachment but only one primary swing
+ok 461 - shared door has a gap on each attachment but only one primary swing
+  ---
+  duration_ms: 4.6244
+  ...
+# Subtest: overlapping coordinates on different levels remain isolated; display order and empty levels are explicit
+ok 462 - overlapping coordinates on different levels remain isolated; display order and empty levels are explicit
+  ---
+  duration_ms: 45.5865
+  ...
+# Subtest: schema5 renders captured stairs, endpoint landings, surface openings, zones and cabinet blocks using room-local bounds
+ok 463 - schema5 renders captured stairs, endpoint landings, surface openings, zones and cabinet blocks using room-local bounds
+  ---
+  duration_ms: 78.8923
+  ...
+# Subtest: unsupported surface geometry stays in its schedule without a fabricated rectangle
+ok 464 - unsupported surface geometry stays in its schedule without a fabricated rectangle
+  ---
+  duration_ms: 23.9739
+  ...
+# Subtest: unknown dimensions and absent placements are reported without positions or zero-sized placeholders
+ok 465 - unknown dimensions and absent placements are reported without positions or zero-sized placeholders
+  ---
+  duration_ms: 6.8227
+  ...
+# Subtest: invalid opening fit is not silently clamped onto its room wall
+ok 466 - invalid opening fit is not silently clamped onto its room wall
+  ---
+  duration_ms: 5.4551
+  ...
+# Subtest: large translated coordinates retain readable normalized geometry while lost numeric extents are explicit
+ok 467 - large translated coordinates retain readable normalized geometry while lost numeric extents are explicit
+  ---
+  duration_ms: 5.8327
+  ...
+# Subtest: historical drawing is deterministic and leaves complete frozen capture unchanged: m3b-v1-snapshot.json
+ok 468 - historical drawing is deterministic and leaves complete frozen capture unchanged: m3b-v1-snapshot.json
+  ---
+  duration_ms: 22.1644
+  ...
+# Subtest: historical drawing is deterministic and leaves complete frozen capture unchanged: m3d-v2-snapshot.json
+ok 469 - historical drawing is deterministic and leaves complete frozen capture unchanged: m3d-v2-snapshot.json
+  ---
+  duration_ms: 24.2697
+  ...
+# Subtest: historical drawing is deterministic and leaves complete frozen capture unchanged: m3d-v3-snapshot.json
+ok 470 - historical drawing is deterministic and leaves complete frozen capture unchanged: m3d-v3-snapshot.json
+  ---
+  duration_ms: 25.4202
+  ...
+# Subtest: historical drawing is deterministic and leaves complete frozen capture unchanged: m3d-v4-snapshot.json
+ok 471 - historical drawing is deterministic and leaves complete frozen capture unchanged: m3d-v4-snapshot.json
+  ---
+  duration_ms: 21.6804
+  ...
+# Subtest: untrusted names and IDs are escaped in HTML and SVG and cannot inject CSS, scripts or network requests
+ok 472 - untrusted names and IDs are escaped in HTML and SVG and cannot inject CSS, scripts or network requests
+  ---
+  duration_ms: 8.5738
+  ...
+# Subtest: metric drawing dimensions do not change geometry, and print CSS keeps each level separate with paginating schedules
+ok 473 - metric drawing dimensions do not change geometry, and print CSS keeps each level separate with paginating schedules
+  ---
+  duration_ms: 9.0912
+  ...
+# Subtest: local export captures rich schema five without rewriting draft, evidence or selected work
+ok 474 - local export captures rich schema five without rewriting draft, evidence or selected work
+  ---
+  duration_ms: 732.8579
+  ...
+# Subtest: local export refuses pending dimension without changing raw text
+ok 475 - local export refuses pending dimension without changing raw text
+  ---
+  duration_ms: 6.1016
+  ...
+# Subtest: local export refuses pending waste without changing raw text
+ok 476 - local export refuses pending waste without changing raw text
+  ---
+  duration_ms: 4.9821
+  ...
+# Subtest: captured report remains bound to its original geometry when later edits commit
+ok 477 - captured report remains bound to its original geometry when later edits commit
+  ---
+  duration_ms: 57.9685
+  ...
+# Subtest: CSV independently parses exact selected quantities, deductions, waste and identity counts
+ok 478 - CSV independently parses exact selected quantities, deductions, waste and identity counts
+  ---
+  duration_ms: 138.9928
+  ...
+# Subtest: metric display rounds at the boundary and canonical columns retain every captured amount
+ok 479 - metric display rounds at the boundary and canonical columns retain every captured amount
+  ---
+  duration_ms: 53.2257
+  ...
+# Subtest: a height change is a distinct capture: walls change, floor and ceiling remain unchanged
+ok 480 - a height change is a distinct capture: walls change, floor and ceiling remain unchanged
+  ---
+  duration_ms: 130.3768
+  ...
+# Subtest: clearing ceiling height retains floor quantities and explicit unavailable walls
+ok 481 - clearing ceiling height retains floor quantities and explicit unavailable walls
+  ---
+  duration_ms: 77.1943
+  ...
+# Subtest: a usable room subtotal never becomes the selected total when another room lacks dimensions
+ok 482 - a usable room subtotal never becomes the selected total when another room lacks dimensions
+  ---
+  duration_ms: 24.7476
+  ...
+# Subtest: unconfirmed dimensions remain provisional even with complete scope coverage
+ok 483 - unconfirmed dimensions remain provisional even with complete scope coverage
+  ---
+  duration_ms: 7.9747
+  ...
+# Subtest: unsupported vaulted ceiling reports its reason and never substitutes verified flat-ceiling quantities
+ok 484 - unsupported vaulted ceiling reports its reason and never substitutes verified flat-ceiling quantities
+  ---
+  duration_ms: 15.8391
+  ...
+# Subtest: historical immutable capture keeps its exact versions and totals: m3b-v1-snapshot.json
+ok 485 - historical immutable capture keeps its exact versions and totals: m3b-v1-snapshot.json
+  ---
+  duration_ms: 100.7996
+  ...
+# Subtest: historical immutable capture keeps its exact versions and totals: m3d-v2-snapshot.json
+ok 486 - historical immutable capture keeps its exact versions and totals: m3d-v2-snapshot.json
+  ---
+  duration_ms: 103.7045
+  ...
+# Subtest: historical immutable capture keeps its exact versions and totals: m3d-v3-snapshot.json
+ok 487 - historical immutable capture keeps its exact versions and totals: m3d-v3-snapshot.json
+  ---
+  duration_ms: 153.0637
+  ...
+# Subtest: historical immutable capture keeps its exact versions and totals: m3d-v4-snapshot.json
+ok 488 - historical immutable capture keeps its exact versions and totals: m3d-v4-snapshot.json
+  ---
+  duration_ms: 127.7799
+  ...
+# Subtest: current layout-version capture retains source groups, height, style and layout data unchanged
+ok 489 - current layout-version capture retains source groups, height, style and layout data unchanged
+  ---
+  duration_ms: 95.8306
+  ...
+# Subtest: spreadsheet formula names, including hidden leading whitespace/newlines, are inert cells
+ok 490 - spreadsheet formula names, including hidden leading whitespace/newlines, are inert cells
+  ---
+  duration_ms: 421.0525
+  ...
+# Subtest: CSV quoted commas, quotes, Unicode and multiline names survive independent parsing
+ok 491 - CSV quoted commas, quotes, Unicode and multiline names survive independent parsing
+  ---
+  duration_ms: 31.3728
+  ...
+# Subtest: HTML escapes names and evidence in every context, with no scripts or network elements
+ok 492 - HTML escapes names and evidence in every context, with no scripts or network elements
+  ---
+  duration_ms: 35.9543
+  ...
+# Subtest: saved provenance distinguishes verified server identities from captured source revision
+ok 493 - saved provenance distinguishes verified server identities from captured source revision
+  ---
+  duration_ms: 33.3707
+  ...
+# Subtest: many long Unicode room names stay complete with print pagination and repeated table headers
+ok 494 - many long Unicode room names stay complete with print pagination and repeated table headers
+  ---
+  duration_ms: 65.1093
+  ...
+# Subtest: empty captured scope is not labeled a complete takeoff
+ok 495 - empty captured scope is not labeled a complete takeoff
+  ---
+  duration_ms: 5.3352
+  ...
+# Subtest: renderer never recalculates a captured evaluation or mutates supplied bytes
+ok 496 - renderer never recalculates a captured evaluation or mutates supplied bytes
+  ---
+  duration_ms: 79.7579
+  ...
+# Subtest: invalid display or provenance options fail explicitly
+ok 497 - invalid display or provenance options fail explicitly
+  ---
+  duration_ms: 26.6253
+  ...
+# Subtest: 10 by 12 feet contributes its 44-foot perimeter once with no openings
+ok 498 - 10 by 12 feet contributes its 44-foot perimeter once with no openings
+  ---
+  duration_ms: 1.0416
+  ...
+# Subtest: one 3-foot door deducts from both baseboard and base shoe
+ok 499 - one 3-foot door deducts from both baseboard and base shoe
+  ---
+  duration_ms: 2.8319
+  ...
+# Subtest: elevated windows never add another perimeter or deduct trim
+ok 500 - elevated windows never add another perimeter or deduct trim
+  ---
+  duration_ms: 0.2255
+  ...
+# Subtest: 3-foot and 2.5-foot doors deduct exactly once for 38.5 feet of trim
+ok 501 - 3-foot and 2.5-foot doors deduct exactly once for 38.5 feet of trim
+  ---
+  duration_ms: 0.2748
+  ...
+# Subtest: 32-inch entered widths retain their precision and their own size group
+ok 502 - 32-inch entered widths retain their precision and their own size group
+  ---
+  duration_ms: 0.2494
+  ...
+# Subtest: legacy doors without dimension properties retain their pixel-width conversion
+ok 503 - legacy doors without dimension properties retain their pixel-width conversion
+  ---
+  duration_ms: 0.1802
+  ...
+# Subtest: invalid historical dimension properties fall back to a valid legacy pixel size
+ok 504 - invalid historical dimension properties fall back to a valid legacy pixel size
+  ---
+  duration_ms: 0.181
+  ...
+# Subtest: fractional entered inches are not rounded for deductions or grouping
+ok 505 - fractional entered inches are not rounded for deductions or grouping
+  ---
+  duration_ms: 0.441
+  ...
+# Subtest: all supported door styles use the entered opening width
+ok 506 - all supported door styles use the entered opening width
+  ---
+  duration_ms: 0.3466
+  ...
+# Subtest: conflicting legacy widths produce a review warning without rewriting data
+ok 507 - conflicting legacy widths produce a review warning without rewriting data
+  ---
+  duration_ms: 0.7926
+  ...
+# Subtest: consistent widths and conversion precision do not produce false review warnings
+ok 508 - consistent widths and conversion precision do not produce false review warnings
+  ---
+  duration_ms: 0.1683
+  ...
+# Subtest: multiple rooms contribute independently and calculations never mutate sketches
+ok 509 - multiple rooms contribute independently and calculations never mutate sketches
+  ---
+  duration_ms: 0.3892
+  ...
+# Subtest: an empty sketch has no material quantities
+ok 510 - an empty sketch has no material quantities
+  ---
+  duration_ms: 1.3781
+  ...
+# Subtest: known confirmation is explicit, timestamped, detached and repeatable
+ok 511 - known confirmation is explicit, timestamped, detached and repeatable
+  ---
+  duration_ms: 6.0198
+  ...
+# Subtest: unknown or conflicting measurements cannot be confirmed implicitly
+ok 512 - unknown or conflicting measurements cannot be confirmed implicitly
+  ---
+  duration_ms: 1.605
+  ...
+# Subtest: candidate resolution requires an explicit existing index and never chooses the first
+ok 513 - candidate resolution requires an explicit existing index and never chooses the first
+  ---
+  duration_ms: 2.3503
+  ...
+# Subtest: candidate evidence and returned measurement do not alias the source or event
+ok 514 - candidate evidence and returned measurement do not alias the source or event
+  ---
+  duration_ms: 0.9274
+  ...
+# Subtest: correction invalidates previous confirmation and retains original evidence in the event
+ok 515 - correction invalidates previous confirmation and retains original evidence in the event
+  ---
+  duration_ms: 0.8684
+  ...
+# Subtest: even a same-value correction resets confirmation; unknown can be filled explicitly
+ok 516 - even a same-value correction resets confirmation; unknown can be filled explicitly
+  ---
+  duration_ms: 0.7343
+  ...
+# Subtest: corrections require positive known new evidence, with zero allowed only for elevations
+ok 517 - corrections require positive known new evidence, with zero allowed only for elevations
+  ---
+  duration_ms: 2.5654
+  ...
+# Subtest: actions reject missing/malformed timestamps, unknown actions and extra fields
+ok 518 - actions reject missing/malformed timestamps, unknown actions and extra fields
+  ---
+  duration_ms: 1.0942
+  ...
+# Subtest: room resize returns invalid opening fit without moving openings or changing unrelated evidence
+ok 519 - room resize returns invalid opening fit without moving openings or changing unrelated evidence
+  ---
+  duration_ms: 8.9167
+  ...
+# Subtest: document actions validate explicit targets and require v2
+ok 520 - document actions validate explicit targets and require v2
+  ---
+  duration_ms: 3.4137
+  ...
+# Subtest: current readiness clears after resolution and confirmation despite retained historical warnings
+ok 521 - current readiness clears after resolution and confirmation despite retained historical warnings
+  ---
+  duration_ms: 6.6162
+  ...
+# Subtest: legacy original JSON, unknown metadata and v2 reprocessing survive explicit correction
+ok 522 - legacy original JSON, unknown metadata and v2 reprocessing survive explicit correction
+  ---
+  duration_ms: 3.8819
+  ...
+# Subtest: history rejects stale revisions and foreign draft identities without consuming either stack
+ok 523 - history rejects stale revisions and foreign draft identities without consuming either stack
+  ---
+  duration_ms: 138.5537
+  ...
+# Subtest: missing targets, reused domain IDs and mutation of frozen state fail without erasing history
+ok 524 - missing targets, reused domain IDs and mutation of frozen state fail without erasing history
+  ---
+  duration_ms: 89.275
+  ...
+# Subtest: failed targeted opening recovery preserves the newer chronological undo entry
+ok 525 - failed targeted opening recovery preserves the newer chronological undo entry
+  ---
+  duration_ms: 95.0561
+  ...
+# Subtest: correcting and undoing an imported conflict restores exact candidates, provenance and original JSON
+ok 526 - correcting and undoing an imported conflict restores exact candidates, provenance and original JSON
+  ---
+  duration_ms: 60.7991
+  ...
+# Subtest: undo of an entered imported unknown restores its reason; clear/undo keeps exact retained evidence
+ok 527 - undo of an entered imported unknown restores its reason; clear/undo keeps exact retained evidence
+  ---
+  duration_ms: 90.5045
+  ...
+# Subtest: old v1/v2 snapshots still verify after correcting, undoing and redoing a confirmed imported value
+ok 528 - old v1/v2 snapshots still verify after correcting, undoing and redoing a confirmed imported value
+  ---
+  duration_ms: 193.9374
+  ...
+# Subtest: explicit measurement/model confirmation and candidate resolution create visible chronological boundaries
+ok 529 - explicit measurement/model confirmation and candidate resolution create visible chronological boundaries
+  ---
+  duration_ms: 191.7804
+  ...
+# Subtest: undo preserves unrelated raw text and old unit contexts, but blocks the conflicting field until Revert
+ok 530 - undo preserves unrelated raw text and old unit contexts, but blocks the conflicting field until Revert
+  ---
+  duration_ms: 114.5286
+  ...
+# Subtest: undoing output removal restores its exact request order without overwriting another output raw field
+ok 531 - undoing output removal restores its exact request order without overwriting another output raw field
+  ---
+  duration_ms: 78.4771
+  ...
+# Subtest: one committed room transaction updates quantities; raw typing and Enter/blur do not add steps
+ok 532 - one committed room transaction updates quantities; raw typing and Enter/blur do not add steps
+  ---
+  duration_ms: 84.3609
+  ...
+# Subtest: room creation reuses exact IDs on redo, respects active units, and does not copy original source into history
+ok 533 - room creation reuses exact IDs on redo, respects active units, and does not copy original source into history
+  ---
+  duration_ms: 21.539
+  ...
+# Subtest: name editing coalesces one explicit session and returning to the initial name leaves no transaction
+ok 534 - name editing coalesces one explicit session and returning to the initial name leaves no transaction
+  ---
+  duration_ms: 83.9839
+  ...
+# Subtest: clear restores exact known value and unknown again without inventing a shared measurement event
+ok 535 - clear restores exact known value and unknown again without inventing a shared measurement event
+  ---
+  duration_ms: 68.0859
+  ...
+# Subtest: formerly confirmed correction undo and repeated redo stay unconfirmed with immutable prior evidence
+ok 536 - formerly confirmed correction undo and repeated redo stay unconfirmed with immutable prior evidence
+  ---
+  duration_ms: 103.955
+  ...
+# Subtest: model declaration undo appends actual declare transition and never restores a previous approval
+ok 537 - model declaration undo appends actual declare transition and never restores a previous approval
+  ---
+  duration_ms: 57.9462
+  ...
+# Subtest: opening move and dimension undo retain identity, style, other raw fields and exact physical coordinates
+ok 538 - opening move and dimension undo retain identity, style, other raw fields and exact physical coordinates
+  ---
+  duration_ms: 150.8598
+  ...
+# Subtest: opening creation and general deletion restore IDs and clean fields in the active metric display
+ok 539 - opening creation and general deletion restore IDs and clean fields in the active metric display
+  ---
+  duration_ms: 75.8517
+  ...
+# Subtest: zero opening sill is restored as zero, and unknown sill remains unresolved
+ok 540 - zero opening sill is restored as zero, and unknown sill remains unresolved
+  ---
+  duration_ms: 64.3471
+  ...
+# Subtest: opening appearance and measurement basis are separate reversible committed transactions
+ok 541 - opening appearance and measurement basis are separate reversible committed transactions
+  ---
+  duration_ms: 114.3134
+  ...
+# Subtest: opening delete restores previous targets only without later scope interaction and preserves later waste raw edits
+ok 542 - opening delete restores previous targets only without later scope interaction and preserves later waste raw edits
+  ---
+  duration_ms: 90.5327
+  ...
+# Subtest: waste undo is guarded by pending raw; Revert does not erase redo or rewind scope revision
+ok 543 - waste undo is guarded by pending raw; Revert does not erase redo or rewind scope revision
+  ---
+  duration_ms: 27.3248
+  ...
+# Subtest: scope and policy transactions undo precisely without changing quantities source or unrelated raw waste
+ok 544 - scope and policy transactions undo precisely without changing quantities source or unrelated raw waste
+  ---
+  duration_ms: 82.8407
+  ...
+# Subtest: a new committed branch clears redo while raw edits, Revert, same-value name and unit switches preserve it
+ok 545 - a new committed branch clears redo while raw edits, Revert, same-value name and unit switches preserve it
+  ---
+  duration_ms: 35.9957
+  ...
+# Subtest: history is bounded to fifty committed transactions and independently retained per draft
+ok 546 - history is bounded to fifty committed transactions and independently retained per draft
+  ---
+  duration_ms: 803.8909
+  ...
+# Subtest: recovery retains latest committed state and typed evidence but deliberately starts empty history
+ok 547 - recovery retains latest committed state and typed evidence but deliberately starts empty history
+  ---
+  duration_ms: 38.0457
+  ...
+# Subtest: failed recovery writes preserve old bytes while accepting memory edit and its Undo/Redo atomically
+ok 548 - failed recovery writes preserve old bytes while accepting memory edit and its Undo/Redo atomically
+  ---
+  duration_ms: 8.1037
+  ...
+# Subtest: corrupt restoration evidence is rejected without overwriting stored bytes
+ok 549 - corrupt restoration evidence is rejected without overwriting stored bytes
+  ---
+  duration_ms: 26.8951
+  ...
+# Subtest: forged stale source restoration and forged dimension zero fail typed recovery validation
+ok 550 - forged stale source restoration and forged dimension zero fail typed recovery validation
+  ---
+  duration_ms: 12.638
+  ...
+# Subtest: existing targeted deletion recovery establishes one explicit boundary after success
+ok 551 - existing targeted deletion recovery establishes one explicit boundary after success
+  ---
+  duration_ms: 41.9265
+  ...
+# Subtest: general Redo of an original delete renews its bounded targeted recovery without creating recovery for Undo creation
+ok 552 - general Redo of an original delete renews its bounded targeted recovery without creating recovery for Undo creation
+  ---
+  duration_ms: 63.7227
+  ...
+# Subtest: explicit feet and inches use physical millimeters
+ok 553 - explicit feet and inches use physical millimeters
+  ---
+  duration_ms: 4.4819
+  ...
+# Subtest: compound feet/inches, decimal feet and metric inputs agree
+ok 554 - compound feet/inches, decimal feet and metric inputs agree
+  ---
+  duration_ms: 2.9948
+  ...
+# Subtest: long unit names, uppercase and decimal metric inputs are explicit
+ok 555 - long unit names, uppercase and decimal metric inputs are explicit
+  ---
+  duration_ms: 0.7447
+  ...
+# Subtest: fractional inch source and denominator retain intended precision
+ok 556 - fractional inch source and denominator retain intended precision
+  ---
+  duration_ms: 1.0866
+  ...
+# Subtest: compound fractional inches retain each component and do not snap
+ok 557 - compound fractional inches retain each component and do not snap
+  ---
+  duration_ms: 0.2973
+  ...
+# Subtest: equal decimal values retain distinct input precision
+ok 558 - equal decimal values retain distinct input precision
+  ---
+  duration_ms: 0.4733
+  ...
+# Subtest: bare input needs a unit; explicit suffix takes precedence
+ok 559 - bare input needs a unit; explicit suffix takes precedence
+  ---
+  duration_ms: 1.3277
+  ...
+# Subtest: invalid dimensions reject zero and negative values
+ok 560 - invalid dimensions reject zero and negative values
+  ---
+  duration_ms: 0.7796
+  ...
+# Subtest: zero elevation and negative presentation coordinate are valid distinct contexts
+ok 561 - zero elevation and negative presentation coordinate are valid distinct contexts
+  ---
+  duration_ms: 0.5898
+  ...
+# Subtest: unknown values remain explicit and cannot carry a fabricated zero
+ok 562 - unknown values remain explicit and cannot carry a fabricated zero
+  ---
+  duration_ms: 0.2843
+  ...
+# Subtest: malformed and partially parsed strings fail rather than truncating
+ok 563 - malformed and partially parsed strings fail rather than truncating
+  ---
+  duration_ms: 0.3893
+  ...
+# Subtest: invalid fractions and fractions in unsupported units reject
+ok 564 - invalid fractions and fractions in unsupported units reject
+  ---
+  duration_ms: 0.2762
+  ...
+# Subtest: nonfinite, overflow and unrepresentable precision fail explicitly
+ok 565 - nonfinite, overflow and unrepresentable precision fail explicitly
+  ---
+  duration_ms: 0.9595
+  ...
+# Subtest: formatting rounds display only and requires valid precision
+ok 566 - formatting rounds display only and requires valid precision
+  ---
+  duration_ms: 0.6233
+  ...
+# Subtest: square units convert separately and never use a length factor once
+ok 567 - square units convert separately and never use a length factor once
+  ---
+  duration_ms: 0.3587
+  ...
+# Subtest: physical comparison tolerance does not quantize stored values
+ok 568 - physical comparison tolerance does not quantize stored values
+  ---
+  duration_ms: 0.3212
+  ...
+# Subtest: empty plans have no bounds, while zero extents are left for the viewport to handle
+ok 569 - empty plans have no bounds, while zero extents are left for the viewport to handle
+  ---
+  duration_ms: 1.5163
+  ...
+# Subtest: negative and distant fractional rooms produce bounds in their actual coordinate system
+ok 570 - negative and distant fractional rooms produce bounds in their actual coordinate system
+  ---
+  duration_ms: 0.2107
+  ...
+# Subtest: top outswing fits both stored hinge sides using actual door width
+ok 571 - top outswing fits both stored hinge sides using actual door width
+  ---
+  duration_ms: 0.4642
+  ...
+# Subtest: right outswing fits both stored hinge sides using actual door width
+ok 572 - right outswing fits both stored hinge sides using actual door width
+  ---
+  duration_ms: 0.1536
+  ...
+# Subtest: bottom outswing fits both stored hinge sides using actual door width
+ok 573 - bottom outswing fits both stored hinge sides using actual door width
+  ---
+  duration_ms: 0.1438
+  ...
+# Subtest: left outswing fits both stored hinge sides using actual door width
+ok 574 - left outswing fits both stored hinge sides using actual door width
+  ---
+  duration_ms: 0.2652
+  ...
+# Subtest: sliding doors add their real bar bounds without an invisible swing extent
+ok 575 - sliding doors add their real bar bounds without an invisible swing extent
+  ---
+  duration_ms: 0.239
+  ...
+# Subtest: large inward swings and bars remain included even when legacy geometry exceeds room extents
+ok 576 - large inward swings and bars remain included even when legacy geometry exceeds room extents
+  ---
+  duration_ms: 0.137
+  ...
+# Subtest: legacy doors preserve the rendered40px bar and60px swing, not their conflicting saved size
+ok 577 - legacy doors preserve the rendered40px bar and60px swing, not their conflicting saved size
+  ---
+  duration_ms: 0.2074
+  ...
+# Subtest: horizontal legacy windows use actual saved width beyond the room, independent of height metadata
+ok 578 - horizontal legacy windows use actual saved width beyond the room, independent of height metadata
+  ---
+  duration_ms: 0.142
+  ...
+# Subtest: vertical legacy windows use actual saved width and off-center attachment
+ok 579 - vertical legacy windows use actual saved width and off-center attachment
+  ---
+  duration_ms: 0.1272
+  ...
+# Subtest: bounds preserve frozen saved rooms, openings, optional fields and custom metadata
+ok 580 - bounds preserve frozen saved rooms, openings, optional fields and custom metadata
+  ---
+  duration_ms: 0.4692
+  ...
+# Subtest: M2C Q-001: independent known answers for all ten outputs, selected top face and waste
+ok 581 - M2C Q-001: independent known answers for all ten outputs, selected top face and waste
+  ---
+  duration_ms: 54.8208
+  ...
+# Subtest: M2C net walls independently derive gross basis without a separate gross output selection
+ok 582 - M2C net walls independently derive gross basis without a separate gross output selection
+  ---
+  duration_ms: 20.2159
+  ...
+# Subtest: M2C missing window height preserves floor/gross and labels the 256 sq ft partial net subtotal
+ok 583 - M2C missing window height preserves floor/gross and labels the 256 sq ft partial net subtotal
+  ---
+  duration_ms: 19.8742
+  ...
+# Subtest: M2C known unconfirmed dimensions produce provisional numbers, never confirmed results
+ok 584 - M2C known unconfirmed dimensions produce provisional numbers, never confirmed results
+  ---
+  duration_ms: 25.5828
+  ...
+# Subtest: M2C known measurements marked needs-review remain blocked rather than provisional
+ok 585 - M2C known measurements marked needs-review remain blocked rather than provisional
+  ---
+  duration_ms: 2.2395
+  ...
+# Subtest: M2C unresolved/conflicting widths block relevant quantities but preserve unrelated floor work
+ok 586 - M2C unresolved/conflicting widths block relevant quantities but preserve unrelated floor work
+  ---
+  duration_ms: 22.2834
+  ...
+# Subtest: M2C no openings and elevated windows preserve gross perimeter floor runs
+ok 587 - M2C no openings and elevated windows preserve gross perimeter floor runs
+  ---
+  duration_ms: 22.3901
+  ...
+# Subtest: M2C multiple separated zero-sill doors deduct each actual interruption once
+ok 588 - M2C multiple separated zero-sill doors deduct each actual interruption once
+  ---
+  duration_ms: 3.1914
+  ...
+# Subtest: M2C precise 32-inch door and fractional/metric equivalents retain physical quantities
+ok 589 - M2C precise 32-inch door and fractional/metric equivalents retain physical quantities
+  ---
+  duration_ms: 17.7948
+  ...
+# Subtest: M2C shared physical door inventory once, deductions and casing per explicitly selected attachment
+ok 590 - M2C shared physical door inventory once, deductions and casing per explicitly selected attachment
+  ---
+  duration_ms: 9.6056
+  ...
+# Subtest: M2C crown deducts explicit full-height gaps and leaves ordinary openings intact
+ok 591 - M2C crown deducts explicit full-height gaps and leaves ordinary openings intact
+  ---
+  duration_ms: 6.3509
+  ...
+# Subtest: M2C explicit basis mismatch blocks opening-derived work without rewriting measurements
+ok 592 - M2C explicit basis mismatch blocks opening-derived work without rewriting measurements
+  ---
+  duration_ms: 4.8579
+  ...
+# Subtest: M2C invalid and duplicate selections are contract errors; empty selections select nothing
+ok 593 - M2C invalid and duplicate selections are contract errors; empty selections select nothing
+  ---
+  duration_ms: 7.9222
+  ...
+# Subtest: M2C invalid relevant geometry stays unavailable and unrelated floor work remains usable
+ok 594 - M2C invalid relevant geometry stays unavailable and unrelated floor work remains usable
+  ---
+  duration_ms: 37.5587
+  ...
+# Subtest: M2C accepted boundary tolerance intersects effective deductions without changing raw dimensions
+ok 595 - M2C accepted boundary tolerance intersects effective deductions without changing raw dimensions
+  ---
+  duration_ms: 7.4278
+  ...
+# Subtest: M2C accepted overlap is unioned once in trim and wall rectangles; positive tiny gaps remain gaps
+ok 596 - M2C accepted overlap is unioned once in trim and wall rectangles; positive tiny gaps remain gaps
+  ---
+  duration_ms: 11.2808
+  ...
+# Subtest: M2C stacked rectangles with a positive vertical gap deduct separate areas without bridging the gap
+ok 597 - M2C stacked rectangles with a positive vertical gap deduct separate areas without bridging the gap
+  ---
+  duration_ms: 7.4451
+  ...
+# Subtest: M2C finite oversized dimensions, product overflow, underflow and waste overflow have structured errors
+ok 598 - M2C finite oversized dimensions, product overflow, underflow and waste overflow have structured errors
+  ---
+  duration_ms: 5.9818
+  ...
+# Subtest: M2C aggregate addition overflow leaves individual rows inspectable without a selected total
+ok 599 - M2C aggregate addition overflow leaves individual rows inspectable without a selected total
+  ---
+  duration_ms: 2.3058
+  ...
+# Subtest: M2C multi-room allowance and adjusted aggregate sum rows without a second waste application
+ok 600 - M2C multi-room allowance and adjusted aggregate sum rows without a second waste application
+  ---
+  duration_ms: 1.9999
+  ...
+# Subtest: M2C frozen source remains unchanged; owned results and evidence are deeply detached and frozen
+ok 601 - M2C frozen source remains unchanged; owned results and evidence are deeply detached and frozen
+  ---
+  duration_ms: 43.3727
+  ...
+# Subtest: M2C viewport/metadata changes do not affect quantities or introduce presentation in results
+ok 602 - M2C viewport/metadata changes do not affect quantities or introduce presentation in results
+  ---
+  duration_ms: 24.3362
+  ...
+# Subtest: M2C explicit legacy adaptation preserves JSON and idempotency without implicit calculation migration
+ok 603 - M2C explicit legacy adaptation preserves JSON and idempotency without implicit calculation migration
+  ---
+  duration_ms: 4.0319
+  ...
+# Subtest: M2C malformed/cyclic/nonfinite v2 data returns a contract error, never a fabricated zero
+ok 604 - M2C malformed/cyclic/nonfinite v2 data returns a contract error, never a fabricated zero
+  ---
+  duration_ms: 7.3941
+  ...
+# Subtest: M2C deterministic properties: valid deductions bounded, waste monotone, sums reconcile, selection order irrelevant
+ok 605 - M2C deterministic properties: valid deductions bounded, waste monotone, sums reconcile, selection order irrelevant
+  ---
+  duration_ms: 754.2746
+  ...
+# Subtest: M2C result schemas reject unit/status/extra-field tampering and nonfinite quantities
+ok 606 - M2C result schemas reject unit/status/extra-field tampering and nonfinite quantities
+  ---
+  duration_ms: 50.9982
+  ...
+# Subtest: M2C direct engine rejects accessors and sparse request arrays without invoking getters
+ok 607 - M2C direct engine rejects accessors and sparse request arrays without invoking getters
+  ---
+  duration_ms: 1.0133
+  ...
+# Subtest: M2C partial subtotal explicitly retains provisional included measurements
+ok 608 - M2C partial subtotal explicitly retains provisional included measurements
+  ---
+  duration_ms: 9.4845
+  ...
+# Subtest: M2C materially shortened spans at large offsets or elevations block trim, wall and casing quantities
+ok 609 - M2C materially shortened spans at large offsets or elevations block trim, wall and casing quantities
+  ---
+  duration_ms: 4.6139
+  ...
+# Subtest: M2C ordinary narrow in-bounds openings retain quantities and label roundoff without invented boundary clipping
+ok 610 - M2C ordinary narrow in-bounds openings retain quantities and label roundoff without invented boundary clipping
+  ---
+  duration_ms: 5.1288
+  ...
+# Subtest: M2C fully absorbed waste and aggregate contributions return arithmetic precision errors
+ok 611 - M2C fully absorbed waste and aggregate contributions return arithmetic precision errors
+  ---
+  duration_ms: 2.376
+  ...
+# Subtest: M2C fully absorbed nonzero deductions are unavailable rather than silently omitted
+ok 612 - M2C fully absorbed nonzero deductions are unavailable rather than silently omitted
+  ---
+  duration_ms: 1.5647
+  ...
+# Subtest: M2C narrow M2B regression: large-coordinate exact spans do not inflate the 0.01mm overrun tolerance
+ok 613 - M2C narrow M2B regression: large-coordinate exact spans do not inflate the 0.01mm overrun tolerance
+  ---
+  duration_ms: 1.5984
+  ...
+# Subtest: M2C narrow M2B regression: large-coordinate exact spans do not inflate the floor overlap tolerance
+ok 614 - M2C narrow M2B regression: large-coordinate exact spans do not inflate the floor overlap tolerance
+  ---
+  duration_ms: 1.4208
+  ...
+# Subtest: Q-001 has sufficient valid confirmed dependencies for all selected quantities, without totals
+ok 615 - Q-001 has sufficient valid confirmed dependencies for all selected quantities, without totals
+  ---
+  duration_ms: 29.7288
+  ...
+# Subtest: missing ceiling height does not block floor, flat ceiling, floor trim or ordinary crown
+ok 616 - missing ceiling height does not block floor, flat ceiling, floor trim or ordinary crown
+  ---
+  duration_ms: 5.5494
+  ...
+# Subtest: missing window height blocks its net face but not gross area or floor-level runs
+ok 617 - missing window height blocks its net face but not gross area or floor-level runs
+  ---
+  duration_ms: 6.5269
+  ...
+# Subtest: unknown sill cannot be assumed elevated; known elevated windows do not need width for floor runs
+ok 618 - unknown sill cannot be assumed elevated; known elevated windows do not need width for floor runs
+  ---
+  duration_ms: 10.1307
+  ...
+# Subtest: unresolved door width blocks only selected width-dependent work
+ok 619 - unresolved door width blocks only selected width-dependent work
+  ---
+  duration_ms: 3.0976
+  ...
+# Subtest: numeric availability, invalid geometry and confirmation remain independent
+ok 620 - numeric availability, invalid geometry and confirmation remain independent
+  ---
+  duration_ms: 7.0701
+  ...
+# Subtest: known measurement carrying needs-review provenance stays numerically available but unresolved
+ok 621 - known measurement carrying needs-review provenance stays numerically available but unresolved
+  ---
+  duration_ms: 2.4927
+  ...
+# Subtest: missing dimensions on an unselected wall/room do not block selected work
+ok 622 - missing dimensions on an unselected wall/room do not block selected work
+  ---
+  duration_ms: 2.8594
+  ...
+# Subtest: floor-level width and sill suffice for trim even when opening height is unknown
+ok 623 - floor-level width and sill suffice for trim even when opening height is unknown
+  ---
+  duration_ms: 2.5602
+  ...
+# Subtest: overlapping floor interruptions have a local interval error without requiring heights
+ok 624 - overlapping floor interruptions have a local interval error without requiring heights
+  ---
+  duration_ms: 4.6837
+  ...
+# Subtest: explicit floor-level kind with elevated sill invalidates floor-run classification
+ok 625 - explicit floor-level kind with elevated sill invalidates floor-run classification
+  ---
+  duration_ms: 2.7126
+  ...
+# Subtest: crown ignores ordinary openings and validates only explicitly selected full-height gaps
+ok 626 - crown ignores ordinary openings and validates only explicitly selected full-height gaps
+  ---
+  duration_ms: 3.7522
+  ...
+# Subtest: shared opening supplies one identity basis and two independent selected deduction/casing faces
+ok 627 - shared opening supplies one identity basis and two independent selected deduction/casing faces
+  ---
+  duration_ms: 2.7966
+  ...
+# Subtest: inventory needs identities, not dimensions, and rejects unsupported same-room shared relationships
+ok 628 - inventory needs identities, not dimensions, and rejects unsupported same-room shared relationships
+  ---
+  duration_ms: 2.4219
+  ...
+# Subtest: casing reports exact neighboring opening whose missing extent prevents overlap validation
+ok 629 - casing reports exact neighboring opening whose missing extent prevents overlap validation
+  ---
+  duration_ms: 2.1569
+  ...
+# Subtest: empty scopes stay empty for every selection type
+ok 630 - empty scopes stay empty for every selection type
+  ---
+  duration_ms: 1.7753
+  ...
+# Subtest: invalid IDs, repeated IDs/outputs, wrong kinds and unattached casing faces are errors
+ok 631 - invalid IDs, repeated IDs/outputs, wrong kinds and unattached casing faces are errors
+  ---
+  duration_ms: 6.3296
+  ...
+# Subtest: unsupported policy, document mismatch and malformed options fail without rewriting history
+ok 632 - unsupported policy, document mismatch and malformed options fail without rewriting history
+  ---
+  duration_ms: 1.691
+  ...
+# Subtest: waste is explicit decimal fraction, finite and nonnegative, without applying it
+ok 633 - waste is explicit decimal fraction, finite and nonnegative, without applying it
+  ---
+  duration_ms: 23.4973
+  ...
+# Subtest: nominal, clear, finished and rough bases stay distinct and are never converted
+ok 634 - nominal, clear, finished and rough bases stay distinct and are never converted
+  ---
+  duration_ms: 5.4716
+  ...
+# Subtest: malformed v2 produces detailed structural errors rather than a readiness claim
+ok 635 - malformed v2 produces detailed structural errors rather than a readiness claim
+  ---
+  duration_ms: 2.8617
+  ...
+# Subtest: frozen request and document produce repeatable detached readiness without history blockers
+ok 636 - frozen request and document produce repeatable detached readiness without history blockers
+  ---
+  duration_ms: 7.1287
+  ...
+# Subtest: floor-run overlap uses endpoint magnitudes at the 0.01mm tolerance boundary
+ok 637 - floor-run overlap uses endpoint magnitudes at the 0.01mm tolerance boundary
+  ---
+  duration_ms: 8.4344
+  ...
+# Subtest: unknown ceiling on the other shared face does not block selected known face
+ok 638 - unknown ceiling on the other shared face does not block selected known face
+  ---
+  duration_ms: 1.4949
+  ...
+# Subtest: canonical JSON sorts object keys by UTF-16, preserves arrays and special own keys
+ok 639 - canonical JSON sorts object keys by UTF-16, preserves arrays and special own keys
+  ---
+  duration_ms: 4.397
+  ...
+# Subtest: canonical JSON rejects coercion, sparse arrays, accessors, cycles and excess depth
+ok 640 - canonical JSON rejects coercion, sparse arrays, accessors, cycles and excess depth
+  ---
+  duration_ms: 1.2358
+  ...
+# Subtest: platform SHA-256 matches independent Node crypto over the documented canonical bytes
+ok 641 - platform SHA-256 matches independent Node crypto over the documented canonical bytes
+  ---
+  duration_ms: 7.2968
+  ...
+# Subtest: calculation content/fingerprints repeat without fabricating a saved revision
+ok 642 - calculation content/fingerprints repeat without fabricating a saved revision
+  ---
+  duration_ms: 131.6834
+  ...
+# Subtest: viewport, presentation, names, arbitrary metadata and legacy original do not change calculation fingerprints
+ok 643 - viewport, presentation, names, arbitrary metadata and legacy original do not change calculation fingerprints
+  ---
+  duration_ms: 72.146
+  ...
+# Subtest: geometry changes change both hashes; provenance/confirmation change only content hash
+ok 644 - geometry changes change both hashes; provenance/confirmation change only content hash
+  ---
+  duration_ms: 130.2918
+  ...
+# Subtest: selection, waste, opening basis and source identity are bound to calculation content
+ok 645 - selection, waste, opening basis and source identity are bound to calculation content
+  ---
+  duration_ms: 16.7536
+  ...
+# Subtest: object insertion order is irrelevant to calculation fingerprints
+ok 646 - object insertion order is irrelevant to calculation fingerprints
+  ---
+  duration_ms: 48.1171
+  ...
+# Subtest: snapshot owns stable frozen source/result copies and captures before the first asynchronous hash
+ok 647 - snapshot owns stable frozen source/result copies and captures before the first asynchronous hash
+  ---
+  duration_ms: 123.4188
+  ...
+# Subtest: snapshot IDs/timestamps do not change deterministic calculation content
+ok 648 - snapshot IDs/timestamps do not change deterministic calculation content
+  ---
+  duration_ms: 51.35
+  ...
+# Subtest: confirmed snapshots reject provisional, blocked, empty and known-needs-review selections
+ok 649 - confirmed snapshots reject provisional, blocked, empty and known-needs-review selections
+  ---
+  duration_ms: 27.1552
+  ...
+# Subtest: confirmation gate applies only selected outputs; inventory explicitly needs no dimension confirmation
+ok 650 - confirmation gate applies only selected outputs; inventory explicitly needs no dimension confirmation
+  ---
+  duration_ms: 5.3174
+  ...
+# Subtest: snapshot validates metadata and version, and independently detects quantity/source tampering
+ok 651 - snapshot validates metadata and version, and independently detects quantity/source tampering
+  ---
+  duration_ms: 110.7326
+  ...
+# Subtest: legacy originals and supplied measurement action evidence are detached and retained in snapshots
+ok 652 - legacy originals and supplied measurement action evidence are detached and retained in snapshots
+  ---
+  duration_ms: 13.9716
+  ...
+# Subtest: display formatting is explicit and never changes canonical engine amounts
+ok 653 - display formatting is explicit and never changes canonical engine amounts
+  ---
+  duration_ms: 9.8817
+  ...
+# Subtest: snapshot rejects impossible or target-incompatible measurement events
+ok 654 - snapshot rejects impossible or target-incompatible measurement events
+  ---
+  duration_ms: 34.5452
+  ...
+# Subtest: Quick Rooms starts with no verified zero project or invented dimensions
+ok 655 - Quick Rooms starts with no verified zero project or invented dimensions
+  ---
+  duration_ms: 21.2324
+  ...
+# Subtest: entered 12x10x8 uses the real engine for 120 floor, 120 ceiling and 352 gross walls
+ok 656 - entered 12x10x8 uses the real engine for 120 floor, 120 ceiling and 352 gross walls
+  ---
+  duration_ms: 24.7755
+  ...
+# Subtest: clearing ceiling height keeps floor and ceiling available, gross walls unavailable
+ok 657 - clearing ceiling height keeps floor and ceiling available, gross walls unavailable
+  ---
+  duration_ms: 21.8158
+  ...
+# Subtest: invalid visible edits mask stale dependent values without mutating canonical measurements
+ok 658 - invalid visible edits mask stale dependent values without mutating canonical measurements
+  ---
+  duration_ms: 12.3792
+  ...
+# Subtest: valid but uncommitted text and blank typing also hide prior totals
+ok 659 - valid but uncommitted text and blank typing also hide prior totals
+  ---
+  duration_ms: 8.6181
+  ...
+# Subtest: zero, negative, exponent and invalid fractions never become valid dimensions
+ok 660 - zero, negative, exponent and invalid fractions never become valid dimensions
+  ---
+  duration_ms: 48.7388
+  ...
+# Subtest: equivalent imperial and metric syntax preserves the same 3810 mm length
+ok 661 - equivalent imperial and metric syntax preserves the same 3810 mm length
+  ---
+  duration_ms: 1.7833
+  ...
+# Subtest: fractional text is not reformatted on typing or commit
+ok 662 - fractional text is not reformatted on typing or commit
+  ---
+  duration_ms: 1.397
+  ...
+# Subtest: Enter plus blur commits once and repeating unchanged edits is a no-op
+ok 663 - Enter plus blur commits once and repeating unchanged edits is a no-op
+  ---
+  duration_ms: 0.7085
+  ...
+# Subtest: committed unit changes change presentation only and retain original provenance
+ok 664 - committed unit changes change presentation only and retain original provenance
+  ---
+  duration_ms: 7.8762
+  ...
+# Subtest: an unresolved bare value retains feet context when project display changes to meters
+ok 665 - an unresolved bare value retains feet context when project display changes to meters
+  ---
+  duration_ms: 4.3309
+  ...
+# Subtest: clearing an old-unit edit releases its context before a new bare metric measurement
+ok 666 - clearing an old-unit edit releases its context before a new bare metric measurement
+  ---
+  duration_ms: 2.1421
+  ...
+# Subtest: resolving an old-unit edit converts presentation to the selected unit while retaining parsed evidence
+ok 667 - resolving an old-unit edit converts presentation to the selected unit while retaining parsed evidence
+  ---
+  duration_ms: 2.4372
+  ...
+# Subtest: new metric fields use metric context without affecting older dirty fields
+ok 668 - new metric fields use metric context without affecting older dirty fields
+  ---
+  duration_ms: 0.6929
+  ...
+# Subtest: duplicate creates independent IDs and state; editing its length yields project 270 and 752
+ok 669 - duplicate creates independent IDs and state; editing its length yields project 270 and 752
+  ---
+  duration_ms: 24.5109
+  ...
+# Subtest: duplicate resets known confirmation, preserves unresolved candidates and clones presentation
+ok 670 - duplicate resets known confirmation, preserves unresolved candidates and clones presentation
+  ---
+  duration_ms: 3.573
+  ...
+# Subtest: duplicate preserves incomplete form context and masks copied stale values
+ok 671 - duplicate preserves incomplete form context and masks copied stale values
+  ---
+  duration_ms: 5.7633
+  ...
+# Subtest: unsupported openings and future physical properties are rejected without lossy duplication
+ok 672 - unsupported openings and future physical properties are rejected without lossy duplication
+  ---
+  duration_ms: 6.5934
+  ...
+# Subtest: room ID collisions include existing wall IDs and never mutate the input
+ok 673 - room ID collisions include existing wall IDs and never mutate the input
+  ---
+  duration_ms: 4.6644
+  ...
+# Subtest: rename and intended removal affect only the selected room while retaining action evidence
+ok 674 - rename and intended removal affect only the selected room while retaining action evidence
+  ---
+  duration_ms: 3.1602
+  ...
+# Subtest: preview is detached and only selects room-only zero-waste quantities
+ok 675 - preview is detached and only selects room-only zero-waste quantities
+  ---
+  duration_ms: 3.1249
+  ...
+# Subtest: storage round-trip retains raw edits, unit contexts and action evidence without quantity totals
+ok 676 - storage round-trip retains raw edits, unit contexts and action evidence without quantity totals
+  ---
+  duration_ms: 9.2678
+  ...
+# Subtest: unit-switched clean presentation recovers without rescaling or confirming canonical dimensions
+ok 677 - unit-switched clean presentation recovers without rescaling or confirming canonical dimensions
+  ---
+  duration_ms: 7.2691
+  ...
+# Subtest: missing, corrupt, unsupported and future cache contents are classified without rewriting
+ok 678 - missing, corrupt, unsupported and future cache contents are classified without rewriting
+  ---
+  duration_ms: 2.5837
+  ...
+# Subtest: cache rejects nonfinite measurements, stale field sets and duplicate physical IDs
+ok 679 - cache rejects nonfinite measurements, stale field sets and duplicate physical IDs
+  ---
+  duration_ms: 12.4563
+  ...
+# Subtest: cache never trusts forged clean flags while visible text disagrees with canonical values
+ok 680 - cache never trusts forged clean flags while visible text disagrees with canonical values
+  ---
+  duration_ms: 10.3876
+  ...
+# Subtest: cache rejects restored confirmation and identified revisions instead of implying authority
+ok 681 - cache rejects restored confirmation and identified revisions instead of implying authority
+  ---
+  duration_ms: 6.3329
+  ...
+# Subtest: cache validates captured actions with existing replay rules
+ok 682 - cache validates captured actions with existing replay rules
+  ---
+  duration_ms: 12.1739
+  ...
+# Subtest: cache rejects unsupported content instead of dropping it, including document extras
+ok 683 - cache rejects unsupported content instead of dropping it, including document extras
+  ---
+  duration_ms: 6.6143
+  ...
+# Subtest: serialization rejects cyclic/exotic input rather than omitting or coercing original data
+ok 684 - serialization rejects cyclic/exotic input rather than omitting or coercing original data
+  ---
+  duration_ms: 4.8184
+  ...
+# Subtest: historical correction evidence survives clearing and removing its original target
+ok 685 - historical correction evidence survives clearing and removing its original target
+  ---
+  duration_ms: 5.3665
+  ...
+# Subtest: explicit groups expand without merging touching ungrouped rooms or opening identity
+ok 686 - explicit groups expand without merging touching ungrouped rooms or opening identity
+  ---
+  duration_ms: 1.5769
+  ...
+# Subtest: group deletion undo restores every member and opening without replacing later unrelated edits
+ok 687 - group deletion undo restores every member and opening without replacing later unrelated edits
+  ---
+  duration_ms: 0.2856
+  ...
+# Subtest: legacy API validates optional group and window metadata without changing old sketches
+ok 688 - legacy API validates optional group and window metadata without changing old sketches
+  ---
+  duration_ms: 4.6941
+  ...
+1..688
+# tests 688
+# suites 0
+# pass 688
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 8993.5333

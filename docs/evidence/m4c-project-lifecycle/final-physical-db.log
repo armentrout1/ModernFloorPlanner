@@ -1,0 +1,224 @@
+
+> rest-express@1.0.0 test:physical:db
+> node --import tsx --test tests/database/physical-plans.test.ts
+
+TAP version 13
+# Subtest: additive physical migration leaves legacy ownership and old account tables unchanged
+ok 1 - additive physical migration leaves legacy ownership and old account tables unchanged
+  ---
+  duration_ms: 276.9202
+  ...
+# Subtest: 0004 preserves every preexisting plan/revision/evaluation/receipt column and immutable triggers
+ok 2 - 0004 preserves every preexisting plan/revision/evaluation/receipt column and immutable triggers
+  ---
+  duration_ms: 44.3327
+  ...
+# Subtest: create persists complete schema5 envelope and server-authored evaluated identity atomically
+ok 3 - create persists complete schema5 envelope and server-authored evaluated identity atomically
+  ---
+  duration_ms: 127.2596
+  ...
+# Subtest: 12x10x8 quantities and later 9ft revision preserve original geometry, totals and snapshot
+ok 4 - 12x10x8 quantities and later 9ft revision preserve original geometry, totals and snapshot
+  ---
+  duration_ms: 161.8711
+  ...
+# Subtest: a fresh repository connection retrieves committed plans and revisions without local cache
+ok 5 - a fresh repository connection retrieves committed plans and revisions without local cache
+  ---
+  duration_ms: 120.0453
+  ...
+# Subtest: two different writes against one base serialize: one succeeds and one conflicts with no partial row
+ok 6 - two different writes against one base serialize: one succeeds and one conflicts with no partial row
+  ---
+  duration_ms: 180.4848
+  ...
+# Subtest: concurrent identical create keys and lost-response retries return exactly one committed result
+ok 7 - concurrent identical create keys and lost-response retries return exactly one committed result
+  ---
+  duration_ms: 219.2626
+  ...
+# Subtest: UUID case variants serialize against the same scoped key and append resource identity
+ok 8 - UUID case variants serialize against the same scoped key and append resource identity
+  ---
+  duration_ms: 162.1345
+  ...
+# Subtest: concurrent identical append keys replay the original outcome even after newer revisions exist
+ok 9 - concurrent identical append keys replay the original outcome even after newer revisions exist
+  ---
+  duration_ms: 296.5162
+  ...
+# Subtest: full-content idempotency includes names and expected base, not just calculation geometry
+ok 10 - full-content idempotency includes names and expected base, not just calculation geometry
+  ---
+  duration_ms: 156.761
+  ...
+# Subtest: same key is independently scoped to principal and workspace
+ok 11 - same key is independently scoped to principal and workspace
+  ---
+  duration_ms: 170.5945
+  ...
+# Subtest: foreign IDs never expose list, current, immutable revision or mutation content
+ok 12 - foreign IDs never expose list, current, immutable revision or mutation content
+  ---
+  duration_ms: 134.2193
+  ...
+# Subtest: viewer cannot create or append and revoked successful actor cannot replay a receipt
+ok 13 - viewer cannot create or append and revoked successful actor cannot replay a receipt
+  ---
+  duration_ms: 77.2377
+  ...
+# Subtest: missing If-Match, wildcard, weak/multiple ETags and stale versions never create revisions
+ok 14 - missing If-Match, wildcard, weak/multiple ETags and stale versions never create revisions
+  ---
+  duration_ms: 187.2845
+  ...
+# Subtest: supported unknowns save as incomplete and unsupported/malformed references fail without mutation
+ok 15 - supported unknowns save as incomplete and unsupported/malformed references fail without mutation
+  ---
+  duration_ms: 161.0916
+  ...
+# Subtest: bounded keyset pagination lists only workspace summaries once and rejects unbounded requests
+ok 16 - bounded keyset pagination lists only workspace summaries once and rejects unbounded requests
+  ---
+  duration_ms: 327.3295
+  ...
+# Subtest: SQL foreign keys reject dangling pointers and cross-workspace plan/revision relationships
+ok 17 - SQL foreign keys reject dangling pointers and cross-workspace plan/revision relationships
+  ---
+  duration_ms: 146.2698
+  ...
+# Subtest: saved revision contents and accepted receipts are append-only at the SQL boundary
+ok 18 - saved revision contents and accepted receipts are append-only at the SQL boundary
+  ---
+  duration_ms: 79.9068
+  ...
+# Subtest: failure after revision insertion rolls back plan, revision, receipt and current pointer together
+ok 19 - failure after revision insertion rolls back plan, revision, receipt and current pointer together
+  ---
+  duration_ms: 204.5271
+  ...
+# Subtest: membership change ahead of a waiting save is checked inside its eventual SQL transaction
+ok 20 - membership change ahead of a waiting save is checked inside its eventual SQL transaction
+  ---
+  duration_ms: 22.6872
+  ...
+# Subtest: logout and workspace switching invalidate the original session before receipt replay
+ok 21 - logout and workspace switching invalidate the original session before receipt replay
+  ---
+  duration_ms: 100.0329
+  ...
+# Subtest: in-flight save holds session authorization until commit, then workspace switch invalidates subsequent use
+ok 22 - in-flight save holds session authorization until commit, then workspace switch invalidates subsequent use
+  ---
+  duration_ms: 156.2085
+  ...
+# Subtest: rich levels/stairs/landings/holes/uses/zones/cabinets/opening evidence roundtrips with unchanged252 takeoff
+ok 23 - rich levels/stairs/landings/holes/uses/zones/cabinets/opening evidence roundtrips with unchanged252 takeoff
+  ---
+  duration_ms: 618.5558
+  ...
+# Subtest: archive and restore affect project metadata and list filters without rewriting any captured revision
+ok 24 - archive and restore affect project metadata and list filters without rewriting any captured revision
+  ---
+  duration_ms: 125.4924
+  ...
+# Subtest: accepted create and append receipts still recover lost acknowledgements after archive
+ok 25 - accepted create and append receipts still recover lost acknowledgements after archive
+  ---
+  duration_ms: 178.2482
+  ...
+# Subtest: duplicate preserves complete rich envelope, historical evaluation, payload and name under explicit new storage identity
+ok 26 - duplicate preserves complete rich envelope, historical evaluation, payload and name under explicit new storage identity
+  ---
+  duration_ms: 573.4173
+  ...
+# Subtest: an explicitly selected archived project can be duplicated into a separate active project without restoring its source
+ok 27 - an explicitly selected archived project can be duplicated into a separate active project without restoring its source
+  ---
+  duration_ms: 88.2576
+  ...
+# Subtest: concurrent exact duplicate requests create one target and one immutable lifecycle receipt
+ok 28 - concurrent exact duplicate requests create one target and one immutable lifecycle receipt
+  ---
+  duration_ms: 91.6772
+  ...
+# Subtest: lifecycle preconditions bind both current revision and archive generation, including archive/restore ABA
+ok 29 - lifecycle preconditions bind both current revision and archive generation, including archive/restore ABA
+  ---
+  duration_ms: 148.2942
+  ...
+# Subtest: archive receipt replay returns the original outcome and current status without rearchiving a restored project
+ok 30 - archive receipt replay returns the original outcome and current status without rearchiving a restored project
+  ---
+  duration_ms: 80.3818
+  ...
+# Subtest: restore receipt replay cannot reactivate a subsequently archived project
+ok 31 - restore receipt replay cannot reactivate a subsequently archived project
+  ---
+  duration_ms: 81.7978
+  ...
+# Subtest: duplicate receipt replay keeps its original first revision while reflecting current target head and archive state
+ok 32 - duplicate receipt replay keeps its original first revision while reflecting current target head and archive state
+  ---
+  duration_ms: 147.2995
+  ...
+# Subtest: lifecycle keys reject changed captured revision or precondition rather than execute a second operation
+ok 33 - lifecycle keys reject changed captured revision or precondition rather than execute a second operation
+  ---
+  duration_ms: 94.3067
+  ...
+# Subtest: all lifecycle operations enforce actor permissions and workspace ownership even for known IDs
+ok 34 - all lifecycle operations enforce actor permissions and workspace ownership even for known IDs
+  ---
+  duration_ms: 92.5714
+  ...
+# Subtest: lifecycle input and exact preconditions reject wildcard, weak, multiple, extra and malformed values
+ok 35 - lifecycle input and exact preconditions reject wildcard, weak, multiple, extra and malformed values
+  ---
+  duration_ms: 84.9817
+  ...
+# Subtest: fresh no-op archive and restore are explicit conflicts and never increase lifecycle generation
+ok 36 - fresh no-op archive and restore are explicit conflicts and never increase lifecycle generation
+  ---
+  duration_ms: 83.9071
+  ...
+# Subtest: lifecycle SQL metadata constraints and immutable receipts reject cross-workspace and malformed history
+ok 37 - lifecycle SQL metadata constraints and immutable receipts reject cross-workspace and malformed history
+  ---
+  duration_ms: 141.9239
+  ...
+# Subtest: concurrent archive and fresh append serialize on the plan and cannot both accept a stale displayed head
+ok 38 - concurrent archive and fresh append serialize on the plan and cannot both accept a stale displayed head
+  ---
+  duration_ms: 134.5443
+  ...
+# Subtest: lifecycle receipt insertion failure rolls back a copied plan and archive transition atomically
+ok 39 - lifecycle receipt insertion failure rolls back a copied plan and archive transition atomically
+  ---
+  duration_ms: 85.8654
+  ...
+# Subtest: waiting lifecycle mutation rechecks a revoked writer after the authorization lock is released
+ok 40 - waiting lifecycle mutation rechecks a revoked writer after the authorization lock is released
+  ---
+  duration_ms: 97.4606
+  ...
+# Subtest: logout or selected workspace changes block lifecycle receipt replay before any receipt is returned
+ok 41 - logout or selected workspace changes block lifecycle receipt replay before any receipt is returned
+  ---
+  duration_ms: 86.6077
+  ...
+# Subtest: lifecycle key scope includes operation and resource, and canonical UUID casing preserves retries
+ok 42 - lifecycle key scope includes operation and resource, and canonical UUID casing preserves retries
+  ---
+  duration_ms: 164.6166
+  ...
+1..42
+# tests 42
+# suites 0
+# pass 42
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 7255.9928

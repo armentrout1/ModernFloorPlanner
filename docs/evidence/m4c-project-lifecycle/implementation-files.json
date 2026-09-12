@@ -1,0 +1,17 @@
+[
+  "client/src/features/physical-draft/AccountSavePanel.tsx",
+  "client/src/features/physical-draft/ProjectList.tsx",
+  "client/src/features/physical-draft/accountSaveState.ts",
+  "client/src/features/physical-draft/projectLifecycleClient.ts",
+  "migrations/0004_physical_project_lifecycle.sql",
+  "server/physicalPlanRoutes.ts",
+  "server/physicalPlanStorage.ts",
+  "shared/exports/quantityReport.ts",
+  "shared/persistence/physicalPlan.ts",
+  "shared/schema.ts",
+  "tests/accounts/runtime.mjs",
+  "tests/database/physical-plans.test.ts",
+  "tests/m4b-autosave-coordinator.test.ts",
+  "tests/persistence/physical-http.test.ts",
+  "tests/persistence/project-lifecycle.spec.ts"
+]

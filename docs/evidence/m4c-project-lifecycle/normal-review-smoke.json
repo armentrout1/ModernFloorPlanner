@@ -1,0 +1,15 @@
+{
+  "ok": true,
+  "sourceCommit": "4a3a321e23726ac13ad20185f5a17429af0ae601",
+  "address": "http://127.0.0.9:5193/physical-draft",
+  "checks": [
+    "New review origin serves the exact canonical implementation",
+    "Normal unavailable authentication issues no session cookie",
+    "Both lists and all three lifecycle mutations fail closed without configured authentication",
+    "Fresh synthetic local draft remains editable with unfinished height preserved",
+    "No page errors or browser API mutations; no owner origins visited"
+  ],
+  "pageErrors": 0,
+  "browserApiMutations": 0,
+  "ownerOriginsVisited": false
+}
