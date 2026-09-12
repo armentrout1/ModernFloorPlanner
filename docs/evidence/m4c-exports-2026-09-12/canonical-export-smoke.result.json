@@ -1,0 +1,41 @@
+{
+  "ok": true,
+  "sourceCommit": "0dffa2d876c69aea76841528dacf9afa7ac34f43",
+  "address": "http://127.0.0.7:5191/physical-draft",
+  "checks": [
+    {
+      "name": "Expected application commit and normal unconfigured composition; no session cookie issued",
+      "passed": true
+    },
+    {
+      "name": "Saved CSV and HTML exports fail closed without configured authentication",
+      "passed": true,
+      "responseStatus": 503
+    },
+    {
+      "name": "Actual local CSV and HTML share a captured 12 x 10 x 8 foot room with no source mutation",
+      "passed": true,
+      "floorSquareFeet": 120,
+      "flatCeilingSquareFeet": 120,
+      "grossWallSquareFeet": 352,
+      "csvBomCount": 1,
+      "provisional": true
+    },
+    {
+      "name": "Sanitized screenshot captured only the fresh synthetic local fixture",
+      "passed": true,
+      "screenshot": "canonical-export-smoke.png"
+    },
+    {
+      "name": "Pending height text remains exact; report preparation refuses silently using old dimensions",
+      "passed": true
+    },
+    {
+      "name": "Fresh headless context only; no API writes or page errors",
+      "passed": true,
+      "pageErrorCount": 0,
+      "apiMutationCount": 0,
+      "ownerOriginsVisited": false
+    }
+  ]
+}

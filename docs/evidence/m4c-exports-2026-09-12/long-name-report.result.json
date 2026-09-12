@@ -1,0 +1,9 @@
+{
+  "passed": true,
+  "rooms": 2,
+  "floorNet": 240,
+  "allowance": 24,
+  "adjusted": 264,
+  "overflow": false,
+  "source": "synthetic current renderer"
+}
