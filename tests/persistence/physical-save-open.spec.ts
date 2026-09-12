@@ -2,10 +2,18 @@ import { test, expect, type Page } from '@playwright/test';
 import { configureIssuer } from '../accounts/control';
 import { signIn,createWorkspace,selectWorkspace,physical,roomField,commit,selectedPhysical,savePanel,saveButton,savePhysical,schemaFive } from './browser-helpers';
 import { capturePhysicalSaveEnvelope } from '../../shared/persistence/physicalSave';
+import { api, counts } from '../autosave/helpers';
 
 // Every primary drawing below is constructed through the compiled UI. OIDC,
 // cookies, authorization routes and durable PostgreSQL are the normal composition.
 test.beforeEach(async({},info)=>configureIssuer({subjectPrefix:'save-browser-'+info.testId.replace(/[^A-Za-z0-9_-]/g,'').slice(-40)}));
+async function bindingFor(p:Page,draftId:string){
+ return p.evaluate(id=>{
+  const context=sessionStorage.getItem('modern-floor-planner:working-context:v1');
+  const key=`modern-floor-planner:context:v1:${context}:modern-floor-planner:physical-save-bindings:v1`;
+  return JSON.parse(sessionStorage.getItem(key)??'{"bindings":{}}').bindings[id];
+ },draftId);
+}
 async function openFirst(p:Page){await savePanel(p).getByRole('button',{name:'Open saved plan',exact:true}).click();await savePanel(p).getByRole('button',{name:'Open separate copy',exact:true}).first().click();await expect(savePanel(p)).toContainText('Opened a separate local copy.');await expect(p.getByTestId('physical-save-status')).toHaveText(/^Saved revision /);}
 
 test('real sign-in, explicit schema5 Save/Open and fresh empty browser context retrieve SQL content',async({page,browser})=>{
@@ -28,9 +36,21 @@ test('two real browser clients conflict visibly and preserve the candidate while
  const context=await browser.newContext({baseURL:process.env.MFP_ACCOUNTS_APP_ORIGIN});try{
   const p=await context.newPage();await p.goto('/physical-draft');await signIn(p);await selectWorkspace(p,workspace.id);await openFirst(p);const candidateId=(await selectedPhysical(p)).id;
   await commit(roomField(page,'Ceiling height'),'9 ft');const second=await savePhysical(page);expect(second.revisionNumber).toBe(2);
-  await commit(roomField(p,'Ceiling height'),'10 ft');const candidate=capturePhysicalSaveEnvelope(await selectedPhysical(p));
-  const conflict=p.waitForResponse(r=>r.request().method()==='POST'&&new URL(r.url()).pathname===`/api/physical-plans/${first.planId}/revisions`);await saveButton(p).click();expect((await conflict).status()).toBe(412);
-  await expect(p.getByTestId('physical-save-status')).toContainText('Conflict');expect(capturePhysicalSaveEnvelope(await selectedPhysical(p))).toEqual(candidate);
+  await commit(roomField(p,'Ceiling height'),'10 ft');const candidateDraft=await selectedPhysical(p),candidate=capturePhysicalSaveEnvelope(candidateDraft),oldBinding=await bindingFor(p,candidateId);
+  expect(oldBinding.planId).toBe(first.planId);expect(oldBinding.revisionId).toBe(first.revisionId);expect(oldBinding.etag).toBe(first.etag);
+  const uiPosts:string[]=[];p.on('request',request=>{if(request.method()==='POST'&&new URL(request.url()).pathname===`/api/physical-plans/${first.planId}/revisions`)uiPosts.push(request.url());});
+  // The durable coordinator detects a definitely-unsent stale base through a real authorized GET before POST.
+  const currentRead=p.waitForResponse(r=>r.request().method()==='GET'&&new URL(r.url()).pathname===`/api/physical-plans/${first.planId}`);
+  await saveButton(p).click();const currentResponse=await currentRead;expect(currentResponse.status()).toBe(200);expect((await currentResponse.json()).revisionId).toBe(second.revisionId);
+  await expect(p.getByTestId('physical-save-status')).toContainText('Conflict');expect(await selectedPhysical(p)).toEqual(candidateDraft);
+  expect(capturePhysicalSaveEnvelope(await selectedPhysical(p))).toEqual(candidate);expect(await bindingFor(p,candidateId)).toEqual(oldBinding);expect(uiPosts).toEqual([]);
+  expect(await counts(first.planId)).toEqual({revisions:2,receipts:2});
+  // Retain independent server enforcement: authenticated exact stale candidate/base still receives 412.
+  const rejected=await api(p,`/api/physical-plans/${first.planId}/revisions`,'POST',candidate,{'Idempotency-Key':crypto.randomUUID(),'If-Match':first.etag});
+  expect(rejected.status).toBe(412);expect(rejected.value.code).toBe('REVISION_CONFLICT');expect(await counts(first.planId)).toEqual({revisions:2,receipts:2});
+  const currentAfterReject=await api(p,`/api/physical-plans/${first.planId}`);expect(currentAfterReject.status).toBe(200);
+  expect(currentAfterReject.value.revisionId).toBe(second.revisionId);expect(currentAfterReject.value.etag).toBe(second.etag);expect(currentAfterReject.value.envelope).toEqual(second.envelope);
+  expect(await selectedPhysical(p)).toEqual(candidateDraft);expect(await bindingFor(p,candidateId)).toEqual(oldBinding);
   await savePanel(p).scrollIntoViewIfNeeded();await p.screenshot({path:test.info().outputPath('physical-save-conflict.png'),fullPage:true});
   await savePanel(p).getByRole('button',{name:'Open latest as separate copy',exact:true}).click();await expect(p.getByTestId('physical-save-status')).toHaveText('Saved revision 2');await expect(roomField(p,'Ceiling height')).toHaveValue('9 ft');
   await p.getByRole('combobox',{name:'Selected physical draft',exact:true}).selectOption(candidateId);expect(capturePhysicalSaveEnvelope(await selectedPhysical(p))).toEqual(candidate);

@@ -184,15 +184,26 @@ function guardTarget(draft: PhysicalDraft, change: HistoryChange): void {
   if (!equal(comparable(target, current), comparable(target, change.after))) fail('The next history target changed or no longer exists. Its newer value has not been overwritten.');
   switch (target.kind) {
     case 'room-use': case 'layout-object': case 'layout-part': guardLayoutHistory(draft,target,restoredHistoryValue(target,change.before,change.after));break;
-    case 'stair-object': case 'stair-part': guardStairHistory(draft,target,restoredHistoryValue(target,change.before,change.after));break;
+    case 'stair-object': case 'stair-part':
+      if (Object.values(draft.pendingInputs?.buildingNames ?? {}).some(raw => raw.kind === target.object && raw.id === target.id && raw.dirty)) fail('Apply or Revert the pending object name before Undo or Redo.');
+      guardStairHistory(draft,target,restoredHistoryValue(target,change.before,change.after));break;
     case 'level':
     case 'level-name':
+      if (target.kind === 'level' && Object.values(draft.pendingInputs?.roomLevels ?? {}).some(raw => raw.from === target.id || raw.to === target.id)) fail('Apply or Revert the pending room assignment before changing this level.');
       if (draft.levelView?.pendingNames && Object.hasOwn(draft.levelView.pendingNames, target.id)) fail('Apply the pending level name before Undo or Redo.');
       break;
     case 'room-measurement': requireClean(draft.fields[target.id]?.[target.field], words(target.field)); break;
     case 'opening-measurement': requireClean(getOpeningFields(draft, target.id)[target.field], words(target.field)); break;
     case 'opening-position': requireClean(getOpeningFields(draft, target.id).offset, 'opening position'); break;
-    case 'room': if (current) Object.entries(draft.fields[target.id]).forEach(([field, raw]) => requireClean(raw, words(field))); break;
+    case 'room-name':
+      if (draft.pendingInputs?.roomNames[target.id]?.dirty) fail('Apply or Revert the pending room name before Undo or Redo.');
+      break;
+    case 'room-level':
+      if (draft.pendingInputs?.roomLevels[target.id]) fail('Apply or Revert the pending room assignment before Undo or Redo.');
+      break;
+    case 'room':
+      if (draft.pendingInputs?.roomNames[target.id]?.dirty || draft.pendingInputs?.roomLevels[target.id]) fail('Apply or Revert the pending room name or assignment before Undo or Redo.');
+      if (current) Object.entries(draft.fields[target.id]).forEach(([field, raw]) => requireClean(raw, words(field))); break;
     case 'opening': if (current) Object.entries(getOpeningFields(draft, target.id)).forEach(([field, raw]) => requireClean(raw, words(field))); break;
     case 'takeoff-output': {
       const currentSelection = current as QuantitySelection | null, restored = change.before as QuantitySelection | null;

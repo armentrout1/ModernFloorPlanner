@@ -138,7 +138,7 @@ function WasteInput({ draft, output, update }: { draft: PhysicalDraft; output: Q
   const revert = useInputRevert(inputRef, {
     name: 'Revert ' + OUTPUT_LABELS[output].replace(/ area$/, '').toLowerCase() + ' waste',
     identity: draft.id + ':' + output, revision: draft.localEditRevision, pending: waste.dirty,
-    onLeave: () => { if (!composing.current) applyWaste(); },
+    onLeave: () => {},
     onRevert: () => {
       const token = captureFieldRevert(draft, { kind: 'waste', output });
       return update(current => revertField(current, token), token.revision);
@@ -151,11 +151,7 @@ function WasteInput({ draft, output, update }: { draft: PhysicalDraft; output: Q
   return <div className="relative mt-4 min-w-0 max-w-xs"><label className="block min-h-7 pr-16 text-sm font-medium" htmlFor="takeoff-waste">Waste percentage</label>
     <Input ref={inputRef} id="takeoff-waste" type="text" className="mt-1 min-w-0 bg-white" value={waste.text} data-physical-pending={waste.dirty ? 'true' : undefined} aria-invalid={Boolean(error)} aria-describedby="takeoff-waste-help"
       onChange={event => { const text = event.target.value; update(current => editWaste(current, output, text)); }}
-      onBlur={event => { if (!composing.current && !revert.skipBlur(event)) applyWaste(); }}
-      onCompositionStart={() => { composing.current = true; }} onCompositionEnd={event => {
-        composing.current = false;
-        if (document.activeElement !== event.currentTarget && !revert.isDeferredFocus(document.activeElement)) applyWaste();
-      }}
+      onCompositionStart={() => { composing.current = true; }} onCompositionEnd={() => { composing.current = false; }}
       onKeyDown={event => {
         if (revert.onInputKeyDown(event, composing.current)) return;
         if (event.key === 'Enter' && !composing.current && !event.nativeEvent.isComposing && !event.repeat) {

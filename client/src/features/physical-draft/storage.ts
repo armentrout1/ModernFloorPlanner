@@ -1,3 +1,4 @@
+import { validatePendingInputs } from './pendingInputs';
 import { layoutRawEntrySchema,layoutTextEntrySchema,layoutActionSchema,validateLayoutEditorState } from './layoutCommands';
 import { stairRawEntrySchema, stairActionSchema, validateStairEditorState } from './stairCommands';
 import { z } from 'zod';
@@ -28,6 +29,11 @@ const source = z.object({ kind: z.enum(['new', 'quick-rooms', 'legacy', 'physica
 }).strict();
 const draft = z.object({ id, localEditRevision: revision, document: supportedPhysicalDocumentSchema,
   displayUnit: z.enum(['ft', 'm']),
+  pendingInputs: z.object({ version: z.literal('physical-pending-input-v1'),
+    roomNames: z.record(id, z.object({ text: z.string(), dirty: z.boolean() }).strict()),
+    buildingNames: z.record(z.object({ kind: z.enum(['stair', 'surface-opening']), id, text: z.string(), dirty: z.boolean() }).strict()),
+    roomLevels: z.record(id, z.object({ from: id, to: id }).strict()),
+  }).strict().optional(),
   fields: z.record(z.object({ length: field, width: field, ceilingHeight: field }).strict()),
   events: z.array(measurementEventCaptureSchema), request: quantityRequestSchema, source,
   openingFields: z.record(openingFieldsSchema).optional(),
@@ -116,6 +122,7 @@ export function validateRegistry(input: unknown): RegistryReadResult {
           || !retainsPrefix(original.historyEvidence?.events ?? [], item.historyEvidence?.events ?? [])
           || !retainsPrefix(original.reviewState?.applicabilityEvents ?? [], item.reviewState?.applicabilityEvents ?? [])) return corrupt('Stored level upgrade discarded retained action evidence.');
     }
+    const pendingError = validatePendingInputs(item); if (pendingError) return corrupt(pendingError);
     const roomIds = item.document.rooms.map(room => room.id);
     if (Object.keys(item.fields).length !== roomIds.length || roomIds.some(roomId => !Object.hasOwn(item.fields, roomId))) {
       return corrupt('Stored room fields do not match the physical document.');

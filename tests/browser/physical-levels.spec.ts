@@ -72,7 +72,7 @@ async function addLevel(p: Page, name: string) {
 }
 async function addRoom(p: Page, name: string, length: string, width: string, height: string) {
   await quick(p); await p.getByRole('button', { name: 'Add room', exact: true }).click();
-  await rooms(p).getByLabel('Room name', { exact: true }).fill(name);
+  await rooms(p).getByLabel('Room name', { exact: true }).fill(name); await rooms(p).getByLabel('Room name', { exact: true }).press('Enter');
   for (const [label, text] of [['Length', length], ['Width', width], ['Ceiling height', height]]) await commit(field(p, label), text);
   await rooms(p).getByLabel('Ceiling model', { exact: true }).selectOption('flat');
   await rooms(p).getByLabel('Wall model', { exact: true }).selectOption('vertical-uniform');
@@ -319,6 +319,12 @@ test('grouped and shared-opening rooms block partial level reassignment with eve
     await page.getByRole('button', { name: 'room-1', exact: true }).click(); const before = await selected(page), controls = await historyState(page);
     await assign(page, 'room-1', main);
     await expect(page.getByRole('alert').first()).toContainText(relationship === 'group' ? /group|related rooms/i : /shared|attachments/i);
+    // Destination choice is now recoverable raw input; rejected Assign changes no physical relationship.
+    expect(durable(await selected(page))).toEqual({ ...durable(before), pendingInputs: {
+      version: 'physical-pending-input-v1', roomNames: {}, buildingNames: {}, roomLevels: { 'room-1': { from: unassigned, to: main } },
+    } });
+    expect(await historyState(page)).toEqual(controls);
+    await rooms(page).getByRole('button', { name: 'Revert room level', exact: true }).click();
     expect(durable(await selected(page))).toEqual(durable(before)); expect(await historyState(page)).toEqual(controls);
     expect(levels(await selected(page)).roomLevels).toEqual(levels(original).roomLevels);
     const walls = new Map(before.document.rooms.flatMap(r => r.wallFaces.map(w => [w.id, r.id] as const)));
@@ -356,7 +362,7 @@ test('upgrading the latest physical and legacy copies preserves originals unknow
   await page.getByRole('button', { name: 'Load Sketch', exact: true }).click(); const load = page.getByRole('dialog', { name: 'Load Sketch', exact: true });
   await load.getByText(saved.name, { exact: true }).click(); await load.getByRole('button', { name: 'Load Selected Sketch', exact: true }).click();
   await page.getByRole('button', { name: 'Open a physical copy', exact: true }).click();
-  await rooms(page).getByLabel('Room name', { exact: true }).fill('Latest legacy copy'); await field(page, 'Length').press('Tab');
+  await rooms(page).getByLabel('Room name', { exact: true }).fill('Latest legacy copy'); await rooms(page).getByLabel('Room name', { exact: true }).press('Enter'); await field(page, 'Length').press('Tab');
   const latest = await selected(page), current = await upgrade(page);
   expect(geometry(current)).toEqual(geometry(latest)); expect(current.source).toEqual(latest.source); expect(current.levelUpgradeLineage!.originalDraft).toEqual(latest);
   expect(current.document.editorContract!.groups).toEqual([{ id: 'kept-group', roomIds: ['legacy-a', 'legacy-b'] }]);

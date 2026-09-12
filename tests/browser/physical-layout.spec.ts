@@ -40,7 +40,7 @@ async function closeInspector(p: Page) {
 async function room(p: Page, name: string, length = '12 ft', width = '10 ft') {
   await closeInspector(p); await p.getByRole('tab', { name: 'Quick Rooms', exact: true }).click();
   await p.getByRole('button', { name: 'Add room', exact: true }).click();
-  await roomForm(p).getByLabel('Room name', { exact: true }).fill(name);
+  await roomForm(p).getByLabel('Room name', { exact: true }).fill(name); await roomForm(p).getByLabel('Room name', { exact: true }).press('Enter');
   for (const [label, value] of [['Length', length], ['Width', width], ['Ceiling height', '8 ft']]) await commit(field(p, label), value);
   return (await selected(p)).document.rooms.at(-1)!;
 }

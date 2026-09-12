@@ -66,7 +66,7 @@ test('one physical draft synchronizes room identity, dimensions and ceiling quan
   const roomId = created.document.rooms[0].id;
   await expect(page.getByTestId('physical-draft-id')).toContainText(created.id);
   for (const name of ['Length', 'Width', 'Ceiling height']) await expect(field(page, name)).toHaveValue('');
-  await inspector(page).getByLabel('Room name', { exact: true }).fill('Shared bedroom');
+  await inspector(page).getByLabel('Room name', { exact: true }).fill('Shared bedroom'); await inspector(page).getByLabel('Room name', { exact: true }).press('Enter');
   await dimensions(page);
   await quantities(page, '120.00 sq ft', '120.00 sq ft', '352.00 sq ft');
   await expect(page.getByTestId('physical-walls')).toContainText(/provisional/i);
@@ -190,7 +190,7 @@ test('explicit Quick Rooms copies keep original bytes and separate draft identit
   const first = await selected(page);
   expect(first.source.kind).toBe('quick-rooms');
   expect(first.source.original).toEqual(JSON.parse(original!));
-  await inspector(page).getByLabel('Room name', { exact: true }).fill('Physical copy only');
+  await inspector(page).getByLabel('Room name', { exact: true }).fill('Physical copy only'); await inspector(page).getByLabel('Room name', { exact: true }).press('Enter');
   await field(page, 'Ceiling height').fill('8 ft -');
   await page.getByRole('button', { name: 'Meters', exact: true }).click();
   const beforeRefresh = await selected(page);

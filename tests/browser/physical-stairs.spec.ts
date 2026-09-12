@@ -65,7 +65,7 @@ async function renameLevel(p: Page, text: string) {
 }
 async function addRoom(p: Page, name: string, length: string, height: string) {
   await quick(p); await p.getByRole('button', { name: 'Add room', exact: true }).click();
-  await rooms(p).getByLabel('Room name', { exact: true }).fill(name);
+  await rooms(p).getByLabel('Room name', { exact: true }).fill(name); await rooms(p).getByLabel('Room name', { exact: true }).press('Enter');
   for (const [label, text] of [['Length', length], ['Width', '10 ft'], ['Ceiling height', height]]) await commit(roomField(p, label), text);
   await rooms(p).getByLabel('Ceiling model', { exact: true }).selectOption('flat');
   await rooms(p).getByLabel('Wall model', { exact: true }).selectOption('vertical-uniform');
@@ -132,7 +132,7 @@ async function selectSurface(p: Page, id: string) {
 async function createStair(p: Page, f: Awaited<ReturnType<typeof building>>, connect = true) {
   await switchLevel(p, f.basement); await expect(p.getByRole('button', { name: 'Add stair', exact: true })).toBeEnabled(); await p.getByRole('button', { name: 'Add stair', exact: true }).click(); await openInspector(p);
   const id = (await stairs(p).getAttribute('data-stair-id'))!;
-  await stairs(p).getByLabel('Stair name', { exact: true }).fill('Basement to Main');
+  await stairs(p).getByLabel('Stair name', { exact: true }).fill('Basement to Main'); await stairs(p).getByLabel('Stair name', { exact: true }).press('Enter');
   for (const [label, value] of [['Stair width', '3 ft'], ['Horizontal run', '6 ft'], ['Lower X', '4 ft'], ['Lower Y', '1 ft']]) await commit(measure(stairs(p), label), value);
   if (connect) {
     await stairs(p).getByRole('combobox', { name: 'Upper level', exact: true }).selectOption(f.main);
@@ -152,7 +152,7 @@ async function landing(p: Page, role: 'lower'|'upper') {
 async function createSurface(p: Page, targetLevel: string, surface: 'floor'|'ceiling', name: string, x = '4 ft') {
   await switchLevel(p,targetLevel); await p.getByRole('button',{name:'Add surface opening',exact:true}).click(); await openInspector(p);
   const id=(await surfaces(p).getAttribute('data-surface-opening-id'))!;
-  await surfaces(p).getByLabel('Surface opening name',{exact:true}).fill(name);
+  await surfaces(p).getByLabel('Surface opening name',{exact:true}).fill(name); await surfaces(p).getByLabel('Surface opening name',{exact:true}).press('Enter');
   await surfaces(p).getByRole('combobox',{name:'Affected surface',exact:true}).selectOption(surface);
   for(const [label,value] of [['Opening width','3 ft'],['Opening length','6 ft'],['Opening X',x],['Opening Y','1 ft']]) await commit(measure(surfaces(p),label),value);
   return id;
@@ -260,8 +260,12 @@ test('stair landing and independent void deletion share one chronological histor
   await redo(page).click();expect(contract(await selected(page)).surfaceOpenings).toHaveLength(0);await undo(page).click();
   await switchLevel(page,f.main);await quick(page);await page.getByRole('button',{name:'Main room',exact:true}).click();
   const beforeAssign=await selected(page),label=await undo(page).getAttribute('aria-label');
-  await rooms(page).getByRole('combobox',{name:'Room level',exact:true}).selectOption(f.basement);await rooms(page).getByRole('button',{name:'Assign room',exact:true}).click();
-  await expect(page.getByRole('alert').first()).toContainText(/stair|surface opening/i);expect(durable(await selected(page))).toEqual(durable(beforeAssign));await expect(undo(page)).toHaveAttribute('aria-label',label!);
+  await rooms(page).getByRole('combobox',{name:'Room level',exact:true}).selectOption(f.basement);
+  const pendingAssignment=await selected(page),mainRoom=beforeAssign.document.rooms.find(room=>room.name==='Main room')!;
+  expect(durable(pendingAssignment)).toEqual({...durable(beforeAssign),pendingInputs:{version:'physical-pending-input-v1',roomNames:{},buildingNames:{},roomLevels:{[mainRoom.id]:{from:f.main,to:f.basement}}}});
+  await rooms(page).getByRole('button',{name:'Assign room',exact:true}).click();
+  await expect(page.getByRole('alert').first()).toContainText(/stair|surface opening/i);expect(await selected(page)).toEqual(pendingAssignment);await expect(undo(page)).toHaveAttribute('aria-label',label!);
+  await rooms(page).getByRole('button',{name:'Revert room level',exact:true}).click();expect(durable(await selected(page))).toEqual(durable(beforeAssign));
   expect((await selected(page)).request).toEqual(original.request);expect((await registry(page)).drafts.find(d=>d.id===f.source.id)).toEqual(f.source);
 });
 

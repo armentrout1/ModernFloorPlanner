@@ -1,3 +1,4 @@
+import { commitRoomNameInput, revertRoomNameInput, commitBuildingNameInput, revertBuildingNameInput, commitRoomLevelInput, revertRoomLevelInput } from './pendingInputs';
 import { commitField, ROOM_FIELDS, type PhysicalDraft } from './state';
 import { commitOpeningField, OPENING_FIELDS } from './openingCommands';
 import { captureFieldRevert, revertField } from './fieldRevert';
@@ -15,6 +16,16 @@ const label = (field: string) => ({ ceilingHeight: 'ceiling height', sillHeight:
 /** Read every draft-owned raw field, including fields on hidden rooms/levels. */
 export function pendingSaveFields(draft: PhysicalDraft): PendingSaveField[] {
   const pending: PendingSaveField[] = [];
+  for (const [id, raw] of Object.entries(draft.pendingInputs?.roomNames ?? {})) if (raw.dirty) pending.push({
+    key: `room-name:${id}`, label: `${draft.document.rooms.find(room => room.id === id)?.name || 'Room'}: room name`, text: raw.text,
+    apply: current => commitRoomNameInput(current, id), revert: current => revertRoomNameInput(current, id) });
+  for (const [key, raw] of Object.entries(draft.pendingInputs?.buildingNames ?? {})) if (raw.dirty) pending.push({
+    key: `building-name:${key}`, label: `${raw.kind} ${raw.id.slice(0, 8)}: name`, text: raw.text,
+    apply: current => commitBuildingNameInput(current, raw.kind, raw.id), revert: current => revertBuildingNameInput(current, raw.kind, raw.id) });
+  for (const [id, value] of Object.entries(draft.pendingInputs?.roomLevels ?? {})) pending.push({
+    key: `room-level:${id}`, label: `${draft.document.rooms.find(room => room.id === id)?.name || 'Room'}: room level assignment`,
+    text: draft.document.schemaVersion !== 2 ? draft.document.buildingLevels.levels.find(level => level.id === value.to)?.name || value.to : value.to,
+    apply: current => commitRoomLevelInput(current, id), revert: current => revertRoomLevelInput(current, id) });
   for (const room of draft.document.rooms) for (const field of ROOM_FIELDS) {
     const raw = draft.fields[room.id]?.[field];
     if (raw?.dirty) pending.push({ key: `room:${room.id}:${field}`, label: `${room.name || 'Room'}: ${label(field)}`, text: raw.text,

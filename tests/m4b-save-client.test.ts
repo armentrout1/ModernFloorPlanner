@@ -62,7 +62,7 @@ function harness() {
   let count=0,valid=true; const replies:ReturnType<typeof deferred<PhysicalPlanRevision>>[]=[],sent:any[]=[],persisted=new Map<string,SaveBinding>();
   const manager=createPhysicalSaveManager({authorize:async()=>({epoch:1}),assert:()=>{if(!valid)throw new AccountContextChanged();},key:()=>`key-${++count}`,load:id=>persisted.get(id)??null,persist:(id,b)=>{persisted.set(id,b);},send:async intent=>{sent.push(intent);const reply=deferred<PhysicalPlanRevision>();replies.push(reply);return reply.promise;}});
   const result=(d:PhysicalDraft,n=1):PhysicalPlanRevision=>({planId:'plan',workspaceId:'workspace',revisionId:`revision-${n}`,revisionNumber:n,name:d.document.name,createdAt:AT,createdBy:'actor',envelope:capturePhysicalSaveEnvelope(d),evaluation:{} as PhysicalPlanRevision['evaluation'],payloadHash:`hash-${n}`,etag:`"revision-${n}"`});
-  const started=async()=>{await new Promise(resolve=>setImmediate(resolve));};
+  let expectedSends=0; const started=async()=>{const expected=++expectedSends;const until=Date.now()+2000;while(sent.length<expected&&Date.now()<until)await new Promise(resolve=>setTimeout(resolve,1));assert.equal(sent.length,expected);};
   return{manager,replies,sent,persisted,result,started,invalidate:()=>{valid=false;}};
 }
 test('duplicate Save clicks serialize and acknowledge only the submitted local revision',async()=>{

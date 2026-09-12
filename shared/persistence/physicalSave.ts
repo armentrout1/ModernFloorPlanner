@@ -167,6 +167,9 @@ function pendingFieldNames(draft: PhysicalDraft): string[] {
   for (const entry of Object.values(draft.layoutFields ?? {})) if (entry.raw.dirty) names.push(`${entry.target.id}: ${entry.target.field}`);
   for (const entry of Object.values(draft.layoutTexts ?? {})) if (entry.dirty) names.push(`${entry.target.id}: label`);
   for (const [output, raw] of Object.entries(draft.takeoffState?.wasteFields ?? {})) if (raw.dirty) names.push(`${output}: waste`);
+  for (const [roomId, raw] of Object.entries(draft.pendingInputs?.roomNames ?? {})) if (raw.dirty) names.push(`${roomId}: room name`);
+  for (const raw of Object.values(draft.pendingInputs?.buildingNames ?? {})) if (raw.dirty) names.push(`${raw.id}: name`);
+  for (const roomId of Object.keys(draft.pendingInputs?.roomLevels ?? {})) names.push(`${roomId}: level assignment`);
   return names;
 }
 

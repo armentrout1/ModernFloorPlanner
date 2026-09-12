@@ -26,7 +26,7 @@ async function commit(input: Locator, text: string) {
 }
 async function room(page: Page, name = 'Alpha', length = '12 ft', width = '10 ft', height = '8 ft') {
   await page.getByRole('button', { name: 'Add room', exact: true }).click();
-  await roomInspector(page).getByLabel('Room name', { exact: true }).fill(name);
+  await roomInspector(page).getByLabel('Room name', { exact: true }).fill(name); await roomInspector(page).getByLabel('Room name', { exact: true }).press('Enter');
   for (const [field, value] of [['Length', length], ['Width', width], ['Ceiling height', height]]) {
     await commit(roomInspector(page).getByLabel(field + ' (ft)', { exact: true }), value);
   }
@@ -273,7 +273,7 @@ test('door appearance and exact-target delete undo preserve measurements, rooms 
   expect((await selected(page)).document.openings.map(value => value.id)).toEqual([window.id]);
   expect((await selected(page)).document.rooms.map(value => value.id)).toEqual([alpha.id]);
   await page.getByRole('button', { name: 'Alpha', exact: true }).click();
-  await roomInspector(page).getByLabel('Room name', { exact: true }).fill('Alpha renamed');
+  await roomInspector(page).getByLabel('Room name', { exact: true }).fill('Alpha renamed'); await roomInspector(page).getByLabel('Room name', { exact: true }).press('Enter');
   await page.getByRole('button', { name: 'Undo opening delete', exact: true }).click();
   const restored = await selected(page);
   expect(restored.document.openings.map(value => value.id)).toEqual([door.id, window.id]);

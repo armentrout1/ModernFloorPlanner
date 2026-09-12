@@ -147,7 +147,7 @@ export function ControlledOpeningSizeField({ label, visibleLabel, text, choices 
 }) {
   const id = useId(), inputRef = useRef<HTMLInputElement>(null);
   const composing = useRef(false), menuOpening = useRef(false);
-  const revert = useInputRevert(inputRef, revertOptions ? { ...revertOptions, onLeave: () => { if (!composing.current && !menuOpening.current) onCommit(); } } : undefined);
+  const revert = useInputRevert(inputRef, revertOptions ? { ...revertOptions, onLeave: () => {} } : undefined);
   return <div className={"min-w-0 space-y-1" + (revertOptions ? " relative" : "")}>
     <Label htmlFor={id} className={"text-xs" + (revertOptions ? " block min-h-7 pr-16" : "")}>{visibleLabel}</Label>
     <div className="flex min-w-0">
@@ -157,9 +157,8 @@ export function ControlledOpeningSizeField({ label, visibleLabel, text, choices 
         aria-label={label} aria-invalid={Boolean(error)} aria-describedby={id + '-help'}
         className={'h-9 min-w-0 px-2 text-sm focus-visible:z-10' + (choices.length ? ' rounded-r-none' : '')}
         onChange={event => onChange(event.target.value)}
-        onBlur={event => { if (!composing.current && !menuOpening.current && !revert.skipBlur(event)) onCommit(); }}
         onCompositionStart={() => { composing.current = true; }}
-        onCompositionEnd={event => { composing.current = false; if (document.activeElement !== event.currentTarget && !menuOpening.current && !revert.isDeferredFocus(document.activeElement)) onCommit(); }}
+        onCompositionEnd={() => { composing.current = false; }}
         onKeyDown={event => {
           if (revert.onInputKeyDown(event, composing.current || menuOpening.current)) return;
           if (composing.current || event.nativeEvent.isComposing || event.keyCode === 229 || event.repeat) return;

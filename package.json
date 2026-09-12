@@ -16,7 +16,9 @@
     "test:accounts": "node scripts/run-accounts-tests.mjs",
     "test:accounts:db": "node --import tsx --test tests/database/accounts.test.ts",
     "test:physical:db": "node --import tsx --test tests/database/physical-plans.test.ts",
-    "test:physical": "node scripts/run-physical-tests.mjs"
+    "test:physical": "node scripts/run-physical-tests.mjs",
+    "test:journal": "playwright test --config playwright.journal.config.ts --reporter=line",
+    "test:autosave": "node scripts/run-autosave-tests.mjs"
   },
   "dependencies": {
     "@headlessui/react": "^2.2.1",

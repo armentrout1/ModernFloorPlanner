@@ -71,7 +71,7 @@ test('response loss after SQL commit retries same payload and key without creati
     const response=await route.fetch();expect(response.status()).toBe(201);if(first){first=false;await route.abort('failed');}else await route.fulfill({response});
   });
   await saveButton(page).click();await expect(page.getByTestId('physical-save-status')).toContainText('Save failed');
-  await roomFields(page).getByLabel('Room name',{exact:true}).fill('Newer local name');const current=await selectedPhysical(page);
+  await roomFields(page).getByLabel('Room name',{exact:true}).fill('Newer local name'); await roomFields(page).getByLabel('Room name',{exact:true}).press('Enter');const current=await selectedPhysical(page);
   await savePanel(page).getByRole('button',{name:'Retry same save request',exact:true}).click();await expect(page.getByTestId('physical-save-status')).toHaveText('Unsaved changes');
   expect(requests).toHaveLength(2);expect(requests[1]).toEqual(requests[0]);expect(await selectedPhysical(page)).toEqual(current);
   const list=await authorized(page,'/api/physical-plans');expect(list.value.plans).toHaveLength(1);expect(list.value.plans[0].revisionNumber).toBe(1);

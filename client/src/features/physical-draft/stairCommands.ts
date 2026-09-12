@@ -225,13 +225,13 @@ export function setSurfaceImpact(draft:PhysicalDraft,id:string,role:EndpointRole
   const next=copyDraftForEdit(draft);stairIn(next,id).surfaceImpacts[role][surface]=copy(impact);return finish(draft,next,'impact',at);
 }
 export function deleteSurfaceOpening(draft:PhysicalDraft,id:string,at:string):PhysicalDraft {
-  surfaceOpeningIn(draft,id);guardRaw(draft,t=>belongs(t,'surface-opening',id));const next=copyDraftForEdit(draft),contract=stairsIn(next);
+  surfaceOpeningIn(draft,id);if(Object.values(draft.pendingInputs?.buildingNames??{}).some(raw=>raw.kind==='surface-opening'&&raw.id===id&&raw.dirty))throw new PhysicalDraftError('PENDING_INPUT_INVALID','Apply or Revert the pending surface opening name before deleting it.');guardRaw(draft,t=>belongs(t,'surface-opening',id));const next=copyDraftForEdit(draft),contract=stairsIn(next);
   contract.surfaceOpenings=contract.surfaceOpenings.filter(item=>item.id!==id);removeStairRaw(next,t=>belongs(t,'surface-opening',id));
   for(const stair of contract.stairs)for(const role of ['lower','upper'] as const)for(const surface of ['floor','ceiling'] as const){const impact=stair.surfaceImpacts[role][surface];if(impact.state==='deduct'&&impact.openingIds.includes(id))stair.surfaceImpacts[role][surface]={state:'unresolved',reason:'A referenced surface opening was deleted; review this finish-surface impact.'};}
   return finish(draft,next,'impact',at);
 }
 export function deleteStair(draft:PhysicalDraft,id:string,at:string):PhysicalDraft {
-  stairIn(draft,id);guardRaw(draft,t=>belongs(t,'stair',id));const next=copyDraftForEdit(draft),contract=stairsIn(next);
+  stairIn(draft,id);if(Object.values(draft.pendingInputs?.buildingNames??{}).some(raw=>raw.kind==='stair'&&raw.id===id&&raw.dirty))throw new PhysicalDraftError('PENDING_INPUT_INVALID','Apply or Revert the pending stair name before deleting it.');guardRaw(draft,t=>belongs(t,'stair',id));const next=copyDraftForEdit(draft),contract=stairsIn(next);
   contract.stairs=contract.stairs.filter(item=>item.id!==id);removeStairRaw(next,t=>belongs(t,'stair',id));
   for(const opening of contract.surfaceOpenings)if(opening.associatedStairId===id)opening.associatedStairId=null;
   return finish(draft,next,'unlink',at);

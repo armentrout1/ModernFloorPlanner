@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { editRoomLevelInput, commitRoomLevelInput, revertRoomLevelInput } from './pendingInputs';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import type { PhysicalDraft } from './state';
-import { activeLevelId, addLevel, renameLevel, editLevelName, reorderLevels, assignRoomLevel, roomLevelId } from './levelCommands';
+import { activeLevelId, addLevel, renameLevel, editLevelName, reorderLevels, roomLevelId } from './levelCommands';
 
 type Change = (change: (draft: PhysicalDraft) => PhysicalDraft, expectedRevision?: number) => boolean;
 export function LevelControls({ draft, update, onSelect, onUpgrade, blocked }: {
@@ -44,18 +44,18 @@ function LevelName({ value, text, disabled, onChange, onSave }: { value: string;
 }
 export function RoomLevelAssignment({ draft, roomId, update }: { draft: PhysicalDraft; roomId: string; update: Change }) {
   const current = roomLevelId(draft, roomId);
-  const [target, setTarget] = useState<{ from: string; to: string } | null>(null);
+  const target = draft.pendingInputs?.roomLevels[roomId];
   if (draft.document.schemaVersion === 2 || !current) return null;
   const levels = [...draft.document.buildingLevels.levels].sort((a, b) => a.displayOrder - b.displayOrder);
   const chosen = target?.from === current && levels.some(level => level.id === target.to) ? target.to : current;
   return <div className="space-y-2 border-b pb-3" data-physical-layout-control>
     <label className="grid gap-1 text-sm font-medium">Room level
-      <select className="h-10 min-w-0 rounded-md border bg-white px-2" value={chosen} data-physical-unapplied-action={chosen !== current ? "Room level: use Assign room or Revert room level before saving." : undefined} onChange={event => setTarget({ from: current, to: event.target.value })}>
+      <select className="h-10 min-w-0 rounded-md border bg-white px-2" value={chosen} data-physical-unapplied-action={chosen !== current ? "Room level: use Assign room or Revert room level before saving." : undefined} onChange={event => update(value => editRoomLevelInput(value, roomId, event.target.value), draft.localEditRevision)}>
         {levels.map(level => <option key={level.id} value={level.id}>{level.name}</option>)}
       </select>
     </label>
-    <Button size="sm" variant="outline" disabled={chosen === current} onClick={() => update(value => assignRoomLevel(value, roomId, chosen, current), draft.localEditRevision)}>Assign room</Button>
-    {chosen !== current ? <Button size="sm" variant="ghost" onClick={() => setTarget(null)}>Revert room level</Button> : null}
+    <Button size="sm" variant="outline" disabled={chosen === current} onClick={() => update(value => commitRoomLevelInput(value, roomId), draft.localEditRevision)}>Assign room</Button>
+    {chosen !== current ? <Button size="sm" variant="ghost" onClick={() => update(value => revertRoomLevelInput(value, roomId), draft.localEditRevision)}>Revert room level</Button> : null}
     <p className="text-xs leading-5 text-slate-500">Moves ownership only. Dimensions, plan position, openings and selected takeoff IDs stay intact.</p>
   </div>;
 }

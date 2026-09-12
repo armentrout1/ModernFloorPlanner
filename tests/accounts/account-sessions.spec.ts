@@ -43,7 +43,7 @@ async function physical(p: Page, name = 'Local Alpha') {
   }
   await p.getByRole('button', { name: 'New physical draft', exact: true }).click();
   await p.getByRole('button', { name: 'Add room', exact: true }).click();
-  await roomFields(p).getByLabel('Room name', { exact: true }).fill(name);
+  await roomFields(p).getByLabel('Room name', { exact: true }).fill(name); await roomFields(p).getByLabel('Room name', { exact: true }).press('Enter');
   for (const [label, value] of [['Length','12 ft'],['Width','10 ft'],['Ceiling height','8 ft']]) await commit(roomField(p, label), value);
 }
 async function registry(p: Page, context?: string) {

@@ -6,9 +6,11 @@ import { Input } from '@/components/ui/input';
 import { useInputRevert } from '@/components/InputRevert';
 import type { PhysicalDraft } from './state';
 import { getStairField, editStairField, commitStairField, revertStairField, stairFieldError,
-  renameStair, setStairEndpoint, setStairPlacement, addLanding, removeLanding, setLandingPlacement,
+  setStairEndpoint, setStairPlacement, addLanding, removeLanding, setLandingPlacement,
   setSurfaceImpact, deleteStair, deleteSurfaceOpening, setSurfaceOpeningAttachment,
-  renameSurfaceOpening, setStairAlignment, createRoomLocalPlacement, type StairFieldTarget } from './stairCommands';
+  setStairAlignment, createRoomLocalPlacement, type StairFieldTarget } from './stairCommands';
+
+import { getBuildingNameInput, editBuildingNameInput, commitBuildingNameInput, revertBuildingNameInput } from './pendingInputs';
 
 export type StairChange = (change: (draft: PhysicalDraft) => PhysicalDraft, expectedRevision?: number) => boolean;
 const now = () => new Date().toISOString();
@@ -23,23 +25,36 @@ function Measure({ draft, target, label, update }: { draft: PhysicalDraft; targe
   const commit = () => update(current => stairFieldError(current, target) ? current : commitStairField(current, target, now()));
   const revert = useInputRevert(inputRef, { name: 'Revert ' + label.toLowerCase(), identity: draft.id + id,
     revision: draft.localEditRevision, pending: input.dirty,
-    onLeave: () => { if (!composing.current) commit(); },
+    onLeave: () => {},
     onRevert: () => update(current => revertStairField(current, target), draft.localEditRevision) });
   return <div className="relative min-w-0">
     <label className="block min-h-[3rem] pr-14 md:min-h-[2rem] text-sm font-medium" htmlFor={id}>{label} ({input.unit})</label>
     <Input ref={inputRef} id={id} type="text" value={input.text} autoComplete="off" spellCheck={false}
       aria-invalid={Boolean(error)} aria-describedby={id + '-help'} data-physical-pending={input.dirty ? 'true' : undefined}
       placeholder="Unknown until entered" onChange={event => update(current => editStairField(current, target, event.target.value))}
-      onBlur={event => { if (!composing.current && !revert.skipBlur(event)) commit(); }}
       onKeyDown={event => {
         if (revert.onInputKeyDown(event, composing.current)) return;
         if (event.key === 'Enter' && !event.repeat && !composing.current && !event.nativeEvent.isComposing && event.keyCode !== 229) { event.preventDefault(); commit(); }
       }} onCompositionStart={() => { composing.current = true; }}
-      onCompositionEnd={event => { composing.current = false; if (document.activeElement !== event.currentTarget && !revert.isDeferredFocus(document.activeElement)) commit(); }} />
+      onCompositionEnd={() => { composing.current = false; }} />
     {revert.control}<p id={id + '-help'} className={'mt-1 text-xs leading-5 ' + (error ? 'text-red-700' : 'text-slate-500')}>
       {error || (input.dirty ? 'Unapplied edit; required quantities remain incomplete.' : 'Measured or proposed input; no automatic confirmation.')}
       {input.unit !== draft.displayUnit ? ' This unfinished edit keeps its original unit context.' : ''}</p>
   </div>;
+}
+
+function BuildingName({ draft, kind, objectId, label, update }: { draft: PhysicalDraft; kind: 'stair' | 'surface-opening'; objectId: string; label: string; update: StairChange }) {
+  const input = getBuildingNameInput(draft, kind, objectId), inputRef = useRef<HTMLInputElement>(null), composing = useRef(false);
+  const commit = () => update(current => commitBuildingNameInput(current, kind, objectId));
+  const revert = useInputRevert(inputRef, { name: 'Revert ' + label.toLowerCase(), identity: draft.id + kind + objectId,
+    revision: draft.localEditRevision, pending: input.dirty, onLeave: () => {},
+    onRevert: () => update(current => revertBuildingNameInput(current, kind, objectId), draft.localEditRevision) });
+  return <div className="relative"><label className="grid gap-1 text-sm font-medium">{label}<Input ref={inputRef} value={input.text}
+    data-physical-pending={input.dirty ? 'true' : undefined} onChange={event => update(current => editBuildingNameInput(current, kind, objectId, event.target.value))}
+    onKeyDown={event => { if (revert.onInputKeyDown(event, composing.current)) return;
+      if (event.key === 'Enter' && !event.repeat && !composing.current && !event.nativeEvent.isComposing && event.keyCode !== 229) { event.preventDefault(); commit(); }
+    }} onCompositionStart={() => { composing.current = true; }} onCompositionEnd={() => { composing.current = false; }} /></label>
+    {revert.control}{input.dirty ? <p className="mt-1 text-xs text-amber-800">Unapplied name. Press Enter, Apply or Revert before saving.</p> : null}</div>;
 }
 
 export function StairInspector({ draft, stairId, update, onNavigate, onDeleted }: {
@@ -50,7 +65,7 @@ export function StairInspector({ draft, stairId, update, onNavigate, onDeleted }
   if (!stair) return null;
   return <div data-testid="physical-stair-inspector" data-stair-id={stair.id} className="min-w-0 space-y-4">
     <div><h2 className="font-semibold">Straight stair</h2><p className="text-xs text-slate-500">One assembly · {stair.id}</p></div>
-    <label className="grid gap-1 text-sm font-medium">Stair name<Input value={stair.name} onChange={event => update(current => renameStair(current, stair.id, event.target.value))} /></label>
+    <BuildingName {...{ draft, update }} kind="stair" objectId={stair.id} label="Stair name" />
     <div className="grid min-w-0 gap-3 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
       <Measure {...{ draft, update }} target={{ kind: 'stair', id: stair.id, field: 'width' }} label="Stair width" />
       <Measure {...{ draft, update }} target={{ kind: 'stair', id: stair.id, field: 'run' }} label="Horizontal run" />
@@ -107,7 +122,7 @@ export function SurfaceOpeningInspector({draft,openingId,update,onDeleted}:{draf
   if(!opening)return null;
   return <div data-testid="physical-surface-opening-inspector" data-surface-opening-id={opening.id} className="space-y-4 min-w-0">
     <h2 className="font-semibold">Surface opening</h2><p className="text-xs text-slate-500">{opening.id}</p>
-    <label className="grid gap-1 text-sm">Surface opening name<Input value={opening.name} onChange={event=>update(current=>renameSurfaceOpening(current,opening.id,event.target.value))}/></label>
+    <BuildingName {...{ draft, update }} kind="surface-opening" objectId={opening.id} label="Surface opening name" />
     <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">{(['width','length'] as const).map(field=><Measure key={field} {...{draft,update}} target={{kind:'surface-opening',id:opening.id,field}} label={'Opening '+field}/>)}</div>
     {opening.attachments.map((attachment,index)=><fieldset key={attachment.roomId+attachment.surface} className="space-y-3 border-t pt-3" data-testid={'surface-attachment-'+index}>
       <legend className="text-sm font-semibold">Affected finish surface</legend>

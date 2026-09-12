@@ -69,7 +69,7 @@ async function renameLevel(p: Page, name: string) {
 }
 async function addRoom(p: Page, name: string, length = '20 ft', width = '15 ft', height = '8 ft') {
   await quick(p); await p.getByRole('button', { name: 'Add room', exact: true }).click();
-  await rooms(p).getByLabel('Room name', { exact: true }).fill(name);
+  await rooms(p).getByLabel('Room name', { exact: true }).fill(name); await rooms(p).getByLabel('Room name', { exact: true }).press('Enter');
   for (const [label, value] of [['Length', length], ['Width', width], ['Ceiling height', height]]) await commit(measure(rooms(p), label), value);
   await rooms(p).getByRole('combobox', { name: 'Ceiling model', exact: true }).selectOption('flat');
   await rooms(p).getByRole('combobox', { name: 'Wall model', exact: true }).selectOption('vertical-uniform');
@@ -388,14 +388,14 @@ test('current stair and surface-opening source upgrades losslessly and layout le
   const raw = serializeRegistry(imported); expect(parseRegistry(raw).status).toBe('recovered');
   await page.evaluate(({ key, raw }) => sessionStorage.setItem(key, raw), { key: KEY, raw }); await page.reload();
   await quick(page); await page.getByRole('button', { name: f.room.name, exact: true }).click();
-  await rooms(page).getByLabel('Room name', { exact: true }).fill('Basement room');
+  await rooms(page).getByLabel('Room name', { exact: true }).fill('Basement room'); await rooms(page).getByLabel('Room name', { exact: true }).press('Enter');
   await commit(measure(rooms(page), 'Length'), '12 ft'); await commit(measure(rooms(page), 'Width'), '10 ft');
   await page.getByRole('button', { name: 'Add level', exact: true }).click(); const main = (await selected(page)).levelView!.activeLevelId;
   await renameLevel(page, 'Main floor'); const upperRoom = await addRoom(page, 'Main room', '15 ft', '10 ft', '9 ft');
   for (const [output, label] of [['floor-area', 'Floor area'], ['ceiling-area', 'Flat ceiling area'], ['gross-wall-area', 'Gross wall area']]) await work(page, output, label);
   await switchLevel(page, f.basement); await page.getByRole('button', { name: 'Add stair', exact: true }).click(); await openInspector(page);
   const stairs = page.getByTestId('physical-stair-inspector'), stairId = (await stairs.getAttribute('data-stair-id'))!;
-  await stairs.getByLabel('Stair name', { exact: true }).fill('Source stair');
+  await stairs.getByLabel('Stair name', { exact: true }).fill('Source stair'); await stairs.getByLabel('Stair name', { exact: true }).press('Enter');
   for (const [label, value] of [['Stair width', '3 ft'], ['Horizontal run', '6 ft'], ['Lower X', '4 ft'], ['Lower Y', '1 ft']]) await commit(measure(stairs, label), value);
   await stairs.getByRole('combobox', { name: 'Upper level', exact: true }).selectOption(main);
   await commit(measure(stairs, 'Upper X'), '4 ft'); await commit(measure(stairs, 'Upper Y'), '1 ft');
@@ -405,7 +405,7 @@ test('current stair and surface-opening source upgrades losslessly and layout le
   for (const [levelId, role, surface] of [[main, 'Upper', 'floor'], [f.basement, 'Lower', 'ceiling']]) {
     await switchLevel(page, levelId); await page.getByRole('button', { name: 'Add surface opening', exact: true }).click(); await openInspector(page);
     const hole = page.getByTestId('physical-surface-opening-inspector'), holeId = (await hole.getAttribute('data-surface-opening-id'))!;
-    await hole.getByLabel('Surface opening name', { exact: true }).fill(role + ' ' + surface + ' void');
+    await hole.getByLabel('Surface opening name', { exact: true }).fill(role + ' ' + surface + ' void'); await hole.getByLabel('Surface opening name', { exact: true }).press('Enter');
     await hole.getByRole('combobox', { name: 'Affected surface', exact: true }).selectOption(surface);
     for (const [label, value] of [['Opening width', '3 ft'], ['Opening length', '6 ft'], ['Opening X', '4 ft'], ['Opening Y', '1 ft']]) await commit(measure(hole, label), value);
     await page.getByTestId('physical-stair-list-' + stairId).click(); await openInspector(page);

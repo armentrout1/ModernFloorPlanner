@@ -27,7 +27,7 @@ async function selected(page: Page): Promise<PhysicalDraft> {
 async function commit(input: Locator, value: string) { await input.fill(value); await input.press('Enter'); await input.press('Tab'); }
 async function room(page: Page, name = 'Alpha', length = '12 ft', width = '10 ft', height = '8 ft') {
   await page.getByRole('button', { name: 'Add room', exact: true }).click();
-  await roomInspector(page).getByLabel('Room name', { exact: true }).fill(name);
+  await roomInspector(page).getByLabel('Room name', { exact: true }).fill(name); await roomInspector(page).getByLabel('Room name', { exact: true }).press('Enter');
   for (const [field, value] of [['Length', length], ['Width', width], ['Ceiling height', height]]) await commit(roomInspector(page).getByLabel(field + ' (ft)', { exact: true }), value);
   for (const [label, value] of [['Ceiling model', 'flat'], ['Wall model', 'vertical-uniform'], ['Crown path', 'rectangular-horizontal']]) await roomInspector(page).getByLabel(label, { exact: true }).selectOption(value);
   return (await selected(page)).document.rooms.find(item => item.name === name)!;

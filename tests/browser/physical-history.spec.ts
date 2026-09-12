@@ -31,7 +31,7 @@ async function selected(p: Page): Promise<PhysicalDraft> {
 async function commit(input: Locator, value: string) { await input.fill(value); await input.press('Enter'); await input.press('Tab'); }
 async function room(p: Page, name = 'Alpha') {
   await p.getByRole('button', { name: 'Add room', exact: true }).click();
-  await rooms(p).getByLabel('Room name', { exact: true }).fill(name);
+  await rooms(p).getByLabel('Room name', { exact: true }).fill(name); await rooms(p).getByLabel('Room name', { exact: true }).press('Enter');
   for (const [label, value] of [['Length', '12 ft'], ['Width', '10 ft'], ['Ceiling height', '8 ft']]) await commit(field(p, label), value);
   return (await selected(p)).document.rooms.find(r => r.name === name)!;
 }
@@ -108,7 +108,7 @@ test('committed height, clearing and coalesced room names undo chronologically a
   await redo(page).click(); expect((await selected(page)).document.rooms[0].ceilingHeight.state).toBe('unknown');
   await undo(page).click();
   const name = rooms(page).getByLabel('Room name', { exact: true });
-  await name.fill(''); await name.pressSequentially('Alpha living room'); await name.press('Tab');
+  await name.fill(''); await name.pressSequentially('Alpha living room'); await name.press('Enter'); await name.press('Tab');
   await expect(undo(page)).toHaveAccessibleName('Undo room name change'); await undo(page).click();
   expect((await selected(page)).document.rooms[0].name).toBe('Alpha');
   await redo(page).click(); expect((await selected(page)).document.rooms[0].name).toBe('Alpha living room');

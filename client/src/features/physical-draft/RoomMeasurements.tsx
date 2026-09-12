@@ -1,12 +1,12 @@
+import { getRoomNameInput, editRoomNameInput, commitRoomNameInput, revertRoomNameInput } from './pendingInputs';
 import { RoomUseControl } from './LayoutInspector';
 import { useRef } from 'react';
 import { RoomLevelAssignment } from './LevelControls';
-import { usePhysicalDraft } from './provider';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useInputRevert } from '@/components/InputRevert';
 import { captureFieldRevert, revertField } from './fieldRevert';
-import { ROOM_FIELDS, renameRoom, editField, commitField, fieldError, setApplicability,
+import { ROOM_FIELDS, editField, commitField, fieldError, setApplicability,
   type PhysicalDraft, type RoomField } from './state';
 import type { RoomApplicability, ApplicabilityField } from '@shared/domain/applicability';
 
@@ -21,7 +21,7 @@ function MeasurementField({ draft, roomId, field, update }: { draft: PhysicalDra
   const revert = useInputRevert(inputRef, {
     name: 'Revert ' + fieldLabels[field].toLowerCase(), identity: draft.id + ':' + roomId + ':' + field,
     revision: draft.localEditRevision, pending: input.dirty,
-    onLeave: () => { if (!composing.current) commit(); },
+    onLeave: () => {},
     onRevert: () => {
       const token = captureFieldRevert(draft, { kind: 'room', id: roomId, field });
       return update(current => revertField(current, token), token.revision);
@@ -35,14 +35,13 @@ function MeasurementField({ draft, roomId, field, update }: { draft: PhysicalDra
       data-physical-pending={input.dirty ? "true" : undefined} aria-invalid={error ? true : undefined} aria-describedby={id + '-help'}
       placeholder={field === 'ceilingHeight' ? 'Unknown until entered' : input.unit === 'ft' ? 'e.g. 12 ft 6 in' : 'e.g. 3.81 m'}
       onChange={event => update(current => editField(current, roomId, field, event.target.value))}
-      onBlur={event => { if (!composing.current && !revert.skipBlur(event)) commit(); }}
       onKeyDown={event => {
         if (revert.onInputKeyDown(event, composing.current)) return;
         if (event.key !== 'Enter' || composing.current || event.nativeEvent.isComposing || event.keyCode === 229) return;
         event.preventDefault(); if (!event.repeat) commit();
       }}
       onCompositionStart={() => { composing.current = true; }}
-      onCompositionEnd={event => { composing.current = false; if (document.activeElement !== event.currentTarget && !revert.isDeferredFocus(document.activeElement)) commit(); }} />
+      onCompositionEnd={() => { composing.current = false; }} />
     {revert.control}
     <p id={id + '-help'} className={'mt-1 text-xs leading-5 ' + (error ? 'text-red-700' : 'text-slate-500')}>
       {error || (input.dirty ? 'Unapplied edit — dependent quantities are incomplete.' :
@@ -51,14 +50,29 @@ function MeasurementField({ draft, roomId, field, update }: { draft: PhysicalDra
     </p>
   </div>;
 }
+
+function RoomNameField({ draft, roomId, update }: { draft: PhysicalDraft; roomId: string; update: Change }) {
+  const raw = getRoomNameInput(draft, roomId), inputRef = useRef<HTMLInputElement>(null), composing = useRef(false);
+  const apply = () => update(current => commitRoomNameInput(current, roomId));
+  const revert = useInputRevert(inputRef, { name: 'Revert room name', identity: draft.id + ':name:' + roomId,
+    revision: draft.localEditRevision, pending: raw.dirty, onLeave: () => {},
+    onRevert: () => update(current => revertRoomNameInput(current, roomId), draft.localEditRevision) });
+  return <div className="relative"><Label className="block min-h-7 pr-16" htmlFor={'physical-name-' + roomId}>Room name</Label>
+    <Input ref={inputRef} id={'physical-name-' + roomId} className="mt-1 bg-white" value={raw.text} data-physical-pending={raw.dirty ? 'true' : undefined}
+      onChange={event => update(current => editRoomNameInput(current, roomId, event.target.value))}
+      onCompositionStart={() => { composing.current = true; }} onCompositionEnd={() => { composing.current = false; }}
+      onKeyDown={event => { if (revert.onInputKeyDown(event, composing.current)) return;
+        if (event.key === 'Enter' && !event.repeat && !composing.current && !event.nativeEvent.isComposing && event.keyCode !== 229) { event.preventDefault(); apply(); } }} />
+    {revert.control}{raw.dirty ? <p className="mt-1 text-xs text-slate-600">Unapplied name. Press Enter, Apply or Revert before saving.</p> : null}
+  </div>;
+}
+
 const models = [
   { field: 'ceiling', label: 'Ceiling model', supported: 'flat', text: 'Flat ceiling', unsupported: 'Sloped / vaulted / other' },
   { field: 'walls', label: 'Wall model', supported: 'vertical-uniform', text: 'Uniform vertical walls', unsupported: 'Varying / stepped / other' },
   { field: 'crownPath', label: 'Crown path', supported: 'rectangular-horizontal', text: 'Rectangular horizontal path', unsupported: 'Sloped / custom path' },
 ] as const;
 export function RoomMeasurements({ draft, roomId, update }: { draft: PhysicalDraft; roomId: string; update: Change }) {
-  const { store } = usePhysicalDraft();
-  const nameSession = useRef<string | null>(null);
   const room = draft.document.rooms.find(item => item.id === roomId)!;
   const applicability = draft.document.calculationContract!.rooms[roomId];
   function model(field: ApplicabilityField, value: string) {
@@ -71,20 +85,7 @@ export function RoomMeasurements({ draft, roomId, update }: { draft: PhysicalDra
   const group = draft.document.editorContract?.groups.find(item => item.roomIds.includes(roomId));
   return <div className="space-y-4" data-testid="physical-room-inspector" data-room-id={roomId}>
     <RoomLevelAssignment key={draft.id + roomId} draft={draft} roomId={roomId} update={update} />
-    <div><Label htmlFor={'physical-name-' + roomId}>Room name</Label>
-      <Input id={'physical-name-' + roomId} className="mt-1 bg-white" value={room.name ?? ''}
-        onFocus={() => { nameSession.current = crypto.randomUUID(); }}
-        onBlur={() => { nameSession.current = null; }}
-        onKeyDown={event => {
-          if (event.key === 'Enter' && !event.repeat && !event.nativeEvent.isComposing && event.keyCode !== 229) {
-            event.preventDefault(); nameSession.current = crypto.randomUUID();
-          }
-        }}
-        onChange={event => {
-          const name = event.target.value;
-          store.updateDraft(draft.id, draft.localEditRevision, current => renameRoom(current, roomId, name),
-            { nameSession: nameSession.current ?? undefined });
-        }} /></div>
+    <RoomNameField draft={draft} roomId={roomId} update={update} />
     <RoomUseControl draft={draft} roomId={roomId} update={update} />
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
       {ROOM_FIELDS.map(field => <MeasurementField key={roomId + ":" + field} {...{ draft, roomId, field, update }} />)}

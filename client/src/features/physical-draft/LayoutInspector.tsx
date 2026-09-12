@@ -24,19 +24,18 @@ function Measure({ draft, target, label, update }: { draft: PhysicalDraft; targe
   const commit = () => update(current => layoutFieldError(current, target) ? current : commitLayoutField(current, target, now()));
   const revert = useInputRevert(inputRef, { name: 'Revert ' + label.toLowerCase(), identity: draft.id + id,
     revision: draft.localEditRevision, pending: input.dirty,
-    onLeave: () => { if (!composing.current) commit(); },
+    onLeave: () => {},
     onRevert: () => update(current => revertLayoutField(current, target), draft.localEditRevision) });
   return <div className="relative min-w-0">
     <label className="block min-h-[3rem] pr-14 text-sm font-medium md:min-h-[2rem]" htmlFor={id}>{label} ({input.unit})</label>
     <Input ref={inputRef} id={id} type="text" value={input.text} autoComplete="off" spellCheck={false}
       aria-invalid={Boolean(error)} aria-describedby={id + '-help'} data-physical-pending={input.dirty ? 'true' : undefined}
       placeholder="Unknown until entered" onChange={event => update(current => editLayoutField(current, target, event.target.value))}
-      onBlur={event => { if (!composing.current && !revert.skipBlur(event)) commit(); }}
       onKeyDown={event => {
         if (revert.onInputKeyDown(event, composing.current)) return;
         if (event.key === 'Enter' && !event.repeat && !composing.current && !event.nativeEvent.isComposing && event.keyCode !== 229) { event.preventDefault(); commit(); }
       }} onCompositionStart={() => { composing.current = true; }}
-      onCompositionEnd={event => { composing.current = false; if (document.activeElement !== event.currentTarget && !revert.isDeferredFocus(document.activeElement)) commit(); }} />
+      onCompositionEnd={() => { composing.current = false; }} />
     {revert.control}<p id={id + '-help'} className={'mt-1 text-xs leading-5 ' + (error ? 'text-red-700' : 'text-slate-500')}>
       {error || (input.dirty ? 'Unapplied layout edit.' : 'Measured or proposed; no automatic confirmation.')}
       {input.unit !== draft.displayUnit ? ' This unfinished edit keeps its original unit context.' : ''}</p>
@@ -49,18 +48,17 @@ function TextField({ draft, target, label, update }: { draft: PhysicalDraft; tar
   const commit = () => update(current => commitLayoutText(current, target, now()));
   const revert = useInputRevert(inputRef, { name: 'Revert ' + label.toLowerCase(), identity: draft.id + id,
     revision: draft.localEditRevision, pending: input.dirty,
-    onLeave: () => { if (!composing.current) commit(); },
+    onLeave: () => {},
     onRevert: () => update(current => revertLayoutText(current, target), draft.localEditRevision) });
   return <div className="relative min-w-0">
     <label htmlFor={id} className="block min-h-[3rem] pr-14 text-sm font-medium md:min-h-[2rem]">{label}</label>
     <Input ref={inputRef} id={id} value={input.text} aria-invalid={Boolean(error)} aria-describedby={id+'-help'} data-physical-pending={input.dirty ? 'true' : undefined}
       onChange={event => update(current => editLayoutText(current, target, event.target.value))}
-      onBlur={event => { if (!composing.current && !revert.skipBlur(event)) commit(); }}
       onKeyDown={event => { if (revert.onInputKeyDown(event, composing.current)) return;
         if (event.key === 'Enter' && !event.repeat && !composing.current && !event.nativeEvent.isComposing && event.keyCode !== 229) { event.preventDefault(); commit(); } }}
       onCompositionStart={() => { composing.current = true; }}
-      onCompositionEnd={event => { composing.current = false; if (document.activeElement !== event.currentTarget && !revert.isDeferredFocus(document.activeElement)) commit(); }} />
-    {revert.control}<p id={id+'-help'} className={'mt-1 text-xs '+(error?'text-red-700':'text-slate-500')}>{error || (input.dirty ? 'Unapplied text; Enter or leave this field to apply.' : '')}</p>
+      onCompositionEnd={() => { composing.current = false; }} />
+    {revert.control}<p id={id+'-help'} className={'mt-1 text-xs '+(error?'text-red-700':'text-slate-500')}>{error || (input.dirty ? 'Unapplied text; press Enter or use Apply to commit.' : '')}</p>
   </div>;
 }
 

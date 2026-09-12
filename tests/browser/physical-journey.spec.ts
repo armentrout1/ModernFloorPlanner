@@ -47,7 +47,7 @@ async function createRoom(page: Page, name = 'Alpha') {
   await page.goto('/physical-draft');
   await page.getByRole('button', { name: 'New physical draft', exact: true }).click();
   await page.getByRole('button', { name: 'Add room', exact: true }).click();
-  await rooms(page).getByLabel('Room name', { exact: true }).fill(name);
+  await rooms(page).getByLabel('Room name', { exact: true }).fill(name); await rooms(page).getByLabel('Room name', { exact: true }).press('Enter');
   for (const [label, value] of [['Length', '12 ft'], ['Width', '10 ft'], ['Ceiling height', '8 ft']]) await commit(rooms(page).getByLabel(label + ' (ft)', { exact: true }), value);
   await models(page);
   return (await selected(page)).document.rooms[0];
@@ -120,7 +120,7 @@ test('one UI-built physical journey preserves identity from adoption through tak
     await expect(page.getByTestId('physical-draft-id')).toHaveText(draftId);
     await expect(rooms(page)).toHaveAttribute('data-room-id', roomId);
     await expect(rooms(page).getByLabel('Room name', { exact: true })).toHaveValue('Standalone source');
-    await rooms(page).getByLabel('Room name', { exact: true }).fill('Alpha');
+    await rooms(page).getByLabel('Room name', { exact: true }).fill('Alpha'); await rooms(page).getByLabel('Room name', { exact: true }).press('Enter');
     for (const [label, value] of [['Length', '12 ft'], ['Width', '10 ft'], ['Ceiling height', '8 ft']]) await commit(rooms(page).getByLabel(label + ' (ft)', { exact: true }), value);
     expect(source.original).toBeTruthy();
     await models(page);

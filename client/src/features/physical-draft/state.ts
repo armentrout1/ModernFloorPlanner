@@ -26,6 +26,12 @@ export interface FieldDraft { text: string; unit: InputUnit; dirty: boolean }
 export interface CapturedMeasurementEvent { target: MeasurementRef; event: MeasurementEvent }
 export interface PhysicalDraft {
   id: string;
+  pendingInputs?: {
+    version: 'physical-pending-input-v1';
+    roomNames: Record<string, { text: string; dirty: boolean }>;
+    buildingNames: Record<string, { kind: 'stair' | 'surface-opening'; id: string; text: string; dirty: boolean }>;
+    roomLevels: Record<string, { from: string; to: string }>;
+  };
   localEditRevision: number;
   document: PhysicalDocument;
   displayUnit: InputUnit;

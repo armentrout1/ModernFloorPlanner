@@ -34,7 +34,7 @@ async function unchanged(page: Page, before: PhysicalDraft) { expect(domain(awai
 async function commit(input: Locator, value: string) { await input.fill(value); await input.press('Enter'); await input.press('Tab'); }
 async function room(page: Page, name = 'Alpha') {
   await page.getByRole('button', { name: 'Add room', exact: true }).click();
-  await rooms(page).getByLabel('Room name', { exact: true }).fill(name);
+  await rooms(page).getByLabel('Room name', { exact: true }).fill(name); await rooms(page).getByLabel('Room name', { exact: true }).press('Enter');
   for (const [name, text] of [['Length', '12 ft'], ['Width', '10 ft'], ['Ceiling height', '8 ft']]) await commit(field(page, name), text);
   return (await selected(page)).document.rooms.find(value => value.name === name)!;
 }
@@ -112,10 +112,12 @@ test('room Revert cancels pointer and keyboard drafts without committing, preser
   await expect(field(page, 'Width')).toBeFocused(); await unchanged(page, confirmed);
   expect((await selected(page)).fields[id].width).toEqual(otherPending.fields[id].width);
   await revert(page, 'width').click(); await unchanged(page, confirmed);
-  // Passing through Revert without activating it is an ordinary leave-field commit.
+  // Passing through Revert preserves raw text; only explicit Enter applies it.
   await field(page, 'Length').fill('13 ft'); await field(page, 'Length').press('Tab');
   await expect(revert(page, 'length')).toBeFocused(); await unchanged(page, confirmed);
-  await page.keyboard.press('Tab'); await amount(page, 'floor-area', 'net', '130.00 sq ft');
+  await page.keyboard.press('Tab'); await unchanged(page, confirmed);
+  expect((await selected(page)).fields[id].length).toEqual({ text: '13 ft', unit: 'ft', dirty: true });
+  await field(page, 'Length').press('Enter'); await amount(page, 'floor-area', 'net', '130.00 sq ft');
   expect((await selected(page)).events).toHaveLength(confirmed.events.length + 1);
   // A successful commit remains committed; clean Escape is not historical undo.
   const committed = await selected(page);
@@ -257,7 +259,7 @@ test.describe('touch Revert', () => {
     await page.getByRole('button', { name: 'Add room', exact: true }).click(); const unknown = await selected(page);
     await field(page, 'Length').fill('12 ft'); await revert(page, 'length').tap();
     await expect(field(page, 'Length')).toHaveValue(''); await unchanged(page, unknown);
-    await rooms(page).getByLabel('Room name', { exact: true }).fill('Bedroom with a pending ceiling measurement');
+    await rooms(page).getByLabel('Room name', { exact: true }).fill('Bedroom with a pending ceiling measurement'); await rooms(page).getByLabel('Room name', { exact: true }).press('Enter');
     for (const [label, text] of [['Length', '12 ft'], ['Width', '10 ft'], ['Ceiling height', '8 ft']]) await commit(field(page, label), text);
     await page.getByRole('button', { name: 'Create window', exact: true }).click(); const unknownWindow = await selected(page);
     await openings(page).getByLabel('Window height', { exact: true }).fill('3 ft'); await revert(page, 'window height').tap();
