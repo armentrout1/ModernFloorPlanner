@@ -10,6 +10,8 @@ export interface ReportOptions {
   source: 'local' | 'saved';
   planId?: string;
   revisionId?: string;
+  /** Storage copy provenance; the captured evaluation remains unchanged. */
+  copiedFrom?: { planId: string; revisionId: string } | null;
   /** HTML-only additive layout view. CSV remains the existing quantity report. */
   includeDrawing?: boolean;
 }
@@ -80,11 +82,16 @@ function targetName(record: RecordRow, names: Map<string, string>) {
 }
 function metadata(snapshot: Snapshot, options: ReportOptions): [string, Cell][] {
   const calculation = snapshot.evaluation.calculation;
+  const copy: [string, Cell][] = options.source === 'saved' && options.copiedFrom ? [
+    ['Copied from account plan ID', options.copiedFrom.planId], ['Copied from account revision ID', options.copiedFrom.revisionId],
+    ['Copy evidence', 'This independent saved project retains the original immutable capture. Account IDs identify this stored copy; source and snapshot IDs below identify the retained capture. No historical evaluation was recalculated.'],
+  ] : [];
   return [
     ['Report', options.includeDrawing ? 'Modern Floor Planner drawing and quantity report' : 'Modern Floor Planner quantity report'], ['Project', snapshot.sourceDocument.name || 'Untitled project'],
     ['Source', options.source === 'local' ? 'Local capture; not an account-saved revision' : 'Authorized saved revision'],
     ['Account plan ID', options.source === 'saved' ? options.planId ?? 'Not supplied' : 'Not applicable'],
     ['Account revision ID', options.source === 'saved' ? options.revisionId ?? 'Not supplied' : 'Not applicable'],
+    ...copy,
     ['Snapshot ID', snapshot.instance.id], ['Captured at', snapshot.instance.createdAt], ['Capture kind', snapshot.instance.kind],
     ['Snapshot schema', snapshot.snapshotSchemaVersion], ['Capture fingerprint', snapshot.captureFingerprint],
     ['Content fingerprint', snapshot.evaluation.fingerprints.content], ['Geometry fingerprint', snapshot.evaluation.fingerprints.geometry],

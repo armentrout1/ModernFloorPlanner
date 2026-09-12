@@ -54,7 +54,7 @@ export async function createAccountsFixture() {
       await setup.unsafe(`create table floor_plans(id serial primary key,name text not null,rooms jsonb not null,created_at text not null,updated_at text not null);
         create table users(id serial primary key,username text not null unique,password text not null);
         insert into floor_plans(name,rooms,created_at,updated_at) values('Unowned synthetic legacy','[]','fixture-created','fixture-updated');`);
-      for (const migration of ['0001_workspace_authorization.sql', '0002_oidc_sessions_accounts.sql', '0003_physical_plans.sql']) {
+      for (const migration of ['0001_workspace_authorization.sql', '0002_oidc_sessions_accounts.sql', '0003_physical_plans.sql', '0004_physical_project_lifecycle.sql']) {
         await setup.unsafe(readFileSync(resolve('migrations', migration), 'utf8'));
       }
     } finally { await setup.end(); }

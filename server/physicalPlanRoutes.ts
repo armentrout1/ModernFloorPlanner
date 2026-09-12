@@ -6,7 +6,7 @@ import { PhysicalPlanStorage, PhysicalPlanStorageError } from './physicalPlanSto
 import { renderQuantityCsv, renderQuantityHtml } from '@shared/exports/quantityReport';
 
 const uuid = z.string().uuid();
-const pageQuery = z.object({ limit: z.coerce.number().int().min(1).max(50).optional(), cursor: z.string().min(1).max(200).optional() }).strict();
+const pageQuery = z.object({ limit: z.coerce.number().int().min(1).max(50).optional(), cursor: z.string().min(1).max(200).optional(), status: z.enum(['active', 'archived']).optional() }).strict();
 const exportQuery = z.object({ format: z.enum(['csv', 'html', 'plan']), unit: z.enum(['ft', 'm']) }).strict();
 const invalid = (res: Response) => res.status(400).json({ code: 'INVALID_REQUEST', message: 'Invalid physical plan request.' });
 export function mountPhysicalPlanRoutes(app: Express, identityResolver: IdentityResolver, allowedOrigin: string | null): void {
@@ -16,7 +16,10 @@ export function mountPhysicalPlanRoutes(app: Express, identityResolver: Identity
     storage: () => new PhysicalPlanStorage(),
     onError(error, res) {
       if (!(error instanceof PhysicalPlanStorageError)) return false;
-      const message = error.status === 412 ? 'A newer server revision exists. Keep your local candidate and open the latest separately, or save as a new plan.'
+      const message = error.code === 'PLAN_ARCHIVED' ? 'This project is archived. Your local work is preserved; restore it or save a separate new plan.'
+        : error.code === 'LIFECYCLE_CONFLICT' ? 'The project or its archive state changed. Refresh the project list and choose the current version.'
+        : error.code === 'PROJECT_STATE_CONFLICT' ? 'This project already has that archive state. Refresh the project list.'
+        : error.status === 412 ? 'A newer server revision exists. Keep your local candidate and open the latest separately, or save as a new plan.'
         : error.status === 428 ? 'The exact current revision is required to save changes.'
         : error.code === 'IDEMPOTENCY_CONFLICT' ? 'This retry key belongs to different saved content. Your local draft is unchanged.'
         : 'This physical plan request could not be accepted. Your local draft is unchanged.';
@@ -49,7 +52,7 @@ export function mountPhysicalPlanRoutes(app: Express, identityResolver: Identity
     // Authorize this immutable revision at retrieval. A prior download, local
     // binding, or knowledge of an ID never grants access to a later request.
     const saved = await storage.readRevision(identity, workspace, plan.data, revision.data);
-    const options = { unit: query.data.unit, source: 'saved' as const, planId: saved.planId, revisionId: saved.revisionId, includeDrawing: query.data.format === 'plan' };
+    const options = { unit: query.data.unit, source: 'saved' as const, planId: saved.planId, revisionId: saved.revisionId, copiedFrom: saved.copiedFrom, includeDrawing: query.data.format === 'plan' };
     const body = await (query.data.format === 'csv'
       ? renderQuantityCsv(saved.evaluation.snapshot, options)
       : renderQuantityHtml(saved.evaluation.snapshot, options));
@@ -62,6 +65,15 @@ export function mountPhysicalPlanRoutes(app: Express, identityResolver: Identity
     }
     res.send(body);
   }));
+  for (const operation of ['duplicate', 'archive', 'restore'] as const) {
+    app.post(`/api/physical-plans/:planId/${operation}`, protectedRoute(async (req, res, storage, identity, workspace) => {
+      if (!z.object({}).strict().safeParse(req.query).success) return invalid(res);
+      const plan = uuid.safeParse(req.params.planId); if (!plan.success) return invalid(res);
+      const result = await storage.lifecycle(identity, workspace, plan.data, operation, req.body,
+        { idempotencyKey: req.get('Idempotency-Key') ?? '', ifMatch: req.get('If-Match') });
+      res.setHeader('ETag', result.plan.lifecycleEtag); res.status(operation === 'duplicate' && !result.replayed ? 201 : 200).json(result);
+    }));
+  }
   app.post('/api/physical-plans/:planId/revisions', protectedRoute(async (req, res, storage, identity, workspace) => {
     const plan = uuid.safeParse(req.params.planId); if (!plan.success) return invalid(res);
     const saved = await storage.append(identity, workspace, plan.data, req.body,

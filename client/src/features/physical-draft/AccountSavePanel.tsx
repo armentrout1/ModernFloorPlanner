@@ -11,8 +11,8 @@ import { selectedDraft, insertDraft } from './state';
 import { pendingSaveFields, type PendingSaveField } from './pendingSaveFields';
 import type { JournalRecord } from './recoveryJournal';
 import { getPhysicalSaveManager } from './accountSaveState';
+import { ProjectList } from './ProjectList';
 
-interface PlanSummary { planId: string; name: string; revisionNumber: number }
 const keepField = (event: PointerEvent<HTMLButtonElement>) => { if (event.button === 0) event.preventDefault(); };
 export function AccountSavePanel() {
   const { registry, store, cache } = usePhysicalDraft(), draft = selectedDraft(registry);
@@ -20,11 +20,11 @@ export function AccountSavePanel() {
   const context = useLocalEditorContext(), manager = getPhysicalSaveManager(context);
   useSyncExternalStore(manager.subscribe, manager.getSnapshot);
   const [notice, setNotice] = useState(''), [showPending, setShowPending] = useState(false);
-  const [plans, setPlans] = useState<PlanSummary[] | null>(null), [cursor, setCursor] = useState<string | null>(null), [loading, setLoading] = useState(false);
+  const [showProjects, setShowProjects] = useState(false), [loading, setLoading] = useState(false);
   const [recovery, setRecovery] = useState<{ generation: number; context: string; records: JournalRecord[] } | null>(null);
   const mounted = useRef(true);
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
-  useEffect(() => { setPlans(null); setCursor(null); setNotice(''); setRecovery(null); }, [account.generation, context]);
+  useEffect(() => { setShowProjects(false); setNotice(''); setRecovery(null); }, [account.generation, context]);
   const { principal, workspace } = account.session;
   const verified = account.session.status === 'authenticated' && principal && workspace;
   const workspaceKey = verified ? workspaceContext(principal.id, workspace.id) : null;
@@ -109,33 +109,24 @@ export function AccountSavePanel() {
         throw Error(target.getSnapshot().error || 'The workspace copy could not be added. The original draft is preserved.');
     } catch (error) { if (mounted.current) setNotice(error instanceof Error ? error.message : 'The workspace could not be opened.'); }
   }
-  async function list(more = false) {
+  async function open(planId: string, stillCurrent: () => boolean = () => true) {
     setLoading(true); setNotice('');
     try {
       const captured = await captureRequestContext();
-      const response = await contextFetch('GET', '/api/physical-plans?limit=20' + (more && cursor ? '&cursor=' + encodeURIComponent(cursor) : ''), undefined, captured);
-      const value = await response.json();
-      if (!response.ok) throw Error(value.message ?? 'Plans could not be listed.');
-      assertRequestContext(captured);
-      if (mounted.current) { setPlans(previous => more ? [...(previous ?? []), ...value.plans] : value.plans); setCursor(value.nextCursor ?? null); }
-    } catch (error) { if (mounted.current) setNotice(error instanceof Error ? error.message : 'Plans could not be listed.'); }
-    finally { if (mounted.current) setLoading(false); }
-  }
-  async function open(planId: string) {
-    setLoading(true); setNotice('');
-    try {
-      const captured = await captureRequestContext();
+      const observation = manager.captureLifecycleObservation();
       const response = await contextFetch('GET', '/api/physical-plans/' + encodeURIComponent(planId), undefined, captured);
       const value = await response.json();
       if (!response.ok) throw Error(value.message ?? 'This plan could not be opened.');
+      if (!stillCurrent()) return;
       const revision = value as PhysicalPlanRevision;
       if (revision.etag !== response.headers.get('ETag')) throw Error('This response did not identify an exact saved revision.');
       const copy = restorePhysicalSaveDraft(revision.envelope, crypto.randomUUID());
       assertRequestContext(captured);
+      if (!stillCurrent()) return;
       if (!checkpointContext(context)) throw Error('Preserve the current draft before opening another plan: temporary recovery is unavailable.');
       if (!store.dispatch(current => insertDraft(current, copy))) throw Error('The opened document could not be added. Existing drafts are unchanged.');
-      manager.opened(copy.id, copy.localEditRevision, revision);
-      if (mounted.current) { setPlans(null); setNotice('Opened a separate local copy. Your other drafts remain available in Selected physical draft.'); }
+      manager.opened(copy.id, copy.localEditRevision, revision, observation);
+      if (mounted.current) { setShowProjects(false); setNotice('Opened a separate local copy. Your other drafts remain available in Selected physical draft.'); }
     } catch (error) { if (mounted.current) setNotice(error instanceof Error ? error.message : 'This plan could not be opened.'); }
     finally { if (mounted.current) setLoading(false); }
   }
@@ -144,10 +135,10 @@ export function AccountSavePanel() {
       <div><h2 className="font-semibold">Account Save / Open</h2><p role="status" data-testid="physical-save-status" className="text-sm">{status}</p></div>
       {bound ? <div className="flex flex-wrap items-center gap-2">
         <Button size="sm" variant="outline" role="switch" aria-checked={Boolean(state?.autosave)} aria-label="Autosave"
-          onPointerDown={keepField} disabled={!canWrite || !draft || !state?.binding || blocked} onClick={() => void toggleAutosave()}>Autosave {state?.autosave ? 'on' : 'off'}</Button>
-        <Button variant="outline" onPointerDown={keepField} disabled={loading || blocked} onClick={() => void list()}>Open saved plan</Button>
+          onPointerDown={keepField} disabled={!canWrite || !draft || !state?.binding || state.archived || blocked} onClick={() => void toggleAutosave()}>Autosave {state?.autosave ? 'on' : 'off'}</Button>
+        <Button variant="outline" onPointerDown={keepField} disabled={loading || blocked} onClick={() => setShowProjects(true)}>Open saved plan</Button>
         {state?.retryable ? <Button onPointerDown={keepField} disabled={!canWrite || !draft || state.phase === 'saving' || blocked} onClick={() => void save('retry')}>Retry same save request</Button>
-          : <Button onPointerDown={keepField} disabled={!canWrite || !draft || state?.phase === 'saving' || state?.phase === 'conflict' || (state?.phase === 'saved' && !changed) || blocked} onClick={() => void save()}>Save to {workspace!.name}</Button>}
+          : <Button onPointerDown={keepField} disabled={!canWrite || !draft || state?.phase === 'saving' || state?.phase === 'conflict' || state?.archived || (state?.phase === 'saved' && !changed) || blocked} onClick={() => void save()}>Save to {workspace!.name}</Button>}
       </div> : null}
     </div>
     {bound ? <p className="text-xs text-slate-600">Destination: {workspace!.name}. First Save is explicit; Autosave stays off until enabled for this plan. {workspace!.role === 'viewer' ? 'Viewer access: saved plans can be opened, but not changed.' : ''}</p>
@@ -163,7 +154,7 @@ export function AccountSavePanel() {
     {state?.binding && bound ? <p className="text-xs text-slate-500" data-testid="physical-saved-revision">Plan {state.binding.planId} · revision {state.binding.revisionNumber} · {state.binding.revisionId}{changed ? ' · newer local edits are unsaved' : ''}</p> : null}
     {state?.message && bound ? <p role={state.phase === 'failed' || state.phase === 'conflict' ? 'alert' : 'status'} className="text-sm text-amber-800">{state.message}</p> : null}
     {notice ? <p role="alert" className="text-sm text-amber-800">{notice}</p> : null}
-    {state?.phase === 'conflict' && state.binding && bound ? <div className="flex flex-wrap gap-2">
+    {(state?.phase === 'conflict' || state?.archived) && state.binding && bound ? <div className="flex flex-wrap gap-2">
       <Button variant="outline" onPointerDown={keepField} disabled={loading} onClick={() => void open(state.binding!.planId)}>Open latest as separate copy</Button>
       <Button onPointerDown={keepField} disabled={!canWrite} onClick={() => void save('new')}>Save candidate as new plan</Button>
     </div> : null}
@@ -181,10 +172,7 @@ export function AccountSavePanel() {
       </div>) : <p className="text-sm">No recovery checkpoints are available for this verified workspace.</p>}
       <Button size="sm" variant="ghost" onPointerDown={keepField} onClick={() => setRecovery(null)}>Close recovery</Button>
     </div> : null}
-    {plans && bound ? <div aria-label="Saved physical plans" className="space-y-2 border-t pt-3"><p className="text-sm">Open creates a separate local copy and preserves the current draft.</p>
-      {plans.length ? plans.map(plan => <div key={plan.planId} className="flex flex-wrap items-center justify-between gap-2 rounded border p-2 text-sm"><span>{plan.name || 'Untitled plan'} · revision {plan.revisionNumber}</span>
-        <Button size="sm" variant="outline" disabled={loading} onPointerDown={keepField} onClick={() => void open(plan.planId)}>Open separate copy</Button></div>) : <p className="text-sm">No physical plans have been saved in this workspace.</p>}
-      {cursor ? <Button size="sm" disabled={loading} variant="outline" onPointerDown={keepField} onClick={() => void list(true)}>More saved plans</Button> : null}
-      <Button size="sm" variant="ghost" onPointerDown={keepField} onClick={() => setPlans(null)}>Close saved plans</Button></div> : null}
+    {showProjects && bound ? <ProjectList key={context + ':' + account.generation} context={context} canWrite={canWrite}
+      onOpen={open} onClose={() => setShowProjects(false)} /> : null}
   </section>;
 }

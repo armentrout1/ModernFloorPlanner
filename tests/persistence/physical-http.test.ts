@@ -13,7 +13,7 @@ import { upgradeExistingDraftToLayout } from '../../client/src/features/physical
 import { addRoom, editField, commitField } from '../../client/src/features/physical-draft/state';
 import { capturePhysicalSaveEnvelope, physicalSavePayloadHash, restorePhysicalSaveDraft } from '../../shared/persistence/physicalSave';
 import { verifyQuantitySnapshot } from '../../shared/quantities/snapshot';
-import type { PhysicalPlanRevision } from '../../shared/persistence/physicalPlan';
+import type { PhysicalPlanRevision, PhysicalPlanSummary, PhysicalPlanLifecycleResult } from '../../shared/persistence/physicalPlan';
 
 assert.equal(process.env.MFP_ACCOUNTS_APP_ORIGIN, 'https://127.0.0.2:54420');
 assert.match(new URL(process.env.DATABASE_URL!).pathname, /^\/mfp_accounts_[a-f0-9]+_test$/);
@@ -363,4 +363,162 @@ test('schematic labels remain inert markup and invalid print controls fail close
   assert.match(html, /&lt;svg/); assert.doesNotMatch(html, /<script\b|<svg[^>]* onload=|<foreignObject\b/);
   const naked = new PhysicalHttpClient(); assert.equal((await naked.request(exportPath(saved, 'plan'))).status, 401);
   assert.deepEqual(await counts(), before);
+});
+
+
+async function projectRow(client: PhysicalHttpClient, planId: string, status = 'active'): Promise<PhysicalPlanSummary> {
+  const response = await client.request('/api/physical-plans?limit=50&status=' + status);
+  assert.equal(response.status, 200);
+  const row = (await response.json()).plans.find((item: PhysicalPlanSummary) => item.planId === planId);
+  assert.ok(row, 'Expected saved project in selected list'); return row;
+}
+async function projectAction(client: PhysicalHttpClient, row: PhysicalPlanSummary, operation: 'duplicate' | 'archive' | 'restore', key = randomUUID()) {
+  return client.request(`/api/physical-plans/${row.planId}/${operation}`, 'POST', { revisionId: row.currentRevisionId },
+    { 'Idempotency-Key': key, 'If-Match': row.lifecycleEtag });
+}
+async function acceptedProject(response: Response): Promise<PhysicalPlanLifecycleResult> {
+  assert.ok([200, 201].includes(response.status), await response.clone().text());
+  const value = await response.json() as PhysicalPlanLifecycleResult;
+  assert.equal(response.headers.get('etag'), value.plan.lifecycleEtag); return value;
+}
+
+test('project duplicate preserves rich captured evidence and quantities while later copy edits are independent', async () => {
+  const { client } = await member(); const original = await save(client, capturePhysicalSaveEnvelope(richPhysicalSaveDraft()));
+  const before = await counts(), row = await projectRow(client, original.planId);
+  const result = await acceptedProject(await projectAction(client, row, 'duplicate'));
+  const copy = result.revision!;
+  assert.notEqual(copy.planId, original.planId); assert.notEqual(copy.revisionId, original.revisionId);
+  assert.equal(copy.revisionNumber, 1); assert.equal(copy.archivedAt, null);
+  assert.deepEqual(copy.envelope, original.envelope); assert.deepEqual(copy.evaluation, original.evaluation);
+  assert.equal(copy.payloadHash, original.payloadHash);
+  assert.deepEqual(copy.copiedFrom, { planId: original.planId, revisionId: original.revisionId });
+  assert.deepEqual(await verifyQuantitySnapshot(copy.evaluation.snapshot), { ok: true });
+  for (const format of ['csv', 'html', 'plan']) {
+    const exported = await client.request(`${revisionPath(copy)}/${copy.revisionId}/export?format=${format}&unit=ft`);
+    assert.equal(exported.status, 200); const text = await exported.text();
+    assert.ok(text.includes('Copied from account plan ID') && text.includes(original.planId));
+    assert.ok(text.includes('No historical evaluation was recalculated.'));
+    assert.ok(text.includes(copy.planId) && text.includes(original.evaluation.snapshot.instance.id));
+  }
+  const changed = structuredClone(copy.envelope); changed.document.name = 'Independent duplicate option';
+  const nextResponse = await client.request(revisionPath(copy), 'POST', changed, { 'Idempotency-Key': randomUUID(), 'If-Match': copy.etag });
+  assert.equal(nextResponse.status, 201); const next = await nextResponse.json();
+  assert.equal(next.planId, copy.planId); assert.equal(next.revisionNumber, 2);
+  assert.equal(next.evaluation.planId, copy.planId); assert.equal(next.copiedFrom, undefined);
+  assert.deepEqual(await (await client.request(`${revisionPath(original)}/${original.revisionId}`)).json(), original);
+  assert.deepEqual((await (await client.request(`${revisionPath(copy)}/${copy.revisionId}`)).json()).evaluation, original.evaluation);
+  const after = await counts(); assert.equal(after.plans, before.plans + 1); assert.equal(after.revisions, before.revisions + 2);
+});
+
+test('archive retains saved captures and accepted receipt replay while rejecting fresh appends; restore changes only lifecycle metadata', async () => {
+  const { client } = await member(), body = capturePhysicalSaveEnvelope(draft()), key = randomUUID();
+  const first = await save(client, body, key);
+  const changed = capturePhysicalSaveEnvelope(draft('9 ft')), appendKey = randomUUID();
+  const appendHeaders = { 'Idempotency-Key': appendKey, 'If-Match': first.etag };
+  const accepted = await client.request(revisionPath(first), 'POST', changed, appendHeaders); assert.equal(accepted.status, 201);
+  const current = await accepted.json() as PhysicalPlanRevision, before = await counts();
+  const archived = await acceptedProject(await projectAction(client, await projectRow(client, first.planId), 'archive'));
+  assert.ok(archived.plan.archivedAt); assert.equal(archived.plan.currentRevisionId, current.revisionId);
+  assert.deepEqual((await (await client.request('/api/physical-plans')).json()).plans, []);
+  for (const saved of [first, current]) {
+    const read = await (await client.request(`${revisionPath(saved)}/${saved.revisionId}`)).json();
+    assert.deepEqual(read.envelope, saved.envelope); assert.deepEqual(read.evaluation, saved.evaluation); assert.ok(read.archivedAt);
+    assert.equal((await client.request(`${revisionPath(saved)}/${saved.revisionId}/export?format=plan&unit=ft`)).status, 200);
+  }
+  const fresh = await client.request(revisionPath(current), 'POST', capturePhysicalSaveEnvelope(draft('10 ft')), { 'Idempotency-Key': randomUUID(), 'If-Match': current.etag });
+  assert.equal(fresh.status, 409); assert.equal((await fresh.json()).code, 'PLAN_ARCHIVED');
+  const replay = await client.request(revisionPath(first), 'POST', changed, appendHeaders); assert.equal(replay.status, 201);
+  const replayed = await replay.json(); assert.equal(replayed.revisionId, current.revisionId); assert.ok(replayed.archivedAt); assert.deepEqual(replayed.evaluation, current.evaluation);
+  const createReplay = await save(client, body, key); assert.equal(createReplay.revisionId, first.revisionId); assert.ok(createReplay.archivedAt);
+  assert.deepEqual(await counts(), before);
+  const restored = await acceptedProject(await projectAction(client, archived.plan, 'restore'));
+  assert.equal(restored.plan.archivedAt, null); assert.equal(restored.plan.lifecycleVersion, archived.plan.lifecycleVersion + 1);
+  assert.deepEqual((await (await client.request(`/api/physical-plans/${first.planId}`)).json()).evaluation, current.evaluation);
+  assert.deepEqual(await counts(), before);
+});
+
+test('concurrent identical lifecycle retries produce one duplicate and old archive receipts cannot reapply after restore', async () => {
+  const { client } = await member(), saved = await save(client), row = await projectRow(client, saved.planId), key = randomUUID(), before = await counts();
+  const results = await Promise.all([projectAction(client, row, 'duplicate', key), projectAction(client, row, 'duplicate', key)]);
+  const copies = await Promise.all(results.map(acceptedProject));
+  assert.equal(copies[0].plan.planId, copies[1].plan.planId); assert.equal(copies.filter(r => !r.replayed).length, 1);
+  assert.equal((await counts()).plans, before.plans + 1);
+  const archiveKey = randomUUID(), archived = await acceptedProject(await projectAction(client, row, 'archive', archiveKey));
+  const restored = await acceptedProject(await projectAction(client, archived.plan, 'restore'));
+  const old = await acceptedProject(await projectAction(client, row, 'archive', archiveKey));
+  assert.equal(old.replayed, true); assert.ok(old.applied.archivedAt); assert.equal(old.plan.archivedAt, null);
+  assert.equal(old.plan.lifecycleVersion, restored.plan.lifecycleVersion);
+  const mismatch = await client.request(`/api/physical-plans/${saved.planId}/archive`, 'POST', { revisionId: randomUUID() }, { 'Idempotency-Key': archiveKey, 'If-Match': row.lifecycleEtag });
+  assert.equal(mismatch.status, 409); assert.equal((await mismatch.json()).code, 'IDEMPOTENCY_CONFLICT');
+});
+
+test('lifecycle preconditions reject stale saved heads and archive-restore ABA without touching physical history', async () => {
+  const { client } = await member(), saved = await save(client), old = await projectRow(client, saved.planId);
+  const appended = await client.request(revisionPath(saved), 'POST', capturePhysicalSaveEnvelope(draft('9 ft')), { 'Idempotency-Key': randomUUID(), 'If-Match': saved.etag }); assert.equal(appended.status, 201);
+  for (const operation of ['archive', 'duplicate'] as const) assert.equal((await projectAction(client, old, operation)).status, 412);
+  const current = await projectRow(client, saved.planId), before = await counts();
+  const archived = await acceptedProject(await projectAction(client, current, 'archive'));
+  await acceptedProject(await projectAction(client, archived.plan, 'restore'));
+  assert.equal((await projectAction(client, current, 'archive')).status, 412);
+  assert.deepEqual(await counts(), before);
+});
+
+test('project routes validate exact preconditions, bodies, filters and query shapes before writes', async () => {
+  const { client } = await member(), saved = await save(client), row = await projectRow(client, saved.planId), before = await counts();
+  const path = `/api/physical-plans/${saved.planId}/duplicate`;
+  for (const precondition of [undefined, '*', 'W/"weak"', saved.etag]) {
+    const headers: Record<string, string> = { 'Idempotency-Key': randomUUID() }; if (precondition) headers['If-Match'] = precondition;
+    const response = await client.request(path, 'POST', { revisionId: saved.revisionId }, headers);
+    assert.equal(response.status, precondition === undefined ? 428 : 400);
+  }
+  const headers = { 'Idempotency-Key': randomUUID(), 'If-Match': row.lifecycleEtag };
+  for (const body of [{}, { revisionId: 'bad' }, { revisionId: saved.revisionId, name: 'Injected rename' }])
+    assert.equal((await client.request(path, 'POST', body, headers)).status, 400);
+  assert.equal((await client.request(path + '?override=1', 'POST', { revisionId: saved.revisionId }, headers)).status, 400);
+  for (const query of ['status=all', 'status=active&status=archived', 'status=active&limit=0', 'status=archived&extra=1'])
+    assert.equal((await client.request('/api/physical-plans?' + query)).status, 400);
+  assert.deepEqual(await counts(), before);
+});
+
+test('project lifecycle is denied to viewers, foreign workspaces, stale sessions and untrusted origins', async () => {
+  const a = await member(), b = await member('account-b'), saved = await save(a.client), row = await projectRow(a.client, saved.planId), before = await counts();
+  for (const operation of ['duplicate', 'archive', 'restore'] as const) assert.equal((await projectAction(b.client, row, operation)).status, 404);
+  await db`insert into workspace_memberships(workspace_id,principal_id,role,status) values(${a.workspace.id},${b.identity.principal!.id},'viewer','active')`;
+  await b.client.select(a.workspace.id);
+  for (const operation of ['duplicate', 'archive', 'restore'] as const) assert.equal((await projectAction(b.client, row, operation)).status, 403);
+  const wrongOrigin = await a.client.request(`/api/physical-plans/${saved.planId}/archive`, 'POST', { revisionId: saved.revisionId }, { 'Idempotency-Key': randomUUID(), 'If-Match': row.lifecycleEtag, Origin: 'https://foreign.example.test' });
+  assert.equal(wrongOrigin.status, 403);
+  const archived = await acceptedProject(await projectAction(a.client, row, 'archive'));
+  assert.equal((await b.client.request(`/api/physical-plans/${saved.planId}`)).status, 200);
+  assert.equal((await b.client.request(`${revisionPath(saved)}/${saved.revisionId}/export?format=plan&unit=ft`)).status, 200);
+  const copyKey = randomUUID(), copied = await acceptedProject(await projectAction(a.client, archived.plan, 'duplicate', copyKey));
+  const afterCopy = await counts();
+  await db`update workspace_memberships set status='revoked' where workspace_id=${a.workspace.id} and principal_id=${a.identity.principal!.id}`;
+  assert.ok([401, 404, 409].includes((await projectAction(a.client, archived.plan, 'duplicate', copyKey)).status));
+  assert.deepEqual(await counts(), afterCopy); assert.equal(afterCopy.plans, before.plans + 1); assert.ok(copied.plan.planId);
+});
+
+test('archive and append race resolves against one locked project head without hidden writes', async () => {
+  const { client, workspace } = await member(), saved = await save(client), row = await projectRow(client, saved.planId);
+  const other = new PhysicalHttpClient(); await other.login(); await other.select(workspace.id);
+  const [archive, append] = await Promise.all([projectAction(client, row, 'archive'),
+    other.request(revisionPath(saved), 'POST', capturePhysicalSaveEnvelope(draft('9 ft')), { 'Idempotency-Key': randomUUID(), 'If-Match': saved.etag })]);
+  assert.ok((archive.status === 200 && append.status === 409) || (archive.status === 412 && append.status === 201), `${archive.status}/${append.status}`);
+  const current = await (await client.request(`/api/physical-plans/${saved.planId}`)).json();
+  assert.equal(current.revisionNumber, archive.status === 200 ? 1 : 2); assert.equal(current.archivedAt !== null, archive.status === 200);
+});
+
+test('active and archived pagination remain separate and duplication of a copy retains original capture provenance', async () => {
+  const { client } = await member(), saved = await save(client), source = await projectRow(client, saved.planId);
+  const copy = await acceptedProject(await projectAction(client, source, 'duplicate'));
+  const copy2 = await acceptedProject(await projectAction(client, copy.plan, 'duplicate'));
+  assert.deepEqual(copy2.revision!.evaluation, saved.evaluation);
+  assert.deepEqual(copy2.revision!.copiedFrom, { planId: copy.plan.planId, revisionId: copy.plan.currentRevisionId });
+  await acceptedProject(await projectAction(client, source, 'archive')); await acceptedProject(await projectAction(client, copy.plan, 'archive'));
+  const first = await (await client.request('/api/physical-plans?status=archived&limit=1')).json();
+  assert.equal(first.plans.length, 1); assert.ok(first.nextCursor);
+  const second = await (await client.request('/api/physical-plans?status=archived&limit=1&cursor=' + first.nextCursor)).json();
+  assert.equal(second.plans.length, 1); assert.equal(second.nextCursor, null);
+  assert.notEqual(first.plans[0].planId, second.plans[0].planId);
+  assert.deepEqual((await (await client.request('/api/physical-plans')).json()).plans.map((r: PhysicalPlanSummary) => r.planId), [copy2.plan.planId]);
 });

@@ -128,3 +128,173 @@ test('a delayed Autosave toggle never replaces newer canonical edits with its ca
 test('a slower enable response cannot reverse a newer explicit Autosave off choice',async()=>{
   const f=await harness(),auth=deferred<unknown>();f.deferAuth(auth.promise);const on=f.manager.setAutosave(f.draft,true);f.deferAuth(null);await f.manager.setAutosave(f.draft,false);auth.resolve({});await on;assert.equal(f.manager.state(f.draft.id).autosave,false);assert.equal(Array.from(f.storage.rows.values())[0].autosave,false);f.manager.dispose();
 });
+
+
+test('archive pause preserves raw fields and every local branch while stopping pending Autosave', async () => {
+  const f = await enabled(), raw = editField(changed(f.draft), 'room', 'ceilingHeight', '9 ft -');
+  f.manager.observe(raw); await f.clock.advance(250);
+  const second = { ...changed(f.draft, 'Second branch'), id: 'second-local-copy' };
+  const response = await f.response(f.draft, 1);
+  f.manager.opened(second.id, second.localEditRevision, response); f.manager.observe(second);
+  await f.manager.setAutosave(second, true);
+  await f.manager.pausePlanForLifecycle(response.planId);
+  f.manager.setPlanArchived(response.planId, true);
+  await f.clock.advance(10000);
+  assert.equal(f.sent.length, 0);
+  for (const id of [raw.id, second.id]) {
+    assert.equal(f.manager.state(id).autosave, false); assert.equal(f.manager.state(id).archived, true);
+  }
+  const records = Array.from(f.storage.rows.values());
+  assert.deepEqual(records.find(r => r.draft.id === raw.id)!.draft, raw);
+  assert.deepEqual(records.find(r => r.draft.id === second.id)!.draft, second);
+  assert.ok(records.every(r => !r.autosave));
+  await assert.rejects(f.manager.save(second), /archived/);
+  f.manager.setPlanArchived(response.planId, false); await f.clock.advance(10000);
+  assert.equal(f.manager.state(second.id).autosave, false); assert.equal(f.sent.length, 0); f.manager.dispose();
+});
+
+test('archive leaves an uncertain accepted save retryable with the exact key and raw newer work', async () => {
+  const f = await enabled(), candidate = changed(f.draft, 'Sent before archive');
+  f.manager.observe(candidate); await f.clock.advance(1750);
+  f.replies[0].reject(Error('Lost accepted response')); await settle();
+  const raw = editField(candidate, 'room', 'length', '13 ft -'); f.manager.observe(raw);
+  const planId = f.manager.state(raw.id).binding!.planId;
+  await f.manager.pausePlanForLifecycle(planId); f.manager.setPlanArchived(planId, true);
+  await f.clock.advance(10000); assert.equal(f.sent.length, 1);
+  assert.deepEqual(Array.from(f.storage.rows.values())[0].intent, f.sent[0]);
+  const retry = f.manager.save(raw, 'retry'); await settle();
+  assert.deepEqual(f.sent[1], f.sent[0]);
+  f.replies[1].resolve({ ...await f.response(candidate, 2), archivedAt: at }); await retry;
+  await f.manager.checkpoint(raw.id);
+  assert.equal(f.manager.state(raw.id).binding!.revisionNumber, 2);
+  assert.equal(f.manager.state(raw.id).retryable, false); assert.equal(f.manager.state(raw.id).archived, true);
+  assert.equal(f.manager.state(raw.id).autosave, false);
+  const record = Array.from(f.storage.rows.values())[0]; assert.equal(record.intent, null); assert.deepEqual(record.draft, raw);
+  f.manager.dispose();
+});
+
+test('a fresh archived-save rejection leaves no false retry but permits an explicit independent Save as new', async () => {
+  const f = await harness(), candidate = changed(f.draft);
+  const saving = f.manager.save(candidate); await settle();
+  f.replies[0].reject(new PhysicalSaveResponseError(409, 'PLAN_ARCHIVED', 'Project is archived')); await saving;
+  assert.equal(f.manager.state(candidate.id).archived, true); assert.equal(f.manager.state(candidate.id).retryable, false);
+  assert.equal(Array.from(f.storage.rows.values())[0].intent, null);
+  const copying = f.manager.save(candidate, 'new'); await settle();
+  assert.equal(f.sent[1].operation, 'create'); assert.equal(f.sent[1].binding, null);
+  f.replies[1].resolve({ ...await f.response(candidate, 1), planId: randomUUID(), archivedAt: null }); await copying;
+  assert.equal(f.manager.state(candidate.id).archived, false); assert.equal(f.manager.state(candidate.id).autosave, false);
+  f.manager.dispose();
+});
+
+test('enabling Autosave checks current archived state even when the local binding predates archive', async () => {
+  const f = await harness(); f.manager.dispose();
+  const manager = createPhysicalSaveManager({ ...f.deps, readCurrent: async () => ({ etag: f.manager.state(f.draft.id).binding!.etag, revisionNumber: 1, archivedAt: at }) });
+  manager.opened(f.draft.id, f.draft.localEditRevision, await f.response(f.draft, 1)); manager.observe(f.draft);
+  await assert.rejects(manager.setAutosave(f.draft, true), /archived/);
+  assert.equal(manager.state(f.draft.id).autosave, false); assert.equal(manager.state(f.draft.id).archived, true);
+  await f.clock.advance(10000); assert.equal(f.sent.length, 0); manager.dispose();
+});
+
+test('archived recovery forks exact evidence with Autosave off and leaves its original checkpoint intact', async () => {
+  const f = await enabled(), raw = editField(f.draft, 'room', 'length', '12 ft -');
+  f.manager.observe(raw); await f.manager.checkpoint(raw.id);
+  const original = clone(Array.from(f.storage.rows.values())[0]); f.manager.dispose();
+  const manager = createPhysicalSaveManager({ ...f.deps, readCurrent: async () => ({ etag: original.binding!.etag, revisionNumber: 1, archivedAt: at }) });
+  const available = await manager.discoverRecovery(); assert.equal(available.length, 1);
+  const recovered = await manager.resumeRecovery(available[0], 'archived-recovery'); manager.observe(recovered);
+  await f.clock.advance(10000);
+  assert.equal(manager.state(recovered.id).archived, true); assert.equal(manager.state(recovered.id).autosave, false);
+  assert.equal(recovered.fields.room.length.text, '12 ft -');
+  assert.deepEqual(f.storage.rows.get(original.scope.branchId), original);
+  assert.equal(f.sent.length, 0); manager.dispose();
+});
+
+test('a delayed enable cannot undo a newer lifecycle pause and recovery failure refuses archive preparation', async () => {
+  const f = await harness(), auth = deferred<unknown>(); f.deferAuth(auth.promise);
+  const enabling = f.manager.setAutosave(f.draft, true);
+  await f.manager.pausePlanForLifecycle(f.manager.state(f.draft.id).binding!.planId);
+  auth.resolve({}); await enabling; assert.equal(f.manager.state(f.draft.id).autosave, false);
+  const before = clone(Array.from(f.storage.rows.values()));
+  f.storage.setFailCheckpoint(true);
+  await assert.rejects(f.manager.pausePlanForLifecycle(f.manager.state(f.draft.id).binding!.planId), /not be preserved/);
+  assert.deepEqual(Array.from(f.storage.rows.values()), before); assert.equal(f.sent.length, 0); f.manager.dispose();
+});
+
+
+test('an older archived receipt cannot reverse a newer restore and still acknowledges the exact saved request', async () => {
+  const f = await enabled(), candidate = changed(f.draft, 'Accepted before archive');
+  f.manager.observe(candidate); await f.clock.advance(1750);
+  f.replies[0].reject(Error('Accepted response lost')); await settle();
+  const raw = editField(candidate, 'room', 'width', '11 ft -'); f.manager.observe(raw);
+  const planId = f.manager.state(raw.id).binding!.planId;
+  await f.manager.pausePlanForLifecycle(planId); f.manager.setPlanArchived(planId, true);
+  const retry = f.manager.save(raw, 'retry'); await settle();
+  assert.deepEqual(f.sent[1], f.sent[0]);
+  const olderArchivedReceipt = { ...await f.response(candidate, 2), archivedAt: at };
+  f.manager.setPlanArchived(planId, false);
+  f.replies[1].resolve(olderArchivedReceipt); await retry; await f.manager.checkpoint(raw.id);
+  assert.equal(f.manager.state(raw.id).binding!.revisionId, olderArchivedReceipt.revisionId);
+  assert.equal(f.manager.state(raw.id).archived, false); assert.equal(f.manager.state(raw.id).autosave, false);
+  assert.equal(f.manager.state(raw.id).retryable, false);
+  const record = Array.from(f.storage.rows.values())[0];
+  assert.equal(record.intent, null); assert.deepEqual(record.draft, raw); assert.equal(record.autosave, false);
+  await f.clock.advance(10000); assert.equal(f.sent.length, 2); f.manager.dispose();
+});
+
+test('a stale archived preflight read cannot reverse restore or discard a fresh save candidate', async () => {
+  const f = await harness(); f.manager.dispose();
+  const read = deferred<{ etag: string; revisionNumber: number; archivedAt: string | null }>();
+  const manager = createPhysicalSaveManager({ ...f.deps, readCurrent: () => read.promise });
+  const original = await f.response(f.draft, 1), candidate = changed(f.draft, 'After restore');
+  manager.opened(f.draft.id, f.draft.localEditRevision, original); manager.observe(candidate);
+  const saving = manager.save(candidate); await settle(); assert.equal(f.sent.length, 0);
+  manager.setPlanArchived(original.planId, true); manager.setPlanArchived(original.planId, false);
+  read.resolve({ etag: original.etag, revisionNumber: 1, archivedAt: at }); await settle();
+  assert.equal(f.sent.length, 1); assert.deepEqual(f.sent[0].envelope, capturePhysicalSaveEnvelope(candidate));
+  const accepted = { ...await f.response(candidate, 2), archivedAt: null };
+  f.replies[0].resolve(accepted); await saving;
+  assert.equal(manager.state(candidate.id).archived, false); assert.equal(manager.state(candidate.id).binding!.revisionId, accepted.revisionId);
+  assert.equal(manager.state(candidate.id).autosave, false); manager.dispose();
+});
+
+test('a delayed archived rejection cannot reverse a newer restore or leave a falsely retryable request', async () => {
+  const f = await harness(), candidate = changed(f.draft);
+  const saving = f.manager.save(candidate); await settle();
+  const planId = f.manager.state(candidate.id).binding!.planId;
+  f.manager.setPlanArchived(planId, true); f.manager.setPlanArchived(planId, false);
+  f.replies[0].reject(new PhysicalSaveResponseError(409, 'PLAN_ARCHIVED', 'Project was archived')); await saving;
+  assert.equal(f.manager.state(candidate.id).archived, false); assert.equal(f.manager.state(candidate.id).autosave, false);
+  assert.equal(f.manager.state(candidate.id).retryable, false); assert.equal(f.manager.state(candidate.id).acknowledgedCurrent, false);
+  assert.equal(Array.from(f.storage.rows.values())[0].intent, null); f.manager.dispose();
+});
+
+test('Open observation preserves a newer restore while keeping the opened revision separate and current active drafts enabled', async () => {
+  const f = await enabled(), original = { ...await f.response(f.draft, 1), archivedAt: null };
+  const activeCopy = { ...f.draft, id: 'active-copy' };
+  f.manager.opened(activeCopy.id, activeCopy.localEditRevision, original, f.manager.captureLifecycleObservation());
+  assert.equal(f.manager.state(f.draft.id).autosave, true);
+  const observation = f.manager.captureLifecycleObservation();
+  f.manager.setPlanArchived(original.planId, true); f.manager.setPlanArchived(original.planId, false);
+  const restoredCopy = { ...f.draft, id: 'restored-copy' };
+  f.manager.opened(restoredCopy.id, restoredCopy.localEditRevision, { ...original, archivedAt: at }, observation);
+  assert.equal(f.manager.state(restoredCopy.id).binding!.revisionId, original.revisionId);
+  assert.equal(f.manager.state(restoredCopy.id).archived, false); assert.equal(f.manager.isPlanArchived(original.planId), false);
+  assert.equal(f.manager.state(f.draft.id).autosave, false); f.manager.dispose();
+});
+
+test('a recovery read delayed across restore preserves the original journal and cannot revive its old Autosave preference', async () => {
+  const f = await enabled(), raw = editField(f.draft, 'room', 'length', '12 ft -');
+  f.manager.observe(raw); await f.manager.checkpoint(raw.id);
+  const original = clone(Array.from(f.storage.rows.values())[0]); f.manager.dispose();
+  const read = deferred<{ etag: string; revisionNumber: number; archivedAt: string | null }>();
+  const manager = createPhysicalSaveManager({ ...f.deps, readCurrent: () => read.promise });
+  const recovering = manager.resumeRecovery(original, 'restore-race-recovery'); await settle();
+  manager.setPlanArchived(original.binding!.planId, true); manager.setPlanArchived(original.binding!.planId, false);
+  read.resolve({ etag: original.binding!.etag, revisionNumber: 1, archivedAt: at });
+  const recovered = await recovering; manager.observe(recovered); await manager.checkpoint(recovered.id);
+  assert.equal(manager.state(recovered.id).archived, false); assert.equal(manager.state(recovered.id).autosave, false);
+  assert.deepEqual(f.storage.rows.get(original.scope.branchId), original);
+  const fork = Array.from(f.storage.rows.values()).find(record => record.scope.branchId !== original.scope.branchId)!;
+  assert.equal(fork.autosave, false); assert.deepEqual(fork.draft, { ...raw, id: recovered.id });
+  await f.clock.advance(10000); assert.equal(f.sent.length, 0); manager.dispose();
+});

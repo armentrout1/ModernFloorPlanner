@@ -11,7 +11,7 @@ export interface SaveBinding { planId: string; revisionId: string; revisionNumbe
 export interface SaveState {
   binding: SaveBinding | null;
   phase: 'local-only' | 'saving' | 'saved' | 'failed' | 'conflict' | 'waiting' | 'paused';
-  message: string; retryable: boolean; autosave: boolean; pending: boolean; acknowledgedCurrent: boolean;
+  message: string; retryable: boolean; autosave: boolean; pending: boolean; acknowledgedCurrent: boolean; archived: boolean;
   recovery: 'memory' | 'checkpointing' | 'checkpointed' | 'unavailable'; recoveryMessage: string;
 }
 export const AUTOSAVE_DELAY_MS = 1500;
@@ -24,12 +24,12 @@ export interface SaveDependencies {
   send(intent: JournalIntent, context: unknown): Promise<PhysicalPlanRevision>;
   key(): string; load(draftId: string): SaveBinding | null; persist(draftId: string, binding: SaveBinding): void;
   journal?: Journal; recoveryContext?(): JournalContext; accessIdentity?(): string;
-  readCurrent?(binding: SaveBinding, context: unknown): Promise<{ etag: string; revisionNumber: number }>;
+  readCurrent?(binding: SaveBinding, context: unknown): Promise<{ etag: string; revisionNumber: number; archivedAt?: string | null }>;
   clock?: { now(): number; set(callback: () => void, delay: number): unknown; clear(timer: unknown): void; random(): number };
 }
 export class PhysicalSaveResponseError extends Error { constructor(public status: number, public code: string, message: string) { super(message); } }
 const empty = (): SaveState => ({ binding: null, phase: 'local-only', message: '', retryable: false, autosave: false,
-  pending: false, acknowledgedCurrent: false, recovery: 'memory', recoveryMessage: '' });
+  pending: false, acknowledgedCurrent: false, archived: false, recovery: 'memory', recoveryMessage: '' });
 interface Entry {
   value: SaveState; draft?: PhysicalDraft; scope?: JournalScope; record?: JournalRecord; intent?: JournalIntent;
   attempt: number; durable: boolean; busy: boolean; suspended: boolean; permanent: boolean; epoch: number; retries: number; preferenceGeneration: number;
@@ -40,6 +40,17 @@ interface Entry {
  * IndexedDB holds detached checkpoints and at most one immutable request/branch. */
 export function createPhysicalSaveManager(dependencies: SaveDependencies) {
   const entries = new Map<string, Entry>(), listeners = new Set<() => void>();
+  const archivedPlans = new Set<string>();
+  const lifecycleObservations = new Map<string, number>();
+  let lifecycleSequence = 0;
+  const captureLifecycleObservation = () => lifecycleSequence;
+  const isPlanArchived = (planId: string) => archivedPlans.has(planId);
+  const newerLifecycle = (planId: string, observation: number) => (lifecycleObservations.get(planId) ?? 0) > observation;
+  // Revision receipts remain valid after a lifecycle change. Their older current-
+  // project metadata must not reverse a newer archive/restore already observed here.
+  const observedArchiveStatus = (planId: string, archivedAt: string | null | undefined, observation: number) =>
+    newerLifecycle(planId, observation) || archivedAt === undefined ? isPlanArchived(planId) : archivedAt !== null;
+  const archivedMessage = 'This saved project is archived. Your local work and recovery remain available. Restore the project before saving changes, or save this candidate as a new plan.';
   const clock = dependencies.clock ?? { now: Date.now, set: (f: () => void, n: number) => setTimeout(f, n),
     clear: (timer: unknown) => clearTimeout(timer as ReturnType<typeof setTimeout>), random: Math.random };
   const ownerId = dependencies.key();
@@ -47,7 +58,8 @@ export function createPhysicalSaveManager(dependencies: SaveDependencies) {
   const notify = () => { if (disposed) return; ++revision; for (const listener of Array.from(listeners)) listener(); };
   function entry(id: string): Entry {
     let e = entries.get(id);
-    if (!e) { const binding = dependencies.load(id); e = { value: { ...empty(), binding, phase: binding ? 'saved' : 'local-only' },
+    if (!e) { const binding = dependencies.load(id), archived = !!binding && isPlanArchived(binding.planId);
+      e = { value: { ...empty(), binding, archived, phase: archived ? 'paused' : binding ? 'saved' : 'local-only' },
       attempt: 0, durable: false, busy: false, suspended: false, permanent: false, epoch: 0, retries: 0, preferenceGeneration: 0, queue: Promise.resolve(), changedAt: clock.now() }; entries.set(id, e); }
     return e;
   }
@@ -91,6 +103,10 @@ export function createPhysicalSaveManager(dependencies: SaveDependencies) {
   async function assess(e: Entry, draft: PhysicalDraft, schedule = true) {
     if (e.draft !== draft || disposed) return;
     const pending = pendingSaveFields(draft).length > 0;
+    if (e.value.archived) {
+      cancel(e, 'sendTimer'); cancel(e, 'retryTimer');
+      patch(e, { phase: 'paused', pending, autosave: false, message: archivedMessage }); return;
+    }
     if (pending) {
       cancel(e, 'sendTimer'); patch(e, { pending: true, acknowledgedCurrent: false,
         ...(e.busy || e.permanent ? {} : { phase: 'paused' as const, message: 'Apply or Revert unfinished inputs before saving new changes.' }) }); return;
@@ -137,13 +153,16 @@ export function createPhysicalSaveManager(dependencies: SaveDependencies) {
     cancel(e, 'assessTimer'); e.assessTimer = clock.set(() => { e.assessTimer = undefined; if (e.draft) void assess(e, e.draft); }, CHECKPOINT_DELAY_MS);
     scheduleRetry(e);
   }
-  function opened(id: string, localRevision: number, response: PhysicalPlanRevision) {
+  function opened(id: string, localRevision: number, response: PhysicalPlanRevision, observation = captureLifecycleObservation()) {
     const e = entry(id), binding: SaveBinding = { planId: response.planId, revisionId: response.revisionId,
       revisionNumber: response.revisionNumber, etag: response.etag, payloadHash: response.payloadHash, savedLocalRevision: localRevision };
     if (e.value.binding?.planId === binding.planId && e.value.binding.revisionNumber > binding.revisionNumber) return;
     e.acknowledgedIdentity = canonicalJson(response.envelope);
     try { e.accessIdentity = dependencies.accessIdentity?.(); } catch { /* Opening is separately authorized. */ }
-    patch(e, { binding, phase: 'saved', message: '', retryable: false, acknowledgedCurrent: true });
+    const archived = observedArchiveStatus(binding.planId, response.archivedAt, observation);
+    if (archived !== isPlanArchived(binding.planId)) setPlanArchived(binding.planId, archived);
+    patch(e, { binding, archived, phase: archived ? 'paused' : 'saved', message: archived ? archivedMessage : '',
+      retryable: false, acknowledgedCurrent: true, ...(archived ? { autosave: false } : {}) });
     dependencies.persist(id, binding); scheduleCheckpoint(e);
   }
   function scheduleRetry(e: Entry) {
@@ -161,6 +180,7 @@ export function createPhysicalSaveManager(dependencies: SaveDependencies) {
     const e = entry(draft.id);
     if (disposed || e.busy) return;
     if (automatic && (!e.value.autosave || e.suspended || e.permanent)) return;
+    if (mode === 'current' && e.value.archived) throw Error(archivedMessage);
     if (mode !== 'retry' && pendingSaveFields(draft).length) throw Error('Apply or Revert each unfinished field before saving.');
     if (mode === 'retry' && (!e.intent || !e.value.retryable)) throw Error('There is no pending request to retry.');
     if (mode !== 'retry' && e.intent) throw Error('Retry the previous request first to establish whether it was stored. Your current edits remain separate.');
@@ -168,7 +188,7 @@ export function createPhysicalSaveManager(dependencies: SaveDependencies) {
     if (!automatic && mode === 'new') e.permanent = false;
     cancel(e, 'sendTimer'); cancel(e, 'retryTimer'); cancel(e, 'checkpointTimer'); cancel(e, 'assessTimer');
     const epoch = e.epoch;
-    let dispatched = false, claimed = false;
+    let dispatched = false, claimed = false, statusObservation = captureLifecycleObservation();
     try {
       let candidate: PhysicalSaveEnvelope | undefined, identity: string | undefined, candidateHash: string | undefined;
       if (mode !== 'retry') {
@@ -216,7 +236,9 @@ export function createPhysicalSaveManager(dependencies: SaveDependencies) {
         }
       }
       if (e.durable && e.record?.state === 'prepared' && intent.binding && dependencies.readCurrent) {
+        statusObservation = captureLifecycleObservation();
         const current = await dependencies.readCurrent(intent.binding, context); dependencies.assert(context);
+        if (observedArchiveStatus(intent.binding.planId, current.archivedAt, statusObservation)) throw new PhysicalSaveResponseError(409, 'PLAN_ARCHIVED', archivedMessage);
         if (current.etag !== intent.binding.etag) throw new PhysicalSaveResponseError(412, 'REVISION_CONFLICT', 'A newer revision exists. Your local candidate is preserved. Open the latest separately, or save this candidate as a new plan.');
       }
       if (e.durable && dependencies.journal) {
@@ -228,6 +250,7 @@ export function createPhysicalSaveManager(dependencies: SaveDependencies) {
       patch(e, { phase: 'saving', message: '', retryable: false });
       dispatched = true;
       if (automatic && mode === 'retry') ++e.retries;
+      statusObservation = captureLifecycleObservation();
       const response = await dependencies.send(intent, context); dependencies.assert(context);
       if (epoch !== e.epoch) throw new AccountContextChanged();
       const accepted: SaveBinding = { planId: response.planId, revisionId: response.revisionId, revisionNumber: response.revisionNumber,
@@ -250,7 +273,9 @@ export function createPhysicalSaveManager(dependencies: SaveDependencies) {
       e.intent = undefined; e.durable = false; e.retries = 0; e.permanent = false;
       if (binding.revisionId === accepted.revisionId) e.acknowledgedIdentity = canonicalJson(intent.envelope);
       dependencies.persist(draft.id, binding);
-      patch(e, { binding, phase: 'saved', message: '', retryable: false });
+      const archived = observedArchiveStatus(binding.planId, response.archivedAt, statusObservation);
+      patch(e, { binding, archived, phase: archived ? 'paused' : 'saved', message: archived ? archivedMessage : '', retryable: false });
+      if (archived || archived !== isPlanArchived(binding.planId)) setPlanArchived(binding.planId, archived);
       scheduleCheckpoint(e);
     } catch (error) {
       if (error instanceof AccountContextChanged || (error instanceof PhysicalSaveResponseError && [401,403,404].includes(error.status))) {
@@ -258,13 +283,15 @@ export function createPhysicalSaveManager(dependencies: SaveDependencies) {
         patch(e, { phase: 'failed', message: 'Account access changed. This draft is preserved. Recheck access before retrying the same request.', retryable: !!e.intent });
         try { await mark(e, 'paused'); } catch (journalError) { unavailable(e, journalError); }
       } else if (error instanceof PhysicalSaveResponseError && error.status < 500 && error.status !== 408 && error.status !== 429) {
-        e.permanent = true;
+        e.permanent = error.code !== 'PLAN_ARCHIVED';
         patch(e, { phase: error.status === 412 ? 'conflict' : 'failed', message: error.message, retryable: false });
+        if (error.code === 'PLAN_ARCHIVED' && e.value.binding && !newerLifecycle(e.value.binding.planId, statusObservation))
+          setPlanArchived(e.value.binding.planId, true);
         let finalized = true;
         if (e.durable && dependencies.journal) try { await serial(e, async () => {
           e.record = await dependencies.journal!.clearRejectedIntent(scope(e), e.attempt);
         }); } catch (journalError) { finalized = false; unavailable(e, journalError); patch(e, { retryable: true }); }
-        if (finalized) { e.intent = undefined; e.durable = false; }
+        if (finalized) { e.intent = undefined; e.durable = false; patch(e, { retryable: false }); }
       } else {
         patch(e, { phase: 'failed', message: dispatched || mode === 'retry'
           ? 'The save response was not received. Your work is unchanged. Retry the same request to check whether it was stored.'
@@ -286,6 +313,12 @@ export function createPhysicalSaveManager(dependencies: SaveDependencies) {
     const context = await dependencies.authorize(); dependencies.assert(context);
     if (preference !== e.preferenceGeneration) return;
     if (!e.value.binding) throw Error('Save this draft explicitly to the selected workspace before enabling Autosave.');
+    if (enabled && dependencies.readCurrent) {
+      const current = await dependencies.readCurrent(e.value.binding, context); dependencies.assert(context);
+      if (preference !== e.preferenceGeneration) return;
+      if (current.archivedAt != null) { setPlanArchived(e.value.binding.planId, true); throw Error(archivedMessage); }
+      if (e.value.archived) { archivedPlans.delete(e.value.binding.planId); patch(e, { archived: false }); }
+    } else if (enabled && e.value.archived) throw Error(archivedMessage);
     // The canonical observer may have advanced while authorization was pending.
     // A preference change must never restore the draft captured by its click.
     e.suspended = false; e.accessIdentity = dependencies.accessIdentity?.();
@@ -322,6 +355,7 @@ export function createPhysicalSaveManager(dependencies: SaveDependencies) {
     if (candidate.scope.origin !== verified.origin || candidate.scope.principalId !== verified.principalId || candidate.scope.workspaceId !== verified.workspaceId) throw new AccountContextChanged();
     const original = await dependencies.journal.read(candidate.scope); dependencies.assert(context);
     if (!original) throw Error('This local checkpoint is no longer available.');
+    const statusObservation = captureLifecycleObservation();
     const current = original.binding && dependencies.readCurrent ? await dependencies.readCurrent(original.binding, context) : null;
     dependencies.assert(context);
     const record = await dependencies.journal.forkRecovery(original.scope, { ...original.scope, branchId: dependencies.key() }, newLocalDraftId);
@@ -333,14 +367,54 @@ export function createPhysicalSaveManager(dependencies: SaveDependencies) {
     const conflict = !!(current && original.binding && current.etag !== original.binding.etag && (!original.intent || original.state === 'prepared'));
     e.permanent = conflict;
     if (conflict && e.intent) { e.record = await dependencies.journal.clearRejectedIntent(record.scope, record.attemptGeneration); e.intent = undefined; e.durable = false; dependencies.assert(context); }
-    patch(e, { binding: record.binding, autosave: record.autosave, recovery: 'checkpointed', recoveryMessage: '',
+    let archived = !!record.binding && observedArchiveStatus(record.binding.planId, current?.archivedAt, statusObservation);
+    if (archived && record.binding) {
+      setPlanArchived(record.binding.planId, true);
+      e.record = await dependencies.journal.setAutosave(record.scope, false); dependencies.assert(context);
+    }
+    // Fork/checkpoint transactions may also outlast a lifecycle response. Keep the
+    // original journal untouched and do not revive its old Autosave preference.
+    const lifecycleChanged = !!record.binding && newerLifecycle(record.binding.planId, statusObservation);
+    if (lifecycleChanged && record.binding) archived = isPlanArchived(record.binding.planId);
+    if (lifecycleChanged && e.record?.autosave) {
+      e.record = await dependencies.journal.setAutosave(record.scope, false); dependencies.assert(context);
+      if (record.binding) archived = isPlanArchived(record.binding.planId);
+    }
+    patch(e, { binding: record.binding, archived, autosave: archived || lifecycleChanged ? false : record.autosave, recovery: 'checkpointed', recoveryMessage: '',
       phase: conflict ? 'conflict' : e.intent ? 'failed' : record.binding ? 'saved' : 'local-only', retryable: !!e.intent,
-      message: conflict ? 'A newer revision exists. Your recovered candidate is preserved. Open latest separately, or save as a new plan.' : e.intent ? 'Recovered request requires its original receipt before newer edits can save.' : '' });
+      message: archived ? archivedMessage : conflict ? 'A newer revision exists. Your recovered candidate is preserved. Open latest separately, or save as a new plan.' : e.intent ? 'Recovered request requires its original receipt before newer edits can save.' : '' });
     if (record.binding) dependencies.persist(newLocalDraftId, record.binding);
     activeId = newLocalDraftId;
     // Caller inserts this detached draft into the canonical store. Only then does
     // observe schedule work; discovery itself never uploads or edits a draft.
     return draft;
+  }
+  /** Pause scheduling before archive without removing a save receipt or raw
+   * fields. The server serializes in-flight saves against the lifecycle tag. */
+  async function pausePlanForLifecycle(planId: string) {
+    const matching = Array.from(entries.values()).filter(e => e.value.binding?.planId === planId || e.intent?.binding?.planId === planId);
+    for (const e of matching) {
+      ++e.preferenceGeneration; cancel(e, 'sendTimer'); cancel(e, 'retryTimer');
+      patch(e, { autosave: false });
+    }
+    for (const e of matching) {
+      await checkpoint(e);
+      if (e.value.recovery === 'unavailable') throw Error('The current local recovery could not be preserved. The project action was not sent.');
+      if (dependencies.journal && e.scope) {
+        try { e.record = await serial(e, () => dependencies.journal!.setAutosave(e.scope!, false)); }
+        catch (error) { unavailable(e, error); throw Error('Autosave could not be paused durably. The project action was not sent.'); }
+      }
+    }
+  }
+  function setPlanArchived(planId: string, archived: boolean) {
+    lifecycleObservations.set(planId, ++lifecycleSequence);
+    if (archived) archivedPlans.add(planId); else archivedPlans.delete(planId);
+    for (const e of Array.from(entries.values())) if (e.value.binding?.planId === planId) {
+      ++e.preferenceGeneration; cancel(e, 'sendTimer'); cancel(e, 'retryTimer');
+      patch(e, { archived, autosave: false, phase: e.intent ? 'failed' : archived ? 'paused' : 'saved',
+        retryable: !!e.intent, message: archived ? archivedMessage : 'Project restored. Autosave remains off; your local edits and pending requests are preserved.' });
+      scheduleCheckpoint(e);
+    }
   }
   function suspend() {
     for (const e of Array.from(entries.values())) {
@@ -350,7 +424,7 @@ export function createPhysicalSaveManager(dependencies: SaveDependencies) {
     }
   }
   function dispose() { suspend(); disposed = true; for (const e of Array.from(entries.values())) { cancel(e, 'checkpointTimer'); cancel(e, 'assessTimer'); } listeners.clear(); }
-  return { state, opened, save, observe, setAutosave, discoverRecovery, resumeRecovery, suspend, dispose,
+  return { state, opened, save, observe, setAutosave, pausePlanForLifecycle, setPlanArchived, captureLifecycleObservation, isPlanArchived, discoverRecovery, resumeRecovery, suspend, dispose,
     checkpoint: async (id: string) => checkpoint(entry(id)), getSnapshot: () => revision,
     subscribe: (listener: () => void) => { listeners.add(listener); return () => { listeners.delete(listener); }; } };
 }
@@ -394,7 +468,8 @@ export function getPhysicalSaveManager(context: string) {
       const value = await response.json();
       if (!response.ok) throw new PhysicalSaveResponseError(response.status, value.code ?? 'OPEN_FAILED', value.message ?? 'Workspace access could not be verified.');
       if (response.headers.get('ETag') !== value.etag) throw Error('The current plan response did not identify its exact revision.');
-      return { etag: value.etag, revisionNumber: value.revisionNumber };
+      assertRequestContext(captured as RequestContext);
+      return { etag: value.etag, revisionNumber: value.revisionNumber, archivedAt: value.archivedAt };
     },
     send: async (intent, captured) => {
       const response = await contextFetch('POST', intent.operation === 'append' ? '/api/physical-plans/' + encodeURIComponent(intent.resource) + '/revisions' : '/api/physical-plans', intent.envelope, captured as RequestContext,

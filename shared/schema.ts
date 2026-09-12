@@ -94,11 +94,21 @@ export const physicalPlans = pgTable('physical_plans', {
   id: uuid('id').primaryKey(),
   workspaceId: uuid('workspace_id').notNull().references(() => workspaces.id, { onDelete: 'restrict' }),
   currentRevisionId: uuid('current_revision_id').notNull(),
+  archivedAt: timestamp('archived_at', { withTimezone: true, mode: 'string' }),
+  archivedBy: uuid('archived_by').references(() => applicationPrincipals.id, { onDelete: 'restrict' }),
+  lifecycleVersion: integer('lifecycle_version').notNull().default(0),
+  copiedFromPlanId: uuid('copied_from_plan_id'), copiedFromRevisionId: uuid('copied_from_revision_id'),
   createdBy: uuid('created_by').notNull().references(() => applicationPrincipals.id, { onDelete: 'restrict' }),
   createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'string' }).notNull().defaultNow(),
 }, table => [unique('physical_plans_workspace_id_key').on(table.workspaceId, table.id),
   index('physical_plans_workspace_id_idx').on(table.workspaceId, table.id),
+  index('physical_plans_active_workspace_idx').on(table.workspaceId, table.id).where(sql`${table.archivedAt} is null`),
+  index('physical_plans_archived_workspace_idx').on(table.workspaceId, table.id).where(sql`${table.archivedAt} is not null`),
+  check('physical_plans_lifecycle_version', sql`${table.lifecycleVersion} >= 0`),
+  check('physical_plans_archive_actor', sql`(${table.archivedAt} is null) = (${table.archivedBy} is null)`),
+  check('physical_plans_copy_pair', sql`(${table.copiedFromPlanId} is null) = (${table.copiedFromRevisionId} is null) and (${table.copiedFromPlanId} is null or ${table.copiedFromPlanId} <> ${table.id})`),
+  foreignKey({ name: 'physical_plans_copy_revision_fk', columns: [table.workspaceId, table.copiedFromPlanId, table.copiedFromRevisionId], foreignColumns: physicalRevisionIdentityColumns() }),
   foreignKey({ name: 'physical_plans_current_revision_fk', columns: [table.workspaceId, table.id, table.currentRevisionId], foreignColumns: physicalRevisionIdentityColumns() })]);
 export const physicalPlanRevisions = pgTable('physical_plan_revisions', {
   id: uuid('id').primaryKey(), workspaceId: uuid('workspace_id').notNull(), planId: uuid('plan_id').notNull(),
@@ -123,6 +133,25 @@ export const physicalSaveReceipts = pgTable('physical_save_receipts', {
   check('physical_receipts_operation', sql`${table.operation} in ('create', 'append')`),
   check('physical_receipts_resource', sql`(${table.operation} = 'create' and ${table.resource} = 'collection') or (${table.operation} = 'append' and ${table.resource} = ${table.planId}::text)`),
   check('physical_receipts_hash', sql`${table.requestHash} ~ '^[0-9a-f]{64}$'`)]);
+
+// Lifecycle receipts are separate from preserved create/append request identities.
+export const physicalLifecycleReceipts = pgTable('physical_lifecycle_receipts', {
+  principalId: uuid('principal_id').notNull().references(() => applicationPrincipals.id, { onDelete: 'restrict' }),
+  workspaceId: uuid('workspace_id').notNull(), operation: text('operation').$type<'duplicate' | 'archive' | 'restore'>().notNull(),
+  resourcePlanId: uuid('resource_plan_id').notNull(), idempotencyKey: uuid('idempotency_key').notNull(),
+  requestHash: text('request_hash').notNull(), resultPlanId: uuid('result_plan_id').notNull(), resultRevisionId: uuid('result_revision_id').notNull(),
+  appliedArchivedAt: timestamp('applied_archived_at', { withTimezone: true, mode: 'string' }),
+  appliedLifecycleVersion: integer('applied_lifecycle_version').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' }).notNull().defaultNow(),
+}, table => [primaryKey({ columns: [table.principalId, table.workspaceId, table.operation, table.resourcePlanId, table.idempotencyKey] }),
+  foreignKey({ name: 'physical_lifecycle_source_fk', columns: [table.workspaceId, table.resourcePlanId], foreignColumns: [physicalPlans.workspaceId, physicalPlans.id] }),
+  foreignKey({ name: 'physical_lifecycle_result_fk', columns: [table.workspaceId, table.resultPlanId, table.resultRevisionId], foreignColumns: physicalRevisionIdentityColumns() }),
+  check('physical_lifecycle_operation', sql`${table.operation} in ('duplicate','archive','restore')`),
+  check('physical_lifecycle_hash', sql`${table.requestHash} ~ '^[0-9a-f]{64}$'`),
+  check('physical_lifecycle_version', sql`${table.appliedLifecycleVersion} >= 0`),
+  check('physical_lifecycle_result', sql`(${table.operation} = 'duplicate' and ${table.resultPlanId} <> ${table.resourcePlanId} and ${table.appliedLifecycleVersion} = 0) or (${table.operation} in ('archive','restore') and ${table.resultPlanId} = ${table.resourcePlanId})`),
+  check('physical_lifecycle_archive', sql`(${table.operation} = 'archive') = (${table.appliedArchivedAt} is not null)`),
+]);
 
 export const floorPlans = pgTable("floor_plans", {
   id: serial("id").primaryKey(),
