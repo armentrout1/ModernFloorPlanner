@@ -1,0 +1,97 @@
+{
+  "ok": true,
+  "smokeCases": 1,
+  "origin": "http://127.0.0.6:5190",
+  "sourceCommit": "f6ba3d388937c2815366be31532bbdd3a4cc594c",
+  "startedAtUtc": "2026-09-12T20:35:08.334Z",
+  "node": "v20.20.2",
+  "composition": "normal-registerRoutes",
+  "authentication": "unconfigured",
+  "checks": [
+    {
+      "name": "Exact integrated source and normal unavailable account composition",
+      "passed": true,
+      "status": "unavailable",
+      "sessionCookieIssued": false
+    },
+    {
+      "name": "Every physical persistence route fails closed with unconfigured accounts",
+      "passed": true
+    },
+    {
+      "name": "Anonymous local room, opening and takeoff remain usable",
+      "passed": true,
+      "roomDimensionsFeet": [
+        12,
+        10,
+        8
+      ],
+      "openingHeightFeet": 3,
+      "wastePercent": 10,
+      "protectedMutations": 0
+    },
+    {
+      "name": "Unavailable Account preserves pending name, dimension, opening and waste without cookies or writes",
+      "passed": true,
+      "sessionCookieIssued": false
+    },
+    {
+      "name": "Denied Save/Load preserve local legacy geometry and unfinished save name",
+      "passed": true,
+      "status": 503,
+      "saveRequests": 1
+    },
+    {
+      "name": "Seven private API requests reject forged identity/workspace/context hints",
+      "passed": true,
+      "deniedRequests": 7,
+      "status": 503
+    },
+    {
+      "name": "Anonymous editing never enables account autosave or creates an account recovery journal",
+      "passed": true,
+      "accountJournalCount": 0
+    },
+    {
+      "name": "Same local draft recovers pending name, dimension, opening and waste plus exact measurement/evidence state",
+      "passed": true,
+      "automaticUpload": false
+    }
+  ],
+  "pageErrorCount": 0,
+  "apiResponses": [
+    {
+      "method": "GET",
+      "path": "/api/auth/session",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/auth/session",
+      "status": 200
+    },
+    {
+      "method": "POST",
+      "path": "/api/floor-plans",
+      "status": 503
+    },
+    {
+      "method": "GET",
+      "path": "/api/auth/session",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/floor-plans",
+      "status": 503
+    }
+  ],
+  "screenshots": [
+    "canonical-autosave-local-draft.png",
+    "canonical-autosave-account-unavailable.png",
+    "canonical-autosave-local-recovery.png"
+  ],
+  "ownerOriginsVisited": false,
+  "finishedAtUtc": "2026-09-12T20:35:11.688Z",
+  "durationSeconds": 3.353
+}
