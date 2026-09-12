@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { toMm } from '../../shared/domain/units';
 import { before, after, beforeEach, test } from 'node:test';
 import { randomUUID } from 'node:crypto';
 import postgres from 'postgres';
@@ -234,11 +235,11 @@ test('viewer downloads are read-only and a later membership revocation denies an
   const owner = await member(), viewer = await member('account-b'), saved = await save(owner.client);
   await db`insert into workspace_memberships(workspace_id,principal_id,role,status) values(${owner.workspace.id},${viewer.identity.principal!.id},'viewer','active')`;
   await viewer.client.select(owner.workspace.id); const before = await counts();
-  for (const format of ['csv', 'html']) assert.equal((await viewer.client.request(exportPath(saved, format))).status, 200);
+  for (const format of ['csv', 'html', 'plan']) assert.equal((await viewer.client.request(exportPath(saved, format))).status, 200);
   assert.equal((await viewer.client.request(revisionPath(saved), 'POST', capturePhysicalSaveEnvelope(draft('9 ft')),
     { 'Idempotency-Key': randomUUID(), 'If-Match': saved.etag })).status, 403);
   await db`update workspace_memberships set status='revoked' where workspace_id=${owner.workspace.id} and principal_id=${viewer.identity.principal!.id}`;
-  for (const format of ['csv', 'html']) {
+  for (const format of ['csv', 'html', 'plan']) {
     const denied = await viewer.client.request(exportPath(saved, format));
     assert.ok([401, 404, 409].includes(denied.status));
     assert.doesNotMatch(await denied.text(), /Synthetic complete physical plan|Test room/);
@@ -249,7 +250,7 @@ test('viewer downloads are read-only and a later membership revocation denies an
 test('foreign and mismatched plan/revision identifiers never reveal an export even when IDs are known', async () => {
   const a = await member(), b = await member('account-b'), savedA = await save(a.client), savedB = await save(b.client);
   const before = await counts();
-  for (const format of ['csv', 'html']) {
+  for (const format of ['csv', 'html', 'plan']) {
     const denied = await b.client.request(exportPath(savedA, format)); assert.equal(denied.status, 404);
     assert.doesNotMatch(await denied.text(), /Synthetic complete physical plan|Test room/);
     const mixed = { ...savedA, revisionId: savedB.revisionId };
@@ -276,7 +277,7 @@ test('export rechecks current session/context and never accepts a naked link or 
   const currentContext = client.context!;
   assert.equal((await client.request('/api/auth/logout', 'POST')).status, 200);
   const stale = new PhysicalHttpClient(); stale.cookie = cookie; stale.context = currentContext; stale.workspace = workspace.id;
-  for (const format of ['csv', 'html']) assert.equal((await stale.request(exportPath(saved, format))).status, 401);
+  for (const format of ['csv', 'html', 'plan']) assert.equal((await stale.request(exportPath(saved, format))).status, 401);
 });
 
 for (const column of ['idle_expires_at', 'absolute_expires_at']) test(`export denies server-expired ${column} even with retained session headers`, async () => {
@@ -290,7 +291,7 @@ test('export rejects missing, repeated and unsupported format/unit controls inst
   const { client } = await member(), saved = await save(client), base = `${revisionPath(saved)}/${saved.revisionId}/export`;
   const before = await counts();
   for (const query of ['', '?format=csv', '?unit=ft', '?format=pdf&unit=ft', '?format=csv&unit=in',
-    '?format=csv&unit=ft&all=true', '?format=csv&format=html&unit=ft', '?format=csv&unit=ft&unit=m', '?format[0]=csv&unit=ft']) {
+    '?format=csv&unit=ft&all=true', '?format=csv&format=html&unit=ft', '?format=csv&unit=ft&unit=m', '?format[0]=csv&unit=ft', '?format=plan&format=html&unit=ft', '?format=plan&unit=ft&level=other']) {
     const response = await client.request(base + query); assert.equal(response.status, 400, query);
     assert.match(response.headers.get('content-type')!, /application\/json/); assert.equal((await response.json()).code, 'INVALID_REQUEST');
   }
@@ -321,4 +322,45 @@ test('saved unknown ceiling height exports explicit incompleteness without repla
   close(Number(exportedTotal(csv, 'floor-area').net), 120); close(Number(exportedTotal(csv, 'ceiling-area').net), 120);
   const walls = exportedTotal(csv, 'gross-wall-area'); assert.equal(walls.net, '');
   assert.notEqual(walls.status, 'complete'); assert.match(csv, /ceilingHeight|ceiling height/i);
+});
+
+
+test('saved schematic sheets use exact captured levels and geometry after later server edits', async () => {
+  const { client } = await member(); const body = capturePhysicalSaveEnvelope(richPhysicalSaveDraft());
+  for (const room of body.document.rooms) room.presentation = { xMm: toMm(1200, 'mm'), yMm: toMm(-500, 'mm') };
+  const saved = await save(client, body), before = await counts();
+  const response = await client.request(exportPath(saved, 'plan'));
+  assert.equal(response.status, 200); const html = await response.text();
+  assert.match(response.headers.get('content-type')!, /^text\/html; charset=utf-8$/i);
+  assert.equal(response.headers.get('content-disposition'), `attachment; filename="modern-floor-planner-${saved.revisionId}.html"`);
+  assert.match(response.headers.get('cache-control')!, /no-store/);
+  assert.match(response.headers.get('content-security-policy')!, /^sandbox;/);
+  assert.equal(response.headers.get('referrer-policy'), 'no-referrer');
+  assert.match(html, /<svg\b/); assert.match(html, /data-level-id="lower-level"/); assert.match(html, /data-level-id="upper-level"/);
+  assert.match(html, /lower-room/); assert.match(html, /upper-room/); assert.match(html, /bifold/);
+  assert.match(html, new RegExp(saved.evaluation.snapshot.instance.id));
+  assert.doesNotMatch(html, /<script\b|<foreignObject\b|NaN|Infinity/);
+  assert.doesNotMatch(await (await client.request(exportPath(saved, 'html'))).text(), /<svg\b/);
+  assert.deepEqual(await counts(), before);
+  const next = structuredClone(body); next.document.rooms[0].name = 'Later room label';
+  next.document.rooms[0].presentation = { xMm: toMm(9000, 'mm'), yMm: toMm(8000, 'mm') };
+  const appended = await client.request(revisionPath(saved), 'POST', next, { 'Idempotency-Key': randomUUID(), 'If-Match': saved.etag });
+  assert.equal(appended.status, 201); const newer = await appended.json() as PhysicalPlanRevision;
+  const afterSave = await counts();
+  assert.equal(await (await client.request(exportPath(saved, 'plan'))).text(), html);
+  const newerHtml = await (await client.request(exportPath(newer, 'plan'))).text();
+  assert.match(newerHtml, /Later room label/); assert.notEqual(newerHtml, html);
+  assert.deepEqual((await (await client.request(`${revisionPath(saved)}/${saved.revisionId}`)).json()).envelope, body);
+  assert.deepEqual(await counts(), afterSave);
+});
+
+test('schematic labels remain inert markup and invalid print controls fail closed', async () => {
+  const { client } = await member(); const body = capturePhysicalSaveEnvelope(draft());
+  body.document.rooms[0].presentation = { xMm: toMm(0, 'mm'), yMm: toMm(0, 'mm') };
+  body.document.rooms[0].name = '<svg onload="evil()"><script>bad()</script>';
+  const saved = await save(client, body); const before = await counts();
+  const html = await (await client.request(exportPath(saved, 'plan'))).text();
+  assert.match(html, /&lt;svg/); assert.doesNotMatch(html, /<script\b|<svg[^>]* onload=|<foreignObject\b/);
+  const naked = new PhysicalHttpClient(); assert.equal((await naked.request(exportPath(saved, 'plan'))).status, 401);
+  assert.deepEqual(await counts(), before);
 });

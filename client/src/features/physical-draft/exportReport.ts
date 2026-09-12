@@ -14,7 +14,7 @@ export async function captureLocalReport(draft: PhysicalDraft, id: string, at: s
   return result.snapshot;
 }
 
-export async function fetchSavedReport(planId: string, revisionId: string, format: 'csv' | 'html', unit: 'ft' | 'm') {
+export async function fetchSavedReport(planId: string, revisionId: string, format: 'csv' | 'html' | 'plan', unit: 'ft' | 'm') {
   const context = await captureRequestContext();
   const url = `/api/physical-plans/${encodeURIComponent(planId)}/revisions/${encodeURIComponent(revisionId)}/export?format=${format}&unit=${unit}`;
   const response = await contextFetch('GET', url, undefined, context);

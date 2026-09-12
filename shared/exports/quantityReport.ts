@@ -1,3 +1,4 @@
+import { PLAN_DRAWING_CSS, renderPlanDrawing } from './planDrawing';
 import type { Dimension, Elevation } from '../domain/measurements';
 import { formatQuantity } from '../quantities/display';
 import type { DeepReadonly } from '../quantities/immutability';
@@ -9,6 +10,8 @@ export interface ReportOptions {
   source: 'local' | 'saved';
   planId?: string;
   revisionId?: string;
+  /** HTML-only additive layout view. CSV remains the existing quantity report. */
+  includeDrawing?: boolean;
 }
 
 type Snapshot = DeepReadonly<QuantitySnapshot>;
@@ -26,10 +29,14 @@ const OUTPUT_NAMES: Record<QuantityRecord['output'], string> = {
   'door-casing': 'Door casing', 'window-casing': 'Window casing', 'opening-inventory': 'Opening inventory',
 };
 const LIMITS = 'Measured finish quantities only, not a complete construction materials list. Material recipes, coverage, accessories, purchasing and trade models are not included. Layout-only zones and cabinet blocks do not add room finish area. Quantity report only; no scaled drawing.';
+const reportLimits = (options: ReportOptions) => options.includeDrawing
+  ? LIMITS.replace('Quantity report only; no scaled drawing.', 'Schematic drawing fitted to the page; not a certified scale drawing. The entire captured layout is shown, while only selected targets contribute to quantities.')
+  : LIMITS;
 const PRECISION = 'Display quantities and dimensions are rounded to four decimal places. CSV canonical columns retain the captured unrounded mm, mm2 or count values. Rounding is presentation only; displayed rows may not sum exactly.';
 
 function checkOptions(options: ReportOptions) {
-  if (!['ft', 'm'].includes(options.unit) || !['local', 'saved'].includes(options.source)) {
+  if (!['ft', 'm'].includes(options.unit) || !['local', 'saved'].includes(options.source)
+      || (options.includeDrawing !== undefined && typeof options.includeDrawing !== 'boolean')) {
     throw new Error('Explicit report units and local or authorized saved provenance are required.');
   }
 }
@@ -74,7 +81,7 @@ function targetName(record: RecordRow, names: Map<string, string>) {
 function metadata(snapshot: Snapshot, options: ReportOptions): [string, Cell][] {
   const calculation = snapshot.evaluation.calculation;
   return [
-    ['Report', 'Modern Floor Planner quantity report'], ['Project', snapshot.sourceDocument.name || 'Untitled project'],
+    ['Report', options.includeDrawing ? 'Modern Floor Planner drawing and quantity report' : 'Modern Floor Planner quantity report'], ['Project', snapshot.sourceDocument.name || 'Untitled project'],
     ['Source', options.source === 'local' ? 'Local capture; not an account-saved revision' : 'Authorized saved revision'],
     ['Account plan ID', options.source === 'saved' ? options.planId ?? 'Not supplied' : 'Not applicable'],
     ['Account revision ID', options.source === 'saved' ? options.revisionId ?? 'Not supplied' : 'Not applicable'],
@@ -88,7 +95,7 @@ function metadata(snapshot: Snapshot, options: ReportOptions): [string, Cell][] 
     ['Result schema', calculation.schemaVersion], ['Selected calculation status', calculation.status],
     ['Display length units', options.unit], ['Opening measurement basis', calculation.request.policy.openingMeasureBasis],
     ['Crown full-height gaps', JSON.stringify(calculation.request.policy.crownFullHeightGaps)],
-    ['Precision', PRECISION], ['Boundaries', LIMITS],
+    ['Precision', PRECISION], ['Boundaries', reportLimits(options)],
     ['Uncertainty', 'Complete describes only the captured selected outputs. Provisional values require review. Missing or unsupported inputs remain unavailable; available subtotals are not complete selected totals.'],
     ['Privacy', 'Authorization applies when retrieving a saved report. A downloaded copy cannot be retroactively revoked.'],
   ];
@@ -196,6 +203,7 @@ function detailRows(snapshot: Snapshot, options: ReportOptions): CsvRow[] {
  * for saved reports, authorize retrieval before calling. Never evaluates geometry. */
 export function renderQuantityCsv(snapshot: Snapshot, options: ReportOptions): string {
   checkOptions(options);
+  options = { ...options, includeDrawing: false };
   const rows: CsvRow[] = [...metadata(snapshot, options).map(([name, details]) => ({ section: 'metadata', name, details })),
     ...scopeRows(snapshot), ...aggregateRows(snapshot, options), ...dimensionRows(snapshot, options), ...detailRows(snapshot, options)];
   return '\uFEFF' + COLUMNS.map(csvCell).join(',') + '\r\n'
@@ -238,13 +246,14 @@ export function renderQuantityHtml(snapshot: Snapshot, options: ReportOptions): 
   return '<!doctype html><html lang="en"><head><meta charset="utf-8">'
     + '<meta name="viewport" content="width=device-width, initial-scale=1">'
     + '<meta http-equiv="Content-Security-Policy" content="default-src \'none\'; style-src \'unsafe-inline\'; base-uri \'none\'; form-action \'none\'">'
-    + '<title>' + html(snapshot.sourceDocument.name || 'Untitled project') + ' — quantity report</title>'
-    + '<style>@page{size:auto;margin:16mm}*{box-sizing:border-box}body{margin:0 auto;padding:28px;max-width:1100px;color:#172535;background:#fff;font:14px/1.5 system-ui,"Segoe UI",sans-serif}h1{font-size:28px;line-height:1.2;margin:8px 0}h2{font-size:20px;border-bottom:2px solid #243b53;padding-bottom:8px;margin-top:30px}h3{font-size:17px;margin:0 0 6px}h4{margin:14px 0 4px}p,li,td,dd{overflow-wrap:anywhere;white-space:pre-wrap;orphans:3;widows:3}dt{font-weight:600}dd{margin:0 0 8px}article{padding:16px 0;border-bottom:1px solid #bac6d2}table{border-collapse:collapse;width:100%;table-layout:fixed;font-size:12px;margin:10px 0}caption{text-align:left;font-weight:600;padding-bottom:6px}th,td{border:1px solid #bbc5cf;padding:7px;text-align:left;vertical-align:top;overflow-wrap:anywhere}th{background:#f0f4f7}thead{display:table-header-group}tr{break-inside:avoid}.notice{border-left:4px solid #375f82;padding:12px;background:#f1f6fa}.unavailable,.finding{color:#683c00}.ids,.muted{font-size:12px;color:#435468}.metadata{display:grid;grid-template-columns:minmax(140px,1fr) 3fr;gap:0 14px}.metadata dd{min-width:0}h1,h2,h3,h4,caption{break-after:avoid;overflow-wrap:anywhere;white-space:pre-wrap}.amounts{break-inside:avoid}.screen-only{font-size:13px}@media print{body{max-width:none;padding:0;font-size:10pt}h1{font-size:21pt}h2{font-size:15pt}h3{font-size:12pt}table{font-size:8pt}.screen-only{display:none}.notice{background:transparent}a{color:inherit}}@media(max-width:600px){body{padding:14px}.metadata{display:block}table{font-size:10px}th,td{padding:4px}}</style></head><body>'
-    + '<header><p class="muted">Modern Floor Planner · captured quantity report</p><h1>' + html(snapshot.sourceDocument.name || 'Untitled project')
+    + '<title>' + html(snapshot.sourceDocument.name || 'Untitled project') + (options.includeDrawing ? ' — drawing and quantity report</title>' : ' — quantity report</title>')
+    + '<style>@page{size:auto;margin:16mm}*{box-sizing:border-box}body{margin:0 auto;padding:28px;max-width:1100px;color:#172535;background:#fff;font:14px/1.5 system-ui,"Segoe UI",sans-serif}h1{font-size:28px;line-height:1.2;margin:8px 0}h2{font-size:20px;border-bottom:2px solid #243b53;padding-bottom:8px;margin-top:30px}h3{font-size:17px;margin:0 0 6px}h4{margin:14px 0 4px}p,li,td,dd{overflow-wrap:anywhere;white-space:pre-wrap;orphans:3;widows:3}dt{font-weight:600}dd{margin:0 0 8px}article{padding:16px 0;border-bottom:1px solid #bac6d2}table{border-collapse:collapse;width:100%;table-layout:fixed;font-size:12px;margin:10px 0}caption{text-align:left;font-weight:600;padding-bottom:6px}th,td{border:1px solid #bbc5cf;padding:7px;text-align:left;vertical-align:top;overflow-wrap:anywhere}th{background:#f0f4f7}thead{display:table-header-group}tr{break-inside:avoid}.notice{border-left:4px solid #375f82;padding:12px;background:#f1f6fa}.unavailable,.finding{color:#683c00}.ids,.muted{font-size:12px;color:#435468}.metadata{display:grid;grid-template-columns:minmax(140px,1fr) 3fr;gap:0 14px}.metadata dd{min-width:0}h1,h2,h3,h4,caption{break-after:avoid;overflow-wrap:anywhere;white-space:pre-wrap}.amounts{break-inside:avoid}.screen-only{font-size:13px}@media print{body{max-width:none;padding:0;font-size:10pt}h1{font-size:21pt}h2{font-size:15pt}h3{font-size:12pt}table{font-size:8pt}.screen-only{display:none}.notice{background:transparent}a{color:inherit}}@media(max-width:600px){body{padding:14px}.metadata{display:block}table{font-size:10px}th,td{padding:4px}}' + (options.includeDrawing ? PLAN_DRAWING_CSS : '') + '</style></head><body>'
+    + '<header><p class="muted">Modern Floor Planner · captured ' + (options.includeDrawing ? 'drawing and quantity report' : 'quantity report') + '</p><h1>' + html(snapshot.sourceDocument.name || 'Untitled project')
     + '</h1><p><strong>Selected calculation status: ' + html(calculation.status) + '</strong></p>'
     + '<p class="screen-only">Use your browser’s Print command to print this report or choose Save as PDF. Paper size and browser settings affect pagination.</p></header>'
-    + '<div class="notice"><p>' + html(LIMITS) + '</p><p>Unsupported ceiling shapes are unavailable, never verified as flat ceilings. Historical snapshots retain their captured policy and assumptions; no upgrade or new measurement confirmation occurs during export.</p>'
+    + '<div class="notice"><p>' + html(reportLimits(options)) + '</p><p>Unsupported ceiling shapes are unavailable, never verified as flat ceilings. Historical snapshots retain their captured policy and assumptions; no upgrade or new measurement confirmation occurs during export.</p>'
     + '<p>' + html(PRECISION) + '</p></div>'
+    + (options.includeDrawing ? renderPlanDrawing(snapshot, options) : '')
     + '<h2>Selected quantities</h2>' + (calculation.outputs.length ? calculation.outputs.map(value => aggregateHtml(value, options)).join('')
       : '<p>No outputs selected. This empty report is not a completed takeoff.</p>')
     + '<h2>Captured scope</h2><p>Only these captured IDs contribute. Other rooms and objects in the source do not automatically enter this scope.</p><ul>'

@@ -11,7 +11,7 @@ import { selectedDraft, type PhysicalDraft } from './state';
 import { usePhysicalDraft } from './provider';
 
 interface CapturedReport {
-  html: string; csv: string | null; source: 'local' | 'saved'; unit: 'ft' | 'm';
+  includeDrawing: boolean; html: string; csv: string | null; source: 'local' | 'saved'; unit: 'ft' | 'm';
   generation: number; context: string; draftId: string; localRevision: number; binding: SaveBinding | null;
 }
 const keepInput = (event: PointerEvent<HTMLButtonElement>) => { if (event.button === 0) event.preventDefault(); };
@@ -23,6 +23,7 @@ export function ExportPanel({ draft }: { draft: PhysicalDraft }) {
   useSyncExternalStore(manager.subscribe, manager.getSnapshot);
   const binding = manager.state(draft.id).binding;
   const [source, setSource] = useState<'local' | 'saved'>('local');
+  const [includeDrawing, setIncludeDrawing] = useState(false);
   const [report, setReport] = useState<CapturedReport | null>(null);
   const [notice, setNotice] = useState(''), [busy, setBusy] = useState(false), [frameReady, setFrameReady] = useState(false);
   const frame = useRef<HTMLIFrameElement>(null), mounted = useRef(true), operation = useRef(0);
@@ -46,19 +47,19 @@ export function ExportPanel({ draft }: { draft: PhysicalDraft }) {
       let html: string, csv: string | null = null;
       if (source === 'saved') {
         if (!binding) throw Error('Save or open an authorized plan first.');
-        html = (await fetchSavedReport(binding.planId, binding.revisionId, 'html', draft.displayUnit)).text;
+        html = (await fetchSavedReport(binding.planId, binding.revisionId, includeDrawing ? 'plan' : 'html', draft.displayUnit)).text;
       } else {
         const unapplied = document.querySelector<HTMLElement>('[data-testid="physical-view"] [data-physical-unapplied-action]');
         if (unapplied || pendingSaveFields(draft).length) throw Error('Apply or Revert unfinished fields before preparing a report. Your text is unchanged.');
         const snapshot = await captureLocalReport(draft, crypto.randomUUID(), new Date().toISOString());
         await authorizeLocal();
-        html = renderQuantityHtml(snapshot, { unit: draft.displayUnit, source: 'local' });
+        html = renderQuantityHtml(snapshot, { unit: draft.displayUnit, source: 'local', includeDrawing });
         csv = renderQuantityCsv(snapshot, { unit: draft.displayUnit, source: 'local' });
       }
       const live = selectedDraft(store.getSnapshot().registry);
       if (!valid(id, generation) || !live || live.id !== draft.id || live.localEditRevision !== revision)
         throw Error('The draft or account changed while preparing the report. Prepare it again.');
-      setReport({ html, csv, source, unit: draft.displayUnit, generation, context, draftId: draft.id, localRevision: revision, binding: source === 'saved' ? { ...binding! } : null });
+      setReport({ includeDrawing, html, csv, source, unit: draft.displayUnit, generation, context, draftId: draft.id, localRevision: revision, binding: source === 'saved' ? { ...binding! } : null });
     } catch (error) { if (valid(id, generation)) setNotice(error instanceof Error ? error.message : 'Report unavailable. Your draft is unchanged.'); }
     finally { if (valid(id, generation)) setBusy(false); }
   }
@@ -69,7 +70,7 @@ export function ExportPanel({ draft }: { draft: PhysicalDraft }) {
     try {
       let body = captured.csv;
       if (captured.source === 'saved' && captured.binding) {
-        const fetched = await fetchSavedReport(captured.binding.planId, captured.binding.revisionId, format === 'csv' ? 'csv' : 'html', captured.unit);
+        const fetched = await fetchSavedReport(captured.binding.planId, captured.binding.revisionId, format === 'csv' ? 'csv' : captured.includeDrawing ? 'plan' : 'html', captured.unit);
         assertRequestContext(fetched.context);
         if (format === 'print' && fetched.text !== captured.html) throw Error('The saved report changed. Prepare it again before printing.');
         body = fetched.text;
@@ -89,11 +90,15 @@ export function ExportPanel({ draft }: { draft: PhysicalDraft }) {
   }
   return <section aria-label="Quantity reports" className="space-y-3 rounded-md border bg-slate-50 p-3">
     <h3 className="font-semibold">Quantity reports</h3>
-    <p className="text-sm text-slate-600">Capture selected work, measurements and uncertainty. This is a quantity report; it does not include a plan drawing or purchasing list.</p>
+    <p className="text-sm text-slate-600">Capture selected work, measurements and uncertainty. Include a schematic drawing if needed. These reports are not purchasing lists or certified scale drawings.</p>
     <div className="flex flex-wrap items-end gap-2">
       <label className="grid gap-1 text-sm">Report source<select className="h-9 rounded border bg-white px-2" value={source}
         onChange={event => { ++operation.current; setBusy(false); setSource(event.target.value as 'local' | 'saved'); setReport(null); }}>
         <option value="local">Current local draft</option><option value="saved" disabled={!binding}>Last acknowledged saved revision{binding ? ' ' + binding.revisionNumber : ''}</option>
+      </select></label>
+      <label className="grid gap-1 text-sm">Report contents<select className="h-9 rounded border bg-white px-2" value={includeDrawing ? 'plan' : 'quantity'}
+        onChange={event => { ++operation.current; setBusy(false); setNotice(''); setFrameReady(false); setIncludeDrawing(event.target.value === 'plan'); setReport(null); }}>
+        <option value="quantity">Quantities only</option><option value="plan">Drawing + quantities</option>
       </select></label>
       <Button type="button" size="sm" variant="outline" onPointerDown={keepInput} onClick={prepare} disabled={busy || account.checking || ['uninitialized','corrupt','unsupported'].includes(cache)}>Prepare report</Button>
     </div>
