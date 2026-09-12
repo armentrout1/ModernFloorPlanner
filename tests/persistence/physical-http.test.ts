@@ -167,3 +167,158 @@ test('rich schema5 with stairs,landings,holes,zones,cabinets,appearance and evid
  close(floor.allowance/(304.8*304.8),25.2);close(floor.adjusted/(304.8*304.8),277.2);
  assert.equal(restored.document.schemaVersion,5);if(restored.document.schemaVersion===5){assert.equal(restored.document.stairsContract.stairs[0].id,'stair');assert.equal(restored.document.layoutContract.zones[0].id,'zone');assert.equal(restored.document.layoutContract.cabinetBlocks[0].id,'cabinet');}
 });
+
+const exportPath = (saved: PhysicalPlanRevision, format = 'csv', unit = 'ft') =>
+  `${revisionPath(saved)}/${saved.revisionId}/export?format=${format}&unit=${unit}`;
+/** Parse quoted RFC4180 fields independently of the production serializer. */
+function csvRecords(text: string): Record<string, string>[] {
+  const rows: string[][] = []; let row: string[] = [], value = '', quoted = false;
+  const input = text.replace(/^\uFEFF/, '');
+  for (let i = 0; i < input.length; i++) {
+    const char = input[i];
+    if (char === '"') {
+      if (quoted && input[i + 1] === '"') { value += '"'; i++; }
+      else quoted = !quoted;
+    } else if (char === ',' && !quoted) { row.push(value); value = ''; }
+    else if ((char === '\r' || char === '\n') && !quoted) {
+      if (char === '\r' && input[i + 1] === '\n') i++;
+      row.push(value); rows.push(row); row = []; value = '';
+    } else value += char;
+  }
+  assert.equal(quoted, false, 'CSV has a closed quoted field');
+  if (row.length || value) { row.push(value); rows.push(row); }
+  const headers = rows.shift(); assert.ok(headers, 'CSV has a header');
+  return rows.filter(fields => fields.some(Boolean)).map(fields => {
+    assert.equal(fields.length, headers.length, 'Every CSV row has the declared columns');
+    return Object.fromEntries(headers.map((header, index) => [header, fields[index]]));
+  });
+}
+function exportedTotal(text: string, output: string) {
+  const row = csvRecords(text).find(record => record.section === 'selected-total' && record.output === output);
+  assert.ok(row, `Missing selected total for ${output}`); return row;
+}
+
+test('saved exports retain exact captured quantities and bytes after a newer server revision exists', async () => {
+  const { client } = await member(); const saved = await save(client);
+  const csvResponse = await client.request(exportPath(saved)); assert.equal(csvResponse.status, 200);
+  const csv = await csvResponse.text();
+  for (const [output, expected] of [['floor-area', 120], ['ceiling-area', 120], ['gross-wall-area', 352]] as const)
+    close(Number(exportedTotal(csv, output).net), expected);
+  assert.match(csv, new RegExp(saved.revisionId)); assert.match(csv, new RegExp(saved.createdAt));
+  assert.match(csvResponse.headers.get('content-type')!, /^text\/csv; charset=utf-8$/i);
+  assert.equal(csvResponse.headers.get('x-content-type-options'), 'nosniff');
+  assert.equal(csvResponse.headers.get('content-disposition'), `attachment; filename="modern-floor-planner-${saved.revisionId}.csv"`);
+  assert.match(csvResponse.headers.get('cache-control')!, /private/);
+  const htmlResponse = await client.request(exportPath(saved, 'html')); assert.equal(htmlResponse.status, 200);
+  const html = await htmlResponse.text(); assert.match(html, new RegExp(saved.revisionId));
+  assert.match(htmlResponse.headers.get('content-type')!, /^text\/html; charset=utf-8$/i);
+  assert.match(htmlResponse.headers.get('content-security-policy')!, /^sandbox;/);
+  assert.match(htmlResponse.headers.get('content-security-policy')!, /default-src 'none'/);
+  assert.equal(htmlResponse.headers.get('referrer-policy'), 'no-referrer');
+  const appended = await client.request(revisionPath(saved), 'POST', capturePhysicalSaveEnvelope(draft('9 ft')),
+    { 'Idempotency-Key': randomUUID(), 'If-Match': saved.etag });
+  assert.equal(appended.status, 201); const next = await appended.json() as PhysicalPlanRevision;
+  const beforeExports = await counts();
+  assert.equal(await (await client.request(exportPath(saved))).text(), csv);
+  assert.equal(await (await client.request(exportPath(saved, 'html'))).text(), html);
+  const nextCsv = await (await client.request(exportPath(next))).text();
+  close(Number(exportedTotal(nextCsv, 'gross-wall-area').net), 396);
+  close(Number(exportedTotal(nextCsv, 'floor-area').net), 120);
+  const metric = await (await client.request(exportPath(saved, 'csv', 'm'))).text();
+  close(Number(exportedTotal(metric, 'floor-area').net), 11.1484);
+  close(Number(exportedTotal(metric, 'floor-area').canonical_net), 11148364.8);
+  assert.deepEqual(await counts(), beforeExports, 'Export does not create plans, revisions or save receipts');
+});
+
+test('viewer downloads are read-only and a later membership revocation denies another download', async () => {
+  const owner = await member(), viewer = await member('account-b'), saved = await save(owner.client);
+  await db`insert into workspace_memberships(workspace_id,principal_id,role,status) values(${owner.workspace.id},${viewer.identity.principal!.id},'viewer','active')`;
+  await viewer.client.select(owner.workspace.id); const before = await counts();
+  for (const format of ['csv', 'html']) assert.equal((await viewer.client.request(exportPath(saved, format))).status, 200);
+  assert.equal((await viewer.client.request(revisionPath(saved), 'POST', capturePhysicalSaveEnvelope(draft('9 ft')),
+    { 'Idempotency-Key': randomUUID(), 'If-Match': saved.etag })).status, 403);
+  await db`update workspace_memberships set status='revoked' where workspace_id=${owner.workspace.id} and principal_id=${viewer.identity.principal!.id}`;
+  for (const format of ['csv', 'html']) {
+    const denied = await viewer.client.request(exportPath(saved, format));
+    assert.ok([401, 404, 409].includes(denied.status));
+    assert.doesNotMatch(await denied.text(), /Synthetic complete physical plan|Test room/);
+  }
+  assert.deepEqual(await counts(), before);
+});
+
+test('foreign and mismatched plan/revision identifiers never reveal an export even when IDs are known', async () => {
+  const a = await member(), b = await member('account-b'), savedA = await save(a.client), savedB = await save(b.client);
+  const before = await counts();
+  for (const format of ['csv', 'html']) {
+    const denied = await b.client.request(exportPath(savedA, format)); assert.equal(denied.status, 404);
+    assert.doesNotMatch(await denied.text(), /Synthetic complete physical plan|Test room/);
+    const mixed = { ...savedA, revisionId: savedB.revisionId };
+    assert.equal((await a.client.request(exportPath(mixed, format))).status, 404);
+    assert.equal((await a.client.request(exportPath({ ...savedA, revisionId: randomUUID() }, format))).status, 404);
+    assert.equal((await b.client.request(exportPath(savedA, format), 'GET', undefined,
+      { 'X-MFP-Workspace-Id': a.workspace.id })).status, 409);
+  }
+  assert.deepEqual(await counts(), before);
+});
+
+test('export rechecks current session/context and never accepts a naked link or a logged-out cookie', async () => {
+  const { client, workspace } = await member(), saved = await save(client);
+  const cookie = client.cookie, originalContext = client.context!;
+  const anonymous = new PhysicalHttpClient();
+  assert.equal((await anonymous.request(exportPath(saved), 'GET', undefined,
+    { 'X-MFP-Workspace-Id': workspace.id, 'X-MFP-Context': originalContext })).status, 401);
+  assert.equal((await client.request(exportPath(saved), 'GET', undefined, { 'X-MFP-Context': '' })).status, 409);
+  await client.select(null);
+  assert.equal((await client.request(exportPath(saved), 'GET', undefined,
+    { 'X-MFP-Context': originalContext, 'X-MFP-Workspace-Id': workspace.id })).status, 409);
+  await client.select(workspace.id);
+  assert.equal((await client.request(exportPath(saved))).status, 200);
+  const currentContext = client.context!;
+  assert.equal((await client.request('/api/auth/logout', 'POST')).status, 200);
+  const stale = new PhysicalHttpClient(); stale.cookie = cookie; stale.context = currentContext; stale.workspace = workspace.id;
+  for (const format of ['csv', 'html']) assert.equal((await stale.request(exportPath(saved, format))).status, 401);
+});
+
+for (const column of ['idle_expires_at', 'absolute_expires_at']) test(`export denies server-expired ${column} even with retained session headers`, async () => {
+  const { client, identity } = await member(), saved = await save(client), before = await counts();
+  await db`update auth_browser_contexts set ${db(column)}=now()-interval '1 second' where principal_id=${identity.principal!.id}`;
+  assert.equal((await client.request(exportPath(saved))).status, 401);
+  assert.deepEqual(await counts(), before);
+});
+
+test('export rejects missing, repeated and unsupported format/unit controls instead of falling through to HTML', async () => {
+  const { client } = await member(), saved = await save(client), base = `${revisionPath(saved)}/${saved.revisionId}/export`;
+  const before = await counts();
+  for (const query of ['', '?format=csv', '?unit=ft', '?format=pdf&unit=ft', '?format=csv&unit=in',
+    '?format=csv&unit=ft&all=true', '?format=csv&format=html&unit=ft', '?format=csv&unit=ft&unit=m', '?format[0]=csv&unit=ft']) {
+    const response = await client.request(base + query); assert.equal(response.status, 400, query);
+    assert.match(response.headers.get('content-type')!, /application\/json/); assert.equal((await response.json()).code, 'INVALID_REQUEST');
+  }
+  for (const path of [`/api/physical-plans/invalid/revisions/${saved.revisionId}/export?format=csv&unit=ft`,
+    `${revisionPath(saved)}/invalid/export?format=csv&unit=ft`]) assert.equal((await client.request(path)).status, 400);
+  assert.deepEqual(await counts(), before);
+});
+
+test('saved export neutralizes formula labels and escapes executable markup without changing the source', async () => {
+  const { client } = await member(), body = capturePhysicalSaveEnvelope(draft());
+  body.document.name = '=2+2'; body.document.rooms[0].name = '<script>alert("room")</script>, quoted "name"';
+  const saved = await save(client, body), before = await counts();
+  const csvResponse = await client.request(exportPath(saved)); assert.equal(csvResponse.status, 200); const csv = await csvResponse.text();
+  assert.ok(csvRecords(csv).some(row => Object.values(row).includes("'=2+2")), 'Formula label receives a literal-text prefix');
+  assert.ok(csvRecords(csv).some(row => Object.values(row).includes(body.document.rooms[0].name!)), 'CSV quotes preserve harmless room text');
+  assert.doesNotMatch(csvResponse.headers.get('content-disposition')!, /=2\+2|script|room/);
+  const htmlResponse = await client.request(exportPath(saved, 'html')); assert.equal(htmlResponse.status, 200); const html = await htmlResponse.text();
+  assert.doesNotMatch(html, /<script\b/i); assert.match(html, /&lt;script&gt;/);
+  assert.doesNotMatch(html, /<(?:iframe|object|embed)\b/i);
+  assert.match(html, /no scaled drawing|schematic/i);
+  assert.deepEqual((await (await client.request(`${revisionPath(saved)}/${saved.revisionId}`)).json()).envelope, body);
+  assert.deepEqual(await counts(), before);
+});
+
+test('saved unknown ceiling height exports explicit incompleteness without replacing wall totals with zero', async () => {
+  const { client } = await member(), saved = await save(client, capturePhysicalSaveEnvelope(draft('')));
+  const response = await client.request(exportPath(saved)); assert.equal(response.status, 200); const csv = await response.text();
+  close(Number(exportedTotal(csv, 'floor-area').net), 120); close(Number(exportedTotal(csv, 'ceiling-area').net), 120);
+  const walls = exportedTotal(csv, 'gross-wall-area'); assert.equal(walls.net, '');
+  assert.notEqual(walls.status, 'complete'); assert.match(csv, /ceilingHeight|ceiling height/i);
+});

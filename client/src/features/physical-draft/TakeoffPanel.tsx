@@ -12,6 +12,7 @@ import { setOutputEnabled, setOutputTargets, selectAllCurrentTargets, setTakeoff
   getWasteField, editWaste, commitWaste, wasteError } from './takeoffCommands';
 import { buildTakeoffReadModel, OUTPUT_LABELS, roomLabel, scopeForRequest, scopeForSelection, type DrawingSourceScope } from './takeoffReadModel';
 import { TakeoffResults } from './TakeoffResults';
+import { ExportPanel } from './ExportPanel';
 
 type Change = (change: (draft: PhysicalDraft) => PhysicalDraft, expectedRevision?: number) => boolean;
 type Face = { openingId: string; wallFaceId: string };
@@ -127,6 +128,7 @@ export function TakeoffPanel({ draft, update, onFocus, onEdit, review, showScope
     {draft.takeoffState?.notice ? <p role="status" className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm">{draft.takeoffState.notice.message}</p> : null}
     {model.errors.length ? <ul className="space-y-1 text-sm text-amber-900">{model.errors.map((error, index) => <li key={error.code + index}>{error.message}</li>)}</ul> : null}
     <TakeoffResults outputs={model.outputs} onFocus={onFocus} onEdit={onEdit} />
+    <ExportPanel draft={draft} />
     {reviewVisible ? review : null}
     <p className="border-t pt-3 text-xs leading-5 text-slate-500">These are measured finish quantities. Waste-adjusted values are not boxes, sheets, gallons, prices or an order-ready construction materials list. Input review is not professional verification or code compliance. Recovery is temporary in this browser tab.</p>
   </section>;

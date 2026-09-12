@@ -3,9 +3,11 @@ import { z } from 'zod';
 import { createProtectedRoute, privateApiResponses } from './authorizedRoutes';
 import type { IdentityResolver } from './identity';
 import { PhysicalPlanStorage, PhysicalPlanStorageError } from './physicalPlanStorage';
+import { renderQuantityCsv, renderQuantityHtml } from '@shared/exports/quantityReport';
 
 const uuid = z.string().uuid();
 const pageQuery = z.object({ limit: z.coerce.number().int().min(1).max(50).optional(), cursor: z.string().min(1).max(200).optional() }).strict();
+const exportQuery = z.object({ format: z.enum(['csv', 'html']), unit: z.enum(['ft', 'm']) }).strict();
 const invalid = (res: Response) => res.status(400).json({ code: 'INVALID_REQUEST', message: 'Invalid physical plan request.' });
 export function mountPhysicalPlanRoutes(app: Express, identityResolver: IdentityResolver, allowedOrigin: string | null): void {
   app.disable('etag');
@@ -39,6 +41,26 @@ export function mountPhysicalPlanRoutes(app: Express, identityResolver: Identity
     if (!plan.success || !revision.success) return invalid(res);
     const saved = await storage.readRevision(identity, workspace, plan.data, revision.data);
     res.setHeader('ETag', saved.etag); res.json(saved);
+  }));
+  app.get('/api/physical-plans/:planId/revisions/:revisionId/export', protectedRoute(async (req, res, storage, identity, workspace) => {
+    const plan = uuid.safeParse(req.params.planId), revision = uuid.safeParse(req.params.revisionId);
+    const query = exportQuery.safeParse(req.query);
+    if (!plan.success || !revision.success || !query.success) return invalid(res);
+    // Authorize this immutable revision at retrieval. A prior download, local
+    // binding, or knowledge of an ID never grants access to a later request.
+    const saved = await storage.readRevision(identity, workspace, plan.data, revision.data);
+    const options = { unit: query.data.unit, source: 'saved' as const, planId: saved.planId, revisionId: saved.revisionId };
+    const body = await (query.data.format === 'csv'
+      ? renderQuantityCsv(saved.evaluation.snapshot, options)
+      : renderQuantityHtml(saved.evaluation.snapshot, options));
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('Content-Disposition', `attachment; filename="modern-floor-planner-${saved.revisionId}.${query.data.format}"`);
+    res.setHeader('Content-Type', query.data.format === 'csv' ? 'text/csv; charset=utf-8' : 'text/html; charset=utf-8');
+    if (query.data.format === 'html') {
+      res.setHeader('Content-Security-Policy', "sandbox; default-src 'none'; style-src 'unsafe-inline'; img-src data:; base-uri 'none'; form-action 'none'; frame-ancestors 'none'");
+      res.setHeader('Referrer-Policy', 'no-referrer');
+    }
+    res.send(body);
   }));
   app.post('/api/physical-plans/:planId/revisions', protectedRoute(async (req, res, storage, identity, workspace) => {
     const plan = uuid.safeParse(req.params.planId); if (!plan.success) return invalid(res);
