@@ -189,10 +189,11 @@ test('only current owners administer existing memberships and cannot remove the 
   assert.equal((await repository.updateWorkspaceName(f.editor.identity, f.a.id, 'New name')).name, 'New name');
 });
 test('database constraints reject dangling ownership, duplicate identity and invalid roles', async () => {
+  // Drizzle wraps driver errors; keep asserting the underlying PostgreSQL constraint code.
   const f = await seed();
-  await assert.rejects(db.insert(schema.externalIdentities).values({ ...f.owner.identity, principalId: f.viewer.principalId }), (e:any) => e.code === '23505');
-  await assert.rejects(db.insert(schema.workspaceMemberships).values({ workspaceId: f.a.id, principalId: f.outsider.principalId, role: 'admin' as any }), (e:any) => e.code === '23514');
-  await assert.rejects(db.insert(schema.floorPlans).values({ ...payload(), workspaceId: randomUUID() }), (e:any) => e.code === '23503');
+  await assert.rejects(db.insert(schema.externalIdentities).values({ ...f.owner.identity, principalId: f.viewer.principalId }), (e:any) => e.cause?.code === '23505');
+  await assert.rejects(db.insert(schema.workspaceMemberships).values({ workspaceId: f.a.id, principalId: f.outsider.principalId, role: 'admin' as any }), (e:any) => e.cause?.code === '23514');
+  await assert.rejects(db.insert(schema.floorPlans).values({ ...payload(), workspaceId: randomUUID() }), (e:any) => e.cause?.code === '23503');
 });
 test('an in-flight mutation waits for workspace membership changes and rechecks the committed role', async () => {
   const f = await seed(); await repository.getFloorPlans(f.editor.identity, f.a.id);

@@ -308,12 +308,12 @@ test('failure after revision insertion rolls back plan, revision, receipt and cu
   const f=await seed();
   await client.unsafe(`create function reject_physical_receipt() returns trigger language plpgsql as $$ begin raise exception 'Synthetic receipt failure'; end $$;
     create trigger reject_physical_receipt before insert on physical_save_receipts for each row when (new.workspace_id='${f.a.id}'::uuid) execute function reject_physical_receipt();`);
-  try { await assert.rejects(repository.create(f.owner.identity,f.a.id,payload(),randomUUID()),/Synthetic receipt failure/); assert.deepEqual(await counts(f.a.id),[0,0,0]); }
+  try { await assert.rejects(repository.create(f.owner.identity,f.a.id,payload(),randomUUID()),(e: any) => e.cause?.code === 'P0001' && e.cause.message === 'Synthetic receipt failure'); assert.deepEqual(await counts(f.a.id),[0,0,0]); }
   finally { await client.unsafe('drop trigger reject_physical_receipt on physical_save_receipts; drop function reject_physical_receipt();'); }
   const first=await repository.create(f.owner.identity,f.a.id,payload(),randomUUID());
   await client.unsafe(`create function reject_physical_receipt() returns trigger language plpgsql as $$ begin raise exception 'Synthetic receipt failure'; end $$;
     create trigger reject_physical_receipt before insert on physical_save_receipts for each row when (new.workspace_id='${f.a.id}'::uuid) execute function reject_physical_receipt();`);
-  try { await assert.rejects(repository.append(f.owner.identity,f.a.id,first.planId,payload('later'),{idempotencyKey:randomUUID(),ifMatch:first.etag}),/Synthetic receipt failure/); assert.deepEqual(await counts(f.a.id),[1,1,1]); assert.deepEqual(await repository.read(f.owner.identity,f.a.id,first.planId),first); }
+  try { await assert.rejects(repository.append(f.owner.identity,f.a.id,first.planId,payload('later'),{idempotencyKey:randomUUID(),ifMatch:first.etag}),(e: any) => e.cause?.code === 'P0001' && e.cause.message === 'Synthetic receipt failure'); assert.deepEqual(await counts(f.a.id),[1,1,1]); assert.deepEqual(await repository.read(f.owner.identity,f.a.id,first.planId),first); }
   finally { await client.unsafe('drop trigger reject_physical_receipt on physical_save_receipts; drop function reject_physical_receipt();'); }
 });
 
@@ -562,7 +562,7 @@ test('lifecycle receipt insertion failure rolls back a copied plan and archive t
     create trigger reject_lifecycle_receipt before insert on physical_lifecycle_receipts for each row when (new.workspace_id='${f.a.id}'::uuid) execute function reject_lifecycle_receipt();`);
   try {
     for (const operation of ['duplicate', 'archive'] as const) {
-      await assert.rejects(repository.lifecycle(f.owner.identity, f.a.id, source.planId, operation, { revisionId: source.revisionId }, lifecycleOptions(initial)), /Synthetic lifecycle failure/);
+      await assert.rejects(repository.lifecycle(f.owner.identity, f.a.id, source.planId, operation, { revisionId: source.revisionId }, lifecycleOptions(initial)), (e: any) => e.cause?.code === 'P0001' && e.cause.message === 'Synthetic lifecycle failure');
       assert.deepEqual(await counts(f.a.id), [1, 1, 1]); assert.deepEqual(await summaryFor(f.owner.identity, f.a.id, source.planId), initial);
     }
   } finally { await client.unsafe('drop trigger reject_lifecycle_receipt on physical_lifecycle_receipts; drop function reject_lifecycle_receipt();'); }

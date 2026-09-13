@@ -116,27 +116,43 @@ test('denied action-intent storage refuses mutation and preserves current local 
 
 test('late active-list responses cannot replace archived results or reopen a closed list', async ({ page }) => {
   const { saved } = await setup(page, 'List race'); await list(page); await mutate(page, saved.planId, 'archive');
+  // Archive schedules its own Active-list refresh. Finish that before installing
+  // the deliberate delay, otherwise Refresh remains disabled by our own route.
+  await expect(row(page, saved.planId)).toHaveCount(0);
+  await expect(projects(page).getByText('Loading saved projects...', { exact: true })).toHaveCount(0);
+  await expect(projects(page).getByRole('button', { name: 'Refresh projects', exact: true })).toBeEnabled();
   const received = deferred(), release = deferred(), finished = deferred();
-  await page.route('**/api/physical-plans?*', async route => {
+  const closeReceived = deferred(), closeRelease = deferred(), closeFinished = deferred();
+  const pattern = '**/api/physical-plans?*';
+  async function gate(value: ReturnType<typeof deferred>, description: string) {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    try { await Promise.race([value.promise, new Promise<never>((_, reject) => {
+      timer = setTimeout(() => reject(Error('Timed out waiting for ' + description)), 10000);
+    })]); } finally { clearTimeout(timer); }
+  }
+  await page.route(pattern, async route => {
     if (route.request().method() !== 'GET' || new URL(route.request().url()).searchParams.get('status') !== 'active') return route.continue();
     const response = await route.fetch(); received.resolve(); await release.promise;
     try { await route.fulfill({ response }); } finally { finished.resolve(); }
   });
   try {
-    await projects(page).getByRole('button', { name: 'Refresh projects', exact: true }).click(); await received.promise;
-    await choose(page, 'Archived'); await expect(row(page, saved.planId)).toBeVisible(); release.resolve(); await finished.promise;
+    await projects(page).getByRole('button', { name: 'Refresh projects', exact: true }).click(); await gate(received, 'held Active refresh');
+    await choose(page, 'Archived'); await expect(row(page, saved.planId)).toBeVisible(); release.resolve(); await gate(finished, 'released Active refresh');
     await expect(projects(page).getByRole('tab', { name: 'Archived', exact: true })).toHaveAttribute('aria-selected', 'true');
     await expect(row(page, saved.planId)).toBeVisible();
-    await page.unroute('**/api/physical-plans?*');
-    const closeReceived = deferred(), closeRelease = deferred(), closeFinished = deferred();
-    await page.route('**/api/physical-plans?*', async route => {
+    await page.unroute(pattern);
+    await page.route(pattern, async route => {
       const response = await route.fetch(); closeReceived.resolve(); await closeRelease.promise;
       try { await route.fulfill({ response }); } finally { closeFinished.resolve(); }
     });
-    await projects(page).getByRole('button', { name: 'Refresh projects', exact: true }).click(); await closeReceived.promise;
+    await projects(page).getByRole('button', { name: 'Refresh projects', exact: true }).click(); await gate(closeReceived, 'held refresh before close');
     await projects(page).getByRole('button', { name: 'Close saved plans', exact: true }).click();
-    closeRelease.resolve(); await closeFinished.promise; await expect(projects(page)).toHaveCount(0);
-  } finally { release.resolve(); await page.unroute('**/api/physical-plans?*'); }
+    closeRelease.resolve(); await gate(closeFinished, 'released refresh after close'); await expect(projects(page)).toHaveCount(0);
+  } finally {
+    release.resolve(); closeRelease.resolve();
+    // Do not hide an assertion failure with a secondary timeout-cleanup error.
+    if (!page.isClosed()) await page.unroute(pattern).catch(() => undefined);
+  }
 });
 
 test('logout during an accepted project action cannot repaint private lists or replace unassigned drafts', async ({ page }) => {

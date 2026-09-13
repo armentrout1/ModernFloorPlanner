@@ -6,8 +6,8 @@
   "scripts": {
     "dev": "tsx server/index.ts",
     "dev:frontend": "vite --host 127.0.0.1 --port 5173 --strictPort",
-    "build": "vite build && esbuild server/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist",
-    "start": "NODE_ENV=production node dist/index.js",
+    "build": "vite build && esbuild server/index.ts --platform=node --packages=external --bundle --splitting --format=esm --outdir=dist",
+    "start": "node scripts/start-production.mjs",
     "check": "tsc",
     "db:push": "drizzle-kit push",
     "test": "node scripts/run-tests.mjs",
@@ -18,7 +18,8 @@
     "test:physical:db": "node --import tsx --test tests/database/physical-plans.test.ts",
     "test:physical": "node scripts/run-physical-tests.mjs",
     "test:journal": "playwright test --config playwright.journal.config.ts --reporter=line",
-    "test:autosave": "node scripts/run-autosave-tests.mjs"
+    "test:autosave": "node scripts/run-autosave-tests.mjs",
+    "test:runtime": "node --test tests/runtime/start.test.mjs"
   },
   "dependencies": {
     "@headlessui/react": "^2.2.1",
@@ -52,17 +53,16 @@
     "@radix-ui/react-toggle": "^1.1.0",
     "@radix-ui/react-toggle-group": "^1.1.0",
     "@radix-ui/react-tooltip": "^1.1.8",
-    "@replit/vite-plugin-shadcn-theme-json": "^0.0.4",
     "@tanstack/react-query": "^5.60.5",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",
     "cmdk": "^1.0.0",
     "connect-pg-simple": "10.0.0",
     "date-fns": "^3.6.0",
-    "drizzle-orm": "^0.39.1",
+    "drizzle-orm": "^0.45.2",
     "drizzle-zod": "^0.7.0",
     "embla-carousel-react": "^8.3.0",
-    "express": "^4.21.2",
+    "express": "^4.22.2",
     "express-session": "1.19.0",
     "framer-motion": "^11.13.1",
     "input-otp": "^1.2.4",
@@ -80,10 +80,9 @@
     "react-resizable-panels": "^2.1.4",
     "recharts": "^2.13.0",
     "tailwind-merge": "^2.5.4",
-    "tailwindcss-animate": "^1.0.7",
     "vaul": "^1.1.0",
     "wouter": "^3.3.5",
-    "ws": "^8.18.0",
+    "ws": "^8.21.3",
     "zod": "^3.23.8",
     "zod-validation-error": "^3.4.0"
   },
@@ -91,6 +90,7 @@
     "@playwright/test": "1.55.1",
     "@replit/vite-plugin-cartographer": "^0.0.11",
     "@replit/vite-plugin-runtime-error-modal": "^0.0.3",
+    "@replit/vite-plugin-shadcn-theme-json": "^0.0.4",
     "@tailwindcss/typography": "^0.5.15",
     "@types/connect-pg-simple": "^7.0.3",
     "@types/express": "4.17.21",
@@ -101,17 +101,28 @@
     "@types/react": "^18.3.11",
     "@types/react-dom": "^18.3.1",
     "@types/ws": "^8.5.13",
-    "@vitejs/plugin-react": "^4.3.2",
+    "@vitejs/plugin-react": "^4.7.0",
     "autoprefixer": "^10.4.20",
-    "drizzle-kit": "^0.30.4",
+    "drizzle-kit": "^0.31.10",
     "esbuild": "^0.25.0",
-    "postcss": "^8.4.47",
+    "postcss": "^8.5.28",
     "tailwindcss": "^3.4.14",
-    "tsx": "^4.19.1",
+    "tailwindcss-animate": "^1.0.7",
+    "tsx": "^4.23.13",
     "typescript": "5.6.3",
-    "vite": "^5.4.14"
+    "vite": "^6.4.3"
   },
   "optionalDependencies": {
     "bufferutil": "^4.0.8"
+  },
+  "engines": {
+    "node": "24.x",
+    "npm": "11.x"
+  },
+  "packageManager": "npm@11.19.0",
+  "overrides": {
+    "express": {
+      "qs": "6.16.0"
+    }
   }
 }

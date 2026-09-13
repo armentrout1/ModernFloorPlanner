@@ -247,7 +247,7 @@ test('session context and lifecycle schema reject malformed bindings; storage fa
   }
   const failing = new AccountStorage(() => { throw new Error('synthetic unavailable'); });
   await assert.rejects(failing.getContext(f.context.browserId, f.context.sessionIdHash, Date.now()), /synthetic unavailable/);
-  await assert.rejects(db.update(schema.browserContexts).set({ status: 'anonymous' }).where(eq(schema.browserContexts.browserId, f.context.browserId)), (e: any) => e.code === '23514');
+  await assert.rejects(db.update(schema.browserContexts).set({ status: 'anonymous' }).where(eq(schema.browserContexts.browserId, f.context.browserId)), (e: any) => e.cause?.code === '23514');
 });
 
 
