@@ -1,5 +1,7 @@
 # M4 protected owner-hosting plan
 
+> Historical planning record retained: its original “adapter not started/unimplemented” statements describe the source-reviewed plan below. The later bounded adapter implementation and actual verification are recorded in [M4 Vercel adapter results](MFP_M4_VERCEL_ADAPTER_RESULTS.md) and the current canonical roadmap. Live bindings, owner protection, provider compatibility and hosted acceptance remain unverified. This notice does not rewrite the historical plan or claim deployment.
+
 Date: 2026-09-12 (America/Chicago). Scope: issue #4, configuration and binding planning only.
 Status: **PLAN COMPLETE / SOURCE-REVIEWED; NOT DEPLOYED.** The adapter, live bindings and hosted acceptance remain unimplemented/unverified. This record supports the canonical BUILD_ROADMAP; it is not another roadmap.
 Entry main/origin/main: 4c57b285442384d23204a75e48e6058e2c493d46.

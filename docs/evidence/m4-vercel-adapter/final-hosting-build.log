@@ -1,0 +1,21 @@
+> rest-express@1.0.0 build:vercel
+> node scripts/build-vercel.mjs
+
+vite v6.4.3 building for production...
+transforming...
+✓ 1871 modules transformed.
+rendering chunks...
+computing gzip size...
+../dist/public/index.html                          1.80 kB │ gzip:   0.74 kB
+../dist/public/assets/index-tbBK-11W.css          72.57 kB │ gzip:  12.95 kB
+../dist/public/assets/display-Ba67TM9b.js          0.78 kB │ gzip:   0.48 kB
+../dist/public/assets/QuickRooms-DfGffM9c.js      15.40 kB │ gzip:   5.58 kB
+../dist/public/assets/PhysicalDraft-DZm8FZVP.js  261.87 kB │ gzip:  75.14 kB
+../dist/public/assets/index-_XUHwOkH.js          852.29 kB │ gzip: 252.32 kB
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 3.15s
+Published 6 compiled client assets for Vercel.

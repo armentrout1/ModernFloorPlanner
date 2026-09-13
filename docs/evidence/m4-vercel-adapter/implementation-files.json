@@ -1,0 +1,21 @@
+[
+  ".gitignore",
+  "app.ts",
+  "package.json",
+  "playwright.hosting.config.ts",
+  "scripts/build-vercel.mjs",
+  "scripts/run-hosting-tests.mjs",
+  "server/accounts.ts",
+  "server/app.ts",
+  "server/hosting.ts",
+  "server/index.ts",
+  "tests/hosting-policy.test.ts",
+  "tests/hosting/handler-server.ts",
+  "tests/hosting/hosted-account.spec.ts",
+  "tests/hosting/packaging.test.mjs",
+  "tests/hosting/proxy-protocol.test.ts",
+  "tests/hosting/proxy-server.ts",
+  "tests/hosting/runtime.mjs",
+  "tsconfig.json",
+  "vercel.json"
+]

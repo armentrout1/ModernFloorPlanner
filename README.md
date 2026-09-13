@@ -4,7 +4,7 @@ A room-first measurement and quantity application: enter room dimensions and ope
 
 ## Current build and roadmap
 
-Use the [canonical build roadmap](docs/BUILD_ROADMAP.md) for the current assigned task and release gates. Local physical editing, quantities, building-layout tools, authorized saved revisions, recovery, reports and project lifecycle have recorded implementation evidence. The bounded [issue #4](https://github.com/armentrout1/ModernFloorPlanner/issues/4) runtime work is complete locally; its [results](docs/MFP_M4_RUNTIME_READINESS_RESULTS.md) retain the verification. The [owner-hosting plan](docs/MFP_M4_HOSTING_BINDING_PLAN.md) now selects compatible Vercel packaging and recommends dedicated Supabase PostgreSQL, with provider decisions and live gates explicit. The next implementation is the Vercel Express adapter and trusted HTTPS acceptance; it has not started.
+Use the [canonical build roadmap](docs/BUILD_ROADMAP.md) for the current assigned task and release gates. Local physical editing, quantities, building-layout tools, authorized saved revisions, recovery, reports and project lifecycle have recorded implementation evidence. The bounded [issue #4](https://github.com/armentrout1/ModernFloorPlanner/issues/4) runtime work is complete locally; its [results](docs/MFP_M4_RUNTIME_READINESS_RESULTS.md) retain the verification. The [owner-hosting plan](docs/MFP_M4_HOSTING_BINDING_PLAN.md) now selects compatible Vercel packaging and recommends dedicated Supabase PostgreSQL, with provider decisions and live gates explicit. The bounded Vercel Express adapter is complete and verified locally; [adapter results](docs/MFP_M4_VERCEL_ADAPTER_RESULTS.md) record the actual verification and remaining gates. The next bounded task after publication is database provider compatibility, empty-database bootstrap and grants, which has not started.
 
 **NOT DEPLOYED.** Live identity-provider/client registration, trusted HTTPS origin and production PostgreSQL binding remain unverified. Local acceptance is not deployment or permission to onboard customers. The broad hosting/readiness issue remains open after its bounded runtime work.
 
@@ -60,6 +60,20 @@ npm start
 ```
 
 `npm start` uses a portable Node entry point that sets production mode before importing the compiled server; it does not require POSIX environment-assignment syntax. Production static serving is separate from Vite's development imports. The built app serves `/`, `/physical-draft` and `/quick-room` directly; API routes are evaluated before the single-page fallback, and absent scripts/styles return 404. Startup does not apply database migrations.
+
+## Vercel adapter build and acceptance
+
+The dedicated hosted entry exports Express without starting the standalone listener. `npm run build:vercel` compiles that handler and builds the existing Vite client for CDN packaging; the standalone `npm run build` / `npm start` path remains separate. Generated `app.js`, `public` and their ownership records are build outputs, not alternative source files. A build refuses to overwrite unmanaged or edited generated output.
+
+```sh
+npm run build:vercel
+npm run test:hosting:packaging
+npm run test:hosting
+```
+
+The packaging suite's actual-artifact case requires `MFP_VERCEL_ARTIFACT_ROOT` pointing to an isolated generated Vercel artifact. Without it that case is skipped, so a plain packaging run is not full artifact acceptance. The hosting integration suite requires the verified disposable PostgreSQL fixture and uses isolated HTTPS/proxy/OIDC/browser sessions; it must not use owner tabs or live credentials. See the [adapter record](docs/MFP_M4_VERCEL_ADAPTER_RESULTS.md) for the offline production-target CLI build and exact command-group results.
+
+The hosted policy requires the exact configured HTTPS origin and platform environment indicator, rejects ambiguous host/protocol metadata before sessions, and is enabled only by the hosted entry. Standalone forwarding headers do not enable proxy trust. Neither local packaging nor simulated HTTPS proves live Vercel header sanitization or owner-only protection. The [historical binding plan](docs/MFP_M4_HOSTING_BINDING_PLAN.md) records the remaining provider, deployment-protection and real callback requirements. No deployment command is part of these local checks.
 
 ## Authentication and persistence boundaries
 

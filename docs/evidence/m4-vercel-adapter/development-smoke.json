@@ -1,0 +1,35 @@
+{
+  "startedAt": "2026-09-13T01:49:42.797Z",
+  "finishedAt": "2026-09-13T01:49:46.119Z",
+  "runtime": "Node 24.21.0",
+  "appRoot": "isolated frozen source archive",
+  "origin": "http://127.0.0.1:54449",
+  "spawnedPid": 7632,
+  "cleanup": true,
+  "results": [
+    {
+      "check": "development frontend HTML and cache-busted source entry",
+      "result": "PASS"
+    },
+    {
+      "check": "Vite development client loads",
+      "result": "PASS"
+    },
+    {
+      "check": "React source transforms under Node 24",
+      "result": "PASS"
+    },
+    {
+      "check": "normal protected APIs remain unavailable without auth/database bindings",
+      "result": "PASS"
+    },
+    {
+      "check": "Vite default host guard rejects synthetic external Host header",
+      "result": "PASS"
+    }
+  ],
+  "counts": {
+    "passed": 5,
+    "failed": 0
+  }
+}

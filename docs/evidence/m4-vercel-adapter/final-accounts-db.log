@@ -1,0 +1,31 @@
+> rest-express@1.0.0 test:accounts:db
+> node --import tsx --test tests/database/accounts.test.ts
+
+✔ additive session migration leaves all legacy rows unclaimed and old user scaffolding inert (157.002ms)
+✔ anonymous state is repeat-safe without overwriting an existing or revoked browser context (14.5826ms)
+✔ durable login state is one-use and exact-browser bound across repository instances (44.0712ms)
+✔ a newer login invalidates older attempts and stale cancellation cannot cancel the newer one (10.1983ms)
+✔ logout or a newer initiation during token exchange prevents the delayed callback from authenticating (15.6955ms)
+✔ login cancellation retains the previous identity and selected workspace without restoring stale tokens (26.4723ms)
+✔ expired/unsafe login attempts fail closed and initiating repeatedly is bounded (33.4842ms)
+✔ issuer plus subject provisioning is concurrent/repeat-safe without email merge or membership creation (50.313ms)
+✔ revoked identities and principals never re-provision or resolve an existing session (26.8467ms)
+✔ session touches are bounded; idle and absolute expiry cannot be extended or revived (30.8168ms)
+✔ workspace creation is atomic/idempotent and never implicitly selects or claims legacy records (26.2152ms)
+✔ workspace creation rate bound counts fresh receipts and never restores revoked memberships on retry (34.035ms)
+✔ selection is explicit, role-aware, current and atomically rotates the workspace context (29.2991ms)
+✔ the same cookie after another person signs in cannot reuse an old context or identity (21.6813ms)
+✔ a revoked membership is excluded from listing and cannot be used by a formerly selected session (16.565ms)
+✔ a request queued behind logout rechecks the browser context inside its SQL transaction (15.2949ms)
+✔ a mutation already holding session authority commits before logout, which then blocks future mutations (90.0204ms)
+✔ session context and lifecycle schema reject malformed bindings; storage failures do not authorize (13.4923ms)
+✔ stale callbacks cannot invoke destructive SID rotation for a newer pending login (12.078ms)
+✔ SID rotation failure rolls back identity provisioning and context finalization (10.6814ms)
+ℹ tests 20
+ℹ suites 0
+ℹ pass 20
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1256.9088

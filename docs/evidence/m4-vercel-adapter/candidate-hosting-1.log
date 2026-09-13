@@ -1,0 +1,35 @@
+✔ actual hosted entry over an HTTP hop supports secure OIDC cookies, PKCE, SID rotation and one-time callback (228.3979ms)
+✔ missing, conflicting and duplicate forwarded metadata fail before durable sessions are created (10.401ms)
+✔ standalone HTTP cannot enable Secure cookies through VERCEL env or spoofed forwarding headers (77.4361ms)
+✔ saved physical revisions and every export remain workspace-private through the hosted transport (207.7417ms)
+✔ a cold hosted handler replacement preserves the server session, saved revision and pending OIDC callback (979.3801ms)
+✖ hosted mutations still reject CSRF and stale contexts and logout revokes the old SID (77.1639ms)
+✔ hosted API unknown paths and malformed JSON retain private JSON errors rather than SPA HTML (3.8452ms)
+ℹ tests 7
+ℹ suites 0
+ℹ pass 6
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 6748.9541
+
+✖ failing tests:
+
+test at tests\hosting\proxy-protocol.test.ts:1:8347
+✖ hosted mutations still reject CSRF and stale contexts and logout revokes the old SID (77.1639ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+
+  200 !== 204
+
+      at TestContext.<anonymous> ([isolated-workspace]\implementation\tests\hosting\proxy-protocol.test.ts:137:10)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 200,
+    expected: 204,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

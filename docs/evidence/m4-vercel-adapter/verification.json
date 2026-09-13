@@ -1,0 +1,156 @@
+{
+  "date": "2026-09-12",
+  "status": "COMPLETE / PRODUCER_VERIFIED locally; NOT DEPLOYED",
+  "entryCommit": "90fd95560fe3d9ea214bbf33f68ed5b33ba2d528",
+  "implementationCommit": "f3360d25ee0791ebe569c055e9003e1894a69c65",
+  "sourceFileCount": 344,
+  "sourceDigest": "a85430f8660676bada4438d7590712f99c05a19681b9e3d65d1b91b64eaacbb0",
+  "counts": {
+    "unit": 693,
+    "mainBrowser": 192,
+    "packaging": 6,
+    "hostingProtocol": 7,
+    "hostingBrowser": 2,
+    "runtime": 5,
+    "authorizationSql": 15,
+    "accountSql": 20,
+    "accountHttps": 32,
+    "accountBrowser": 8,
+    "physicalSql": 42,
+    "physicalHttps": 37,
+    "physicalBrowser": 24,
+    "journalBrowser": 17,
+    "autosaveBrowser": 15
+  },
+  "freshCommandGroups": [
+    {
+      "command": "npm ci",
+      "name": "install",
+      "exitCode": 0,
+      "seconds": 11.535
+    },
+    {
+      "command": "npm test",
+      "name": "unit",
+      "exitCode": 0,
+      "seconds": 8.841
+    },
+    {
+      "command": "npm run check",
+      "name": "typecheck",
+      "exitCode": 0,
+      "seconds": 6.224
+    },
+    {
+      "command": "npm run build",
+      "name": "build",
+      "exitCode": 0,
+      "seconds": 4.337
+    },
+    {
+      "command": "npm run build:vercel",
+      "name": "hosting-build",
+      "exitCode": 0,
+      "seconds": 3.896
+    },
+    {
+      "seconds": 536.613,
+      "exitCode": 0,
+      "name": "browser",
+      "command": "npx playwright test --reporter=line"
+    },
+    {
+      "command": "node --test tests/hosting/packaging.test.mjs",
+      "name": "packaging",
+      "exitCode": 0,
+      "seconds": 0.663
+    },
+    {
+      "command": "node scripts/run-hosting-tests.mjs",
+      "name": "hosting",
+      "exitCode": 0,
+      "seconds": 16.289
+    },
+    {
+      "command": "npm run test:runtime",
+      "name": "runtime",
+      "exitCode": 0,
+      "seconds": 2.799
+    },
+    {
+      "command": "npm run test:authorization:db",
+      "name": "authorization-db",
+      "exitCode": 0,
+      "seconds": 1.644
+    },
+    {
+      "command": "npm run test:accounts:db",
+      "name": "accounts-db",
+      "exitCode": 0,
+      "seconds": 1.578
+    },
+    {
+      "command": "npm run test:accounts",
+      "name": "accounts",
+      "exitCode": 0,
+      "seconds": 35.601
+    },
+    {
+      "command": "npm run test:physical:db",
+      "name": "physical-db",
+      "exitCode": 0,
+      "seconds": 6.256
+    },
+    {
+      "command": "npm run test:physical",
+      "name": "physical",
+      "exitCode": 0,
+      "seconds": 86.03
+    },
+    {
+      "command": "npm run test:journal",
+      "name": "journal",
+      "exitCode": 0,
+      "seconds": 6.347
+    },
+    {
+      "command": "npm run test:autosave",
+      "name": "autosave",
+      "exitCode": 0,
+      "seconds": 90.345
+    }
+  ],
+  "postIntegrationGroups": [
+    {
+      "exitCode": 0,
+      "name": "install",
+      "command": "npm ci"
+    },
+    {
+      "exitCode": 0,
+      "name": "build",
+      "command": "npm run build"
+    },
+    {
+      "exitCode": 0,
+      "name": "hosting-build",
+      "command": "npm run build:vercel"
+    },
+    {
+      "exitCode": 0,
+      "name": "runtime",
+      "command": "npm run test:runtime"
+    },
+    {
+      "exitCode": 0,
+      "name": "hosting",
+      "command": "npm run test:hosting"
+    }
+  ],
+  "ownerBrowserInteractions": 0,
+  "deployment": "NOT DEPLOYED",
+  "liveProviderDatabaseAuthIngress": "NOT VERIFIED",
+  "disposablePostgresStopped": true,
+  "integratedSourceComparison": "344/344 MATCH",
+  "freshPostRunSourceComparison": "344/344 MATCH"
+}

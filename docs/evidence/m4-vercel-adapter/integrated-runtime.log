@@ -1,0 +1,16 @@
+> rest-express@1.0.0 test:runtime
+> node --test tests/runtime/start.test.mjs
+
+✔ actual npm start selects production and serves direct SPA links from built assets (760.2647ms)
+✔ built scripts and styles load, while absent assets and non-GET routes never become SPA HTML (21.2995ms)
+✔ normal APIs remain ahead of SPA fallback and fail closed without provider bindings (3.0454ms)
+✔ compiled server retains sanitized parser errors (10.3797ms)
+✔ invalid listener configuration exits clearly instead of silently using another port (1586.82ms)
+ℹ tests 5
+ℹ suites 0
+ℹ pass 5
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 2478.5189

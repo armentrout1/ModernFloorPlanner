@@ -1,0 +1,32 @@
+> rest-express@1.0.0 test:hosting
+> node scripts/run-hosting-tests.mjs
+
+✔ actual hosted entry over an HTTP hop supports secure OIDC cookies, PKCE, SID rotation and one-time callback (254.994ms)
+✔ missing, conflicting and duplicate forwarded metadata fail before durable sessions are created (10.2552ms)
+✔ standalone HTTP cannot enable Secure cookies through VERCEL env or spoofed forwarding headers (79.1082ms)
+✔ saved physical revisions and every export remain workspace-private through the hosted transport (201.7635ms)
+✔ a cold hosted handler replacement preserves the server session, saved revision and pending OIDC callback (1001.1218ms)
+✔ hosted mutations still reject CSRF and stale contexts and logout revokes the old SID (80.1314ms)
+✔ hosted API unknown paths and malformed JSON retain private JSON errors rather than SPA HTML (4.3257ms)
+ℹ tests 7
+ℹ suites 0
+ℹ pass 7
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 6784.9772
+
+Running 2 tests using 1 worker
+
+
+
+(node:30916) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+(node:30916) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+[1/2] tests\hosting\hosted-account.spec.ts:9:1 › HTTPS edge login rotates Secure cookies and preserves unapplied anonymous work across the real callback
+[2/2] tests\hosting\hosted-account.spec.ts:59:1 › browser can save and reopen SQL content through hosted transport; logout blocks the former private context
+  2 passed (6.3s)

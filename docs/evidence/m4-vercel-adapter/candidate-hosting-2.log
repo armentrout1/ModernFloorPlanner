@@ -1,0 +1,69 @@
+✔ actual hosted entry over an HTTP hop supports secure OIDC cookies, PKCE, SID rotation and one-time callback (247.6758ms)
+✔ missing, conflicting and duplicate forwarded metadata fail before durable sessions are created (9.9113ms)
+✔ standalone HTTP cannot enable Secure cookies through VERCEL env or spoofed forwarding headers (80.4773ms)
+✔ saved physical revisions and every export remain workspace-private through the hosted transport (190.6427ms)
+✔ a cold hosted handler replacement preserves the server session, saved revision and pending OIDC callback (926.6632ms)
+✔ hosted mutations still reject CSRF and stale contexts and logout revokes the old SID (76.4497ms)
+✔ hosted API unknown paths and malformed JSON retain private JSON errors rather than SPA HTML (3.4494ms)
+ℹ tests 7
+ℹ suites 0
+ℹ pass 7
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 6741.043
+
+Running 2 tests using 1 worker
+
+
+
+(node:11124) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+(node:11124) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+[1/2] tests\hosting\hosted-account.spec.ts:9:1 › HTTPS edge login rotates Secure cookies and preserves unapplied anonymous work across the real callback
+  1) tests\hosting\hosted-account.spec.ts:9:1 › HTTPS edge login rotates Secure cookies and preserves unapplied anonymous work across the real callback
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+      13 |   const before = await page.evaluate(key => sessionStorage.getItem(key), PHYSICAL_DRAFT_STORAGE_KEY);
+      14 |   const rawBefore = await selectedPhysical(page);
+    > 15 |   const prior = (await context.cookies()).find(cookie => cookie.name === '__Host-mfp-session'); expect(Boolean(prior)).toBe(true);
+         |                                                                                                                        ^
+      16 |   await signIn(page); const cookie = (await context.cookies()).find(item => item.name === '__Host-mfp-session');
+      17 |   expect(Boolean(cookie && prior && cookie.value !== prior.value)).toBe(true);
+      18 |   expect(cookie && { secure: cookie.secure, httpOnly: cookie.httpOnly, sameSite: cookie.sameSite, path: cookie.path }).toEqual({ secure: true, httpOnly: true, sameSite: 'Lax', path: '/' });
+        at [isolated-workspace]\implementation\tests\hosting\hosted-account.spec.ts:15:120
+
+    Error Context: test-results-hosting\hosted-account-HTTPS-edge--973ea-rk-across-the-real-callback\error-context.md
+
+
+
+(node:19692) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+
+(node:19692) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+[2/2] tests\hosting\hosted-account.spec.ts:51:1 › browser can save and reopen SQL content through hosted transport; logout blocks the former private context
+  1 failed
+    tests\hosting\hosted-account.spec.ts:9:1 › HTTPS edge login rotates Secure cookies and preserves unapplied anonymous work across the real callback
+  1 passed (9.3s)
+file:///[isolated-workspace]/implementation/scripts/run-hosting-tests.mjs:14
+  child.once('exit', code => code === 0 ? done() : reject(new Error('Hosting acceptance failed.')));
+                                                          ^
+
+Error: Hosting acceptance failed.
+    at ChildProcess.<anonymous> (file:///[isolated-workspace]/implementation/scripts/run-hosting-tests.mjs:14:59)
+    at ChildProcess.wrapper (node:events:639:12)
+    at ChildProcess.emit (node:events:514:28)
+    at ChildProcess._handle.onexit (node:internal/child_process:295:12)
+
+Node.js v24.21.0
