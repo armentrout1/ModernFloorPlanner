@@ -1,0 +1,9 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "express",
+  "buildCommand": "npm run build:vercel",
+  "routes": [
+    { "src": "^/(?:quick-room|physical-draft|account/callback)?$", "methods": ["GET", "HEAD"], "dest": "/index.html" },
+    { "src": "^/(?:quick-room|physical-draft|account/callback)?$", "status": 405, "headers": { "Allow": "GET, HEAD" } }
+  ]
+}

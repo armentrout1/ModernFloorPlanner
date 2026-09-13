@@ -11,3 +11,8 @@ vite.config.ts.*
 # Separate authenticated synthetic acceptance output
 /test-results-accounts/
 /test-results-physical/
+
+# Generated Vercel client assets and local build metadata; not provider bindings.
+/public/
+/.vercel/
+/app.js

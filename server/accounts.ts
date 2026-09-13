@@ -11,6 +11,7 @@ import { AccountStorage, AccountStorageError, type BrowserContext, type LoginTra
 import { privateApiResponses } from './authorizedRoutes';
 import { sessionCookiePolicy, type IdentityResolver } from './identity';
 import type { VerifiedIdentity, SessionBinding } from './authorizationTypes';
+import { sessionProxyFor } from './hosting';
 
 declare module 'express-session' { interface SessionData { browserId?: string } }
 const hash = (value: string) => createHash('sha256').update(value).digest('hex');
@@ -53,7 +54,7 @@ export function mountAccounts(app: Express): IdentityResolver {
   app.locals.closeAccountSessions = () => store.close();
   const middleware = session({
     name: sessionCookiePolicy.name, store, secret: settings.sessionSecret,
-    resave: false, saveUninitialized: false, rolling: false, proxy: false,
+    resave: false, saveUninitialized: false, rolling: false, proxy: sessionProxyFor(app),
     // Cookie lifetime is absolute; PostgreSQL independently enforces idle expiry.
     // Late ordinary responses never roll an old SID over a newer login cookie.
     cookie: { httpOnly: true, secure: true, sameSite: 'lax', path: '/', maxAge: 8 * 60 * 60 * 1000 },

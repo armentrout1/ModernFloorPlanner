@@ -1,30 +1,10 @@
 import express from "express";
-import { registerRoutes } from "./routes";
+import { configureApplication } from "./app";
 import { serveStatic } from "./static";
 import { log } from "./log";
 import { httpErrorHandler } from "./httpErrors";
 
-import { privateApiResponses } from './authorizedRoutes';
 const app = express();
-app.use('/api', privateApiResponses);
-app.use('/api/physical-plans', express.json({ limit: '4mb' }));
-app.use(express.json());
-app.use(express.urlencoded({ extended: false }));
-
-app.use((req, res, next) => {
-  const start = Date.now();
-  const path = req.path;
-
-  res.on("finish", () => {
-    const duration = Date.now() - start;
-    if (path.startsWith("/api")) {
-      // Log request metadata, never saved sketch contents or response bodies.
-      log(`${req.method} ${path} ${res.statusCode} in ${duration}ms`);
-    }
-  });
-
-  next();
-});
 
 (async () => {
   const portText = process.env.PORT ?? "5000";
@@ -33,7 +13,7 @@ app.use((req, res, next) => {
   if (!/^[0-9]+$/.test(portText) || !Number.isSafeInteger(port) || port < 1 || port > 65535 ||
       !host || host !== host.trim() || !/^[A-Za-z0-9_.:%-]+$/.test(host))
     throw new Error("Invalid listener configuration");
-  const server = await registerRoutes(app);
+  const server = await configureApplication(app);
 
   // Set up the client after API routes so its catch-all does not intercept them.
   if (app.get("env") === "development") {
