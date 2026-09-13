@@ -22,7 +22,9 @@
     "test:physical": "node scripts/run-physical-tests.mjs",
     "test:journal": "playwright test --config playwright.journal.config.ts --reporter=line",
     "test:autosave": "node scripts/run-autosave-tests.mjs",
-    "test:runtime": "node --test tests/runtime/start.test.mjs"
+    "test:runtime": "node --test tests/runtime/start.test.mjs",
+    "test:database:privileges": "node --import tsx --test tests/database/provider-privileges.test.ts",
+    "test:database:transport": "node scripts/run-database-transport-tests.mjs"
   },
   "dependencies": {
     "@headlessui/react": "^2.2.1",

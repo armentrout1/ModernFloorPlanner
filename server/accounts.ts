@@ -7,6 +7,7 @@ import { z } from 'zod';
 import { readAuthConfiguration, safeReturnPath } from './authConfiguration';
 import { createOidcClient } from './oidcClient';
 import { getDatabase } from './db';
+import { toSessionPoolOptions } from './databaseConfiguration';
 import { AccountStorage, AccountStorageError, type BrowserContext, type LoginTransaction } from './accountStorage';
 import { privateApiResponses } from './authorizedRoutes';
 import { sessionCookiePolicy, type IdentityResolver } from './identity';
@@ -46,7 +47,7 @@ export function mountAccounts(app: Express): IdentityResolver {
   const protocol = createOidcClient(settings);
   const PgStore = connectPgSimple(session);
   const store = new PgStore({
-    conObject: { connectionString: settings.databaseUrl, max: 5, connectionTimeoutMillis: 10000, idleTimeoutMillis: 20000 },
+    conObject: toSessionPoolOptions(settings.database),
     tableName: 'mfp_sessions', createTableIfMissing: false,
     pruneSessionInterval: false, errorLog: () => { /* Never log database connection/session details. */ },
   });

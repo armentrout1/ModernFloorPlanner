@@ -16,3 +16,7 @@ vite.config.ts.*
 /public/
 /.vercel/
 /app.js
+
+# Separate hosting/database acceptance artifacts
+/test-results-hosting/
+/test-results-database-transport/
