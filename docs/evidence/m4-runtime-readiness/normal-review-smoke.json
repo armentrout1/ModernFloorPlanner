@@ -1,0 +1,15 @@
+{
+  "ok": true,
+  "sourceCommit": "cf2bdc0c9c662d5cf56abf8a5fca7ba2e945c7d5",
+  "address": "http://127.0.0.10:5194/physical-draft",
+  "checks": [
+    "Actual compiled server serves the exact canonical built document and referenced assets",
+    "Normal unavailable authentication issues no session cookie",
+    "Both lists and all three lifecycle mutations fail closed without configured authentication",
+    "Fresh synthetic local draft remains editable with unfinished height preserved",
+    "No page errors or browser API mutations; no owner origins visited"
+  ],
+  "pageErrors": 0,
+  "browserApiMutations": 0,
+  "ownerOriginsVisited": false
+}

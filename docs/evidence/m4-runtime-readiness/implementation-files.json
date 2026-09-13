@@ -1,0 +1,15 @@
+[
+  ".nvmrc",
+  "package-lock.json",
+  "package.json",
+  "scripts/start-production.mjs",
+  "server/index.ts",
+  "server/log.ts",
+  "server/static.ts",
+  "server/vite.ts",
+  "tests/database/accounts.test.ts",
+  "tests/database/authorization.test.ts",
+  "tests/database/physical-plans.test.ts",
+  "tests/persistence/project-lifecycle.spec.ts",
+  "tests/runtime/start.test.mjs"
+]

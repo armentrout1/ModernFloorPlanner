@@ -1,0 +1,31 @@
+
+Running 3 tests using 1 worker
+
+
+
+(node:40608) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+(node:40608) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+[1/3] tests\persistence\project-lifecycle.spec.ts:246:1 › late active-list responses cannot replace archived results or reopen a closed list
+
+
+(node:20896) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+(node:20896) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+[2/3] tests\persistence\project-lifecycle.spec.ts:246:1 › late active-list responses cannot replace archived results or reopen a closed list
+
+(node:41088) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+(node:41088) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+[3/3] tests\persistence\project-lifecycle.spec.ts:246:1 › late active-list responses cannot replace archived results or reopen a closed list
+  3 passed (11.2s)

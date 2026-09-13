@@ -1,0 +1,62 @@
+[
+  {
+    "seconds": 17.183,
+    "command": "npm ci",
+    "name": "install",
+    "exitCode": 0
+  },
+  {
+    "seconds": 9.342,
+    "command": "npm test",
+    "name": "unit",
+    "exitCode": 0
+  },
+  {
+    "seconds": 7.56,
+    "command": "npm run check",
+    "name": "typecheck",
+    "exitCode": 0
+  },
+  {
+    "seconds": 4.544,
+    "command": "npm run build",
+    "name": "build",
+    "exitCode": 0
+  },
+  {
+    "seconds": 2.715,
+    "command": "npm run test:runtime",
+    "name": "runtime",
+    "exitCode": 0
+  },
+  {
+    "seconds": 1.552,
+    "command": "npm run test:authorization:db",
+    "name": "authorization-db",
+    "exitCode": 0
+  },
+  {
+    "seconds": 1.594,
+    "command": "npm run test:accounts:db",
+    "name": "accounts-db",
+    "exitCode": 0
+  },
+  {
+    "seconds": 37.82,
+    "command": "npm run test:accounts",
+    "name": "accounts",
+    "exitCode": 0
+  },
+  {
+    "seconds": 7.964,
+    "command": "npm run test:physical:db",
+    "name": "physical-db",
+    "exitCode": 0
+  },
+  {
+    "seconds": 182.023,
+    "command": "npm run test:physical",
+    "name": "physical",
+    "exitCode": 1
+  }
+]

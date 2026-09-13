@@ -1,0 +1,80 @@
+[
+  {
+    "command": "npm ci",
+    "name": "install",
+    "seconds": 15.329,
+    "exitCode": 0
+  },
+  {
+    "command": "npm test",
+    "name": "unit",
+    "seconds": 8.35,
+    "exitCode": 0
+  },
+  {
+    "command": "npm run check",
+    "name": "typecheck",
+    "seconds": 6.338,
+    "exitCode": 0
+  },
+  {
+    "command": "npm run build",
+    "name": "build",
+    "seconds": 4.614,
+    "exitCode": 0
+  },
+  {
+    "command": "npm run test:runtime",
+    "name": "runtime",
+    "seconds": 2.695,
+    "exitCode": 0
+  },
+  {
+    "seconds": 547.596,
+    "name": "browser",
+    "command": "npx playwright test --reporter=line",
+    "exitCode": 0
+  },
+  {
+    "command": "npm run test:authorization:db",
+    "name": "authorization-db",
+    "seconds": 1.725,
+    "exitCode": 0
+  },
+  {
+    "command": "npm run test:accounts:db",
+    "name": "accounts-db",
+    "seconds": 1.694,
+    "exitCode": 0
+  },
+  {
+    "command": "npm run test:accounts",
+    "name": "accounts",
+    "seconds": 35.799,
+    "exitCode": 0
+  },
+  {
+    "command": "npm run test:physical:db",
+    "name": "physical-db",
+    "seconds": 6.446,
+    "exitCode": 0
+  },
+  {
+    "command": "npm run test:physical",
+    "name": "physical",
+    "seconds": 86.757,
+    "exitCode": 0
+  },
+  {
+    "command": "npm run test:journal",
+    "name": "journal",
+    "seconds": 6.872,
+    "exitCode": 0
+  },
+  {
+    "command": "npm run test:autosave",
+    "name": "autosave",
+    "seconds": 90.496,
+    "exitCode": 0
+  }
+]

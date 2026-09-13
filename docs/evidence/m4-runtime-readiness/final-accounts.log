@@ -1,0 +1,66 @@
+
+> rest-express@1.0.0 test:accounts
+> node scripts/run-accounts-tests.mjs
+
+Running separate OIDC protocol/session suite (synthetic HTTPS and PostgreSQL).
+✔ real HTTPS discovery, S256 code exchange and verified signing keys create exact issuer/subject and rotate opaque session (1015.9147ms)
+✔ production OIDC client rejects wrong-issuer without creating an authenticated session (24.138ms)
+✔ production OIDC client rejects wrong-audience without creating an authenticated session (21.286ms)
+✔ production OIDC client rejects wrong-azp without creating an authenticated session (20.4801ms)
+✔ production OIDC client rejects wrong-nonce without creating an authenticated session (19.6676ms)
+✔ production OIDC client rejects wrong-signature without creating an authenticated session (20.5114ms)
+✔ production OIDC client rejects expired-token without creating an authenticated session (18.3942ms)
+✔ production OIDC client rejects expired-code without creating an authenticated session (18.5725ms)
+✔ production OIDC client rejects wrong-pkce without creating an authenticated session (18.878ms)
+✔ production OIDC client rejects wrong-state without creating an authenticated session (14.2239ms)
+✔ production OIDC client rejects token-failure without creating an authenticated session (17.1509ms)
+✔ production OIDC client rejects missing-id-token without creating an authenticated session (17.0399ms)
+✔ production OIDC client rejects malformed-token without creating an authenticated session (17.0838ms)
+✔ provider cancellation and malformed/repeated callback parameters return only sanitized local outcomes (24.5792ms)
+✔ callback is one-time and concurrent callbacks cannot both authenticate or overwrite the winning cookie (42.9789ms)
+✔ concurrent independent login attempts retain distinct correlation and stale success cannot replace newer identity (32.8919ms)
+✔ logout revokes the server context and stale pre-logout callback cannot restore it (38.5339ms)
+✔ session and outstanding login correlation survive actual application-process recreation (959.9305ms)
+✔ server enforces idle_expires_at independently of browser cookie (41.738ms)
+✔ server enforces absolute_expires_at independently of browser cookie (29.0796ms)
+✔ same email from a different configured issuer does not merge principals (1803.979ms)
+✔ workspace creation retries are atomic, selection explicit, and old context/forged role cannot write (205.6272ms)
+✔ principal disablement and active membership revocation remain effective for real signed-in sessions (65.0428ms)
+✔ login and logout require exact trusted Origin, request marker and current context; return paths are allowlisted (20.7303ms)
+✔ discovery outage and mismatched metadata fail closed and a later valid discovery recovers (1882.7483ms)
+✔ unconfigured normal composition remains unavailable and cannot use synthetic headers or ambient database access (1716.5032ms)
+✔ fixture certificate is not trusted outside the scoped Node process trust configuration (77.4671ms)
+✔ actual mismatched S256 challenge is rejected by issuer rather than a synthetic token error (137.1409ms)
+✔ expired durable login transaction rejects callback before exchanging the issuer code (19.6823ms)
+✔ logout during a real token exchange defeats its late success without overwriting the logout cookie (442.0322ms)
+✔ a stale exchange cannot destroy the shared anonymous session of a newer pending login (437.5757ms)
+✔ actual OIDC owner/editor/viewer sessions retain server-enforced legacy CRUD and cross-workspace denials (178.5564ms)
+ℹ tests 32
+ℹ suites 0
+ℹ pass 32
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 9563.5166
+Running separate account browser suite (synthetic HTTPS and PostgreSQL).
+
+Running 8 tests using 1 worker
+
+
+
+(node:15600) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+(node:15600) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+[1/8] tests\accounts\account-sessions.spec.ts:238:1 › real OIDC redirect preserves unapplied local dimensions, opening and waste without assigning or uploading them
+[2/8] tests\accounts\account-sessions.spec.ts:280:1 › private legacy records cannot enter unassigned recovery or reappear after A signs out and B signs in
+[3/8] tests\accounts\account-sessions.spec.ts:343:1 › same-page workspace switches preserve exact raw fields, evidence and committed Undo history in separate contexts
+[4/8] tests\accounts\account-sessions.spec.ts:376:1 › cross-tab logout and identity change hide old private rows and reject an old session-context operation
+[5/8] tests\accounts\account-sessions.spec.ts:441:1 › provider cancellation and token failure return to local recovery without exposing protocol parameters
+[6/8] tests\accounts\account-sessions.spec.ts:477:1 › failed recovery prevents redirect and logout while preserving current pending input in memory
+[7/8] tests\accounts\account-sessions.spec.ts:505:1 › phone account controls preserve a valid unapplied field on pointer and keyboard focus transfer
+[8/8] tests\accounts\account-sessions.spec.ts:556:1 › only the fixture certificate pin permits the isolated HTTPS origin
+  8 passed (22.4s)

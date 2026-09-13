@@ -1,0 +1,66 @@
+
+> rest-express@1.0.0 test:authorization:db
+> node --import tsx --test tests/database/authorization.test.ts
+
+✔ additive migration preserves old users and every legacy payload field without assigning ownership (140.9147ms)
+✔ actual PostgreSQL CRUD enforces roles and assigns validated workspace outside the legacy DTO (27.966ms)
+✔ known other-workspace IDs and workspace selections never disclose or mutate B records (24.506ms)
+✔ viewer reads succeed but all writes and editor membership administration fail (20.8681ms)
+✔ issuer and subject jointly identify a current principal; malformed, forged and nonmember identities deny (13.8043ms)
+✔ membership revocation/demotion and principal/identity revocation take effect on the next operation (18.803ms)
+✔ mass-assigned authority is rejected while nested drawing metadata remains inert and compatible (29.8363ms)
+✔ unowned legacy records stay inaccessible despite known IDs and remain unmodified (22.2967ms)
+✔ only current owners administer existing memberships and cannot remove the last active owner (21.7634ms)
+✖ database constraints reject dangling ownership, duplicate identity and invalid roles (9.372ms)
+✔ an in-flight mutation waits for workspace membership changes and rechecks the committed role (58.3809ms)
+✔ a protected write holds its authorization lock until commit and revocation waits, then denies subsequent writes (88.2626ms)
+✔ simultaneous owner demotions serialize and leave one active owner (13.764ms)
+✔ missing or malformed database binding and repository failures never fall back to unscoped data (11.5564ms)
+✔ actual HTTP middleware and routes enforce scoped PostgreSQL persistence with private responses (73.6123ms)
+ℹ tests 15
+ℹ suites 0
+ℹ pass 14
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1295.9913
+
+✖ failing tests:
+
+test at tests\database\authorization.test.ts:4:10108
+✖ database constraints reject dangling ownership, duplicate identity and invalid roles (9.372ms)
+  AssertionError [ERR_ASSERTION]: The validation function is expected to return "true". Received false
+
+  Caught error:
+
+  Error: Failed query: insert into "external_identities" ("issuer", "subject", "principal_id", "status") values ($1, $2, $3, default)
+  params: https://synthetic.example/issuer,2ff20312-8cd4-4f58-b4e5-9602dac7c64b:owner,877d0d9f-cea5-49e7-85f1-19197f0c22fe
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async TestContext.<anonymous> (<isolated-source>\tests\database\authorization.test.ts:193:3)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: Error: Failed query: insert into "external_identities" ("issuer", "subject", "principal_id", "status") values ($1, $2, $3, default)
+    params: https://synthetic.example/issuer,2ff20312-8cd4-4f58-b4e5-9602dac7c64b:owner,877d0d9f-cea5-49e7-85f1-19197f0c22fe
+        at PostgresJsPreparedQuery.queryWithCache (<isolated-source>\node_modules\src\pg-core\session.ts:73:11)
+        at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+        at async waitForActual (node:assert:646:5)
+        at async strict.rejects (node:assert:769:25)
+        at async TestContext.<anonymous> (<isolated-source>\tests\database\authorization.test.ts:193:3)
+        at async Test.run (node:internal/test_runner/test:1409:7)
+        at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+      [cause]: PostgresError: duplicate key value violates unique constraint "external_identities_pkey"
+          at ErrorResponse (file:///<isolated-source>/node_modules/postgres/src/connection.js:788:26)
+          at handle (file:///<isolated-source>/node_modules/postgres/src/connection.js:474:6)
+          at Socket.data (file:///<isolated-source>/node_modules/postgres/src/connection.js:315:9)
+          at Socket.emit (node:events:514:28)
+          at addChunk (node:internal/streams/readable:568:12)
+          at readableAddChunkPushByteMode (node:internal/streams/readable:519:3)
+          at Readable.push (node:internal/streams/readable:399:5)
+          at TCP.onStreamRead (node:internal/stream_base_commons:189:23)
+    },
+    operator: 'rejects',
+    diff: 'simple'
+  }

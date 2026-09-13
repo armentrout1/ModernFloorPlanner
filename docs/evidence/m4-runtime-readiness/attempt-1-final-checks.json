@@ -1,0 +1,38 @@
+[
+  {
+    "name": "install",
+    "seconds": 14.14,
+    "exitCode": 0,
+    "command": "npm ci"
+  },
+  {
+    "name": "unit",
+    "seconds": 9.254,
+    "exitCode": 0,
+    "command": "npm test"
+  },
+  {
+    "name": "typecheck",
+    "seconds": 7.421,
+    "exitCode": 0,
+    "command": "npm run check"
+  },
+  {
+    "name": "build",
+    "seconds": 5.796,
+    "exitCode": 0,
+    "command": "npm run build"
+  },
+  {
+    "name": "runtime",
+    "seconds": 2.848,
+    "exitCode": 0,
+    "command": "npm run test:runtime"
+  },
+  {
+    "name": "authorization-db",
+    "seconds": 1.661,
+    "exitCode": 1,
+    "command": "npm run test:authorization:db"
+  }
+]

@@ -1,50 +1,74 @@
 # Modern Floor Planner
 
-A room-first measurement and quantity application: enter room dimensions and openings, select the work, and see a synchronized sketch with explainable quantities.
+A room-first measurement and quantity application: enter room dimensions and openings, select the work, and use the synchronized physical sketch and explainable quantities. React/TypeScript/Vite remains the frontend; Express, PostgreSQL and Drizzle remain the backend.
 
-## Build from the roadmap
+## Current build and roadmap
 
-Start with the [executable build roadmap](docs/BUILD_ROADMAP.md), then the [September 6 source audit and research](docs/RESEARCH_AND_AUDIT_2026-09-06.md). M1 implementation and recorded verification are tracked in [MFP-M1 / issue #2](https://github.com/armentrout1/ModernFloorPlanner/issues/2).
+Use the [canonical build roadmap](docs/BUILD_ROADMAP.md) for the current assigned task and release gates. Local physical editing, quantities, building-layout tools, authorized saved revisions, recovery, reports and project lifecycle have recorded implementation evidence. The current bounded [issue #4](https://github.com/armentrout1/ModernFloorPlanner/issues/4) assignment covers runtime and dependency readiness; its [results](docs/MFP_M4_RUNTIME_READINESS_RESULTS.md) record actual verification separately from pending work.
 
-Current planning baseline: `876968e78d7070775e7924f33a3164ba20905d42`. Roadmap publication does not mean its milestones are implemented, tested or deployed. The historical app is being improved incrementally, not replaced wholesale.
+**NOT DEPLOYED.** Live identity-provider/client registration, trusted HTTPS origin and production PostgreSQL binding remain unverified. Local acceptance is not deployment or permission to onboard customers. The broad hosting/readiness issue remains open after its bounded runtime work.
 
-Contributors: read [AGENTS.md](AGENTS.md), [ECOSYSTEM.md](ECOSYSTEM.md), the [My Way workflow](docs/ecosystem/MY_WAY_WORKFLOW.md) and [product ecosystem mapping](docs/ecosystem/PRODUCT_ROADMAP.md). Read [opening behavior documentation](DOORS_AND_WINDOWS.md) before changing doors/windows. Verify the existing checkout and preserve unpublished local work.
+Contributors must read [AGENTS.md](AGENTS.md), [ECOSYSTEM.md](ECOSYSTEM.md), the [My Way workflow](docs/ecosystem/MY_WAY_WORKFLOW.md) and [product ecosystem mapping](docs/ecosystem/PRODUCT_ROADMAP.md). Read [opening behavior](DOORS_AND_WINDOWS.md) before changing doors/windows. Verify the actual checkout, branch, remote, working tree and other writers; preserve unpublished work, owner tabs/drafts/storage, stash and archives. Use isolated test sessions rather than the owner's open sketches or protected review origins.
 
-Existing stack: React/TypeScript/Vite frontend; Express/PostgreSQL/Drizzle backend. M1 local checks are documented below. The owner confirmed the app is not hosted yet; Vercel setup and a real database binding remain future work.
+Modern Floor Planner owns geometry and quantities. FixDoneNow coordinates jobs; LedgerLine owns financial estimates; ProjectRoll owns media. Standalone use remains independent.
 
-Modern Floor Planner owns geometry and quantities. FixDoneNow coordinates jobs; LedgerLine owns financial estimates; ProjectRoll owns media. Standalone use must remain independent.
+## Runtime and reproducible checks
 
-## Reproducible checks
-
-Use Node **20.20.2** (`.nvmrc`; npm 10.8.2 used for verification). The historical
-Replit configuration specifies Node 20. M1 also tested Node 24.11.1; M2A was verified on the existing Node 20 pin. Node 24 runtime modernization is separately proposed in issue #4.
+Use **Node 24.21.0** from `.nvmrc` and **npm 11.19.0** from `packageManager`. `package.json` declares Node `24.x` and npm `11.x`. The runtime receipt and current dependency/check results are in [runtime readiness results](docs/MFP_M4_RUNTIME_READINESS_RESULTS.md). Use the committed lockfile with `npm ci`.
 
 ```sh
+node --version
+npm --version
 npm ci
 npm test
 npm run check
 npm run build
 npx playwright install chromium
-npm run test:browser
+npx playwright test --reporter=line
+npm run test:runtime
 ```
 
-`npm test` runs physical measurement/parser/adapter tests, pure calculation/recovery tests and real HTTP route regressions.
-`npm run test:browser` builds the app, starts a disposable server on
-`127.0.0.1:4173`, runs Chromium acceptance, and stops that server. It uses the
-real API handlers with in-memory storage; it never connects to a database.
-No staging environment is required. Local failure traces/screenshots appear
-in `test-results/`; the HTML report is in `playwright-report/`.
+`npm run test:browser` is the convenience command that builds before running the main Playwright suite. It starts isolated fixture/parity/denial servers on ports 4173–4175 and stops them afterward; it does not reuse an existing server. Traces/screenshots are written to `test-results/` and the HTML report to `playwright-report/`. The dedicated account, physical-persistence, journal and Autosave suites have separate commands and isolated configuration; see their recorded results before treating a main-browser pass as a full integration pass. Database suites require an explicitly verified disposable local test database, never live/customer records.
 
-For the actual app, the existing `npm run dev` / `npm run start` commands use
-PostgreSQL through `DATABASE_URL` and the existing port 5000 configuration.
-Production start retains the host's POSIX command syntax. The app is not hosted yet. When first deployment is assigned, configure credentials
-through the approved host's secret settings, not committed files. Do not run
-`db:push` as part of M1 verification. The current routes have no authenticated
-workspace scope; **do not onboard customers or partners** until the M4 gate passes.
+`npm run test:runtime` exercises actual compiled `npm start`, static assets/direct links and fail-closed API behavior on its own loopback listener. Run it after building. A separate production-only dependency installation is also part of the bounded readiness verification; current evidence belongs in the result record. No mandatory staging environment is introduced.
 
-Read [M1 results and release limits](docs/MFP_M1_RESULTS.md) before interpreting
-local tests as deployment or real-database evidence.
+## Run locally
 
-## Shared measurement boundary (M2A)
+`npm run dev` serves the Express application with Vite development middleware. `npm run dev:frontend` serves only Vite at `127.0.0.1:5173`; it does not stand in for the authenticated Express/API composition. Avoid launching either on an occupied or protected owner-review origin.
 
-The additive v2 schemas live in `shared/domain`; `shared/compatibility/legacyDocument.ts` converts supported legacy documents without changing live editor/save/API payloads. Read [M2A results, supported syntax and conversion rules](docs/MFP_M2A_RESULTS.md) before adopting this boundary. M2B policy validation and M2C quantities remain future work. No production deployment, PostgreSQL durability or tenant isolation is claimed.
+The application accepts `HOST` and `PORT`. Defaults are `0.0.0.0` and `5000`; use loopback explicitly for a local session. Invalid listener settings exit instead of silently selecting another port. For example, after choosing an unused local port:
+
+PowerShell:
+
+```powershell
+$env:HOST = '127.0.0.1'
+$env:PORT = '5000'
+npm run dev
+```
+
+POSIX shell:
+
+```sh
+HOST=127.0.0.1 PORT=5000 npm run dev
+```
+
+For the compiled application, build first and then run `npm start` with the same listener settings:
+
+```sh
+npm run build
+npm start
+```
+
+`npm start` uses a portable Node entry point that sets production mode before importing the compiled server; it does not require POSIX environment-assignment syntax. Production static serving is separate from Vite's development imports. The built app serves `/`, `/physical-draft` and `/quick-room` directly; API routes are evaluated before the single-page fallback, and absent scripts/styles return 404. Startup does not apply database migrations.
+
+## Authentication and persistence boundaries
+
+The normal application can display local-draft editing without a configured identity provider. In that state, the session reports unavailable and protected saved-plan APIs fail closed; a local page or known plan ID grants no account access. Current account/workspace/member checks, append-only revisions, export authorization, archive/restore and explicit recovery are documented in [M4A account results](docs/MFP_M4A_SESSIONS_ACCOUNTS_RESULTS.md), [M4B Save/Open results](docs/MFP_M4B_SAVE_OPEN_RESULTS.md) and [M4C lifecycle results](docs/MFP_M4C_PROJECT_LIFECYCLE_RESULTS.md).
+
+Account persistence requires approved server-side `DATABASE_URL` and the complete validated OIDC/session configuration, including issuer/client, trusted HTTPS application origin/callback and session secret. Use the established server configuration boundary and approved secret handling; do not put credentials in client code or committed files. Database access is explicit and does not fall back to ambient PostgreSQL defaults. Do not run `db:push` or apply migration files against a live/unidentified database as part of local startup or this readiness task. Real provider/host/database setup and customer onboarding remain separate release work.
+
+## Historical references
+
+The original planning baseline was `876968e78d7070775e7924f33a3164ba20905d42`; see the [September 6 audit](docs/RESEARCH_AND_AUDIT_2026-09-06.md) and [M1 results](docs/MFP_M1_RESULTS.md). Earlier checks used Node 20.20.2/npm 10.8.2, and historical `.replit` metadata still names Node 20. Those records are historical, not the current `.nvmrc`/`packageManager` contract or a verified deployment binding. The earlier M1 finding of unscoped routes predates the recorded M4 authorization work and must not be read as current runtime behavior.
+
+The additive measurement boundary began in `shared/domain` and `shared/compatibility/legacyDocument.ts`; [M2A results](docs/MFP_M2A_RESULTS.md) describe that initial adapter. Later engine, selected-quantity, shared physical-document and saved snapshot behavior is recorded in the canonical roadmap. Old “future work” statements in milestone reports preserve their original dates; they do not override current completed checkpoints.
