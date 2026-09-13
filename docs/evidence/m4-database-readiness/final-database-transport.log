@@ -1,0 +1,21 @@
+
+> rest-express@1.0.0 test:database:transport
+> node scripts/run-database-transport-tests.mjs
+
+Transport fixture: owned PostgreSQL container started.
+Transport fixture: exact provider SQL applied; transaction pooler started.
+Isolated database transport versions: {"imageId":"sha256:73effda355dc88afe46251b829139b953eb92c2346ffb2ced0bc9ce6f618f540","postgres":"PostgreSQL 17.11 (Debian 17.11-1.pgdg12+2) on x86_64-pc-linux-gnu, compiled by gcc (Debian 12.2.0-14+deb12u1) 12.2.0, 64-bit","pgbouncer":"PgBouncer 1.25.2","base":"postgres@sha256:051f7b7b3abdd564d5d1bd1e8c4b9c1b6e77087d1dd22020ede611c096a272e0"}
+✔ both production driver adapters connect with verified CA/hostname through direct TLS and actual transaction pooler (127.9499ms)
+✔ wrong CA and wrong hostname fail both drivers without plaintext fallback, including sslmode=require (126.8397ms)
+✔ TLS-only PostgreSQL and pooler refuse explicit plaintext from either driver (20.0905ms)
+✔ real PgBouncer transaction mode with named statements disabled accepts unnamed queries from both adapters (42.1345ms)
+✔ transaction-scoped advisory locks are exclusive and released at commit across pooled driver clients (36.8505ms)
+✔ normal OIDC/session/workspace and immutable save lifecycle work under restricted runtime role through pooler (1340.612ms)
+ℹ tests 6
+ℹ suites 0
+ℹ pass 6
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1910.6592

@@ -1,0 +1,21 @@
+[
+  ".gitignore",
+  "database/README.md",
+  "database/bootstrap.sql",
+  "database/harden.sql",
+  "database/restrict-database.sql",
+  "database/setup.mjs",
+  "package.json",
+  "scripts/run-database-transport-tests.mjs",
+  "server/accounts.ts",
+  "server/authConfiguration.ts",
+  "server/databaseConfiguration.ts",
+  "server/db.ts",
+  "tests/database-configuration.test.ts",
+  "tests/database-transport/Dockerfile",
+  "tests/database-transport/runtime.mjs",
+  "tests/database-transport/tls.mjs",
+  "tests/database-transport/transport.test.ts",
+  "tests/database/provider-fixture.ts",
+  "tests/database/provider-privileges.test.ts"
+]

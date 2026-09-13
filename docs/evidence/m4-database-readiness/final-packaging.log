@@ -1,0 +1,20 @@
+✔ CDN packaging copies only the client, preserves standalone/server source, and removes stale generated assets (23.7067ms)
+✔ existing unmanaged public files are preserved and cause a clear refusal (6.142ms)
+✔ edits to previous generated assets are preserved instead of silently erased (8.2438ms)
+✔ a private file mixed into build output cannot be published (4.3226ms)
+✔ generated handler stays outside CDN assets and refuses to overwrite owner edits (9.1567ms)
+9:31:38 PM [express] GET /api/auth/session 200 in 1ms
+9:31:38 PM [express] GET /api/auth/session 200 in 0ms
+9:31:38 PM [express] GET /api/physical-plans 503 in 0ms
+9:31:38 PM [express] GET /api/floor-plans 503 in 0ms
+9:31:38 PM [express] GET /api/unknown-artifact-route 404 in 0ms
+9:31:38 PM [express] GET /api/auth/callback 303 in 0ms
+✔ actual Vercel artifact retains complete routing and a cold, production-only API handler (489.0014ms)
+ℹ tests 6
+ℹ suites 0
+ℹ pass 6
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 620.808

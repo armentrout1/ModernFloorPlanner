@@ -1,0 +1,24 @@
+
+> rest-express@1.0.0 test:database:privileges
+> node --import tsx --test tests/database/provider-privileges.test.ts
+
+✔ bootstrap creates the exact base then unchanged migrations yield fourteen forced-RLS tables with no seeded identities (311.3988ms)
+✔ bootstrap refuses existing tables transactionally and preserves their contents (5.1813ms)
+✔ real restricted login completes account provisioning and FOR SHARE locks without permitting identity rewrites (57.3323ms)
+✔ restricted legacy CRUD uses its one sequence and keeps null-owned historical sketches inaccessible (27.4309ms)
+✔ physical save, append, duplicate, archive and restore preserve immutable envelopes under runtime grants (103.1897ms)
+✔ connect-pg-simple performs real get/upsert/touch/destroy using the restricted runtime login (54.6337ms)
+✔ PUBLIC and Data API roles cannot read any application table, sequences or helper functions (13.9801ms)
+✔ runtime has no owner escalation, DDL, trigger, truncate or inert-user privileges (2.3599ms)
+✔ new owner-created objects do not regain default API privileges or PUBLIC function execution (3.345ms)
+✔ hardening refuses unexpected existing column grants, policies and unsafe membership before changing grants (958.9074ms)
+✔ migration setup reserves one administrative connection while unrelated pooled queries retain their role and search path (405.9197ms)
+✔ a later migration failure preserves earlier committed steps and resets the reserved administrative session (282.3486ms)
+ℹ tests 12
+ℹ suites 0
+ℹ pass 12
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 2939.809

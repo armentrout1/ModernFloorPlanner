@@ -1,0 +1,26 @@
+{
+  "ownedFiles": 7,
+  "trailingWhitespace": [],
+  "migrations": [
+    {
+      "path": "migrations\\0001_workspace_authorization.sql",
+      "sha256": "5d35ccf6b026190b1c87ce8c28f622bf312fa831e58e7e6c00d98f6cbf7ca11f",
+      "canonicalMatch": true
+    },
+    {
+      "path": "migrations\\0002_oidc_sessions_accounts.sql",
+      "sha256": "00a9798c4594bb26bcb29a5bddd19f5d32fddb6f3a6eee2da92e10594cfe5e23",
+      "canonicalMatch": true
+    },
+    {
+      "path": "migrations\\0003_physical_plans.sql",
+      "sha256": "612ef5e8a69c8a09e85b12e142fa06d631ab4dac8d9f867ea3073c49772a0812",
+      "canonicalMatch": true
+    },
+    {
+      "path": "migrations\\0004_physical_project_lifecycle.sql",
+      "sha256": "6bcb03884907337edd33373f933020ebb210c58a48f1c58f122fa7178d4c5de5",
+      "canonicalMatch": true
+    }
+  ]
+}

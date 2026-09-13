@@ -1,0 +1,37 @@
+✔ actual hosted entry over an HTTP hop supports secure OIDC cookies, PKCE, SID rotation and one-time callback (262.8179ms)
+✔ missing, conflicting and duplicate forwarded metadata fail before durable sessions are created (9.8659ms)
+✔ standalone HTTP cannot enable Secure cookies through VERCEL env or spoofed forwarding headers (80.7744ms)
+✔ saved physical revisions and every export remain workspace-private through the hosted transport (211.5977ms)
+✔ a cold hosted handler replacement preserves the server session, saved revision and pending OIDC callback (1002.1692ms)
+✔ hosted mutations still reject CSRF and stale contexts and logout revokes the old SID (84.9554ms)
+✔ hosted API unknown paths and malformed JSON retain private JSON errors rather than SPA HTML (4.3496ms)
+ℹ tests 7
+ℹ suites 0
+ℹ pass 7
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 6802.771
+
+Running 2 tests using 1 worker
+
+node.exe : (node:24136) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+At
+[isolated-workspace]\run_final_checks.ps1:38
+char:2
++  & $check.tool @arguments *> (Join-Path $evidence ('final-'+$check.na ...
++  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ((node:2... env being set.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+(node:24136) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[1/2] tests\hosting\hosted-account.spec.ts:9:1 › HTTPS edge login rotates Secure cookies and preserves unapplied anonymous work across the real callback
+[2/2] tests\hosting\hosted-account.spec.ts:59:1 › browser can save and reopen SQL content through hosted transport; logout blocks the former private context
+  2 passed (9.5s)

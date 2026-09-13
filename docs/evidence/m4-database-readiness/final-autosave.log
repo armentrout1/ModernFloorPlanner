@@ -1,0 +1,39 @@
+
+> rest-express@1.0.0 test:autosave
+> node scripts/run-autosave-tests.mjs
+
+
+Running 15 tests using 1 worker
+
+
+
+npm.cmd : (node:27336) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+At
+[isolated-workspace]\run_final_checks.ps1:38
+char:2
++  & $check.tool @arguments *> (Join-Path $evidence ('final-'+$check.na ...
++  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ((node:2... env being set.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:27336) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[1/15] tests\autosave\autosave-recovery.spec.ts:9:1 › A: explicit first Save and opt-in produce one immutable height revision, retrieved by a fresh authorized browser
+[2/15] tests\autosave\autosave-recovery.spec.ts:55:1 › B/K: rapid commits coalesce and view/no-op/off changes create no server revisions
+[3/15] tests\autosave\autosave-recovery.spec.ts:174:1 › C: raw text and original unit survive same-profile recovery; explicit Apply saves without measurement confirmation
+[4/15] tests\autosave\autosave-recovery.spec.ts:226:1 › D: delayed acknowledgement preserves newer raw and committed edits and sends the later candidate once
+[5/15] tests\autosave\autosave-recovery.spec.ts:271:1 › E: endpoint unavailable, same-profile reload recovery and restored connectivity save exactly once
+[6/15] tests\autosave\autosave-recovery.spec.ts:306:1 › F/G: committed response lost, reload retains exact receipt intent then orders newer edits
+[7/15] tests\autosave\autosave-recovery.spec.ts:363:1 › H: definitely-unsent recovered branch conflicts against another browser advance without rebasing
+[8/15] tests\autosave\autosave-recovery.spec.ts:404:1 › I: logout with an uncertain request hides recovery from B and rightful A may explicitly resume
+[9/15] tests\autosave\autosave-recovery.spec.ts:455:1 › I: current viewer and revoked permissions block pending autosave transmission
+[10/15] tests\autosave\autosave-recovery.spec.ts:487:1 › J: independent same-profile pages preserve distinct branches and concurrent server writes conflict
+[11/15] tests\autosave\autosave-recovery.spec.ts:517:1 › L: denied IndexedDB prevents autosave but explicit Save remains available with honest local warning
+[12/15] tests\autosave\autosave-recovery.spec.ts:546:1 › M: rich schema5 request/evidence and 252 + 25.2 = 277.2 survive journal recovery and authorized append
+[13/15] tests\autosave\journal-crash.spec.ts:63:1 › G/L: real SQL commit followed by local acknowledgement abort preserves newer raw bytes and replays one receipt after reload
+[14/15] tests\autosave\journal-crash.spec.ts:157:1 › J: two resumed copies of one uncertain request share an atomic attempt claim and never create another revision
+[15/15] tests\autosave\journal-crash.spec.ts:243:1 › L: corrupt and unsupported journal branches show recovery failure while memory and prior bytes remain untouched
+  15 passed (1.4m)

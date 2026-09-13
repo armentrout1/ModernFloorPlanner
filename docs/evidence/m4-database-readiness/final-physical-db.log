@@ -1,0 +1,54 @@
+
+> rest-express@1.0.0 test:physical:db
+> node --import tsx --test tests/database/physical-plans.test.ts
+
+✔ additive physical migration leaves legacy ownership and old account tables unchanged (243.8585ms)
+✔ 0004 preserves every preexisting plan/revision/evaluation/receipt column and immutable triggers (46.745ms)
+✔ create persists complete schema5 envelope and server-authored evaluated identity atomically (96.4554ms)
+✔ 12x10x8 quantities and later 9ft revision preserve original geometry, totals and snapshot (125.3244ms)
+✔ a fresh repository connection retrieves committed plans and revisions without local cache (97.5311ms)
+✔ two different writes against one base serialize: one succeeds and one conflicts with no partial row (154.3189ms)
+✔ concurrent identical create keys and lost-response retries return exactly one committed result (154.7263ms)
+✔ UUID case variants serialize against the same scoped key and append resource identity (140.3ms)
+✔ concurrent identical append keys replay the original outcome even after newer revisions exist (224.4158ms)
+✔ full-content idempotency includes names and expected base, not just calculation geometry (125.3144ms)
+✔ same key is independently scoped to principal and workspace (121.8637ms)
+✔ foreign IDs never expose list, current, immutable revision or mutation content (100.1215ms)
+✔ viewer cannot create or append and revoked successful actor cannot replay a receipt (61.29ms)
+✔ missing If-Match, wildcard, weak/multiple ETags and stale versions never create revisions (142.48ms)
+✔ supported unknowns save as incomplete and unsupported/malformed references fail without mutation (114.6327ms)
+✔ bounded keyset pagination lists only workspace summaries once and rejects unbounded requests (283.1992ms)
+✔ SQL foreign keys reject dangling pointers and cross-workspace plan/revision relationships (116.6176ms)
+✔ saved revision contents and accepted receipts are append-only at the SQL boundary (77.0748ms)
+✔ failure after revision insertion rolls back plan, revision, receipt and current pointer together (224.5085ms)
+✔ membership change ahead of a waiting save is checked inside its eventual SQL transaction (27.1718ms)
+✔ logout and workspace switching invalidate the original session before receipt replay (133.3229ms)
+✔ in-flight save holds session authorization until commit, then workspace switch invalidates subsequent use (155.5096ms)
+✔ rich levels/stairs/landings/holes/uses/zones/cabinets/opening evidence roundtrips with unchanged252 takeoff (702.1305ms)
+✔ archive and restore affect project metadata and list filters without rewriting any captured revision (152.8814ms)
+✔ accepted create and append receipts still recover lost acknowledgements after archive (198.9119ms)
+✔ duplicate preserves complete rich envelope, historical evaluation, payload and name under explicit new storage identity (667.604ms)
+✔ an explicitly selected archived project can be duplicated into a separate active project without restoring its source (101.6863ms)
+✔ concurrent exact duplicate requests create one target and one immutable lifecycle receipt (103.8485ms)
+✔ lifecycle preconditions bind both current revision and archive generation, including archive/restore ABA (177.6978ms)
+✔ archive receipt replay returns the original outcome and current status without rearchiving a restored project (91.3528ms)
+✔ restore receipt replay cannot reactivate a subsequently archived project (91.7526ms)
+✔ duplicate receipt replay keeps its original first revision while reflecting current target head and archive state (164.6918ms)
+✔ lifecycle keys reject changed captured revision or precondition rather than execute a second operation (85.7028ms)
+✔ all lifecycle operations enforce actor permissions and workspace ownership even for known IDs (110.8365ms)
+✔ lifecycle input and exact preconditions reject wildcard, weak, multiple, extra and malformed values (95.865ms)
+✔ fresh no-op archive and restore are explicit conflicts and never increase lifecycle generation (93.3451ms)
+✔ lifecycle SQL metadata constraints and immutable receipts reject cross-workspace and malformed history (159.0159ms)
+✔ concurrent archive and fresh append serialize on the plan and cannot both accept a stale displayed head (135.8538ms)
+✔ lifecycle receipt insertion failure rolls back a copied plan and archive transition atomically (95.0488ms)
+✔ waiting lifecycle mutation rechecks a revoked writer after the authorization lock is released (89.8098ms)
+✔ logout or selected workspace changes block lifecycle receipt replay before any receipt is returned (70.226ms)
+✔ lifecycle key scope includes operation and resource, and canonical UUID casing preserves retries (118.7268ms)
+ℹ tests 42
+ℹ suites 0
+ℹ pass 42
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 7172.9143

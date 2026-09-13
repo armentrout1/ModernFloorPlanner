@@ -1,0 +1,20 @@
+✔ bootstrap creates the exact base then unchanged migrations yield fourteen forced-RLS tables with no seeded identities (367.1086ms)
+✔ bootstrap refuses existing tables transactionally and preserves their contents (5.8358ms)
+✔ real restricted login completes account provisioning and FOR SHARE locks without permitting identity rewrites (73.6974ms)
+✔ restricted legacy CRUD uses its one sequence and keeps null-owned historical sketches inaccessible (30.6588ms)
+✔ physical save, append, duplicate, archive and restore preserve immutable envelopes under runtime grants (125.6456ms)
+✔ connect-pg-simple performs real get/upsert/touch/destroy using the restricted runtime login (65.2552ms)
+✔ PUBLIC and Data API roles cannot read any application table, sequences or helper functions (16.0689ms)
+✔ runtime has no owner escalation, DDL, trigger, truncate or inert-user privileges (2.297ms)
+✔ new owner-created objects do not regain default API privileges or PUBLIC function execution (3.2127ms)
+✔ hardening refuses unexpected existing column grants, policies and unsafe membership before changing grants (1070.9297ms)
+✔ migration setup reserves one administrative connection while unrelated pooled queries retain their role and search path (520.9845ms)
+✔ a later migration failure preserves earlier committed steps and resets the reserved administrative session (325.835ms)
+ℹ tests 12
+ℹ suites 0
+ℹ pass 12
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 3478.3961

@@ -1,0 +1,40 @@
+
+> rest-express@1.0.0 test:hosting
+> node scripts/run-hosting-tests.mjs
+
+✔ actual hosted entry over an HTTP hop supports secure OIDC cookies, PKCE, SID rotation and one-time callback (262.2594ms)
+✔ missing, conflicting and duplicate forwarded metadata fail before durable sessions are created (10.1423ms)
+✔ standalone HTTP cannot enable Secure cookies through VERCEL env or spoofed forwarding headers (80.2773ms)
+✔ saved physical revisions and every export remain workspace-private through the hosted transport (212.9727ms)
+✔ a cold hosted handler replacement preserves the server session, saved revision and pending OIDC callback (997.4094ms)
+✔ hosted mutations still reject CSRF and stale contexts and logout revokes the old SID (86.5996ms)
+✔ hosted API unknown paths and malformed JSON retain private JSON errors rather than SPA HTML (4.0688ms)
+ℹ tests 7
+ℹ suites 0
+ℹ pass 7
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 6806.2464
+
+Running 2 tests using 1 worker
+
+
+npm.cmd : (node:6260) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+At [isolated-workspace]\post_integration_smok
+e.ps1:24 char:2
++  & npm.cmd @arguments *> (Join-Path $evidence ('integrated-'+$check.n ...
++  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ((node:6... env being set.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+(node:6260) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[1/2] tests\hosting\hosted-account.spec.ts:9:1 › HTTPS edge login rotates Secure cookies and preserves unapplied anonymous work across the real callback
+[2/2] tests\hosting\hosted-account.spec.ts:59:1 › browser can save and reopen SQL content through hosted transport; logout blocks the former private context
+  2 passed (6.2s)

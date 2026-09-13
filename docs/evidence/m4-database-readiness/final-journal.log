@@ -1,0 +1,52 @@
+
+> rest-express@1.0.0 test:journal
+> playwright test --config playwright.journal.config.ts --reporter=line
+
+npm.cmd : [WebServer] (node:33676) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR'
+env being set.
+At
+[isolated-workspace]\run_final_checks.ps1:38
+char:2
++  & $check.tool @arguments *> (Join-Path $evidence ('final-'+$check.na ...
++  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ([We... env being set.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+
+
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:25696) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being
+set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+[WebServer] (node:5392) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+
+Running 17 tests using 1 worker
+
+(node:12648) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+
+
+(node:12648) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+[1/17] tests\journal\recovery-journal.spec.ts:104:1 › real IndexedDB checkpoints detach full rich source, raw text, units and persisted autosave preference
+[2/17] tests\journal\recovery-journal.spec.ts:138:1 › request success followed by transaction abort never reports durable checkpoint or replaces prior bytes
+[3/17] tests\journal\recovery-journal.spec.ts:176:1 › acknowledgement atomically clears matching intent and advances binding without erasing newer raw checkpoint
+[4/17] tests\journal\recovery-journal.spec.ts:213:1 › abort after acknowledgement writes retains exact uncertain intent and previous binding for receipt replay
+[5/17] tests\journal\recovery-journal.spec.ts:260:1 › prepared and dispatched crash windows survive new journal instances with exact body, key and base
+[6/17] tests\journal\recovery-journal.spec.ts:291:1 › monotonic generations and stale-writer guards prevent delayed checkpoints replacing newer edits
+[7/17] tests\journal\recovery-journal.spec.ts:320:1 › two branches retain independent drafts and one copied intent is atomically leased until expiry
+[8/17] tests\journal\recovery-journal.spec.ts:351:1 › a dispatched intent is immutable and copied idempotency keys cannot identify another payload
+[9/17] tests\journal\recovery-journal.spec.ts:394:1 › storage denial and injected quota failure preserve memory and previous recovery bytes
+[10/17] tests\journal\recovery-journal.spec.ts:440:1 › corrupt and unsupported stored bytes are never repaired or replaced silently
+[11/17] tests\journal\recovery-journal.spec.ts:484:1 › request fingerprint corruption pauses discovery without deleting the uncertain intent
+[12/17] tests\journal\recovery-journal.spec.ts:508:1 › account and plan scope boundaries exclude other branches; no stored label grants access
+[13/17] tests\journal\recovery-journal.spec.ts:555:1 › turning autosave off preserves a dispatched intent, and newer binding is not rewound by older accepted receipt
+[14/17] tests\journal\recovery-journal.spec.ts:593:1 › first explicit create acknowledgement atomically changes plan scope without altering local draft identity
+[15/17] tests\journal\recovery-journal.spec.ts:628:1 › version change closes this journal and preserves records while another connection blocks the upgrade
+[16/17] tests\journal\recovery-journal.spec.ts:682:1 › explicit recovery forks a separate local branch preserving original bytes and exact uncertain network request
+[17/17] tests\journal\recovery-journal.spec.ts:732:1 › pausing preserves definitely-unsent provenance and never erases the exact candidate
+  17 passed (3.9s)

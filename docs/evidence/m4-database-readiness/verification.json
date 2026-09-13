@@ -1,0 +1,227 @@
+{
+  "date": "2026-09-12",
+  "status": "COMPLETE / PRODUCER_VERIFIED locally; NOT DEPLOYED",
+  "entryCommit": "1e2cbe5e327ec04e55b69c192508939b5b404097",
+  "implementationCommit": "71047c89b94a968a31e8b2c9130f84b6b6ee6897",
+  "sourceFileCount": 358,
+  "sourceDigest": "dd4382035e070aa12689449b346820ac459d3aff6793818cf1f8a995c993a98d",
+  "counts": {
+    "unit": 707,
+    "databasePrivileges": 12,
+    "databaseTransport": 6,
+    "packaging": 6,
+    "hostingProtocol": 7,
+    "hostingBrowser": 2,
+    "runtime": 5,
+    "authorizationSql": 15,
+    "accountSql": 20,
+    "accountHttps": 32,
+    "accountBrowser": 8,
+    "physicalSql": 42,
+    "physicalHttps": 37,
+    "physicalBrowser": 24,
+    "journalBrowser": 17,
+    "autosaveBrowser": 15
+  },
+  "freshCommandGroups": [
+    {
+      "exitCode": 0,
+      "command": "npm ci",
+      "name": "install",
+      "seconds": 13.261
+    },
+    {
+      "exitCode": 0,
+      "command": "npm test",
+      "name": "unit",
+      "seconds": 8.542
+    },
+    {
+      "exitCode": 0,
+      "command": "npm run check",
+      "name": "typecheck",
+      "seconds": 7.286
+    },
+    {
+      "exitCode": 0,
+      "command": "npm run build",
+      "name": "build",
+      "seconds": 4.459
+    },
+    {
+      "exitCode": 0,
+      "command": "npm run build:vercel",
+      "name": "hosting-build",
+      "seconds": 4.231
+    },
+    {
+      "exitCode": 0,
+      "command": "offline vercel build --prod --standalone",
+      "name": "offline-artifact",
+      "seconds": 7.751
+    },
+    {
+      "exitCode": 0,
+      "command": "npm run test:database:privileges",
+      "name": "database-privileges",
+      "seconds": 3.353
+    },
+    {
+      "exitCode": 0,
+      "command": "npm run test:database:transport",
+      "name": "database-transport",
+      "seconds": 10.466
+    },
+    {
+      "exitCode": 0,
+      "command": "node --test tests/hosting/packaging.test.mjs",
+      "name": "packaging",
+      "seconds": 0.662
+    },
+    {
+      "exitCode": 0,
+      "command": "node scripts/run-hosting-tests.mjs",
+      "name": "hosting",
+      "seconds": 20.051
+    },
+    {
+      "exitCode": 0,
+      "command": "npm run test:runtime",
+      "name": "runtime",
+      "seconds": 2.75
+    },
+    {
+      "exitCode": 0,
+      "command": "npm run test:authorization:db",
+      "name": "authorization-db",
+      "seconds": 1.688
+    },
+    {
+      "exitCode": 0,
+      "command": "npm run test:accounts:db",
+      "name": "accounts-db",
+      "seconds": 1.471
+    },
+    {
+      "exitCode": 0,
+      "command": "npm run test:accounts",
+      "name": "accounts",
+      "seconds": 35.69
+    },
+    {
+      "exitCode": 0,
+      "command": "npm run test:physical:db",
+      "name": "physical-db",
+      "seconds": 7.473
+    },
+    {
+      "exitCode": 0,
+      "command": "npm run test:physical",
+      "name": "physical",
+      "seconds": 84.106
+    },
+    {
+      "exitCode": 0,
+      "command": "npm run test:journal",
+      "name": "journal",
+      "seconds": 4.82
+    },
+    {
+      "exitCode": 0,
+      "command": "npm run test:autosave",
+      "name": "autosave",
+      "seconds": 89.519
+    }
+  ],
+  "postIntegrationGroups": [
+    {
+      "exitCode": 0,
+      "command": "npm ci",
+      "name": "install"
+    },
+    {
+      "exitCode": 0,
+      "command": "npm run build",
+      "name": "build"
+    },
+    {
+      "exitCode": 0,
+      "command": "npm run build:vercel",
+      "name": "hosting-build"
+    },
+    {
+      "exitCode": 0,
+      "command": "npm run test:runtime",
+      "name": "runtime"
+    },
+    {
+      "exitCode": 0,
+      "command": "npm run test:hosting",
+      "name": "hosting"
+    },
+    {
+      "exitCode": 0,
+      "command": "npm run test:database:privileges",
+      "name": "database-privileges"
+    },
+    {
+      "exitCode": 0,
+      "command": "npm run test:database:transport",
+      "name": "database-transport"
+    }
+  ],
+  "mainDrawingBrowserSuite": {
+    "freshRun": false,
+    "historicalPassCount": 192,
+    "reason": "Unchanged client/shared/main drawing test source. Relevant account/persistence/journal/autosave/hosting browser flows rerun above."
+  },
+  "generatedIntegratedArtifacts": {
+    "fileCount": 18,
+    "match": true,
+    "files": {
+      "dist/chunk-MLKGABMK.js": "30c77128186890ab8043f3a2502ab91c7d9dec358dd35ee0d89835189b1caa03",
+      "dist/chunk-O4HBQCES.js": "9ceefd517b8d33ccf537d52f4f916e555be3803dab93dfa2c73ef25ee0ae4962",
+      "dist/index.js": "8be05a7c3424218003a0234a5ef4364c980b789262af580f01d0a82955b55ae6",
+      "dist/storage-45CZ5LZT.js": "25d5884779e6ca2e6cfd3253cba667d4c540d456239338321c339921fd356573",
+      "dist/vite-ILWVGQH5.js": "6a255056eb23c7014676ff4f965e7a2383a22afa4e988c30161d686537239b78",
+      "dist/public/index.html": "69011dcb73862608a5ffccd735b7074c4575797117a9d32ac377f2810df3a9c1",
+      "dist/public/assets/display-Ba67TM9b.js": "85cc189ba73c6ba5a2f6136d1291e64b341fb6029ff8f3cd1863736c44db699a",
+      "dist/public/assets/index-tbBK-11W.css": "48a481d89921e45f937a933847041af609599d7fdc1ff7271b4c00f0aa5edd02",
+      "dist/public/assets/index-_XUHwOkH.js": "7991652b4afec18d54587f095431be06e1952e9a7a2b0b10f759a29e2c8cea31",
+      "dist/public/assets/PhysicalDraft-DZm8FZVP.js": "36052e0fc297996f97651ae3207281eeef1af5823befa878cad529429128f598",
+      "dist/public/assets/QuickRooms-DfGffM9c.js": "3fb2f2701046924e3eb50100f3ac8ad83dd973ca153b8fae55ca830f2f6119c0",
+      "public/index.html": "69011dcb73862608a5ffccd735b7074c4575797117a9d32ac377f2810df3a9c1",
+      "public/assets/display-Ba67TM9b.js": "85cc189ba73c6ba5a2f6136d1291e64b341fb6029ff8f3cd1863736c44db699a",
+      "public/assets/index-tbBK-11W.css": "48a481d89921e45f937a933847041af609599d7fdc1ff7271b4c00f0aa5edd02",
+      "public/assets/index-_XUHwOkH.js": "7991652b4afec18d54587f095431be06e1952e9a7a2b0b10f759a29e2c8cea31",
+      "public/assets/PhysicalDraft-DZm8FZVP.js": "36052e0fc297996f97651ae3207281eeef1af5823befa878cad529429128f598",
+      "public/assets/QuickRooms-DfGffM9c.js": "3fb2f2701046924e3eb50100f3ac8ad83dd973ca153b8fae55ca830f2f6119c0",
+      "app.js": "b0a8f584fd6282899566aa3d3810dcebdb1f3b121dc09c42faaa85d3c4e7642d"
+    },
+    "retainedEarlierCandidateChunks": [
+      "dist/chunk-JHXDDOBC.js",
+      "dist/storage-TFZF6DRJ.js"
+    ],
+    "comparison": "Every artifact from the fresh committed-source build matches the final tested artifact; earlier candidate chunks remain archived and unused."
+  },
+  "preservation": {
+    "preservedDistFileCount": 11,
+    "distHashesMatch": true,
+    "stashUnchanged": true,
+    "archiveUnchanged": true,
+    "ownerBrowserInteractions": 0
+  },
+  "ownerBrowserInteractions": 0,
+  "deployment": "NOT DEPLOYED",
+  "liveProviderDatabaseAuthIngress": "NOT VERIFIED",
+  "cleanup": {
+    "verifiedLocalPostgresFixtureStopped": true,
+    "ownedDockerContainersRemaining": 0,
+    "ownedDockerNetworksRemaining": 0,
+    "fixturePortsRemaining": 0,
+    "ownerReviewPid": 2616,
+    "ownerReviewOrigin": "http://127.0.0.10:5194",
+    "ownerReviewRestarted": false
+  },
+  "syntheticScreenshotInspected": true
+}

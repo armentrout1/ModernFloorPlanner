@@ -1,0 +1,143 @@
+{
+  "schemaVersion": 1,
+  "checkedAtUtc": "2026-09-13T02:32:52.440Z",
+  "status": "PASS",
+  "scope": "Current offline artifact/source equality; NOT DEPLOYED",
+  "source": {
+    "entryCommit": "1e2cbe5e327ec04e55b69c192508939b5b404097",
+    "fileCount": 358,
+    "digest": "dd4382035e070aa12689449b346820ac459d3aff6793818cf1f8a995c993a98d",
+    "mismatches": []
+  },
+  "versions": {
+    "verificationNode": "24.21.0",
+    "vercelCli": "59.11.7",
+    "vercelExpressBuilder": "7.0.2",
+    "vercelNodeBuilder": "12.0.1",
+    "vercelBuildUtils": "14.9.1",
+    "artifactRuntime": "nodejs24.x",
+    "artifactExpress": "4.22.2",
+    "clientVite": "6.4.3",
+    "handlerCompilerEsbuild": "0.25.0"
+  },
+  "build": {
+    "command": "offline vercel build --prod --standalone",
+    "seconds": 7.751,
+    "exitCode": 0,
+    "log": "final-offline-artifact.log"
+  },
+  "identity": {
+    "handler": {
+      "generatedFile": "app.js",
+      "artifactFile": "functions/index.func/app.js",
+      "sha256": "b0a8f584fd6282899566aa3d3810dcebdb1f3b121dc09c42faaa85d3c4e7642d",
+      "artifactSha256": "b0a8f584fd6282899566aa3d3810dcebdb1f3b121dc09c42faaa85d3c4e7642d",
+      "match": true
+    },
+    "client": {
+      "generatedDirectory": "public",
+      "artifactDirectory": "static",
+      "generatedFileCount": 6,
+      "artifactFileCount": 6,
+      "match": true,
+      "files": [
+        {
+          "path": "assets/display-Ba67TM9b.js",
+          "sha256": "85cc189ba73c6ba5a2f6136d1291e64b341fb6029ff8f3cd1863736c44db699a",
+          "artifactSha256": "85cc189ba73c6ba5a2f6136d1291e64b341fb6029ff8f3cd1863736c44db699a"
+        },
+        {
+          "path": "assets/index-_XUHwOkH.js",
+          "sha256": "7991652b4afec18d54587f095431be06e1952e9a7a2b0b10f759a29e2c8cea31",
+          "artifactSha256": "7991652b4afec18d54587f095431be06e1952e9a7a2b0b10f759a29e2c8cea31"
+        },
+        {
+          "path": "assets/index-tbBK-11W.css",
+          "sha256": "48a481d89921e45f937a933847041af609599d7fdc1ff7271b4c00f0aa5edd02",
+          "artifactSha256": "48a481d89921e45f937a933847041af609599d7fdc1ff7271b4c00f0aa5edd02"
+        },
+        {
+          "path": "assets/PhysicalDraft-DZm8FZVP.js",
+          "sha256": "36052e0fc297996f97651ae3207281eeef1af5823befa878cad529429128f598",
+          "artifactSha256": "36052e0fc297996f97651ae3207281eeef1af5823befa878cad529429128f598"
+        },
+        {
+          "path": "assets/QuickRooms-DfGffM9c.js",
+          "sha256": "3fb2f2701046924e3eb50100f3ac8ad83dd973ca153b8fae55ca830f2f6119c0",
+          "artifactSha256": "3fb2f2701046924e3eb50100f3ac8ad83dd973ca153b8fae55ca830f2f6119c0"
+        },
+        {
+          "path": "index.html",
+          "sha256": "69011dcb73862608a5ffccd735b7074c4575797117a9d32ac377f2810df3a9c1",
+          "artifactSha256": "69011dcb73862608a5ffccd735b7074c4575797117a9d32ac377f2810df3a9c1"
+        }
+      ]
+    },
+    "artifactConfigSha256": "281fbeaeff089d86af9e8f88474f27d07656eb77ddb21cb6fdc1934b8a5a9254",
+    "functionConfigSha256": "04c678abc89ff0e1731e274fe1794b2600535fe4e755fd9860bc1c09a1bdeb59"
+  },
+  "artifact": {
+    "functionCount": 1,
+    "staticFileCount": 6,
+    "routes": [
+      {
+        "src": "^/(?:quick-room|physical-draft|account/callback)?$",
+        "methods": [
+          "GET",
+          "HEAD"
+        ],
+        "dest": "/index.html"
+      },
+      {
+        "src": "^/(?:quick-room|physical-draft|account/callback)?$",
+        "status": 405,
+        "headers": {
+          "Allow": "GET, HEAD"
+        }
+      },
+      {
+        "handle": "error"
+      },
+      {
+        "status": 404,
+        "src": "^(?!/api).*$",
+        "dest": "/404.html"
+      },
+      {
+        "handle": "filesystem"
+      },
+      {
+        "src": "/(.*)",
+        "dest": "/",
+        "transforms": [
+          {
+            "type": "request.path",
+            "op": "set",
+            "args": "/$1"
+          }
+        ]
+      }
+    ],
+    "functionRuntime": "nodejs24.x",
+    "functionHandler": "app.js",
+    "functionFramework": {
+      "slug": "express",
+      "version": "4.22.2"
+    },
+    "topLevelStaticFramework": {
+      "slug": "vite",
+      "version": "6.4.3"
+    }
+  },
+  "recordedAcceptance": {
+    "command": "node --test tests/hosting/packaging.test.mjs",
+    "exitCode": 0,
+    "seconds": 0.662,
+    "log": "final-packaging.log"
+  },
+  "limitations": [
+    "Offline CLI output does not certify deployed CDN/edge behavior.",
+    "Managed forwarded-header sanitization, live provider database/auth binding and owner-only deployment protection remain unverified.",
+    "This verifier performed no CLI build, deployment, provider operation, migration or browser operation."
+  ]
+}

@@ -1,0 +1,27 @@
+
+> rest-express@1.0.0 test:authorization:db
+> node --import tsx --test tests/database/authorization.test.ts
+
+✔ additive migration preserves old users and every legacy payload field without assigning ownership (168.9414ms)
+✔ actual PostgreSQL CRUD enforces roles and assigns validated workspace outside the legacy DTO (29.4725ms)
+✔ known other-workspace IDs and workspace selections never disclose or mutate B records (23.9005ms)
+✔ viewer reads succeed but all writes and editor membership administration fail (19.952ms)
+✔ issuer and subject jointly identify a current principal; malformed, forged and nonmember identities deny (12.3288ms)
+✔ membership revocation/demotion and principal/identity revocation take effect on the next operation (19.0287ms)
+✔ mass-assigned authority is rejected while nested drawing metadata remains inert and compatible (29.4089ms)
+✔ unowned legacy records stay inaccessible despite known IDs and remain unmodified (21.6574ms)
+✔ only current owners administer existing memberships and cannot remove the last active owner (21.5671ms)
+✔ database constraints reject dangling ownership, duplicate identity and invalid roles (50.9395ms)
+✔ an in-flight mutation waits for workspace membership changes and rechecks the committed role (22.7874ms)
+✔ a protected write holds its authorization lock until commit and revocation waits, then denies subsequent writes (97.1618ms)
+✔ simultaneous owner demotions serialize and leave one active owner (15.6635ms)
+✔ missing or malformed database binding and repository failures never fall back to unscoped data (10.5933ms)
+✔ actual HTTP middleware and routes enforce scoped PostgreSQL persistence with private responses (77.1954ms)
+ℹ tests 15
+ℹ suites 0
+ℹ pass 15
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1394.8743
