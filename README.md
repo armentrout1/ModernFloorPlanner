@@ -4,7 +4,7 @@ A room-first measurement and quantity application: enter room dimensions and ope
 
 ## Current build and roadmap
 
-Use the [canonical build roadmap](docs/BUILD_ROADMAP.md) for the current assigned task and release gates. Local physical editing, quantities, building-layout tools, authorized saved revisions, recovery, reports and project lifecycle have recorded implementation evidence. The current bounded [issue #4](https://github.com/armentrout1/ModernFloorPlanner/issues/4) assignment covers runtime and dependency readiness; its [results](docs/MFP_M4_RUNTIME_READINESS_RESULTS.md) record actual verification separately from pending work.
+Use the [canonical build roadmap](docs/BUILD_ROADMAP.md) for the current assigned task and release gates. Local physical editing, quantities, building-layout tools, authorized saved revisions, recovery, reports and project lifecycle have recorded implementation evidence. The bounded [issue #4](https://github.com/armentrout1/ModernFloorPlanner/issues/4) runtime work is complete locally; its [results](docs/MFP_M4_RUNTIME_READINESS_RESULTS.md) retain the verification. The [owner-hosting plan](docs/MFP_M4_HOSTING_BINDING_PLAN.md) now selects compatible Vercel packaging and recommends dedicated Supabase PostgreSQL, with provider decisions and live gates explicit. The next implementation is the Vercel Express adapter and trusted HTTPS acceptance; it has not started.
 
 **NOT DEPLOYED.** Live identity-provider/client registration, trusted HTTPS origin and production PostgreSQL binding remain unverified. Local acceptance is not deployment or permission to onboard customers. The broad hosting/readiness issue remains open after its bounded runtime work.
 

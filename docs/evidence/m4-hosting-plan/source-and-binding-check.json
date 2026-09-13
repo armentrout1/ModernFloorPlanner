@@ -1,0 +1,32 @@
+{
+  "checkedAtUtc": "2026-09-13T01:16:54.666220+00:00",
+  "entryCommit": "4c57b285442384d23204a75e48e6058e2c493d46",
+  "sourceFilesChecked": 330,
+  "sourceMismatches": [],
+  "sourceStatus": "MATCH",
+  "freshApplicationTestsRun": false,
+  "reason": "Documentation-only hosting plan; exact previously tested application/configuration/test source retained.",
+  "vercelInventory": {
+    "teamCount": 1,
+    "projectCount": 10,
+    "matchingRepositoryProjects": 0,
+    "projectBindingFilePresent": false,
+    "hostingConfigurationFilePresent": false
+  },
+  "supabaseInventory": {
+    "projectCount": 7,
+    "clearlyNamedModernFloorPlannerProjects": 0,
+    "genericProjectOwnership": "UNRESOLVED - not inspected or assigned"
+  },
+  "liveDatabaseQueries": 0,
+  "ownerBrowserInteractions": 0,
+  "deployment": "NOT DEPLOYED",
+  "documentationChecks": {
+    "workingWhitespace": "PASS",
+    "localLinksChecked": 20,
+    "localLinks": "PASS",
+    "historicalRoadmapText": "PRESERVED",
+    "independentDesignReview": "PASS - no material findings",
+    "applicationSourceAfterDocumentation": "330/330 MATCH"
+  }
+}
