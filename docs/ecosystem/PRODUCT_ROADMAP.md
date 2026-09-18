@@ -1,36 +1,44 @@
-# Modern Floor Planner — product ecosystem roadmap
+# Modern Floor Planner — ecosystem roadmap
 
-Updated: 2026-09-06. Shared policy remains blueprint v1.1 / My Way. Selected repository: `armentrout1/ModernFloorPlanner`. Reviewed remote baseline: `876968e78d7070775e7924f33a3164ba20905d42` on `main`.
+Shared package v1.2, September 8, 2026. Reviewed product baseline `d771406acbf65290b10bb538cdad2fe86e0d00b4`. Canonical shared source: FixDoneNow `04c0477affd4515e375f30a2f37cd3d5c2916911`. A published mirror branch is not adopted main until merged by the current publishing owner.
 
-## Current activation
+## One standalone build sequence
 
-The owner explicitly requested research, architecture and a committed executable roadmap for this product on September 6. Planning is active; the previous blanket documentation-only/selection-unverified description is superseded for this product-planning task. **This publication does not implement the drawing backlog, start Codex, verify a local checkout or authorize live billing/data migrations.**
+[../BUILD_ROADMAP.md](../BUILD_ROADMAP.md) remains the only canonical standalone product roadmap. Read its latest checkpoint, the current issue and actual result files. This map does not duplicate or renumber M1–M8, restart completed repairs, replace the drawing framework or modify active local work.
 
-Authoritative build sequence: [BUILD_ROADMAP.md](../BUILD_ROADMAP.md). Evidence: [dated audit and research](../RESEARCH_AND_AUDIT_2026-09-06.md). First prepared task: [MFP-M1 / issue #2](https://github.com/armentrout1/ModernFloorPlanner/issues/2). M1 issue #2 remains locally producer-verified, open and unreleased. The owner explicitly accepted that evidence and assigned M2A only under [issue #3](https://github.com/armentrout1/ModernFloorPlanner/issues/3); its shared measurement schemas/parsers/legacy adapter are locally verified (see [M2A results](../MFP_M2A_RESULTS.md)). M2B is next eligible but unstarted; later gates remain. Hosting/runtime is separately [PROPOSED in issue #4](https://github.com/armentrout1/ModernFloorPlanner/issues/4), not activated.
+The September 8 review observed M1, M2A/B/C and M3A locally completed, plus M3B Slice 1 locally producer-verified in [issue #10](https://github.com/armentrout1/ModernFloorPlanner/issues/10). M3B remains in progress; Slice 2 was next eligible/unstarted. **NOT DEPLOYED in the reviewed evidence.** Hosting #4 remains proposed and safe persisted/customer/partner use remains separately gated. These are dated source observations, not a fresh test or an activation of the next slice.
 
-The complete local Codex output and unpublished ecosystem roadmap were read, preserved and reconciled during the assigned M1 task; the output is archived. See [M1 evidence](../MFP_M1_RESULTS.md). No machine-specific paths or private inventories belong in this public repository.
+The earlier ecosystem paragraph calling M2B next is superseded by the canonical product checkpoint. Local stashes, archived roadmaps, ongoing drafts and protected browser/server state must remain untouched by remote documentation work.
 
 ## Owned responsibility
 
-Modern Floor Planner independently owns drawings, editor, physical measurements and provenance, quantity calculations, saved geometry versions, exports and tenant-scoped authorization/persistence. It must work without FixDoneNow. Consumers store authorized versioned references; they do not duplicate the geometry engine or read its private database.
+Own independent drawings, geometry/editor, physical measurements/provenance, quantity rules, source versions, persistence, exports and tenant-safe access. FixDoneNow owns business/customer/site/job relationships and host navigation; LedgerLine owns financial estimates, prices/taxes/totals and lifecycle; ProjectRoll owns media and selected photo-report composition.
 
-FixDoneNow owns CRM/job orchestration. LedgerLine owns authoritative financial estimates/totals/lifecycle. ProjectRoll owns media and photo-report composition. Advisory material costs are not a second financial engine. Shared policy and cross-product consumer roadmaps are not changed by this document.
+A CRM job links to authorized drawing workspace/project/version IDs; it is not another geometry database. The drawing product must remain useful without FixDoneNow. Public page slugs, customer email/address and client-supplied workspace IDs never grant drawing authority. The host's paid entitlement does not replace producer membership/delegation checks.
 
-## Capability mapping and gates
+## Capability mapping
 
-| Capability | Required result | Build milestone / status |
-| --- | --- | --- |
-| ECO-001 | Verify local root/remote/branch/HEAD/dirty state and reconcile Codex's local output. | M1 entry verified; original local work preserved and reconciled. |
-| DR-001 | Standalone/workspace roles, tenant-safe access and explicit partner authority/consent. | M4 standalone gate; M6 partner provisioning/linking. Not implemented by this publication. |
-| DR-002 | Product-owned editor, physical quantity engine, measurement assumptions and versioned outputs. | M1 repairs; M2 engine; M3 quick-room UI; M4 revisions/exports; M6 hosted interface. |
-| ECO-002 | Cross-business denial, independent standalone operation, expired permission rejection and stable issued snapshots. | M4 producer tests and M6 originating-consumer verification. |
+| Capability | Existing milestone boundary |
+| --- | --- |
+| ECO-001 | Current task verifies real local root/remote/branch/HEAD/dirty state and writer; do not treat this remote review as local proof. |
+| DR-001 | M4 secure standalone persistence/roles; M6 explicit scoped partner linking/provisioning/consent. No unscoped legacy API customer rollout. |
+| DR-002 | M1/M2 measurement foundation; M3 usable synchronized physical workflow; M4 durable revisions/exports; M6 supported producer-owned editor/output handoff. Local M3 progress does not satisfy M4/M6. |
+| ECO-002 | Two isolated business/workspace journeys, stale/revoked scope denial, preserved immutable outputs, standalone compatibility and actual originating-consumer acceptance. |
+| ECO-004 / FDN-005 | Reconcile proposed sponsored project allowance with existing M5 standalone commercial rules and M6 partner contracts. Do not silently adopt FDN figures as direct-product prices/limits. |
+| Later purchasing quantities | M7 specified material recipes/coverage/accessories/waste/stock quantities; later trade/construction scope follows its separately approved model. Room area is not a complete materials list. |
 
-Roadmap order: repair foundation → measurement engine → quick-room workflow → secure saving/revisions/exports → paid-use pilot → FixDoneNow handoff → materials → suppliers/enterprise.
+## CRM handoff to design when activated
 
-Do not expose reviewed unscoped `/api/floor-plans` methods as a multi-tenant integration. Historical source shows functionality, not customer-safe runtime proof. Read the audit before making claims.
+FixDoneNow should launch the product-owned editor with trusted business/environment/job context through the supported future interface, preserve its unfinished job form, and return to that same job. The producer returns an authorized reference/version, explicit units, source/provenance and per-output readiness. Unknown inputs stay unknown; do not manufacture dimensions or claim physical accuracy from an uncalibrated photo.
 
-## Cross-product execution
+Keep geometry and immutable quantity output separate from LedgerLine price/tax authority. Editing a later drawing revision must not rewrite an already issued estimate/proposal; explicitly select a new version and require appropriate review before replacing draft inputs. Private drawing/site data is not automatically published to a Business Page or shared customer report.
 
-Use owner-repository issues and existing capability IDs. Publish and verify compatible producer interfaces before consumer deployment. FixDoneNow and LedgerLine adapters receive separate bounded assignments; an issue in this repo does not grant access to or start work in another checkout. Future drawing AI belongs here and must label inferred versus confirmed measurements.
+Provision/link only on authorized use, recover safely from partial success and avoid duplicates on retries. Independently owned drawing workspaces require supported consent before sponsorship/linking. Exiting FixDoneNow or changing payer is not permission to delete the owner's designs.
 
-Ordinary authorized delivery uses the verified production branch and normal deployment with appropriate checks; no compulsory staging or preview. Preserve existing plans, unrelated work, provider-managed backups and rollback references. Record commit, deployed version and originating workflow result separately. A roadmap, mock or successful GitHub commit is not end-to-end integration evidence.
+## Commercial boundaries and future acceptance
+
+The canonical [provider offer](https://github.com/armentrout1/fixdonenow/blob/main/docs/provider-workspace-blueprint.md) retains proposed Free/Pro values as decision candidates only. Define what counts as a new project, copying versus revising, month/timezone, retry/concurrency, source usage events, grace/export/retention, payer precedence and specialist costs before enforcing a sponsored allowance. Normal edits must not consume another new-project unit.
+
+No paid price/allowance, customer provisioning, account-backed persistence, hosting or partner API is created by this documentation. A useful Free CRM can ship in FixDoneNow without waiting for this product's complete roadmap. Later drawing integration follows the existing producer gates and one explicit bounded consumer task.
+
+Read the shared [amendment](CRM_AND_COMMERCIAL_AMENDMENT.md), [dependencies](CAPABILITY_DEPENDENCIES.md) and [My Way](MY_WAY_WORKFLOW.md). Keep separate repositories/commits and existing release policy; no mandatory staging/control folder. Record source, local checks, actual deployment and consumer verification as separate evidence. Stop at the assigned slice rather than expanding completed work.
