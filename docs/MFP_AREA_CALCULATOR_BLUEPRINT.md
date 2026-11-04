@@ -1,9 +1,9 @@
 # Modern Floor Planner area calculator architecture and UX blueprint
 
-Date: 2026-11-04  
-Status: PLANNED — IMPLEMENTATION NOT STARTED — NOT DEPLOYED  
-Baseline reviewed: main at 7fe09f0eafe6e581549a7cf5a6ba68ee5711b78a  
-Owning requirement: issue #9, MFP-BLD-001, and ecosystem dependency DR-002
+- Date: 2026-11-04
+- Status: PLANNED — IMPLEMENTATION NOT STARTED — NOT DEPLOYED
+- Baseline reviewed: main at 7fe09f0eafe6e581549a7cf5a6ba68ee5711b78a
+- Owning requirement: issue #9, MFP-BLD-001, and ecosystem dependency DR-002
 
 ## Decision summary
 
