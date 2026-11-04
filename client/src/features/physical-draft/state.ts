@@ -6,7 +6,8 @@ import { applyMeasurementAction, type MeasurementEvent } from '@shared/domain/me
 import { unknownMeasurement, type Dimension } from '@shared/domain/measurements';
 import type { MeasurementRef } from '@shared/domain/geometryValidation';
 import { parseMeasurement, formatMeasurement } from '@shared/domain/parseMeasurement';
-import { QUANTITY_POLICY_VERSION_V2, QUANTITY_POLICY_VERSION_V3, QUANTITY_POLICY_VERSION_V4, type QuantityRequest } from '@shared/quantities/policy';
+import { QUANTITY_POLICY_VERSION_V2, type QuantityRequest } from '@shared/quantities/policy';
+import { createAreaSummaryRequest } from '@shared/quantities/summary';
 import { copyJson } from '@shared/quantities/canonicalJson';
 import { assertSupportedPhysicalDocument, importLegacyPhysicalDraft, upgradePhysicalDraft,
   type PhysicalDraftSource } from '@shared/compatibility/physicalDraft';
@@ -93,12 +94,7 @@ function fieldsFor(document: PhysicalDocument, unit: InputUnit): PhysicalDraft['
     [field, { text: committedFieldText(room[field], unit), unit, dirty: false }]))])) as PhysicalDraft['fields'];
 }
 export function requestForRooms(document: PhysicalDocument): QuantityRequest {
-  return { policy: { version: ((document.schemaVersion === 4 || document.schemaVersion === 5)) ? QUANTITY_POLICY_VERSION_V4 : document.schemaVersion === 3 ? QUANTITY_POLICY_VERSION_V3 : QUANTITY_POLICY_VERSION_V2, openingMeasureBasis: 'finished', crownFullHeightGaps: [] },
-    selections: document.rooms.length ? [
-      { output: 'floor-area', roomIds: document.rooms.map(room => room.id), wasteFraction: 0 },
-      { output: 'ceiling-area', roomIds: document.rooms.map(room => room.id), wasteFraction: 0 },
-      { output: 'gross-wall-area', wallFaceIds: document.rooms.flatMap(room => room.wallFaces.map(wall => wall.id)), wasteFraction: 0 },
-    ] : [] };
+  return createAreaSummaryRequest(document);
 }
 function entry(id: string, document: PhysicalDocument, source: PhysicalDraftSource, name?: string): PhysicalDraft {
   if (!validId(id)) throw new PhysicalDraftError('INVALID_DRAFT_ID', 'A local draft needs a distinct nonblank ID.');

@@ -9,8 +9,8 @@ import { Label } from '@/components/ui/label';
 import { QuantitySummary } from '@/features/quick-room/QuantitySummary';
 import { useQuickRoomDraft } from '@/features/quick-room/useQuickRoomDraft';
 import { addRoom, renameRoom, editField, commitField, switchUnit, duplicateRoom, removeRoom, previewDocument,
-  requestForRooms, fieldError, ROOM_FIELDS, type QuickRoomDraft, type RoomField, type InputUnit } from '@/features/quick-room/state';
-import { calculateQuantities } from '@shared/quantities/engine';
+  fieldError, ROOM_FIELDS, type QuickRoomDraft, type RoomField, type InputUnit } from '@/features/quick-room/state';
+import { calculateAreaSummary } from '@shared/quantities/summary';
 import type { PhysicalRoom } from '@shared/domain/document';
 
 const fieldLabels: Record<RoomField, string> = { length: 'Length', width: 'Width', ceilingHeight: 'Ceiling height' };
@@ -74,11 +74,9 @@ export default function QuickRooms({ active = true }: { active?: boolean }) {
     }
   }, [focusId, active]);
   const preview = useMemo(() => previewDocument(draft), [draft]);
-  const quantities = useMemo(() => calculateQuantities(preview, requestForRooms(preview)), [preview]);
-  const roomQuantities = useMemo(() => new Map(preview.rooms.map(room => {
-    const selected = { ...preview, rooms: [room] };
-    return [room.id, calculateQuantities(selected, requestForRooms(selected))] as const;
-  })), [preview]);
+  const area = useMemo(() => calculateAreaSummary(preview), [preview]);
+  const summary = area.ok ? area.summary : null;
+  const roomQuantities = useMemo(() => new Map((summary?.rooms ?? []).map(room => [room.id, room] as const)), [summary]);
   function add() {
     const id = crypto.randomUUID();
     update(current => addRoom(current, id, roomType === 'Custom' ? undefined : roomType));
@@ -108,7 +106,7 @@ export default function QuickRooms({ active = true }: { active?: boolean }) {
       </header>
       <main aria-labelledby="quick-rooms-title" className="mx-auto max-w-7xl px-4 py-7 sm:px-6 sm:py-10 lg:px-8">
         <div className="mb-6 max-w-3xl">
-          <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-primary">Measure a room. Get quantities.</p>
+          <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-primary">Area calculator · Measure a room. Get quantities.</p>
           <h1 id="quick-rooms-title" ref={heading} tabIndex={-1} className="text-3xl font-semibold tracking-tight outline-none sm:text-4xl">Quick Rooms</h1>
           <p className="mt-3 max-w-2xl text-base leading-7 text-slate-600">Start with the room in front of you. Enter its dimensions to calculate floor, flat ceiling and gross wall areas.</p>
         </div>
@@ -163,13 +161,13 @@ export default function QuickRooms({ active = true }: { active?: boolean }) {
                       onCommit={() => update(current => commitField(current, room.id, field, new Date().toISOString()))} />)}
                   </div>
                   <p className="mb-4 text-xs leading-5 text-slate-500">Examples: 12 ft 6 in · 32 1/2 in · 3.81 m. Units may be written in any field.</p>
-                  <QuantitySummary result={roomQuantities.get(room.id)!} unit={draft.displayUnit} />
+                  <QuantitySummary group={roomQuantities.get(room.id) ?? null} unit={draft.displayUnit} />
                 </article>
               ))}
             </div>
             <aside className="min-w-0 rounded-xl border border-slate-200 bg-white p-5 shadow-sm lg:sticky lg:top-6">
               <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary"><Layers className="h-5 w-5" /></div>
-              <QuantitySummary result={quantities} unit={draft.displayUnit} project />
+              <QuantitySummary group={summary?.project ?? null} unit={draft.displayUnit} project />
               <div className="mt-5 border-t border-slate-200 pt-4 text-xs leading-5 text-slate-600">
                 <p className="font-medium text-amber-800">Based on entered dimensions — not field-verified.</p>
                 <p className="mt-2">Rectangular rooms and flat ceilings. Areas use zero waste; wall quantities are before door and window deductions.</p>

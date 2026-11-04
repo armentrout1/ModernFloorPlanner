@@ -1,7 +1,7 @@
 # Modern Floor Planner area calculator architecture and UX blueprint
 
 - Date: 2026-11-04
-- Status: PLANNED — IMPLEMENTATION NOT STARTED — NOT DEPLOYED
+- Status: PACKETS 1–3 IMPLEMENTED AND LOCALLY VERIFIED — NOT DEPLOYED
 - Baseline reviewed: main at 7fe09f0eafe6e581549a7cf5a6ba68ee5711b78a
 - Owning requirement: issue #9, MFP-BLD-001, and ecosystem dependency DR-002
 
@@ -11,7 +11,7 @@ Modern Floor Planner will build the calculator as a focused user experience over
 
 The product will have two calculator entry points that share one calculation source:
 
-- Quick Rooms at /quick-room remains the fastest way to enter rectangular room dimensions and see room and project areas. Its navigation label should become Area calculator while the route remains unchanged for compatibility.
+- Quick Rooms at /quick-room remains the fastest way to enter rectangular room dimensions and see room and project areas. The established route and workflow title remain unchanged, with an Area calculator task descriptor added for discoverability.
 - Unified physical draft at /physical-draft keeps its existing Quick Rooms and Drawing views. The quantity card already shown in both views gains a compact Selected room / Current level / Whole project scope control. The detailed measured takeoff stays in its current location for openings, waste, trim, and export control.
 - The legacy standalone sketch at / remains available but does not receive another calculator implementation.
 
@@ -73,11 +73,11 @@ This separation prevents a simple all-room area summary from silently changing t
 
 Add shared/quantities/summary.ts as a pure projection with no React, DOM, database, or rendering imports.
 
-Inputs:
+Calculation boundary:
 
 - PhysicalDocument
-- CalculationResult from the existing engine
-- an explicit summary scope, initially all modeled rooms
+- one generated all-room, zero-waste request using the document's existing policy version
+- one calculateQuantities invocation, followed by a projection of its records
 
 Outputs:
 
@@ -141,7 +141,7 @@ Zones and cabinet blocks remain layout annotations and do not add to the parent 
 | / | Legacy sketch workflow | Keep the existing legacy display; do not add new calculator logic |
 | FixDoneNow job, later | Launch from a customer job | Open the hosted /physical-draft session with scoped return context |
 
-Keep /quick-room as the URL so bookmarks and tests remain valid. Change user-facing navigation from Standalone Quick Rooms to Area calculator where the label describes the task more clearly. The page title may read Area calculator with Quick Rooms retained as the workflow name in supporting copy.
+Keep /quick-room as the URL so bookmarks and tests remain valid. Keep Quick Rooms as the familiar workflow name and add Area calculator as a task descriptor above it. This makes the capability discoverable without renaming established navigation or adding another destination.
 
 ### Quick calculator experience
 
@@ -223,7 +223,7 @@ The exact diff should remain small and additive.
 | Path | Change |
 | --- | --- |
 | shared/quantities/summary.ts | New pure room/level/project projection |
-| tests/quantity-summary.test.ts | Grouping, ordering, completeness, compatibility, and unit-independent fixtures |
+| tests/area-summary.test.ts | Grouping, ordering, completeness, schema 2–5 compatibility, and unit-independent fixtures |
 | client/src/features/area-summary/AreaSummaryGrid.tsx | Shared accessible result grid for Quick Rooms and Physical Draft |
 | client/src/features/quick-room/QuantitySummary.tsx | Present one room or project summary with completeness counts |
 | client/src/pages/QuickRooms.tsx | Area calculator naming, one shared calculation, project action, and clearer status copy |
@@ -240,7 +240,22 @@ The first implementation packet should not require a database migration. Existin
 
 ## Delivery packets
 
-### Packet 1: summary contract
+### Implementation checkpoint — 2026-11-04
+
+Packets 1–3 are implemented in the application and verified locally. The implementation uses one canonical engine evaluation per document, projects room/level/project results without repeating dimension arithmetic, preserves the existing Quick Rooms and Drawing views, and adds no route, dependency, database migration, or saved-document field.
+
+Verification at this checkpoint:
+
+- all 710 repository unit tests pass
+- the calculator's schema 2–5 compatibility tests pass
+- TypeScript check and production build pass
+- all 33 affected Quick Rooms, Physical Draft, and levels browser tests pass
+- desktop, tablet, and phone screenshots were visually reviewed
+- incomplete projects expose no false grand total and label usable incomplete results as provisional partial subtotals
+
+Publication to main and deployment are separate gates. This checkpoint is not a production deployment and does not activate FixDoneNow integration.
+
+### Packet 1: summary contract — implemented
 
 Goal: produce deterministic room, level, and project summaries from existing engine results.
 
@@ -260,7 +275,7 @@ Completion evidence:
 - build
 - whitespace check
 
-### Packet 2: Quick Rooms calculator polish
+### Packet 2: Quick Rooms calculator polish — implemented
 
 Goal: make the existing fast workflow clearly discoverable as the area calculator.
 
@@ -278,7 +293,7 @@ Completion evidence:
 - keyboard and responsive review
 - no changes to engine arithmetic or saved-project APIs
 
-### Packet 3: Physical Draft area summary
+### Packet 3: Physical Draft area summary — implemented
 
 Goal: give saved multi-level projects an understandable room-to-level-to-project result view.
 
@@ -296,7 +311,7 @@ Completion evidence:
 - phone and desktop visual review
 - no database migration
 
-### Packet 4: exports and hardening
+### Packet 4: exports and hardening — planned
 
 Goal: make on-screen grouping and captured reports agree without changing the immutable snapshot model.
 
@@ -313,7 +328,7 @@ Completion evidence:
 - visual PDF review
 - exact captured snapshot parity
 
-### Packet 5: FixDoneNow integration after release gates
+### Packet 5: FixDoneNow integration after release gates — planned
 
 Goal: let a FixDoneNow job launch Modern Floor Planner and receive an accepted immutable result.
 
@@ -426,6 +441,6 @@ This blueprint does not authorize or imply:
 
 ## Implementation recommendation
 
-Start with Packet 1 and Packet 2. They deliver the clearest user value with the smallest architectural risk because the engine, Quick Rooms input model, unit handling, and project aggregate already exist. Packet 3 should follow once the summary contract is stable. Packet 4 can then add report parity. Packet 5 remains a separate cross-product release after the existing deployment and pilot gates.
+Packets 1–3 are complete in the application. Packet 4 should proceed only after grouped export parity is approved, and it must remain additive to the immutable snapshot model. Packet 5 remains a separate cross-product release after the existing deployment, identity, persistence, pilot, and contract gates.
 
 This sequence gives Modern Floor Planner its own calculator without creating a second math system, preserves the evidence and safety rules already built into the repository, and creates the cleanest future handoff to FixDoneNow and LedgerLine.

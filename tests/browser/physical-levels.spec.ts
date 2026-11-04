@@ -163,6 +163,17 @@ test('UI-built levels filter the same draft and show independent complete level 
   test.setTimeout(75_000); const f = await fixture(page), initial = await selected(page); await totals(page, 270, 802);
   expect(levels(initial).levels).toHaveLength(3); expect(Object.keys(levels(initial).roomLevels).sort()).toEqual([f.alpha.id, f.beta.id].sort());
   for (const l of levels(initial).levels) expect(l.finishedFloorElevation).toMatchObject({ state: 'unknown', valueMm: null, reference: null });
+  const areaScope = page.getByRole('group', { name: 'Area total scope', exact: true });
+  await expect(areaScope.getByRole('button', { name: 'Selected room', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await areaScope.getByRole('button', { name: 'Current level', exact: true }).click();
+  await expect(page.getByTestId('physical-floor')).toContainText('120.00 sq ft');
+  await expect(page.getByTestId('physical-walls')).toContainText('352.00 sq ft');
+  await areaScope.getByRole('button', { name: 'Whole project', exact: true }).click();
+  await expect(page.getByTestId('physical-floor')).toContainText('270.00 sq ft');
+  await expect(page.getByTestId('physical-walls')).toContainText('802.00 sq ft');
+  await page.getByRole('tab', { name: 'Drawing', exact: true }).click();
+  await expect(areaScope.getByRole('button', { name: 'Whole project', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await quick(page); await areaScope.getByRole('button', { name: 'Selected room', exact: true }).click();
   for (const [level, visible, hidden, opening, absent, area, wallArea, screenshot] of [
     [f.basement, f.alpha, f.beta, f.door, f.window, 120, 352, 'basement'], [f.main, f.beta, f.alpha, f.window, f.door, 150, 450, 'main-floor'],
   ] as const) {

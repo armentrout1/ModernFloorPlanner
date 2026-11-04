@@ -25,7 +25,7 @@ import { ReviewPanel } from '@/features/physical-draft/ReviewPanel';
 import { scopeForRequest, type DrawingSourceScope } from '@/features/physical-draft/takeoffReadModel';
 import { deleteOpening, undoOpeningDelete } from '@/features/physical-draft/openingCommands';
 import { shouldIgnoreEditorShortcut } from '@/utils/keyboard';
-import { PhysicalQuantities } from '@/features/physical-draft/PhysicalQuantities';
+import { PhysicalQuantities, type AreaScope } from '@/features/physical-draft/PhysicalQuantities';
 import { createDraft, insertDraft, selectDraft, selectedDraft, addRoom, switchUnit, previewDocument,
   type PhysicalDraft as Draft } from '@/features/physical-draft/state';
 
@@ -35,6 +35,7 @@ function DraftWorkspace() {
   const [showTakeoffScope, setShowTakeoffScope] = useTransientLocalState('physical:show-scope', true);
   const [sourceFocus, setSourceFocus] = useState<{ draftId: string; key: string; scope: DrawingSourceScope } | null>(null);
   const [view, setView] = useTransientLocalState<PhysicalView>('physical:view', 'rooms');
+  const [areaScope, setAreaScope] = useTransientLocalState<AreaScope>('physical:area-scope', 'room');
   const narrow = useInspectorLayout();
   const [inspectorOpen, setInspectorOpen] = useState(false);
   const inspectorOpener = useRef<HTMLButtonElement>(null);
@@ -328,7 +329,8 @@ function DraftWorkspace() {
             <div className="min-w-0 space-y-4">
               {view === 'drawing' ? <PhysicalDrawing key={contextKey + view} levelId={levelId} camera={cameras.current.get(contextKey)} onCamera={camera => cameras.current.set(contextKey, camera)} document={preview} draft={draft} selectedBuilding={selectedBuilding} onSelectBuilding={selectBuilding} selectedId={selectedRoomId} onSelect={selectRoom} selectedOpeningId={selectedOpening?.id ?? null} onSelectOpening={selectOpening} update={update} takeoffScope={showTakeoffScope ? takeoffScope : undefined} sourceFocus={focus} /> :
                 <fieldset disabled={blocked} className="min-w-0 rounded-lg border bg-white p-4 sm:p-5"><legend className="sr-only">Quick room measurements</legend><RoomMeasurements draft={draft} roomId={selectedRoomId} update={update} /></fieldset>}
-              <PhysicalQuantities document={preview} roomId={selectedRoomId} unit={draft.displayUnit} />
+              <PhysicalQuantities document={preview} roomId={selectedRoomId} levelId={levelId} unit={draft.displayUnit}
+                scope={areaScope} onScopeChange={setAreaScope} />
               <OpeningList draft={draft} roomId={selectedRoomId} selectedId={selectedOpening?.id ?? null} onSelect={selectOpening} update={update} />
             </div>
             {view === 'drawing' ? inspector() : <div className="min-w-0 space-y-4"><PhysicalDrawing key={contextKey + view} levelId={levelId} camera={cameras.current.get(contextKey)} onCamera={camera => cameras.current.set(contextKey, camera)} document={preview} draft={draft} selectedBuilding={selectedBuilding} onSelectBuilding={selectBuilding} selectedId={selectedRoomId} onSelect={selectRoom} selectedOpeningId={selectedOpening?.id ?? null} onSelectOpening={selectOpening} update={update} takeoffScope={showTakeoffScope ? takeoffScope : undefined} sourceFocus={focus} />

@@ -3,6 +3,7 @@ import { unknownMeasurement, type Dimension } from '@shared/domain/measurements'
 import { applyMeasurementAction, type MeasurementEvent } from '@shared/domain/measurementActions';
 import { formatMeasurement, parseMeasurement } from '@shared/domain/parseMeasurement';
 import { QUANTITY_POLICY_VERSION, type QuantityRequest } from '@shared/quantities/policy';
+import { createAreaSummaryRequest } from '@shared/quantities/summary';
 
 export const ROOM_FIELDS = ['length', 'width', 'ceilingHeight'] as const;
 export type RoomField = typeof ROOM_FIELDS[number];
@@ -202,12 +203,5 @@ export function previewDocument(draft: QuickRoomDraft): PhysicalDocument {
 }
 
 export function requestForRooms(document: PhysicalDocument): QuantityRequest {
-  return {
-    policy: { version: QUANTITY_POLICY_VERSION, openingMeasureBasis: 'finished', crownFullHeightGaps: [] },
-    selections: document.rooms.length ? [
-      { output: 'floor-area', roomIds: document.rooms.map(room => room.id), wasteFraction: 0 },
-      { output: 'ceiling-area', roomIds: document.rooms.map(room => room.id), wasteFraction: 0 },
-      { output: 'gross-wall-area', wallFaceIds: document.rooms.flatMap(room => room.wallFaces.map(wall => wall.id)), wasteFraction: 0 },
-    ] : [],
-  };
+  return createAreaSummaryRequest(document);
 }
