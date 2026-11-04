@@ -12,7 +12,7 @@ Modern Floor Planner will build the calculator as a focused user experience over
 The product will have two calculator entry points that share one calculation source:
 
 - Quick Rooms at /quick-room remains the fastest way to enter rectangular room dimensions and see room and project areas. Its navigation label should become Area calculator while the route remains unchanged for compatibility.
-- Unified physical draft at /physical-draft gains an Area summary view for saved and multi-level work. The view will show room, level, and whole-project totals, then expose the existing detailed measured takeoff when the user needs openings, waste, trim, or export control.
+- Unified physical draft at /physical-draft keeps its existing Quick Rooms and Drawing views. The quantity card already shown in both views gains a compact Selected room / Current level / Whole project scope control. The detailed measured takeoff stays in its current location for openings, waste, trim, and export control.
 - The legacy standalone sketch at / remains available but does not receive another calculator implementation.
 
 The first calculator release covers measured floor area, flat ceiling area, gross wall area, completeness, and room/level/project rollups. Pricing, product coverage, package counts, and order quantities remain later M7 material-recipe work. FixDoneNow integration remains a later M6 consumer flow after Modern Floor Planner is deployed and its identity, persistence, pilot, and contract gates are complete.
@@ -137,7 +137,7 @@ Zones and cabinet blocks remain layout annotations and do not add to the parent 
 | Location | User purpose | Calculator behavior |
 | --- | --- | --- |
 | /quick-room | Fast measuring without drawing the full plan | Primary Area calculator entry; room cards and sticky project summary |
-| /physical-draft | Saved, multi-level, opening-aware project work | Add Area summary as a third view beside Quick Rooms and Drawing |
+| /physical-draft | Saved, multi-level, opening-aware project work | Upgrade the existing quantity card with room, current-level, and whole-project scopes |
 | / | Legacy sketch workflow | Keep the existing legacy display; do not add new calculator logic |
 | FixDoneNow job, later | Launch from a customer job | Open the hosted /physical-draft session with scoped return context |
 
@@ -175,19 +175,21 @@ The project summary should show:
 
 Quick Rooms stays temporary in the browser tab until it is copied into the physical workflow. The UI must not describe it as account-saved.
 
-### Physical Draft area summary
+### Physical Draft area totals
 
-Extend PhysicalViewTabs from Rooms and Drawing to Rooms, Drawing, and Area summary.
+Do not add another top-level view. Quick Rooms and Drawing remain the two physical-draft views, and the existing quantity card remains visible in both.
 
-Area summary contains three levels of information:
+Upgrade that card with one compact scope control:
 
-1. Project header cards for floor, flat ceiling, and gross wall area.
-2. Level sections in display order, each with its totals, completeness, and room count.
-3. Expandable room rows with room values, status, and Edit room or Locate source action.
+1. Selected room shows the room being edited.
+2. Current level shows every modeled room owned by the active level.
+3. Whole project shows every modeled room in the draft.
 
-The current Measured takeoff becomes the advanced section of this view. It remains the place to choose work, choose exact targets, set waste, inspect opening deductions, review evidence, and prepare exports. The summary must label itself All modeled rooms. The advanced section must label itself Selected work. These phrases prevent a user from assuming the two scopes are identical.
+The card renders one scope at a time with floor, flat-ceiling, and gross-wall values, its Complete / Provisional / Partial / Unavailable state, and the number of rooms needing measurements. The current level option appears only when the document has explicit level ownership. Historical schema-2 work offers Selected room and Whole project without inventing a floor.
 
-On a phone, project cards stack, level headings remain sticky only when they do not obscure content, and room rows use one column. On wider screens, project cards use a three-column grid and level sections may use two columns. No horizontal scrolling should be necessary at a 390-pixel viewport.
+The existing Measured takeoff stays in its current location. It remains the place to choose exact work and targets, set waste, inspect opening deductions, review evidence, and prepare exports. The compact card must say All modeled rooms when it shows the project, while the takeoff continues to say explicit selected targets. This prevents the two scopes from being confused without adding navigation.
+
+On a phone, scope buttons wrap above a single-column result grid. On wider screens, the three quantities share one row. No horizontal scrolling should be necessary at a 390-pixel viewport.
 
 ### States and language
 
@@ -206,7 +208,7 @@ Avoid language that suggests professional verification, permit compliance, surve
 
 ### Accessibility
 
-- Preserve manual tab activation and arrow-key behavior when adding the third physical-draft view.
+- Preserve the existing two-view tab behavior unchanged. The area scope control is an ordinary labeled button group, not another nested tab interface.
 - Every quantity must have a text label and status; color cannot be the only indicator.
 - Applied versus unapplied input behavior remains explicit.
 - Focus should move to the new room name after Add room and remain stable when summaries refresh.
@@ -222,16 +224,16 @@ The exact diff should remain small and additive.
 | --- | --- |
 | shared/quantities/summary.ts | New pure room/level/project projection |
 | tests/quantity-summary.test.ts | Grouping, ordering, completeness, compatibility, and unit-independent fixtures |
-| client/src/features/quick-room/QuantitySummary.tsx | Consume the projection and show completeness counts |
-| client/src/pages/QuickRooms.tsx | Area calculator naming, project action, and clearer status copy |
-| client/src/features/physical-draft/PhysicalViewTabs.tsx | Add the Area summary view and retain keyboard behavior |
-| client/src/features/physical-draft/AreaSummaryPanel.tsx | New project, level, and room presentation |
-| client/src/pages/PhysicalDraft.tsx | Render the summary view and place advanced takeoff within it |
-| client/src/features/physical-draft/TakeoffPanel.tsx | Presentation-only heading/scope clarification; no new math |
+| client/src/features/area-summary/AreaSummaryGrid.tsx | Shared accessible result grid for Quick Rooms and Physical Draft |
+| client/src/features/quick-room/QuantitySummary.tsx | Present one room or project summary with completeness counts |
+| client/src/pages/QuickRooms.tsx | Area calculator naming, one shared calculation, project action, and clearer status copy |
+| client/src/features/physical-draft/PhysicalQuantities.tsx | Add the room / current-level / whole-project scope control |
+| client/src/pages/PhysicalDraft.tsx | Pass the existing selected room and active level to the upgraded quantity card |
+| client/src/features/physical-draft/TakeoffPanel.tsx | Presentation-only scope clarification if needed; no new math |
 | shared/exports/quantityReport.ts | Later additive grouped summary section if export parity is approved |
 | tests/browser/quick-room.spec.ts | Fast calculator and incomplete-project behavior |
 | tests/browser/physical-levels.spec.ts | Per-level rollups and historical grouping |
-| tests/browser/physical-view-tabs.spec.ts | Third-tab keyboard and responsive acceptance |
+| tests/browser/physical-draft.spec.ts | Existing-view integration, scope control, and responsive acceptance |
 | tests/browser/physical-exports.spec.ts | Grouped export parity when that packet is activated |
 
 The first implementation packet should not require a database migration. Existing physical documents already persist room measurements, level ownership, quantity policy, and revisions. A migration is needed only if a future design adds new persisted semantics rather than a read projection.
@@ -282,15 +284,15 @@ Goal: give saved multi-level projects an understandable room-to-level-to-project
 
 Work:
 
-- add the third view
-- render project, level, and room summaries
-- place the existing advanced takeoff under the selected-work section
-- add Locate source and Edit room navigation
-- preserve selected level, room, drawing camera, pending fields, history, and takeoff request across view changes
+- upgrade the existing area totals card rather than adding a view
+- add selected-room, current-level, and whole-project scope buttons
+- render one compact summary scope at a time
+- keep the existing advanced takeoff in place
+- preserve selected level, room, drawing camera, pending fields, history, and takeoff request while the summary scope changes
 
 Completion evidence:
 
-- level, tab, drawing, takeoff, history, and recovery browser tests
+- level, physical-draft, drawing, takeoff, history, and recovery browser tests
 - phone and desktop visual review
 - no database migration
 
