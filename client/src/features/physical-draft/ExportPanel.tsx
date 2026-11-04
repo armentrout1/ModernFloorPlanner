@@ -90,7 +90,7 @@ export function ExportPanel({ draft }: { draft: PhysicalDraft }) {
   }
   return <section aria-label="Quantity reports" className="space-y-3 rounded-md border bg-slate-50 p-3">
     <h3 className="font-semibold">Quantity reports</h3>
-    <p className="text-sm text-slate-600">Capture selected work, measurements and uncertainty. Include a schematic drawing if needed. These reports are not purchasing lists or certified scale drawings.</p>
+    <p className="text-sm text-slate-600">Capture selected work with its room, level and project area grouping, measurements and uncertainty. Grouping includes only captured targets. These reports are not purchasing lists or certified scale drawings.</p>
     <div className="flex flex-wrap items-end gap-2">
       <label className="grid gap-1 text-sm">Report source<select className="h-9 rounded border bg-white px-2" value={source}
         onChange={event => { ++operation.current; setBusy(false); setSource(event.target.value as 'local' | 'saved'); setReport(null); }}>

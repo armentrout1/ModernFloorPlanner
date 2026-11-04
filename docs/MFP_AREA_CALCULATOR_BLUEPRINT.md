@@ -242,14 +242,16 @@ The first implementation packet should not require a database migration. Existin
 
 ### Implementation checkpoint — 2026-11-04
 
-Packets 1–3 are implemented in the application and verified locally. The implementation uses one canonical engine evaluation per document, projects room/level/project results without repeating dimension arithmetic, preserves the existing Quick Rooms and Drawing views, and adds no route, dependency, database migration, or saved-document field.
+Packets 1–4 are implemented in the application and verified locally. The implementation uses one canonical engine evaluation per document, projects room/level/project results without repeating dimension arithmetic, preserves the existing Quick Rooms and Drawing views, and adds no route, dependency, database migration, or saved-document field. Packet 4 adds report grouping only from records already present in the immutable captured calculation; it does not expand target scope, rerun geometry, or apply waste a second time.
 
 Verification at this checkpoint:
 
-- all 710 repository unit tests pass
+- all 715 repository unit tests pass
 - the calculator's schema 2–5 compatibility tests pass
 - TypeScript check and production build pass
-- all 33 affected Quick Rooms, Physical Draft, and levels browser tests pass
+- all 33 affected Quick Rooms, Physical Draft, and levels browser tests from Packets 1–3 pass
+- 12 current-draft export/drawing browser tests and 24 saved-revision persistence/authorization browser tests pass for Packet 4
+- the generated 8-page quantity PDF and 20-page combined drawing/quantity PDF were visually reviewed
 - desktop, tablet, and phone screenshots were visually reviewed
 - incomplete projects expose no false grand total and label usable incomplete results as provisional partial subtotals
 
@@ -311,22 +313,29 @@ Completion evidence:
 - phone and desktop visual review
 - no database migration
 
-### Packet 4: exports and hardening — planned
+### Packet 4: exports and hardening — implemented
 
 Goal: make on-screen grouping and captured reports agree without changing the immutable snapshot model.
 
 Work:
 
-- decide whether the grouped summary is an additive report section or a separate summary format
-- derive any exported group from the captured calculation result
-- retain canonical values, statuses, excluded targets, fingerprints, and source revision
-- test long room/level names, historical schemas, print pagination, spreadsheet safety, and authorization
+- add `Captured area grouping` to the existing CSV, HTML and print/PDF report rather than creating another format or UI control
+- derive project, level and room rows only from selected floor-area, flat-ceiling-area and gross-wall-area records already in the captured calculation result
+- retain canonical net values, statuses, exact included/excluded target IDs, fingerprints, source revision and the existing detailed selected-work section
+- keep schema 2 captures under a neutral `Historical / unassigned` level while schema 3–5 captures retain their recorded level names and order
+- preserve partial and unavailable outcomes instead of treating missing captured work as zero
+- test long room/level names, historical schemas, print pagination, spreadsheet safety and saved-report authorization
 
 Completion evidence:
 
-- export unit, browser, HTTPS, and authorization suites
-- visual PDF review
-- exact captured snapshot parity
+- 715/715 repository unit tests, including the pure captured-summary contract
+- TypeScript check and production build
+- 12/12 current-draft export/drawing browser tests
+- 24/24 saved-revision persistence and authorization browser tests against the dedicated disposable PostgreSQL fixture
+- visual review of the generated 8-page quantity PDF and 20-page combined drawing/quantity PDF
+- exact immutable captured-record parity with no export-time engine evaluation
+
+Full evidence and boundaries: [Packet 4 export results](MFP_AREA_CALCULATOR_EXPORT_RESULTS.md).
 
 ### Packet 5: FixDoneNow integration after release gates — planned
 
@@ -441,6 +450,6 @@ This blueprint does not authorize or imply:
 
 ## Implementation recommendation
 
-Packets 1–3 are complete in the application. Packet 4 should proceed only after grouped export parity is approved, and it must remain additive to the immutable snapshot model. Packet 5 remains a separate cross-product release after the existing deployment, identity, persistence, pilot, and contract gates.
+Packets 1–4 are complete in the application. The grouped export is additive to the immutable snapshot model and preserves the advanced selected-work report below it. Packet 5 remains a separate cross-product release after the existing deployment, identity, persistence, pilot, and contract gates.
 
 This sequence gives Modern Floor Planner its own calculator without creating a second math system, preserves the evidence and safety rules already built into the repository, and creates the cleanest future handoff to FixDoneNow and LedgerLine.

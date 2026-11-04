@@ -1,4 +1,5 @@
 import { PLAN_DRAWING_CSS, renderPlanDrawing } from './planDrawing';
+import { buildCapturedAreaSummary, type CapturedAreaRow } from './capturedAreaSummary';
 import type { Dimension, Elevation } from '../domain/measurements';
 import { formatQuantity } from '../quantities/display';
 import type { DeepReadonly } from '../quantities/immutability';
@@ -206,13 +207,56 @@ function detailRows(snapshot: Snapshot, options: ReportOptions): CsvRow[] {
   });
 }
 
+const AREA_OUTPUT_NAMES: Record<CapturedAreaRow['output'], string> = {
+  'floor-area': 'Floor area', 'ceiling-area': 'Flat ceiling area', 'gross-wall-area': 'Gross wall area',
+};
+function capturedAreaValue(row: CapturedAreaRow) {
+  return row.totalMm2 ?? row.subtotalMm2;
+}
+function capturedAreaDetails(row: CapturedAreaRow) {
+  const kind = row.status === 'partial'
+    ? (row.subtotalStatus === 'provisional' ? 'Provisional partial subtotal' : 'Partial subtotal')
+    : row.status === 'unavailable' ? 'Unavailable' : row.status === 'provisional' ? 'Provisional captured total' : 'Captured total';
+  return kind + '; scope ' + row.scope + '; room IDs ' + JSON.stringify(row.roomIds)
+    + '; included target IDs ' + JSON.stringify(row.includedTargetIds)
+    + '; excluded target IDs ' + JSON.stringify(row.excludedTargetIds)
+    + '; complete/provisional/blocked targets ' + [row.completeTargetCount, row.provisionalTargetCount, row.blockedTargetCount].join('/')
+    + '. Derived only from immutable captured records; no geometry recalculation, target expansion or second waste application.';
+}
+function capturedAreaRows(snapshot: Snapshot, options: ReportOptions): CsvRow[] {
+  return buildCapturedAreaSummary(snapshot.sourceDocument, snapshot.evaluation.calculation).rows.map(row => {
+    const value = capturedAreaValue(row);
+    return { section: 'captured-area-' + row.scope, entity_id: row.scopeId, name: row.scopeLabel,
+      output: row.output, status: row.status,
+      completeness: row.status === 'partial' ? 'partial' : row.status === 'unavailable' ? 'none' : 'complete',
+      unit: unitLabel('mm2', options), net: value === null ? '' : number(value, 'mm2', options),
+      canonical_unit: 'mm2', canonical_net: value ?? '', details: capturedAreaDetails(row) };
+  });
+}
+function capturedAreaHtml(snapshot: Snapshot, options: ReportOptions) {
+  const summary = buildCapturedAreaSummary(snapshot.sourceDocument, snapshot.evaluation.calculation);
+  const introduction = '<h2>Captured area grouping</h2><p>This groups only floor, flat-ceiling and gross-wall records already present in this immutable snapshot. It does not add unselected rooms or surfaces, rerun geometry, or apply waste a second time. Values are captured net areas; the selected quantities below retain their exact deductions, allowances and adjusted totals.</p>';
+  if (!summary.rows.length) return introduction + '<p>No area outputs were selected in this captured calculation.</p>';
+  return introduction + '<table class="area-summary"><thead><tr><th scope="col">Scope</th><th scope="col">Output</th><th scope="col">Status</th><th scope="col">Captured net area</th><th scope="col">Captured targets</th></tr></thead><tbody>'
+    + summary.rows.map(row => {
+      const value = capturedAreaValue(row);
+      const valueText = value === null ? 'Unavailable' : number(value, 'mm2', options) + ' ' + unitLabel('mm2', options)
+        + (row.status === 'partial' ? row.subtotalStatus === 'provisional' ? ' provisional partial subtotal' : ' partial subtotal' : '');
+      return '<tr data-area-scope="' + html(row.scope) + '" data-area-scope-id="' + html(row.scopeId) + '"><td><strong>'
+        + html(row.scopeLabel) + '</strong><br><span class="ids">' + html(row.scope + ' · ' + row.scopeId) + '</span></td><td>'
+        + html(AREA_OUTPUT_NAMES[row.output]) + '</td><td>' + html(row.status) + '</td><td>' + html(valueText) + '</td><td>'
+        + html('Included: ' + (row.includedTargetIds.join(', ') || 'None') + '; excluded: ' + (row.excludedTargetIds.join(', ') || 'None'))
+        + '</td></tr>';
+    }).join('') + '</tbody></table>';
+}
+
 /** Presentation only: the caller must capture or verify snapshot integrity and,
  * for saved reports, authorize retrieval before calling. Never evaluates geometry. */
 export function renderQuantityCsv(snapshot: Snapshot, options: ReportOptions): string {
   checkOptions(options);
   options = { ...options, includeDrawing: false };
   const rows: CsvRow[] = [...metadata(snapshot, options).map(([name, details]) => ({ section: 'metadata', name, details })),
-    ...scopeRows(snapshot), ...aggregateRows(snapshot, options), ...dimensionRows(snapshot, options), ...detailRows(snapshot, options)];
+    ...scopeRows(snapshot), ...capturedAreaRows(snapshot, options), ...aggregateRows(snapshot, options), ...dimensionRows(snapshot, options), ...detailRows(snapshot, options)];
   return '\uFEFF' + COLUMNS.map(csvCell).join(',') + '\r\n'
     + rows.map(row => COLUMNS.map(column => csvCell(row[column] ?? '')).join(',')).join('\r\n') + '\r\n';
 }
@@ -261,6 +305,7 @@ export function renderQuantityHtml(snapshot: Snapshot, options: ReportOptions): 
     + '<div class="notice"><p>' + html(reportLimits(options)) + '</p><p>Unsupported ceiling shapes are unavailable, never verified as flat ceilings. Historical snapshots retain their captured policy and assumptions; no upgrade or new measurement confirmation occurs during export.</p>'
     + '<p>' + html(PRECISION) + '</p></div>'
     + (options.includeDrawing ? renderPlanDrawing(snapshot, options) : '')
+    + capturedAreaHtml(snapshot, options)
     + '<h2>Selected quantities</h2>' + (calculation.outputs.length ? calculation.outputs.map(value => aggregateHtml(value, options)).join('')
       : '<p>No outputs selected. This empty report is not a completed takeoff.</p>')
     + '<h2>Captured scope</h2><p>Only these captured IDs contribute. Other rooms and objects in the source do not automatically enter this scope.</p><ul>'

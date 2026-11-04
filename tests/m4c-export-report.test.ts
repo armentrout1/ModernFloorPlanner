@@ -58,6 +58,11 @@ test('CSV independently parses exact selected quantities, deductions, waste and 
   assert.deepEqual([inventory.unit, inventory.net, inventory.waste_fraction, inventory.allowance], ['count', '2', '', '0']);
   assert.equal(rows.filter(row => row.section === 'selected-total').length, 10);
   assert.equal(rows.some(row => row.section === 'available-subtotal'), false);
+  const areas = rows.filter(row => row.section.startsWith('captured-area-'));
+  assert.equal(areas.length, 9);
+  assert.equal(areas.find(row => row.section === 'captured-area-project' && row.output === 'floor-area')?.net, '120');
+  assert.equal(areas.find(row => row.section === 'captured-area-level' && row.output === 'floor-area')?.name, 'Historical / unassigned');
+  assert.match(areas[0].details, /no geometry recalculation, target expansion or second waste application/);
 });
 
 test('metric display rounds at the boundary and canonical columns retain every captured amount', async () => {
@@ -105,8 +110,12 @@ test('a usable room subtotal never becomes the selected total when another room 
   const subtotal = rows.find(row => row.section === 'available-subtotal')!;
   assert.equal(subtotal.net, '120'); assert.equal(subtotal.completeness, 'partial');
   assert.match(subtotal.details, /not a complete selected total/); assert.match(subtotal.details, /unmeasured-room/);
+  const area = rows.find(row => row.section === 'captured-area-project' && row.output === 'floor-area')!;
+  assert.deepEqual([area.status, area.completeness, area.net], ['partial', 'partial', '120']);
+  assert.match(area.details, /Partial subtotal/); assert.match(area.details, /unmeasured-room/);
   const html = renderQuantityHtml(snapshot, local);
   assert.match(html, /Available subtotal — incomplete selection/); assert.match(html, /excludes missing targets/);
+  assert.match(html, /Captured area grouping/); assert.match(html, /partial subtotal/);
 });
 
 test('unconfirmed dimensions remain provisional even with complete scope coverage', async () => {
@@ -141,7 +150,12 @@ for (const name of ['m3b-v1-snapshot.json', 'm3d-v2-snapshot.json', 'm3d-v3-snap
       assert.equal(total(rows, output.output).status, output.status);
       assert.equal(total(rows, output.output).canonical_net, output.total ? String(output.total.net) : '');
     }
+    const level = rows.find(row => row.section === 'captured-area-level');
+    assert.ok(level);
+    if (snapshot.sourceDocument.schemaVersion === 2) assert.equal(level.name, 'Historical / unassigned');
+    else assert.ok(snapshot.sourceDocument.buildingLevels.levels.some(item => item.name === level.name));
     const html = renderQuantityHtml(snapshot, local);
+    assert.match(html, /Captured area grouping/);
     assert.ok(html.includes(snapshot.snapshotSchemaVersion));
     assert.ok(html.includes(snapshot.evaluation.calculation.engineVersion));
     assert.ok(html.includes(snapshot.captureFingerprint));
@@ -205,6 +219,7 @@ test('many long Unicode room names stay complete with print pagination and repea
   const snapshot = await capture(document, request([{ output: 'floor-area', roomIds: document.rooms.map(room => room.id), wasteFraction: 0 }]));
   const html = renderQuantityHtml(snapshot, local), rows = parseCsv(renderQuantityCsv(snapshot, local));
   assert.equal(total(rows, 'floor-area').net, '4800');
+  assert.equal(rows.filter(row => row.section.startsWith('captured-area-')).length, 42);
   for (const room of document.rooms) { assert.ok(html.includes(room.name!)); assert.ok(html.includes(room.id)); }
   assert.ok(html.includes(document.name));
   assert.match(html, /h1,h2,h3,h4,caption\{[^}]*overflow-wrap:anywhere/);
@@ -217,6 +232,7 @@ test('empty captured scope is not labeled a complete takeoff', async () => {
   const snapshot = await capture(q001(), request([]));
   const rows = parseCsv(renderQuantityCsv(snapshot, local));
   assert.equal(rows.filter(row => row.section === 'selected-total').length, 0);
+  assert.equal(rows.filter(row => row.section.startsWith('captured-area-')).length, 0);
   assert.match(renderQuantityHtml(snapshot, local), /No outputs selected/);
   assert.match(renderQuantityHtml(snapshot, local), /not a completed takeoff/);
 });
@@ -227,7 +243,9 @@ test('renderer never recalculates a captured evaluation or mutates supplied byte
   // must reject this mismatch; the renderer must not silently repair or upgrade it.
   snapshot.sourceDocument.rooms[0].length = measured('99 ft');
   freezeDeep(snapshot); const before = canonicalJson(snapshot);
-  assert.equal(total(parseCsv(renderQuantityCsv(snapshot, local)), 'floor-area').net, '120');
+  const rows = parseCsv(renderQuantityCsv(snapshot, local));
+  assert.equal(total(rows, 'floor-area').net, '120');
+  assert.equal(rows.find(row => row.section === 'captured-area-project' && row.output === 'floor-area')?.net, '120');
   const first = renderQuantityHtml(snapshot, local); assert.equal(renderQuantityHtml(snapshot, local), first);
   assert.equal(canonicalJson(snapshot), before);
   assert.equal((await verifyQuantitySnapshot(snapshot)).ok, false);

@@ -16,6 +16,7 @@ async function prepareSaved(page: Page) {
   const response = page.waitForResponse(value => new URL(value.url()).pathname.endsWith('/export') && new URL(value.url()).searchParams.get('format') === 'html');
   await reports(page).getByRole('button', { name: 'Prepare report', exact: true }).click();
   expect((await response).status()).toBe(200);
+  await expect(preview(page).getByRole('heading', { name: 'Captured area grouping', exact: true })).toBeVisible();
   await expect(preview(page).getByRole('heading', { name: 'Selected quantities', exact: true })).toBeVisible();
   await expect(reports(page).getByRole('button', { name: 'Print / Save PDF', exact: true })).toBeEnabled();
 }
@@ -53,6 +54,9 @@ function total(records: Record<string, string>[], output: string) {
   const row = records.find(record => record.section === 'selected-total' && record.output === output);
   expect(row).toBeTruthy(); return row!;
 }
+function area(records: Record<string, string>[], output: string) {
+  return records.find(record => record.section === 'captured-area-project' && record.output === output)!;
+}
 async function originalStorageKey(page: Page) {
   return page.evaluate(() => {
     const context = sessionStorage.getItem('modern-floor-planner:working-context:v1');
@@ -78,6 +82,9 @@ test('saved CSV and preview use the authorized immutable revision while newer he
   const html = await frame(page).getAttribute('srcdoc'); const first = await downloadCsv(page);
   expect(total(first.records, 'floor-area').net).toBe('120'); expect(total(first.records, 'ceiling-area').net).toBe('120');
   expect(total(first.records, 'gross-wall-area').net).toBe('352');
+  expect(area(first.records, 'floor-area')).toMatchObject({ net: '120', status: 'provisional' });
+  expect(area(first.records, 'gross-wall-area')).toMatchObject({ net: '352', status: 'provisional' });
+  await expect(preview(page).locator('[data-area-scope="project"]')).toHaveCount(3);
   expect(first.records.find(record => record.section === 'metadata' && record.name === 'Account revision ID')?.details).toBe(saved.revisionId);
   expect((await selectedPhysical(page)).document).toEqual(before.document);
   await commit(roomField(page, 'Ceiling height'), '9 ft'); const newer = await selectedPhysical(page);

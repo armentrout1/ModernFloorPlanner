@@ -38,6 +38,7 @@ async function createRoom(page: Page, height = '8 ft') {
 }
 async function prepare(page: Page) {
   await reports(page).getByRole('button', { name: 'Prepare report', exact: true }).click();
+  await expect(preview(page).getByRole('heading', { name: 'Captured area grouping', exact: true })).toBeVisible();
   await expect(preview(page).getByRole('heading', { name: 'Selected quantities', exact: true })).toBeVisible();
   await expect(reports(page).getByRole('button', { name: 'Print / Save PDF', exact: true })).toBeEnabled();
 }
@@ -71,6 +72,7 @@ async function download(page: Page) {
   return { text, rows: parseCsv(text) };
 }
 const total = (rows: Record<string, string>[], output: string) => rows.find(row => row.section === 'selected-total' && row.output === output)!;
+const area = (rows: Record<string, string>[], output: string) => rows.find(row => row.section === 'captured-area-project' && row.output === output)!;
 const meta = (rows: Record<string, string>[], name: string) => rows.find(row => row.section === 'metadata' && row.name === name)!.details;
 const errors = new WeakMap<Page, string[]>(), writes = new WeakMap<Page, string[]>();
 test.beforeEach(({ page }) => {
@@ -90,7 +92,10 @@ test('CSV and print preview capture one immutable quantity snapshot while later 
   const first = await download(page);
   for (const [output, amount] of [['floor-area', '120'], ['ceiling-area', '120'], ['gross-wall-area', '352']]) {
     expect(total(first.rows, output)).toMatchObject({ net: amount, unit: 'ft2', completeness: 'complete', status: 'provisional' });
+    expect(area(first.rows, output)).toMatchObject({ net: amount, unit: 'ft2', completeness: 'complete', status: 'provisional' });
   }
+  await expect(preview(page).locator('[data-area-scope="project"]')).toHaveCount(3);
+  await expect(preview(page).locator('[data-area-scope="project"]').first()).toContainText('Captured selected area scope');
   await expect(aggregate(page, 'Gross wall area').locator('tbody td').nth(3)).toHaveText('352');
   await expect(preview(page).locator('body')).toContainText(meta(first.rows, 'Snapshot ID'));
   await expect(preview(page).locator('body')).toContainText(meta(first.rows, 'Capture fingerprint'));
@@ -131,6 +136,8 @@ test('unknown ceiling height exports available floor and flat ceiling with expli
   expect(total(rows, 'floor-area').net).toBe('120');
   expect(total(rows, 'ceiling-area').net).toBe('120');
   expect(total(rows, 'gross-wall-area').net).toBe('');
+  expect(area(rows, 'gross-wall-area')).toMatchObject({ status: 'unavailable', completeness: 'none', net: '' });
+  await expect(preview(page).locator('[data-area-scope="project"]').filter({ hasText: 'Gross wall area' })).toContainText('Unavailable');
   expect(total(rows, 'gross-wall-area').completeness).not.toBe('complete');
   expect(rows.some(row => row.section === 'finding' && /height/i.test(row.details))).toBe(true);
   await expect(aggregate(page, 'Gross wall area')).toContainText('Unavailable');

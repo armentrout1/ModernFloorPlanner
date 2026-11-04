@@ -69,6 +69,7 @@ async function chooseDrawing(page: Page) {
 }
 async function prepare(page: Page) {
   await reports(page).getByRole('button', { name: 'Prepare report', exact: true }).click();
+  await expect(preview(page).getByRole('heading', { name: 'Captured area grouping', exact: true })).toBeVisible();
   await expect(preview(page).getByRole('heading', { name: 'Selected quantities', exact: true })).toBeVisible();
   await expect(reports(page).getByRole('button', { name: 'Print / Save PDF', exact: true })).toBeEnabled();
 }
@@ -252,6 +253,8 @@ test('print targets the frozen drawing report and self-contained multi-level HTM
   try {
     await printed.setContent(html!, { waitUntil: 'load' }); await printed.emulateMedia({ media: 'print' });
     await expect(printed.locator('.plan-sheet')).toHaveCount(3);
+    await expect(printed.getByRole('heading', { name: 'Captured area grouping', exact: true })).toBeVisible();
+    await expect(printed.locator('.area-summary tbody tr')).toHaveCount(15);
     await expect(printed.getByRole('heading', { name: 'Selected quantities', exact: true })).toBeVisible();
     await expect(printed.locator('script')).toHaveCount(0);
     await expect(printed.locator('body')).toContainText('Schematic only — not a certified scale drawing.');

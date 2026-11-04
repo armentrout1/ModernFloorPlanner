@@ -7,7 +7,7 @@ Status: **M4 database compatibility, empty-database bootstrap and grants: COMPLE
 
 Evidence and dated external research: [research and audit](RESEARCH_AND_AUDIT_2026-09-06.md).
 
-Calculator design reference, 2026-11-04: [area calculator architecture and UX blueprint](MFP_AREA_CALCULATOR_BLUEPRINT.md). This is a planning specification under issue #9 and DR-002. Implementation is not started, and it does not displace the current #4 identity gate, M5 pilot, or later M6/M7 contracts.
+Calculator delivery checkpoint, 2026-11-04: [area calculator architecture and UX blueprint](MFP_AREA_CALCULATOR_BLUEPRINT.md). Packets 1-4 are implemented and producer-verified locally under issue #9 and DR-002; [Packet 4 results](MFP_AREA_CALCULATOR_EXPORT_RESULTS.md) record grouped export parity. This is **NOT DEPLOYED**, and it does not displace the current #4 identity gate, M5 pilot, or later M6/M7 contracts.
 
 ## 0. Current M4 database readiness checkpoint — 2026-09-12
 
