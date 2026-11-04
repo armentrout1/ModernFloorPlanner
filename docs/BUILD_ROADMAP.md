@@ -7,6 +7,8 @@ Status: **M4 database compatibility, empty-database bootstrap and grants: COMPLE
 
 Evidence and dated external research: [research and audit](RESEARCH_AND_AUDIT_2026-09-06.md).
 
+Calculator design reference, 2026-11-04: [area calculator architecture and UX blueprint](MFP_AREA_CALCULATOR_BLUEPRINT.md). This is a planning specification under issue #9 and DR-002. Implementation is not started, and it does not displace the current #4 identity gate, M5 pilot, or later M6/M7 contracts.
+
 ## 0. Current M4 database readiness checkpoint — 2026-09-12
 
 Assigned bounded scope: [issue #4](https://github.com/armentrout1/ModernFloorPlanner/issues/4), explicit database/TLS/pooling configuration, empty-schema bootstrap and least-privilege runtime/Data API controls. **COMPLETE / PRODUCER_VERIFIED locally; NOT DEPLOYED.** [Full database-readiness record](MFP_M4_DATABASE_READINESS_RESULTS.md). Entry main `1e2cbe5e327ec04e55b69c192508939b5b404097`; implementation **71047c89b94a968a31e8b2c9130f84b6b6ee6897**. Documentation publication is the containing commit, with a #4 GitHub receipt added only after ordinary push and remote confirmation. All 358 hashes match canonical integration and the isolated archive of the actual implementation commit. Implementation working/staged whitespace PASS.
