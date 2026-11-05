@@ -23,7 +23,11 @@ async function exists(path) {
 /** Publish only a freshly built client. Refuse to erase unmanaged/edited public files. */
 export async function publishClientAssets(root = projectRoot) {
   const base = resolve(root), source = join(base, 'dist', 'public'), destination = join(base, 'public');
-  const metadata = join(base, '.vercel', 'mfp-client-files.json');
+  // Kept outside .vercel so source deployments carry the non-secret hash
+  // receipt alongside an ignored generated public directory. The remote build
+  // can then prove it is replacing our prior output even when VITE values make
+  // the freshly compiled hashes differ from the local upload.
+  const metadata = join(base, 'mfp-client-files.generated.json');
   for (const path of [join(base, 'dist'), source, destination, dirname(metadata)]) {
     const stat = await exists(path);
     if (stat && (!stat.isDirectory() || stat.isSymbolicLink())) throw new Error('Static output directories must be local directories.');
@@ -41,7 +45,13 @@ export async function publishClientAssets(root = projectRoot) {
     const current = await inventory(destination);
     let previous;
     try { previous = JSON.parse(await readFile(metadata, 'utf8')); } catch { /* Missing ownership record must not authorize deletion. */ }
-    if (Object.keys(current).length && JSON.stringify(current) !== JSON.stringify(previous))
+    const currentFiles = JSON.stringify(current);
+    const ownedFiles = JSON.stringify(previous);
+    const freshlyBuiltFiles = JSON.stringify(files);
+    // Vercel uploads the ignored-by-Git generated client but not local .vercel
+    // ownership metadata. Adopt that upload only when every byte exactly matches
+    // this fresh build; any extra, missing, or changed asset still fails closed.
+    if (Object.keys(current).length && currentFiles !== ownedFiles && currentFiles !== freshlyBuiltFiles)
       throw new Error('Existing public files are unmanaged or changed; preserve them before rebuilding.');
     // Both source/destination are fixed children of this project, checked above.
     await rm(destination, { recursive: true });

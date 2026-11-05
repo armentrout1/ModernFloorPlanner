@@ -40,6 +40,15 @@ test('existing unmanaged public files are preserved and cause a clear refusal', 
   assert.equal(await readFile(join(root, 'public/owner.txt'), 'utf8'), 'preserve me');
 }));
 
+test('a byte-identical uploaded client can be adopted without local ownership metadata', async () => fixture(async root => {
+  await mkdir(join(root, 'public/assets'), { recursive: true });
+  await writeFile(join(root, 'public/index.html'), '<script src="/assets/editor.js"></script>');
+  await writeFile(join(root, 'public/assets/editor.js'), 'console.log("synthetic editor")');
+  const result = await publishClientAssets(root);
+  assert.deepEqual(Object.keys(result), ['assets/editor.js', 'index.html']);
+  assert.deepEqual((await readdir(join(root, 'public'))).sort(), ['assets', 'index.html']);
+}));
+
 test('edits to previous generated assets are preserved instead of silently erased', async () => fixture(async root => {
   await publishClientAssets(root);
   await writeFile(join(root, 'public/index.html'), 'owner edit');
