@@ -26,3 +26,5 @@ vite.config.ts.*
 # Separate hosting/database acceptance artifacts
 /test-results-hosting/
 /test-results-database-transport/
+.vercel
+.env*
