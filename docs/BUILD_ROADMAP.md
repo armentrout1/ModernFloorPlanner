@@ -1,13 +1,25 @@
 # Modern Floor Planner — executable product and build roadmap
 
-Version: 1.28 — M4 Supabase owner identity entry, 2026-11-04
+Version: 1.29 — M4 live Supabase/Vercel binding entry, 2026-11-04
 Repository: `armentrout1/ModernFloorPlanner`; delivery branch: `main`.
 Original audit baseline: 876968e78d7070775e7924f33a3164ba20905d42; #22 entry main: 08ec2a89a0492823c5629143930960b59a6d1aad; #22 implementation: `f6ba3d388937c2815366be31532bbdd3a4cc594c`, integrated with all 310 committed source/configuration/test/migration files matching the final tested manifest.
-Status: **M4 Supabase owner sign-in/consent entry: COMPLETE / PRODUCER_VERIFIED locally; NOT BOUND and NOT DEPLOYED.** Implementation `ab2a64ad3f635fe996763796fd75c8466316106f` adds one isolated, lazy-loaded provider route while retaining the existing OIDC PKCE/session/workspace boundary. Exact checks: **720/720 unit** and **194/194 browser** PASS, typecheck and both builds PASS, hosted packaging **5 PASS / 1 artifact-dependent SKIP**. [Full result](MFP_M4_SUPABASE_IDENTITY_ENTRY_RESULTS.md). Broad #4 remains OPEN. The single next bounded task is **live Supabase/Vercel provider binding and owner acceptance — WAITING FOR explicit project, region/plan and canonical-domain authorization**. Earlier completed M4 work remains preserved; calculator packets 1–4 remain complete locally, #9/#10 stay open, #2 unreleased and M5 not started.
+Status: **M4 live Supabase/Vercel resources: CREATED / PARTIALLY BOUND / NOT DEPLOYED.** The approved Free Supabase project and empty Vercel project now exist; browser-public Supabase configuration, sensitive production `DATABASE_URL` and session secret, plus bounded production issuer/pool settings are configured. Confidential OAuth client values, canonical origin/callback, live database bootstrap/grants, owner-only deployment protection, Git linkage and deployment remain gated. [Live binding record](MFP_M4_LIVE_BINDING_RECORD.md). The previously verified owner sign-in/consent implementation `ab2a64ad3f635fe996763796fd75c8466316106f` remains unchanged. Broad #4 remains OPEN; calculator packets 1–4 remain complete locally, #9/#10 stay open, #2 unreleased and M5 not started.
 
 Evidence and dated external research: [research and audit](RESEARCH_AND_AUDIT_2026-09-06.md).
 
 Calculator delivery checkpoint, 2026-11-04: [area calculator architecture and UX blueprint](MFP_AREA_CALCULATOR_BLUEPRINT.md). Packets 1-4 are implemented and producer-verified locally under issue #9 and DR-002; [Packet 4 results](MFP_AREA_CALCULATOR_EXPORT_RESULTS.md) record grouped export parity. This is **NOT DEPLOYED**, and it does not displace the current #4 live provider-binding gate, M5 pilot, or later M6/M7 contracts.
+
+## 0. Current M4 live Supabase/Vercel binding checkpoint — 2026-11-04
+
+Assigned bounded scope: [issue #4](https://github.com/armentrout1/ModernFloorPlanner/issues/4), approved provider provisioning and environment binding without deployment. **PROVIDER RESOURCES CREATED / PARTIALLY BOUND / NOT DEPLOYED.** [Exact nonsecret resource and environment record](MFP_M4_LIVE_BINDING_RECORD.md).
+
+**Created and verified:** Supabase organization `Armenrout1`, Free `$0/month` plan, dedicated `Modern Floor Planner` project `frryprsnfzlghhmwpmos` in East US (Ohio) with Nano compute and healthy status; Vercel project `modern-floor-planner` under `dblas-projects`, Node 24 and `cle1`, with no Git link, deployment or domain. The exact owner email is kept only in an ignored local operator note because this repository is public. The database password is not in Git, Markdown, logs or chat.
+
+**Bound configuration:** all three Vercel environments have the public Supabase URL and publishable key. Production has the OIDC issuer, sensitive percent-encoded `DATABASE_URL`, sensitive generated session secret, transaction-pool mode and one-connection application/session budgets. Secret values remain concealed. Confidential OAuth client values and canonical origin/callback remain unset.
+
+**Remaining gates and one next task:** separately configure the Supabase OAuth server/client and canonical origin. After that, use the reviewed live database bootstrap/grant path, establish Aaron-only protection across all deployment surfaces, and run owner/non-owner acceptance before any release. No deployment, Git link, schema migration, customer onboarding or M5 work occurred.
+
+The identity-entry section below remains the completed implementation checkpoint that this live binding will activate.
 
 ## 0. Current M4 Supabase identity entry checkpoint — 2026-11-04
 
@@ -17,7 +29,7 @@ Assigned bounded scope: [issue #4](https://github.com/armentrout1/ModernFloorPla
 
 **Exact verification:** `npm test` **720/720 PASS**; full Playwright **194/194 PASS**; focused authorization **5/5 PASS**; typecheck PASS; standalone and Vercel source builds PASS; packaging **5 PASS / 1 SKIP** because no isolated CLI artifact root was supplied. The account and hosting database suites stopped before execution because their explicit loopback-only `mfp_test` database URL and actual data-directory proof were absent; no unknown database was touched. The existing main-bundle size warning remains. Current production audit findings require separate reachability/remediation review before deployment.
 
-**Remaining gates and one next task:** create or select a dedicated MFP Supabase project only after explicit region/plan approval; accept the OAuth-server beta; enable asymmetric signing, owner-only registration policy and a confidential client; bind public Vite Config separately from private OIDC/session/database Secrets; establish all-surface Vercel owner protection and the canonical HTTPS origin; use the reviewed database bootstrap/grant path; then prove the real approval/denial/callback/session/non-owner journeys. No project, user, credential, database, paid resource, environment value, domain or deployment was created here. The next task is **live provider binding and owner acceptance**, not M5 or customer onboarding.
+**Superseded remaining-gate statement:** the dedicated Free Supabase project and empty Vercel project are now created and partially bound as recorded above. OAuth-server/client, canonical origin/callback, session secret, live database setup, owner-only protection and acceptance remain open. The historical implementation itself created no live resource and remains unchanged.
 
 The database-readiness and earlier M4 sections below remain historical completed checkpoints. This section governs the current assignment and release gate.
 

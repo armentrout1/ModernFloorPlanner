@@ -1,6 +1,12 @@
 node_modules
 dist
 .DS_Store
+
+# Local environment files and private provider ownership notes.
+.env
+.env.*
+!.env.example
+/docs/MFP_SUPABASE_OWNER.local.md
 server/public
 vite.config.ts.*
 *.tar.gz
