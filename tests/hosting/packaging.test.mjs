@@ -74,7 +74,7 @@ test('actual Vercel artifact retains complete routing and a cold, production-onl
     assert.equal(runtime.framework.slug, 'express');
     const spa = config.routes.filter(route => route.dest === '/index.html');
     assert.equal(spa.length, 1); assert.deepEqual(spa[0].methods, ['GET', 'HEAD']);
-    for (const path of ['/', '/quick-room', '/physical-draft', '/account/callback'])
+    for (const path of ['/', '/quick-room', '/physical-draft', '/account/callback', '/oauth/consent'])
       assert.match(path, new RegExp(spa[0].src));
     for (const path of ['/api', '/api/auth/callback', '/api/physical-plans', '/assets/missing.js', '/unknown'])
       assert.doesNotMatch(path, new RegExp(spa[0].src));

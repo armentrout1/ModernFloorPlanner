@@ -19,10 +19,10 @@ app.use((req, res, next) => {
   req.pipe(upstream);
 });
 // The packaging tests independently validate generated Vercel routing. These are
-// the selected four page routes plus public build assets needed by browser acceptance.
+// the selected five page routes plus public build assets needed by browser acceptance.
 const publicPath = resolve('public');
 app.use(express.static(publicPath));
-for (const path of ['/', '/physical-draft', '/quick-room', '/account/callback'])
+for (const path of ['/', '/physical-draft', '/quick-room', '/account/callback', '/oauth/consent'])
   app.get(path, (_req, res) => res.sendFile(resolve(publicPath, 'index.html')));
 app.use((_req, res) => res.sendStatus(404));
 const server = createServer({ key: readFileSync(process.env.MFP_ACCOUNTS_TLS_KEY!), cert: readFileSync(process.env.MFP_ACCOUNTS_TLS_CERT!) }, app);

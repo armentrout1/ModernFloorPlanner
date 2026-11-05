@@ -10,6 +10,7 @@ import NotFound from "@/pages/not-found";
 import FloorPlanner from "@/pages/FloorPlanner";
 const QuickRooms = lazy(() => import("@/pages/QuickRooms"));
 const PhysicalDraft = lazy(() => import("@/pages/PhysicalDraft"));
+const SupabaseAuthorization = lazy(() => import("@/pages/SupabaseAuthorization"));
 
 function Router() {
   const [location] = useLocation();
@@ -38,7 +39,7 @@ function Router() {
 }
 
 const contextClients = new Map<string, QueryClient>();
-function App() {
+function EditorApplication() {
   const account = useSyncExternalStore(accountStore.subscribe, accountStore.getSnapshot);
   const cacheKey = account.session.principal && account.session.workspace
     ? account.session.principal.id + ':' + account.session.workspace.id : 'unassigned';
@@ -63,6 +64,12 @@ function App() {
       <Toaster />
     </QueryClientProvider>
   );
+}
+
+function App() {
+  const [location] = useLocation();
+  if (location === '/oauth/consent') return <Suspense fallback={<p role="status" className="p-8">Loading owner authorization…</p>}><SupabaseAuthorization /></Suspense>;
+  return <EditorApplication />;
 }
 
 export default App;
