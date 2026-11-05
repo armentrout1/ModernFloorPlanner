@@ -30,13 +30,21 @@ const unavailable = (res: Response) => {
 };
 const databaseFailureClass = (error: unknown): string => {
   const code = error && typeof error === 'object' && 'code' in error && typeof error.code === 'string' ? error.code : '';
+  const message = error instanceof Error ? error.message : '';
   if (/^28/.test(code)) return 'authentication';
+  if (/password authentication failed|tenant or user not found|sasl/i.test(message)) return 'authentication';
   if (code === '42501') return 'permission';
+  if (/permission denied/i.test(message)) return 'permission';
   if (code === '42P01') return 'missing-relation';
+  if (/relation .* does not exist/i.test(message)) return 'missing-relation';
   if (['ENOTFOUND', 'EAI_AGAIN'].includes(code)) return 'dns';
   if (['ETIMEDOUT', 'ECONNREFUSED', 'ECONNRESET'].includes(code) || /^08/.test(code)) return 'connection';
-  if (['UNABLE_TO_VERIFY_LEAF_SIGNATURE', 'SELF_SIGNED_CERT_IN_CHAIN', 'ERR_TLS_CERT_ALTNAME_INVALID'].includes(code)) return 'tls';
+  if (['UNABLE_TO_VERIFY_LEAF_SIGNATURE', 'SELF_SIGNED_CERT_IN_CHAIN', 'ERR_TLS_CERT_ALTNAME_INVALID'].includes(code) || /certificate|tls|ssl/i.test(message)) return 'tls';
   return 'unknown';
+};
+const databaseFailureCode = (error: unknown): string => {
+  const code = error && typeof error === 'object' && 'code' in error && typeof error.code === 'string' ? error.code : '';
+  return /^[A-Z0-9_]{2,64}$/.test(code) ? code : 'none';
 };
 const emptyStatus = (status: string, contextToken: string | null = null) => ({
   status, contextToken, principal: null, workspace: null, workspaces: [],
@@ -65,6 +73,7 @@ export function mountAccounts(app: Express): IdentityResolver {
     // Never log connection strings, messages, query text or credentials.
     errorLog: (...values) => console.error('account_session_store_error', {
       category: databaseFailureClass(values.find(value => value && typeof value === 'object')),
+      code: databaseFailureCode(values.find(value => value && typeof value === 'object')),
     }),
   });
   // Server owners may close resources on shutdown; this is not a request-accessible control.
@@ -84,7 +93,7 @@ export function mountAccounts(app: Express): IdentityResolver {
   };
   app.use('/api', (req, res, next) => middleware(req, res, error => {
     if (error) {
-      console.error('account_session_request_error', { category: databaseFailureClass(error) });
+      console.error('account_session_request_error', { category: databaseFailureClass(error), code: databaseFailureCode(error) });
       if (req.path === '/auth/callback') callbackRedirect(res, 'failed'); else unavailable(res);
       return;
     }
