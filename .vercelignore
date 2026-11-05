@@ -1,7 +1,6 @@
 # Generated artifacts are rebuilt by Vercel from reviewed source.
 /app.js
 /dist/
-/public/
 /server/public/
 
 # Local credentials, project metadata, and test output never belong in uploads.

@@ -25,7 +25,19 @@ const identity = (context: BrowserContext): VerifiedIdentity => ({
 const persist = (req: Request) => new Promise<void>((resolve, reject) => req.session.save(error => error ? reject(error) : resolve()));
 const regenerate = (req: Request) => new Promise<void>((resolve, reject) => req.session.regenerate(error => error ? reject(error) : resolve()));
 const destroy = (req: Request) => new Promise<void>((resolve, reject) => req.session.destroy(error => error ? reject(error) : resolve()));
-const unavailable = (res: Response) => res.status(503).json({ code: 'SIGN_IN_UNAVAILABLE', message: 'Account access is temporarily unavailable. Your local drawing is unchanged.' });
+const unavailable = (res: Response) => {
+  if (!res.headersSent) res.status(503).json({ code: 'SIGN_IN_UNAVAILABLE', message: 'Account access is temporarily unavailable. Your local drawing is unchanged.' });
+};
+const databaseFailureClass = (error: unknown): string => {
+  const code = error && typeof error === 'object' && 'code' in error && typeof error.code === 'string' ? error.code : '';
+  if (/^28/.test(code)) return 'authentication';
+  if (code === '42501') return 'permission';
+  if (code === '42P01') return 'missing-relation';
+  if (['ENOTFOUND', 'EAI_AGAIN'].includes(code)) return 'dns';
+  if (['ETIMEDOUT', 'ECONNREFUSED', 'ECONNRESET'].includes(code) || /^08/.test(code)) return 'connection';
+  if (['UNABLE_TO_VERIFY_LEAF_SIGNATURE', 'SELF_SIGNED_CERT_IN_CHAIN', 'ERR_TLS_CERT_ALTNAME_INVALID'].includes(code)) return 'tls';
+  return 'unknown';
+};
 const emptyStatus = (status: string, contextToken: string | null = null) => ({
   status, contextToken, principal: null, workspace: null, workspaces: [],
 });
@@ -49,7 +61,11 @@ export function mountAccounts(app: Express): IdentityResolver {
   const store = new PgStore({
     conObject: toSessionPoolOptions(settings.database),
     tableName: 'mfp_sessions', createTableIfMissing: false,
-    pruneSessionInterval: false, errorLog: () => { /* Never log database connection/session details. */ },
+    pruneSessionInterval: false,
+    // Never log connection strings, messages, query text or credentials.
+    errorLog: (...values) => console.error('account_session_store_error', {
+      category: databaseFailureClass(values.find(value => value && typeof value === 'object')),
+    }),
   });
   // Server owners may close resources on shutdown; this is not a request-accessible control.
   app.locals.closeAccountSessions = () => store.close();
@@ -68,6 +84,7 @@ export function mountAccounts(app: Express): IdentityResolver {
   };
   app.use('/api', (req, res, next) => middleware(req, res, error => {
     if (error) {
+      console.error('account_session_request_error', { category: databaseFailureClass(error) });
       if (req.path === '/auth/callback') callbackRedirect(res, 'failed'); else unavailable(res);
       return;
     }
