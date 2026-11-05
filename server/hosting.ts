@@ -40,8 +40,20 @@ export function configureHosting(app: Express, options: HostingOptions = {}): vo
     // VERCEL + headers are not standalone authentication, and edge sanitization needs live verification.
     const requestHost = singleHeader(req, 'host');
     const forwardedHost = singleHeader(req, 'x-forwarded-host');
-    if (requestHost?.toLowerCase() !== host || forwardedHost?.toLowerCase() !== host ||
-        singleHeader(req, 'x-forwarded-proto') !== 'https' || req.headers.forwarded !== undefined) {
+    const forwardedProto = singleHeader(req, 'x-forwarded-proto');
+    const requestHostCanonical = requestHost?.toLowerCase() === host;
+    const forwardedHostCanonical = forwardedHost?.toLowerCase() === host;
+    const forwardedProtoSecure = forwardedProto === 'https';
+    const competingForwardedHeader = req.headers.forwarded !== undefined;
+    if (!requestHostCanonical || !forwardedHostCanonical || !forwardedProtoSecure || competingForwardedHeader) {
+      // Values can contain credentials or attacker-controlled input. Log only the
+      // predicate results needed to diagnose the managed edge contract.
+      console.warn('hosting_request_rejected', {
+        requestHostCanonical,
+        forwardedHostCanonical,
+        forwardedProtoSecure,
+        competingForwardedHeader,
+      });
       res.status(400).json({ code: 'INVALID_HOSTING_REQUEST', message: 'Invalid application request.' });
       return;
     }
