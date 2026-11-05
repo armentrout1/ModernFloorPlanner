@@ -140,3 +140,11 @@ Owner-only All Deployments protection across production/generated/custom URLs, m
 ## Single next bounded task
 
 **#4 identity-provider and owner sign-in/consent entry gate — NOT STARTED.** Confirm one identity-provider approach compatible with the existing OIDC client and the owner's hosting direction. Recheck the current Supabase OAuth-server/beta, asymmetric signing, exact confidential-client registration and login/consent requirements identified in the hosting plan; accepting Supabase PostgreSQL does not accept or configure that separate identity product. Produce one compatible flow, owner decisions/requirements, and a bounded isolated implementation slice before live provisioning or deployment. Retain the current account/session engine and workspace authorization. Broad #4 stays OPEN; this package does not begin M5.
+
+## Live provider verification addendum — 2026-11-05
+
+The provider-unknown and “not started” statements above are retained as the dated September implementation record. They are superseded operationally by the completed live binding recorded in [M4 live Supabase and Vercel binding record](MFP_M4_LIVE_BINDING_RECORD.md).
+
+The dedicated Supabase project now contains the expected 14 application tables with zero application rows. All 14 tables are owned by the NOLOGIN `mfp_object_owner` role and have RLS enabled and forced. The LOGIN role `mfp_app` inherits only the NOLOGIN `mfp_runtime` permission role, owns no application objects, and cannot create database or temporary objects. Provider-managed admin-only memberships were preserved without treating them as executable runtime privilege paths.
+
+The final live sequence passed schema and role preflight, hardening, database CREATE/TEMP restriction, catalog verification, empty-data verification, a restricted direct login and a restricted shared transaction-pooler login. The temporary explicit owner membership required for Supabase default-privilege administration was revoked before completion. Vercel Production `DATABASE_URL` was replaced with the generated restricted pooler credential without printing or committing either database password. This is live database/provider verification, but it is not an application deployment or a persistence journey through the hosted UI.

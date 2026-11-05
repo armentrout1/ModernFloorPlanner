@@ -49,6 +49,17 @@ test('bootstrap creates the exact base then unchanged migrations yield fourteen 
   assert.equal(current.name,fixture.loginRole);
 });
 
+test('provider admin-only grants cannot exercise runtime roles and retain database administration privileges',async()=>{
+  const [membership]=await fixture.admin`select admin_option,inherit_option,set_option from pg_auth_members
+    where roleid=(select oid from pg_roles where rolname=${fixture.runtimeRole})
+      and member=(select oid from pg_roles where rolname=${fixture.providerAdminRole})`;
+  assert.deepEqual(membership,{admin_option:true,inherit_option:false,set_option:false});
+  const [privileges]=await fixture.admin`select
+    has_database_privilege(${fixture.providerAdminRole},current_database(),'CREATE') as can_create,
+    has_database_privilege(${fixture.providerAdminRole},current_database(),'TEMP') as can_temp`;
+  assert.deepEqual(privileges,{can_create:true,can_temp:true});
+});
+
 test('bootstrap refuses existing tables transactionally and preserves their contents',async()=>{
   await fixture.admin`insert into users(username,password) values('inert legacy','preserved field')`;
   await assert.rejects(applyBootstrap(fixture.admin,fixture),/Bootstrap requires an empty/);

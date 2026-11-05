@@ -11,8 +11,14 @@ BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname=runtime_name AND NOT rolcanlogin AND NOT rolsuper AND NOT rolbypassrls
     AND NOT rolcreatedb AND NOT rolcreaterole AND NOT rolreplication) THEN RAISE EXCEPTION 'Restricted runtime permission role is required'; END IF;
   EXECUTE format('REVOKE CREATE, TEMPORARY ON DATABASE %I FROM PUBLIC',target);
-  FOR actor IN SELECT r.rolname FROM pg_roles r WHERE r.rolname IN ('anon','authenticated','service_role','authenticator',runtime_name)
-      OR (NOT r.rolsuper AND pg_has_role(r.oid,runtime_name,'MEMBER')) LOOP
+  -- Provider administrators may hold ADMIN-only grants with both INHERIT and SET disabled.
+  -- Restrict only identities that can actually exercise runtime privileges.
+  FOR actor IN WITH RECURSIVE members(id) AS (
+      SELECT oid FROM pg_roles WHERE rolname=runtime_name
+      UNION SELECT m.member FROM pg_auth_members m JOIN members a ON m.roleid=a.id
+        WHERE m.inherit_option OR m.set_option
+    ) SELECT r.rolname FROM pg_roles r WHERE r.rolname IN ('anon','authenticated','service_role','authenticator',runtime_name)
+      OR (NOT r.rolsuper AND r.oid IN (SELECT id FROM members)) LOOP
     EXECUTE format('REVOKE CREATE, TEMPORARY ON DATABASE %I FROM %I',target,actor.rolname);
   END LOOP;
   EXECUTE format('GRANT CONNECT ON DATABASE %I TO %I',target,runtime_name);

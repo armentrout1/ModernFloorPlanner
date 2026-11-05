@@ -33,9 +33,11 @@ BEGIN
     OR EXISTS (SELECT 1 FROM pg_namespace n WHERE n.nspowner=owner_id AND n.nspname<>target) THEN
     RAISE EXCEPTION 'Object owner must be dedicated to this application schema and database';
   END IF;
-  -- Membership authority matters even when INHERIT is disabled. Check every descendant login/group.
+  -- Check every identity that can exercise runtime privileges. Provider-admin grants with both
+  -- INHERIT and SET disabled retain role-administration authority but are not runtime identities.
   FOR member_row IN WITH RECURSIVE members(id) AS (
       SELECT runtime_id UNION SELECT m.member FROM pg_auth_members m JOIN members a ON m.roleid=a.id
+        WHERE m.inherit_option OR m.set_option
     ) SELECT r.* FROM pg_roles r JOIN members m ON m.id=r.oid LOOP
     IF member_row.rolsuper OR member_row.rolbypassrls OR member_row.rolcreatedb OR member_row.rolcreaterole OR member_row.rolreplication
       OR member_row.rolname IN ('anon','authenticated','service_role','authenticator')
@@ -91,8 +93,11 @@ BEGIN
     IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname=role_name) THEN grantees:=array_append(grantees,role_name); END IF;
   END LOOP;
   grantees:=array_append(grantees,runtime_name);
-  -- Also remove direct ACLs from the runtime login(s), so inheritance cannot mask excessive privileges.
-  FOR member_row IN SELECT r.rolname FROM pg_roles r WHERE r.oid<>runtime_id AND pg_has_role(r.oid,runtime_id,'MEMBER') AND NOT r.rolsuper LOOP
+  -- Also remove direct ACLs from identities that can inherit or SET the runtime role.
+  FOR member_row IN WITH RECURSIVE members(id) AS (
+      SELECT runtime_id UNION SELECT m.member FROM pg_auth_members m JOIN members a ON m.roleid=a.id
+        WHERE m.inherit_option OR m.set_option
+    ) SELECT r.rolname FROM pg_roles r JOIN members m ON m.id=r.oid WHERE r.oid<>runtime_id AND NOT r.rolsuper LOOP
     grantees:=array_append(grantees,member_row.rolname);
   END LOOP;
   FOREACH role_name IN ARRAY grantees LOOP

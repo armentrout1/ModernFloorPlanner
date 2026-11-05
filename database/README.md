@@ -12,7 +12,7 @@ The owner must be dedicated to this database and schema: hardening checks for ot
 
 ## Ordered operator steps
 
-1. Verify the approved target database, direct connection, roles, and an empty target schema. Grant the object owner `USAGE, CREATE` on that schema through the approved administrator. Bootstrap refuses existing application relations, functions, and types.
+1. Verify the approved target database, direct connection, roles, and an empty target schema. Grant the object owner `USAGE, CREATE` on that schema through the approved administrator. On providers such as Supabase where the administrator receives an ADMIN-only grant with both INHERIT and SET disabled, temporarily grant the administrator SET access to the object owner for setup and revoke that grant immediately after hardening. Bootstrap refuses existing application relations, functions, and types.
 2. Run `bootstrap.sql` with `ON_ERROR_STOP`, `schema_name=public`, and the explicit `object_owner`. It creates only the original empty `users` and `floor_plans` tables. No identities, memberships, or customer rows are seeded.
 3. In a reserved direct session, set the role to the object owner and `search_path` to `public, pg_catalog`; run `0001_workspace_authorization.sql`, `0002_oidc_sessions_accounts.sql`, `0003_physical_plans.sql`, and `0004_physical_project_lifecycle.sql` in that order. Each historical file owns its transaction. Reset the role and search path afterward, including on failure.
 4. Run `harden.sql` with the same `schema_name`, `object_owner`, and the explicit `runtime_role`. It validates the expected objects and role relationships before applying grants and RLS.

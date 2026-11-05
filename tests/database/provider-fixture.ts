@@ -17,7 +17,8 @@ export async function createProviderFixture(options: { harden?: boolean; migrati
   const control = postgres(supplied, { max: 1, prepare: false, connect_timeout: 5, onnotice: () => {} });
   const suffix = randomBytes(8).toString('hex');
   const databaseName = `mfp_provider_${suffix}_test`, ownerRole = `mfp_owner_${suffix}`,
-    runtimeRole = `mfp_permissions_${suffix}`, loginRole = `mfp_login_${suffix}`;
+    runtimeRole = `mfp_permissions_${suffix}`, loginRole = `mfp_login_${suffix}`,
+    providerAdminRole = `mfp_provider_admin_${suffix}`;
   const schemaName = 'public', createdRoles: string[] = [];
   let createdDatabase = false, databaseOid: number | undefined;
   let admin: ReturnType<typeof postgres> | undefined, runtime: ReturnType<typeof postgres> | undefined;
@@ -42,7 +43,10 @@ export async function createProviderFixture(options: { harden?: boolean; migrati
       await control.unsafe(`CREATE ROLE "${name}" ${name===loginRole ? 'LOGIN INHERIT' : 'NOLOGIN NOINHERIT'} NOSUPERUSER NOBYPASSRLS NOCREATEDB NOCREATEROLE NOREPLICATION`);
       createdRoles.push(name);
     }
+    await control.unsafe(`CREATE ROLE "${providerAdminRole}" NOLOGIN NOINHERIT NOSUPERUSER BYPASSRLS CREATEDB CREATEROLE NOREPLICATION`);
+    createdRoles.push(providerAdminRole);
     await control.unsafe(`GRANT "${runtimeRole}" TO "${loginRole}"`);
+    await control.unsafe(`GRANT "${ownerRole}", "${runtimeRole}", "${loginRole}" TO "${providerAdminRole}" WITH ADMIN TRUE, INHERIT FALSE, SET FALSE`);
     const password = randomBytes(32).toString('hex');
     await control.unsafe(`ALTER ROLE "${loginRole}" PASSWORD '${password}'`);
     // The known disposable cluster may have API-role fixtures already; never alter those roles.
@@ -53,6 +57,7 @@ export async function createProviderFixture(options: { harden?: boolean; migrati
       }
     }
     await control.unsafe(`CREATE DATABASE "${databaseName}"`); createdDatabase = true;
+    await control.unsafe(`GRANT CREATE, TEMPORARY ON DATABASE "${databaseName}" TO "${providerAdminRole}"`);
     [{ oid: databaseOid }] = await control`select oid from pg_database where datname=${databaseName}`;
     const adminAddress = new URL(supplied); adminAddress.pathname='/'+databaseName;
     const runtimeAddress = new URL(adminAddress); runtimeAddress.username=loginRole; runtimeAddress.password=password;
@@ -64,6 +69,6 @@ export async function createProviderFixture(options: { harden?: boolean; migrati
     if (options.harden !== false && options.migrations !== false) { await applyHardening(admin, setup); await applyDatabaseRestrictions(admin, setup); }
     runtime = postgres(runtimeAddress.toString(), { max: 4, prepare: false, connect_timeout: 5, onnotice: () => {} });
     return { admin, runtime, adminUrl: adminAddress.toString(), runtimeUrl: runtimeAddress.toString(),
-      databaseName, schemaName, ownerRole, runtimeRole, loginRole, cleanup };
+      databaseName, schemaName, ownerRole, runtimeRole, loginRole, providerAdminRole, cleanup };
   } catch (error) { await cleanup(); throw error; }
 }
