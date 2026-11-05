@@ -60,6 +60,14 @@ test('hosted entry uses Vercel reconstructed headers without relying on raw sock
   } finally { await server.close(); }
 });
 
+test('Vercel standard Forwarded metadata is inert after canonical host and protocol validation', async () => {
+  const fixture = application({ hosting: 'vercel' }); const server = await listen(fixture.app);
+  try {
+    const response = await server.send({ ...headers, Forwarded: 'for=192.0.2.1;host=foreign.invalid;proto=http' });
+    assert.equal(response.status, 200); assert.equal(fixture.reached(), 1);
+  } finally { await server.close(); }
+});
+
 test('ordinary listener ignores both forwarded headers and the VERCEL environment flag', async () => {
   const fixture = application({}); const server = await listen(fixture.app);
   try { const response = await server.send(); assert.equal(response.status, 200);
@@ -80,14 +88,13 @@ test('incomplete or noncanonical hosted configuration fails before session or ro
   }
 });
 
-test('wrong hosts, protocol ambiguity and competing Forwarded headers fail closed before sessions', async () => {
+test('wrong hosts and forwarded protocol ambiguity fail closed before sessions', async () => {
   const cases: Record<string, string | string[]>[] = [
     { ...headers, Host: 'other.example' }, { ...headers, 'X-Forwarded-Host': 'other.example' },
     { ...headers, 'X-Forwarded-Host': '' }, { ...headers, 'X-Forwarded-Proto': '' },
     { ...headers, 'X-Forwarded-Proto': 'http' }, { ...headers, 'X-Forwarded-Proto': 'https,http' },
     { ...headers, 'X-Forwarded-Host': 'planner.example,other.example' },
     { ...headers, 'X-Forwarded-Proto': ['https', 'https'] },
-    { ...headers, Forwarded: 'proto=http;host=other.example' },
     { Host: 'planner.example' },
   ];
   const fixture = application({ hosting: 'vercel' }); const server = await listen(fixture.app);

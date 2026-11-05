@@ -66,7 +66,7 @@ test('actual hosted entry over an HTTP hop supports secure OIDC cookies, PKCE, S
   assert.ok(!/access_token|id_token|refresh_token|client_secret|code_verifier|sessionID/.test(await status.text()));
 });
 
-test('missing, conflicting and duplicate forwarded metadata fail before durable sessions are created', async () => {
+test('missing, conflicting and duplicate trusted forwarding metadata fail before durable sessions are created', async () => {
   const before = await sessionCounts();
   const invalid = [
     ['Host', '127.0.0.2:54440'],
@@ -76,7 +76,6 @@ test('missing, conflicting and duplicate forwarded metadata fail before durable 
     [...hostedHeaders, 'X-Forwarded-Proto', 'https'],
     [...hostedHeaders, 'X-Forwarded-Host', '127.0.0.2:54440'],
     ['Host', '127.0.0.2:54440', 'X-Forwarded-Host', '127.0.0.2:54440', 'X-Forwarded-Proto', 'https,http'],
-    [...hostedHeaders, 'Forwarded', 'proto=https;host=127.0.0.2:54440'],
   ];
   for (const headers of invalid) {
     const response = await rawRequest(54442, headers);
@@ -84,6 +83,12 @@ test('missing, conflicting and duplicate forwarded metadata fail before durable 
     assert.equal(response.cookie.length, 0); assert.match(response.cache, /no-store/);
   }
   assert.deepEqual(await sessionCounts(), before);
+});
+
+test('standard Forwarded metadata is inert once canonical Vercel headers are validated', async () => {
+  const response = await rawRequest(54442, [...hostedHeaders, 'Forwarded', 'for=192.0.2.1;host=foreign.invalid;proto=http']);
+  assert.equal(response.status, 200); assert.equal(response.value.status, 'anonymous');
+  assert.ok(response.cookie.some(value => value.startsWith('__Host-mfp-session=')));
 });
 
 test('standalone HTTP cannot enable Secure cookies through VERCEL env or spoofed forwarding headers', async () => {

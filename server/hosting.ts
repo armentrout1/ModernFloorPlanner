@@ -44,15 +44,16 @@ export function configureHosting(app: Express, options: HostingOptions = {}): vo
     const requestHostCanonical = requestHost?.toLowerCase() === host;
     const forwardedHostCanonical = forwardedHost?.toLowerCase() === host;
     const forwardedProtoSecure = forwardedProto === 'https';
-    const competingForwardedHeader = req.headers.forwarded !== undefined;
-    if (!requestHostCanonical || !forwardedHostCanonical || !forwardedProtoSecure || competingForwardedHeader) {
+    // Vercel also emits RFC Forwarded metadata. It is intentionally unused;
+    // session transport trusts only the exact X-Forwarded-Proto checked here.
+    if (!requestHostCanonical || !forwardedHostCanonical || !forwardedProtoSecure) {
       // Values can contain credentials or attacker-controlled input. Log only the
       // predicate results needed to diagnose the managed edge contract.
       console.warn('hosting_request_rejected', {
         requestHostCanonical,
         forwardedHostCanonical,
         forwardedProtoSecure,
-        competingForwardedHeader,
+        standardForwardedHeaderPresent: req.headers.forwarded !== undefined,
       });
       res.status(400).json({ code: 'INVALID_HOSTING_REQUEST', message: 'Invalid application request.' });
       return;
