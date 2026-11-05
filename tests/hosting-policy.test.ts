@@ -8,12 +8,13 @@ import { configureHosting, sessionProxyFor, type HostingOptions } from '../serve
 
 const origin = 'https://planner.example';
 const headers = { Host: 'planner.example', 'X-Forwarded-Host': 'planner.example', 'X-Forwarded-Proto': 'https' };
-function application(options: HostingOptions, env: { origin?: string; vercel?: string } = { origin, vercel: '1' }) {
+function application(options: HostingOptions, env: { origin?: string; vercel?: string } = { origin, vercel: '1' }, reconstruct = false) {
   const previous = { origin: process.env.MFP_APP_ORIGIN, vercel: process.env.VERCEL };
   const app = express();
   try {
     if (env.origin === undefined) delete process.env.MFP_APP_ORIGIN; else process.env.MFP_APP_ORIGIN = env.origin;
     if (env.vercel === undefined) delete process.env.VERCEL; else process.env.VERCEL = env.vercel;
+    if (reconstruct) app.use((req, _res, next) => { req.rawHeaders = []; next(); });
     configureHosting(app, options);
   } finally {
     if (previous.origin === undefined) delete process.env.MFP_APP_ORIGIN; else process.env.MFP_APP_ORIGIN = previous.origin;
@@ -48,6 +49,14 @@ test('hosted entry permits its canonical forwarded HTTPS request and retains sec
     assert.match(cookie, /^__Host-mfp-session=/); assert.match(cookie, /; Secure/);
     assert.match(cookie, /; HttpOnly/); assert.match(cookie, /; SameSite=Lax/); assert.match(cookie, /; Path=\//);
     assert.doesNotMatch(cookie, /Domain=/); assert.equal(fixture.reached(), 1);
+  } finally { await server.close(); }
+});
+
+test('hosted entry uses Vercel reconstructed headers without relying on raw socket metadata', async () => {
+  const fixture = application({ hosting: 'vercel' }, { origin, vercel: '1' }, true); const server = await listen(fixture.app);
+  try {
+    const response = await server.send(); assert.equal(response.status, 200);
+    assert.equal(fixture.reached(), 1);
   } finally { await server.close(); }
 });
 

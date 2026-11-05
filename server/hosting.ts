@@ -15,12 +15,10 @@ function canonicalHost(origin: string | undefined): string | null {
 function singleHeader(req: Request, name: string): string | null {
   const value = req.headers[name];
   if (typeof value !== 'string' || !value || value.trim() !== value || /[,\s]/.test(value)) return null;
-  // These are the adapter's reconstructed headers. This does not certify edge deduplication.
-  let count = 0;
-  for (let index = 0; index < req.rawHeaders.length; index += 2) {
-    if (req.rawHeaders[index].toLowerCase() === name) count++;
-  }
-  return count === 1 ? value : null;
+  // Vercel reconstructs IncomingMessage from its Fetch request, so rawHeaders is
+  // adapter metadata rather than the original edge header list. Duplicate
+  // forwarded values are still rejected above after Node joins them with commas.
+  return value;
 }
 
 /** Mount before parsers/routes. Ordinary Node listeners never opt into forwarded-protocol trust. */
