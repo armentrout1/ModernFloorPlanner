@@ -92,7 +92,7 @@ export default function PlanTitleEditor({ sketchId, value, onChange, onSaved }: 
   const StatusIcon = saveState === 'saving' ? LoaderCircle : saveState === 'saved' ? Check : saveState === 'error' ? CloudOff : Cloud;
   const statusHidden = saveState === 'local' && !localStatusVisible;
   return (
-    <div className="min-w-[12rem] max-w-xs flex-1">
+    <div className="min-w-0 max-w-xs flex-1">
       <Input
         aria-label="Current floor plan name"
         value={value}

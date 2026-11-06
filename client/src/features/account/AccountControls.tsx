@@ -27,14 +27,14 @@ export default function AccountControls() {
   const displayName = currentWorkspace?.name || session.principal?.displayName || 'Account';
 
   return (
-    <div className="ml-auto flex min-w-0 items-center gap-2">
+    <div className="ml-auto flex min-w-0 shrink-0 items-center gap-1 sm:gap-2">
       {authenticated && currentWorkspace ? (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="min-w-0 max-w-[12rem] gap-2 px-2" aria-label={`Workspace: ${currentWorkspace.name}`}>
               <Building2 className="h-4 w-4 shrink-0" />
-              <span className="truncate">{currentWorkspace.name}</span>
-              <ChevronDown className="h-4 w-4 shrink-0 text-slate-500" />
+              <span className="hidden truncate sm:inline">{currentWorkspace.name}</span>
+              <ChevronDown className="hidden h-4 w-4 shrink-0 text-slate-500 sm:block" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-64">
@@ -60,8 +60,8 @@ export default function AccountControls() {
           </DropdownMenuContent>
         </DropdownMenu>
       ) : (
-        <Button variant="ghost" className="gap-2 px-2" onClick={() => sendAccountUiCommand({ type: 'sign-in' })}>
-          <LogIn className="h-4 w-4" /> Guest
+        <Button variant="ghost" className="gap-2 px-2" aria-label="Guest" onClick={() => sendAccountUiCommand({ type: 'sign-in' })}>
+          <LogIn className="h-4 w-4" /> <span className="hidden sm:inline">Guest</span>
         </Button>
       )}
 

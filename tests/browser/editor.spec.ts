@@ -126,6 +126,32 @@ test.afterEach(async ({ page }) => {
   expect((page as Page & { m1Errors?: string[] }).m1Errors, 'uncaught browser errors').toEqual([]);
 });
 
+test('editor identity and action controls remain in two stable rows while resizing', async ({ page }) => {
+  await page.goto('/');
+  const identity = page.getByTestId('editor-identity-row');
+  const actions = page.getByTestId('editor-action-row');
+  const title = page.getByLabel('Current floor plan name', { exact: true });
+
+  for (const width of [390, 820, 1280, 1920]) {
+    await page.setViewportSize({ width, height: 900 });
+    await expect(identity).toBeVisible();
+    await expect(actions).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Modern Floor Planner', exact: true })).toBeVisible();
+    await expect(title).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Account', exact: true })).toBeVisible();
+
+    const identityBox = await identity.boundingBox();
+    const actionsBox = await actions.boundingBox();
+    expect(identityBox).not.toBeNull();
+    expect(actionsBox).not.toBeNull();
+    expect(actionsBox!.y, `actions stay below identity at ${width}px`).toBeGreaterThanOrEqual(identityBox!.y + identityBox!.height - 1);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), `${width}px page has no horizontal overflow`).toBe(true);
+
+    await page.getByRole('button', { name: 'New Sketch', exact: true }).scrollIntoViewIfNeeded();
+    await expect(page.getByRole('button', { name: 'New Sketch', exact: true })).toBeInViewport();
+  }
+});
+
 test('local draft-name confirmation hides ten seconds after the latest edit', async ({ page }) => {
   await page.clock.install();
   await page.goto('/');
