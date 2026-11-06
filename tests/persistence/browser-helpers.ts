@@ -1,6 +1,7 @@
 import { test, expect, type Page, type Locator } from '@playwright/test';
 import { parseRegistry, PHYSICAL_DRAFT_STORAGE_KEY } from '../../client/src/features/physical-draft/storage';
-export const panel = (p: Page) => p.getByRole('dialog', { name: 'Account', exact: true });
+export const panel = (p: Page) => p.getByRole('dialog', { name: 'Account', exact: true })
+  .or(p.getByRole('region', { name: 'Welcome to Modern Floor Planner', exact: true }));
 export const roomFields = (p: Page) => p.getByTestId('physical-room-inspector');
 export const roomField = (p: Page, label: string) => roomFields(p).getByLabel(new RegExp('^' + label + ' \\((ft|m)\\)$'));
 const openingFields = (p: Page) => p.getByTestId('physical-opening-inspector');
@@ -13,11 +14,16 @@ export async function account(p: Page) {
       const signInItem = p.getByRole('menuitem', { name: 'Sign in or create account', exact: true });
       if (await signInItem.isVisible()) await signInItem.click();
       else await p.getByRole('menuitem', { name: 'Settings', exact: true }).click();
-    } else await p.getByRole('button', { name: 'Sign in with email', exact: true }).click();
+    }
   }
   await expect(panel(p)).toBeVisible();
 }
-export async function closeAccount(p: Page) { await panel(p).getByRole('button', { name: 'Close', exact: true }).click(); await expect(panel(p)).toBeHidden(); }
+export async function closeAccount(p: Page) {
+  const dialog = p.getByRole('dialog', { name: 'Account', exact: true });
+  if (await dialog.isVisible()) await dialog.getByRole('button', { name: 'Close', exact: true }).click();
+  else await panel(p).getByRole('button', { name: 'Continue as guest', exact: true }).click();
+  await expect(panel(p)).toBeHidden();
+}
 export async function signIn(p: Page, who: 'A' | 'B' | 'C' = 'A') {
   await account(p);
   await panel(p).getByLabel('Email address', { exact: true }).fill(`account-${who.toLowerCase()}@example.test`);

@@ -123,7 +123,8 @@ function WorkspaceNameSetting({ workspace }: { workspace: AccountWorkspace }) {
 export default function AccountPanel() {
   const account = useSyncExternalStore(accountStore.subscribe, accountStore.getSnapshot);
   const initialView: AuthView = location.pathname === '/account/reset-password' ? 'reset-password' : 'sign-in';
-  const [open, setOpen] = useState(location.pathname.startsWith('/account/'));
+  const [open, setOpen] = useState(false);
+  const [authGatewayOpen, setAuthGatewayOpen] = useState(location.pathname.startsWith('/account/'));
   const [busy, setBusy] = useState(false), [error, setError] = useState('');
   const [name, setName] = useState('My Workspace'), [selectedWorkspace, setSelectedWorkspace] = useState('');
   const [authView, setAuthView] = useState<AuthView>(initialView);
@@ -172,6 +173,7 @@ export default function AccountPanel() {
     if (next.principal && next.workspace) {
       rememberWorkspace(next.principal.id, next.workspace.id);
       resumeLocalContext(workspaceContext(next.principal.id, next.workspace.id));
+      setAuthGatewayOpen(false);
       setOpen(false);
       return true;
     }
@@ -195,7 +197,7 @@ export default function AccountPanel() {
   useEffect(() => {
     if (!location.pathname.startsWith('/account/')) return;
     const recovery = location.pathname === '/account/reset-password';
-    setOpen(true);
+    setAuthGatewayOpen(true);
     if (recovery) setAuthView('reset-password');
     const handle = (event: string, token: string | null) => {
       if (recovery) {
@@ -277,12 +279,14 @@ export default function AccountPanel() {
     setCreatingWorkspace(false);
     setAccountMessage('');
     setOpen(false);
+    setAuthGatewayOpen(true);
     cleanAccountRedirect();
   }
 
   async function continueAsGuest() {
     await refreshAccount();
     resumeLocalContext(UNASSIGNED_CONTEXT);
+    setAuthGatewayOpen(false);
     setOpen(false);
   }
 
@@ -308,11 +312,17 @@ export default function AccountPanel() {
       if (!command || busyRef.current) return;
       if (command.type === 'open' || command.type === 'settings') {
         setCreatingWorkspace(false);
-        runInputLayoutTransition(() => setOpen(true));
+        runInputLayoutTransition(() => {
+          if (account.session.status === 'authenticated') setOpen(true);
+          else setAuthGatewayOpen(true);
+        });
         void refreshAccount().catch(() => {});
       } else if (command.type === 'sign-in') {
         chooseView('sign-in');
-        runInputLayoutTransition(() => setOpen(true));
+        runInputLayoutTransition(() => {
+          setOpen(false);
+          setAuthGatewayOpen(true);
+        });
         void refreshAccount().catch(() => {});
       } else if (command.type === 'new-workspace') {
         setName('New Workspace');
@@ -332,8 +342,41 @@ export default function AccountPanel() {
   const { session } = account;
   const workspace = session.workspace;
   const needsFirstWorkspace = session.status === 'authenticated' && !workspace && session.workspaces.length === 0;
+
+  const signedOutGateway = <>
+    {authView === 'reset-password' ? <form className="grid gap-3" onSubmit={event => { event.preventDefault(); void action(submitNewPassword, false); }}>
+      <h2 className="text-lg font-semibold">Choose a new password</h2>
+      {!recoveryReady && <p role="status" className="text-sm">Checking the reset link…</p>}
+      <label className="grid gap-1 text-sm">New password<Input type="password" autoComplete="new-password" value={password} onChange={event => setPassword(event.target.value)} minLength={8} required /></label>
+      <label className="grid gap-1 text-sm">Confirm new password<Input type="password" autoComplete="new-password" value={passwordConfirmation} onChange={event => setPasswordConfirmation(event.target.value)} minLength={8} required /></label>
+      <Button type="submit" disabled={busy || !recoveryReady}>Update password</Button>
+    </form> : authView === 'forgot-password' ? <form className="grid gap-3" onSubmit={event => { event.preventDefault(); void action(submitResetRequest, false); }}>
+      <h2 className="text-lg font-semibold">Reset your password</h2>
+      <p className="text-sm text-slate-600">Enter your email and Supabase will send a secure reset link.</p>
+      <label className="grid gap-1 text-sm">Email address<Input type="email" autoComplete="email" value={email} onChange={event => setEmail(event.target.value)} required /></label>
+      <Button type="submit" disabled={busy}>Email reset link</Button>
+      <Button type="button" variant="ghost" disabled={busy} onClick={() => chooseView('sign-in')}>Back to sign in</Button>
+    </form> : <form className="grid gap-3" onSubmit={event => { event.preventDefault(); void action(authView === 'sign-up' ? submitSignUp : submitSignIn); }}>
+      <h2 className="text-lg font-semibold">{authView === 'sign-up' ? 'Create an account' : 'Sign in'}</h2>
+      <p className="text-sm text-slate-600">{session.status === 'unavailable' ? 'Sign-in is unavailable. Local guest work remains available.' : session.status === 'expired' ? 'Your sign-in expired. Previous private work is preserved separately.' : session.status === 'revoked' ? 'Account access was revoked. Previous private work is preserved separately.' : authView === 'sign-up' ? 'Create an account and start planning.' : 'Sign in and continue where you left off.'}</p>
+      <GoogleButton disabled={busy || session.status === 'unavailable' || !session.contextToken} onClick={() => void action(submitGoogleSignIn)} />
+      <div className="flex items-center gap-3 text-xs uppercase tracking-wide text-slate-500" aria-hidden="true"><span className="h-px flex-1 bg-slate-200" /><span>or use email</span><span className="h-px flex-1 bg-slate-200" /></div>
+      <label className="grid gap-1 text-sm">Email address<Input type="email" autoComplete="email" value={email} onChange={event => setEmail(event.target.value)} required /></label>
+      <label className="grid gap-1 text-sm">Password<Input type="password" autoComplete={authView === 'sign-up' ? 'new-password' : 'current-password'} value={password} onChange={event => setPassword(event.target.value)} minLength={authView === 'sign-up' ? 8 : undefined} required /></label>
+      {authView === 'sign-up' && <label className="grid gap-1 text-sm">Confirm password<Input type="password" autoComplete="new-password" value={passwordConfirmation} onChange={event => setPasswordConfirmation(event.target.value)} minLength={8} required /></label>}
+      <Button type="submit" disabled={busy || session.status === 'unavailable' || !session.contextToken}>{authView === 'sign-up' ? 'Create account' : 'Sign in'}</Button>
+      <div className="flex flex-wrap justify-between gap-2">
+        <Button type="button" variant="ghost" size="sm" disabled={busy} onClick={() => chooseView(authView === 'sign-up' ? 'sign-in' : 'sign-up')}>{authView === 'sign-up' ? 'Already have an account? Sign in' : 'Create account'}</Button>
+        {authView === 'sign-in' && <Button type="button" variant="ghost" size="sm" disabled={busy} onClick={() => chooseView('forgot-password')}>Forgot password?</Button>}
+      </div>
+    </form>}
+    <div className="flex items-center gap-3 py-1 text-xs uppercase tracking-wide text-slate-400" aria-hidden="true"><span className="h-px flex-1 bg-slate-200" /><span>or</span><span className="h-px flex-1 bg-slate-200" /></div>
+    <Button variant="outline" disabled={busy} onClick={() => void action(continueAsGuest)}>Continue as guest</Button>
+    <p className="flex items-center gap-2 text-xs text-slate-500"><LockKeyhole className="h-3.5 w-3.5" /> Guest drafts stay on this device until you explicitly save them to an account.</p>
+  </>;
+
   return <>
-    {!account.editorContext && !open && <section className="flex min-h-screen items-center justify-center bg-gradient-to-br from-blue-50 via-white to-slate-100 p-6" aria-label="Welcome to Modern Floor Planner">
+    {(!account.editorContext || authGatewayOpen) && !open && <section className="fixed inset-0 z-50 flex min-h-screen items-start justify-center overflow-y-auto bg-gradient-to-br from-blue-50 via-white to-slate-100 p-4 sm:items-center sm:p-6" aria-label="Welcome to Modern Floor Planner" data-physical-layout-control>
       <div className="w-full max-w-lg rounded-2xl border border-slate-200 bg-white p-8 shadow-xl shadow-slate-200/60">
         <div className="mb-7 flex items-center gap-3 text-primary">
           <div className="rounded-xl bg-primary/10 p-2.5"><Sparkles className="h-6 w-6" /></div>
@@ -341,6 +384,8 @@ export default function AccountPanel() {
         </div>
         <h1 className="text-3xl font-semibold tracking-tight text-slate-950">Plan your space with confidence.</h1>
         <p className="mt-3 text-slate-600">Sign in to open your saved floor plans, or continue as a guest to work locally in this browser.</p>
+        {accountMessage && <p role="status" className="mt-5 rounded border border-blue-200 bg-blue-50 p-3 text-sm">{accountMessage}</p>}
+        {account.checking && <p role="status" className="mt-5 text-sm">Checking account access…</p>}
         <div className="mt-7 grid gap-3">
           {session.status === 'authenticated' && session.principal && workspace ? <>
             <Button size="lg" disabled={busy} onClick={() => void action(async () => {
@@ -350,30 +395,17 @@ export default function AccountPanel() {
             })}>Continue to {workspace.name}</Button>
             <Button variant="outline" disabled={busy} onClick={() => runInputLayoutTransition(() => setOpen(true))}>Settings</Button>
             <Button variant="ghost" disabled={busy} onClick={() => void action(signOut)}>Sign out</Button>
-          </> : <>
-            <GoogleButton disabled={busy || session.status === 'unavailable' || !session.contextToken} onClick={() => void action(submitGoogleSignIn)} />
-            <Button size="lg" disabled={busy} onClick={() => { chooseView('sign-in'); setOpen(true); }}>Sign in with email</Button>
-            <Button variant="outline" disabled={busy} onClick={() => { chooseView('sign-up'); setOpen(true); }}>Create account</Button>
-            <div className="flex items-center gap-3 py-1 text-xs uppercase tracking-wide text-slate-400" aria-hidden="true"><span className="h-px flex-1 bg-slate-200" /><span>or</span><span className="h-px flex-1 bg-slate-200" /></div>
-            <Button variant="ghost" disabled={busy} onClick={() => void action(continueAsGuest)}>Continue as guest</Button>
-          </>}
+          </> : signedOutGateway}
         </div>
-        <p className="mt-6 flex items-center gap-2 text-xs text-slate-500"><LockKeyhole className="h-3.5 w-3.5" /> Guest drafts stay on this device until you explicitly save them to an account.</p>
         {error && <p role="alert" className="mt-4 text-sm text-red-700">{error}</p>}
       </div>
     </section>}
-    <Dialog open={open} onOpenChange={next => { if (!busy) runInputLayoutTransition(() => setOpen(next)); }}>
+    <Dialog open={open && session.status === 'authenticated'} onOpenChange={next => { if (!busy) runInputLayoutTransition(() => setOpen(next)); }}>
       <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-lg" data-physical-layout-control>
         <DialogHeader><DialogTitle>Account</DialogTitle></DialogHeader>
         {accountMessage && <p role="status" className="rounded border border-blue-200 bg-blue-50 p-3 text-sm">{accountMessage}</p>}
         {account.checking && <p role="status">Checking account access…</p>}
-        {authView === 'reset-password' ? <form className="grid gap-3" onSubmit={event => { event.preventDefault(); void action(submitNewPassword, false); }}>
-          <h2 className="text-lg font-semibold">Choose a new password</h2>
-          {!recoveryReady && <p role="status" className="text-sm">Checking the reset link…</p>}
-          <label className="grid gap-1 text-sm">New password<Input type="password" autoComplete="new-password" value={password} onChange={event => setPassword(event.target.value)} minLength={8} required /></label>
-          <label className="grid gap-1 text-sm">Confirm new password<Input type="password" autoComplete="new-password" value={passwordConfirmation} onChange={event => setPasswordConfirmation(event.target.value)} minLength={8} required /></label>
-          <Button type="submit" disabled={busy || !recoveryReady}>Update password</Button>
-        </form> : session.status === 'authenticated' ? <div className="grid gap-5">
+        {session.status === 'authenticated' && <div className="grid gap-5">
           {creatingWorkspace ? <form className="grid gap-3" onSubmit={event => { event.preventDefault(); void action(submitWorkspaceCreation); }}>
             <div>
               <h2 className="text-lg font-semibold">Create a new workspace</h2>
@@ -410,30 +442,7 @@ export default function AccountPanel() {
             {workspace && <Button variant="outline" disabled={busy} onClick={() => { setName('New Workspace'); setRequestId(crypto.randomUUID()); setCreatingWorkspace(true); }}>New workspace</Button>}
           </>}
           <Button variant="ghost" disabled={busy} onClick={() => action(signOut)}>Sign out</Button>
-        </div> : authView === 'forgot-password' ? <form className="grid gap-3" onSubmit={event => { event.preventDefault(); void action(submitResetRequest, false); }}>
-          <h2 className="text-lg font-semibold">Reset your password</h2>
-          <p className="text-sm">Enter your email and Supabase will send a secure reset link.</p>
-          <label className="grid gap-1 text-sm">Email address<Input type="email" autoComplete="email" value={email} onChange={event => setEmail(event.target.value)} required /></label>
-          <Button type="submit" disabled={busy}>Email reset link</Button>
-          <Button type="button" variant="ghost" disabled={busy} onClick={() => chooseView('sign-in')}>Back to sign in</Button>
-        </form> : <form className="grid gap-3" onSubmit={event => { event.preventDefault(); void action(authView === 'sign-up' ? submitSignUp : submitSignIn); }}>
-          <h2 className="text-lg font-semibold">{authView === 'sign-up' ? 'Create an account' : 'Sign in'}</h2>
-          <p>{session.status === 'unavailable' ? 'Sign-in is unavailable. Local guest work remains available.' : session.status === 'expired' ? 'Your sign-in expired. Previous private work is preserved separately.' : session.status === 'revoked' ? 'Account access was revoked. Previous private work is preserved separately.' : authView === 'sign-up' ? 'Create an account and start planning.' : 'Sign in and continue where you left off.'}</p>
-          <GoogleButton disabled={busy || session.status === 'unavailable' || !session.contextToken} onClick={() => void action(submitGoogleSignIn)} />
-          <div className="flex items-center gap-3 text-xs uppercase tracking-wide text-slate-500" aria-hidden="true"><span className="h-px flex-1 bg-slate-200" /><span>or use email</span><span className="h-px flex-1 bg-slate-200" /></div>
-          <label className="grid gap-1 text-sm">Email address<Input type="email" autoComplete="email" value={email} onChange={event => setEmail(event.target.value)} required /></label>
-          <label className="grid gap-1 text-sm">Password<Input type="password" autoComplete={authView === 'sign-up' ? 'new-password' : 'current-password'} value={password} onChange={event => setPassword(event.target.value)} minLength={authView === 'sign-up' ? 8 : undefined} required /></label>
-          {authView === 'sign-up' && <label className="grid gap-1 text-sm">Confirm password<Input type="password" autoComplete="new-password" value={passwordConfirmation} onChange={event => setPasswordConfirmation(event.target.value)} minLength={8} required /></label>}
-          <Button type="submit" disabled={busy || session.status === 'unavailable' || !session.contextToken}>{authView === 'sign-up' ? 'Create account' : 'Sign in'}</Button>
-          <div className="flex flex-wrap justify-between gap-2">
-            <Button type="button" variant="ghost" size="sm" disabled={busy} onClick={() => chooseView(authView === 'sign-up' ? 'sign-in' : 'sign-up')}>{authView === 'sign-up' ? 'Already have an account? Sign in' : 'Create account'}</Button>
-            {authView === 'sign-in' && <Button type="button" variant="ghost" size="sm" disabled={busy} onClick={() => chooseView('forgot-password')}>Forgot password?</Button>}
-          </div>
-        </form>}
-        {session.status !== 'authenticated' && <>
-          <Button variant="outline" disabled={busy} onClick={() => action(continueAsGuest)}>Continue as guest</Button>
-          <p className="text-xs text-slate-600">Guest work stays in this browser until you explicitly save it to an account.</p>
-        </>}
+        </div>}
         {error && <p role="alert" className="text-sm text-red-700">{error}</p>}
       </DialogContent>
     </Dialog>
