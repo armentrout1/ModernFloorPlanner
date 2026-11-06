@@ -5,7 +5,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const projectRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const assetTypes = new Set(['.html', '.js', '.css', '.svg', '.png', '.jpg', '.jpeg', '.gif', '.webp', '.avif', '.ico', '.woff', '.woff2', '.ttf', '.otf']);
-const staticRootMarker = 'vercel-static-root.txt';
+const staticRootMarker = '.vercel-static-root';
 async function inventory(directory, relative = '') {
   const files = {};
   for (const entry of await readdir(join(directory, relative), { withFileTypes: true })) {

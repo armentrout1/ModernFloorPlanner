@@ -21,7 +21,7 @@ vite.config.ts.*
 # Generated Vercel client assets and local build metadata; not provider bindings.
 # The tracked marker makes the static root visible before Vercel runs the build.
 /public/*
-!/public/vercel-static-root.txt
+!/public/.vercel-static-root
 /.vercel/
 /app.js
 /mfp-client-files.generated.json
