@@ -1,11 +1,11 @@
 import { test, expect, type Page } from '@playwright/test';
-import { configureIssuer } from '../accounts/control';
+import { configureSupabase } from '../accounts/control';
 import { parseRegistry } from '../../client/src/features/physical-draft/storage';
 import { RECOVERY_JOURNAL_NAME } from '../../client/src/features/physical-draft/recoveryJournal';
 import { setup, counts, roomField, commit, selectedPhysical, savePanel, saveButton,
   recoveryStatus, resumeLocal, deferred } from './helpers';
 
-test.beforeEach(async ({}, info) => configureIssuer({ subjectPrefix: 'journal-crash-' + info.testId.replace(/[^A-Za-z0-9_-]/g, '').slice(-35) }));
+test.beforeEach(async ({}, info) => configureSupabase({ subjectPrefix: 'journal-crash-' + info.testId.replace(/[^A-Za-z0-9_-]/g, '').slice(-35) }));
 
 type Row = { key: string; value: any; bytes: string };
 async function rows(page: Page): Promise<Row[]> {

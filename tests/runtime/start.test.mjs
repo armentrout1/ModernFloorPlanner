@@ -60,7 +60,7 @@ before(async () => {
 after(closeChild);
 
 test('actual npm start selects production and serves direct SPA links from built assets', async () => {
-  for (const route of ['/', '/physical-draft', '/quick-room', '/account/callback?result=failed&returnTo=%2F']) {
+  for (const route of ['/', '/physical-draft', '/quick-room', '/account/confirm', '/account/reset-password']) {
     const response = await request(route), html = await response.text();
     assert.equal(response.status, 200); assert.match(response.headers.get('content-type'), /text\/html/);
     assert.match(html, /\/assets\/[^" ]+\.js/); assert.doesNotMatch(html, /\/@vite\/client|\/src\/main\.tsx/);

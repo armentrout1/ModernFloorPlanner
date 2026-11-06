@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { configureIssuer } from '../accounts/control';
+import { configureSupabase } from '../accounts/control';
 import { capturePhysicalSaveEnvelope } from '../../shared/persistence/physicalSave';
 import { richPhysicalSaveDraft } from '../fixtures/physicalSave';
 import { setup, api, counts, deferred, setAutosave, autosave, membership, resumeLocal } from '../autosave/helpers';
@@ -36,7 +36,7 @@ async function pendingBytes(page: Page) {
 }
 const errors = new WeakMap<Page, string[]>();
 test.beforeEach(async ({ page }, info) => {
-  await configureIssuer({ subjectPrefix: 'projects-' + info.testId.replace(/[^A-Za-z0-9_-]/g, '').slice(-40) });
+  await configureSupabase({ subjectPrefix: 'projects-' + info.testId.replace(/[^A-Za-z0-9_-]/g, '').slice(-40) });
   errors.set(page, []); page.on('pageerror', error => errors.get(page)!.push(error.message));
 });
 test.afterEach(({ page }) => expect(errors.get(page)).toEqual([]));
@@ -165,7 +165,7 @@ test('logout during an accepted project action cannot repaint private lists or r
     await row(page, saved.planId).getByRole('button', { name: 'Duplicate saved revision', exact: true }).click(); await received.promise;
     await account(page); await panel(page).getByRole('button', { name: 'Sign out', exact: true }).click(); release.resolve(); await finished.promise;
     await expect(projects(page)).toHaveCount(0); await expect(page.getByText('Private lifecycle', { exact: true })).toHaveCount(0);
-    await panel(page).getByRole('button', { name: 'Resume unassigned local-only work', exact: true }).click();
+    await panel(page).getByRole('button', { name: 'Continue as guest (local only)', exact: true }).click();
     await expect(page.getByTestId('physical-saved-revision')).toHaveCount(0); await expect(savePanel(page)).not.toContainText('independent project');
   } finally { release.resolve(); await page.unroute('**/api/physical-plans/*/duplicate'); }
 });

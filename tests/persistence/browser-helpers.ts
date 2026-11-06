@@ -8,10 +8,11 @@ const currentKey = (context: string) => context === 'unassigned' ? PHYSICAL_DRAF
 export async function account(p: Page) { if (!await panel(p).isVisible()) await p.getByRole('button', { name: 'Account', exact: true }).click(); await expect(panel(p)).toBeVisible(); }
 export async function closeAccount(p: Page) { await panel(p).getByRole('button', { name: 'Close', exact: true }).click(); await expect(panel(p)).toBeHidden(); }
 export async function signIn(p: Page, who: 'A' | 'B' | 'C' = 'A') {
-  await account(p); await expect(panel(p).getByRole('button', { name: 'Sign in', exact: true })).toBeEnabled();
+  await account(p);
+  await panel(p).getByLabel('Email address', { exact: true }).fill(`account-${who.toLowerCase()}@example.test`);
+  await panel(p).getByLabel('Password', { exact: true }).fill(`Password-ACCOUNT-${who}-1234`);
   await panel(p).getByRole('button', { name: 'Sign in', exact: true }).click();
-  await p.getByRole('button', { name: 'Continue as Account ' + who, exact: true }).click();
-  await expect(panel(p)).toContainText(new RegExp('account-' + who.toLowerCase()));
+  await expect(panel(p)).toContainText('Signed in with Supabase Auth');
   expect(new URL(p.url()).search).toBe('');
 }
 export async function createWorkspace(p: Page, suffix: string) {

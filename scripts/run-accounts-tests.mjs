@@ -11,12 +11,13 @@ const run = (args, label, env) => new Promise((resolve, reject) => {
 });
 if (!selection.includes('--browser-only')) {
   const fixture = await createAccountsFixture();
-  try { await run(['--import', 'tsx', '--test', '--test-concurrency=1', 'tests/accounts/protocol.test.ts'], 'OIDC protocol/session', fixture.env); }
+  try { await run(['--import', 'tsx', '--test', '--test-concurrency=1', 'tests/accounts/protocol.test.ts'], 'Supabase Auth/session', fixture.env); }
   finally { await fixture.cleanup(); }
 }
 if (!selection.includes('--protocol-only')) {
   const fixture = await createAccountsFixture(); let app;
   try {
+    await run(['node_modules/vite/bin/vite.js', 'build'], 'account browser build', fixture.env);
     app = await fixture.startApp();
     await run(['node_modules/@playwright/test/cli.js', 'test', '--config=playwright.accounts.config.ts', '--reporter=line'], 'account browser', fixture.env);
   } finally { if (app) await app.stop(); await fixture.cleanup(); }

@@ -1,12 +1,12 @@
 import { test, expect, type Page } from '@playwright/test';
-import { configureIssuer } from '../accounts/control';
+import { configureSupabase } from '../accounts/control';
 import { signIn,createWorkspace,selectWorkspace,physical,roomField,commit,selectedPhysical,savePanel,saveButton,savePhysical,schemaFive } from './browser-helpers';
 import { capturePhysicalSaveEnvelope } from '../../shared/persistence/physicalSave';
 import { api, counts } from '../autosave/helpers';
 
-// Every primary drawing below is constructed through the compiled UI. OIDC,
+// Every primary drawing below is constructed through the compiled UI. Supabase Auth,
 // cookies, authorization routes and durable PostgreSQL are the normal composition.
-test.beforeEach(async({},info)=>configureIssuer({subjectPrefix:'save-browser-'+info.testId.replace(/[^A-Za-z0-9_-]/g,'').slice(-40)}));
+test.beforeEach(async({},info)=>configureSupabase({subjectPrefix:'save-browser-'+info.testId.replace(/[^A-Za-z0-9_-]/g,'').slice(-40)}));
 async function bindingFor(p:Page,draftId:string){
  return p.evaluate(id=>{
   const context=sessionStorage.getItem('modern-floor-planner:working-context:v1');

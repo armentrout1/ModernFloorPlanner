@@ -6,7 +6,7 @@ import pg from 'pg';
 const { Pool } = pg;
 import { readDatabaseConfiguration, toPostgresOptions, toSessionPoolOptions } from '../../server/databaseConfiguration';
 import { PhysicalHttpClient } from '../persistence/http-client';
-import { configureIssuer } from '../accounts/control';
+import { configureSupabase } from '../accounts/control';
 import { basicPhysicalSaveDraft } from '../fixtures/physicalSave';
 import { capturePhysicalSaveEnvelope } from '../../shared/persistence/physicalSave';
 
@@ -16,7 +16,7 @@ assert.equal(new URL(url).hostname, 'localhost'); assert.equal(new URL(url).port
 const config = (value = url, env = process.env) => readDatabaseConfiguration(value, env);
 const sql = postgres({ ...toPostgresOptions(config(process.env.MFP_TRANSPORT_ADMIN_URL!)), onnotice: () => {} });
 after(async () => sql.end());
-beforeEach(async () => configureIssuer({ subjectPrefix: 'tls-' + randomUUID() }));
+beforeEach(async () => configureSupabase({ subjectPrefix: 'tls-' + randomUUID() }));
 async function restartApp() {
   assert.ok(process.send, 'The owning fixture runner must perform restarts');
   await new Promise<void>((done, reject) => {
@@ -107,7 +107,7 @@ test('transaction-scoped advisory locks are exclusive and released at commit acr
   } finally { await application.end(); await sessions.end(); }
 });
 
-test('normal OIDC/session/workspace and immutable save lifecycle work under restricted runtime role through pooler', async () => {
+test('normal Supabase/session/workspace and immutable save lifecycle work under restricted runtime role through pooler', async () => {
   const owner = await member(); const envelope = capturePhysicalSaveEnvelope(basicPhysicalSaveDraft()); const key = randomUUID();
   const created = await owner.client.request('/api/physical-plans', 'POST', envelope, { 'Idempotency-Key': key }); assert.equal(created.status, 201);
   const saved = await created.json(); assert.deepEqual(saved.envelope, envelope);

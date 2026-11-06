@@ -7,8 +7,8 @@ import postgres from 'postgres';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import { eq, and } from 'drizzle-orm';
 import * as schema from '../../shared/schema';
-import { AccountStorage, AccountStorageError, SESSION_IDLE_MS, SESSION_ABSOLUTE_MS, ANONYMOUS_SESSION_MS, LOGIN_TRANSACTION_MS,
-  type BrowserContext, type SessionBinding, type LoginTransaction } from '../../server/accountStorage';
+import { AccountStorage, AccountStorageError, SESSION_IDLE_MS, SESSION_ABSOLUTE_MS, ANONYMOUS_SESSION_MS,
+  type BrowserContext, type SessionBinding } from '../../server/accountStorage';
 import { DatabaseStorage } from '../../server/storage';
 import { AuthorizationError, type VerifiedIdentity } from '../../server/authorizationTypes';
 import type { Database } from '../../server/db';
@@ -29,7 +29,6 @@ const hash = (value = randomUUID()) => createHash('sha256').update(value).digest
 const binding = (c: BrowserContext): SessionBinding => ({ browserId: c.browserId, contextToken: c.contextToken, sessionIdHash: c.sessionIdHash });
 const identity = (c: BrowserContext): VerifiedIdentity => ({ issuer: c.issuer!, subject: c.subject!, sessionBinding: binding(c) });
 const errorCode = (code: string) => (e: unknown) => e instanceof AccountStorageError && e.code === code;
-const fields = (now = Date.now(), returnPath = '/physical-draft') => ({ stateHash: hash(), nonce: hash(), codeVerifier: hash(), returnPath, expiresAt: now + LOGIN_TRANSACTION_MS });
 const plan = { name: 'Synthetic account sketch', rooms: [], createdAt: '2026-09-09T12:00:00Z', updatedAt: '2026-09-09T12:00:00Z' };
 before(async () => {
   const [actual] = await admin`select current_database() as database, current_user as username, current_setting('data_directory') as directory, host(inet_server_addr()) as address`;
@@ -50,11 +49,9 @@ before(async () => {
 });
 after(async () => { if (client) await client.end(); if (created) await admin.unsafe(`drop schema "${testSchema}" cascade`); await admin.end(); });
 async function anonymous(now = Date.now()) { return accounts.createAnonymousContext(randomUUID(), hash(), now); }
-async function start(c: BrowserContext, now = Date.now()) { return accounts.beginLogin(binding(c), fields(now), now); }
 async function signIn(subject = randomUUID(), now = Date.now(), issuer = 'https://synthetic-issuer.example') {
-  const c = await anonymous(now), attempt = await start(c, now);
-  await accounts.consumeLogin(c.browserId, c.sessionIdHash, attempt.stateHash, now);
-  return accounts.finishLogin(attempt, { issuer, subject }, hash(), now);
+  const c = await anonymous(now);
+  return accounts.authenticate(binding(c), { issuer, subject }, hash(), now);
 }
 async function withWorkspace() {
   const context = await signIn(); const workspace = await accounts.createWorkspace(identity(context), { name: 'Explicit workspace', idempotencyKey: randomUUID() }, Date.now());
@@ -86,57 +83,20 @@ test('anonymous state is repeat-safe without overwriting an existing or revoked 
   await assert.rejects(accounts.createAnonymousContext(c.browserId, c.sessionIdHash, Date.now()), errorCode('SESSION_REVOKED'));
   assert.equal(await accounts.getContext(c.browserId, c.sessionIdHash, Date.now(), { touch: true }), null);
 });
-test('durable login state is one-use and exact-browser bound across repository instances', async () => {
-  const c = await anonymous(), attempt = await start(c), other = await anonymous();
-  const second = new AccountStorage(() => db);
-  await assert.rejects(second.consumeLogin(other.browserId, other.sessionIdHash, attempt.stateHash, Date.now()), errorCode('STALE_CONTEXT'));
-  const results = await Promise.allSettled([accounts.consumeLogin(c.browserId, c.sessionIdHash, attempt.stateHash, Date.now()), second.consumeLogin(c.browserId, c.sessionIdHash, attempt.stateHash, Date.now())]);
-  assert.equal(results.filter(v => v.status === 'fulfilled').length, 1); assert.equal(results.filter(v => v.status === 'rejected').length, 1);
-  const signed = await second.finishLogin(attempt, { issuer: 'https://synthetic.example', subject: randomUUID() }, hash(), Date.now());
-  assert.equal(signed.status, 'authenticated'); assert.equal(signed.selectedWorkspaceId, null);
-  assert.notEqual(signed.sessionIdHash, c.sessionIdHash); assert.notEqual(signed.contextToken, attempt.binding.contextToken);
+test('direct verified login is one-use and exact-browser bound across repository instances', async () => {
+  const c = await anonymous(), second = new AccountStorage(() => db);
+  const firstHash = hash(), secondHash = hash();
+  const results = await Promise.allSettled([
+    accounts.authenticate(binding(c), { issuer: 'https://synthetic.example/auth/v1', subject: randomUUID() }, firstHash, Date.now()),
+    second.authenticate(binding(c), { issuer: 'https://synthetic.example/auth/v1', subject: randomUUID() }, secondHash, Date.now()),
+  ]);
+  assert.equal(results.filter(value => value.status === 'fulfilled').length, 1);
+  assert.equal(results.filter(value => value.status === 'rejected').length, 1);
+  const winner = results.find(value => value.status === 'fulfilled') as PromiseFulfilledResult<BrowserContext>;
+  assert.equal(winner.value.status, 'authenticated'); assert.equal(winner.value.selectedWorkspaceId, null);
+  assert.notEqual(winner.value.sessionIdHash, c.sessionIdHash); assert.notEqual(winner.value.contextToken, c.contextToken);
   assert.equal(await accounts.getContext(c.browserId, c.sessionIdHash, Date.now()), null);
-  const [stored] = await db.select().from(schema.loginTransactions).where(eq(schema.loginTransactions.stateHash, attempt.stateHash));
-  assert.equal(stored.nonce, null); assert.equal(stored.codeVerifier, null); assert.ok(stored.completedAt);
-  await assert.rejects(second.finishLogin(attempt, { issuer: 'https://synthetic.example', subject: randomUUID() }, hash(), Date.now()), errorCode('STALE_CONTEXT'));
-});
-test('a newer login invalidates older attempts and stale cancellation cannot cancel the newer one', async () => {
-  const c = await anonymous(), old = await start(c);
-  const current = (await accounts.getContext(c.browserId, c.sessionIdHash, Date.now()))!;
-  const latest = await start(current); await accounts.cancelLogin(old, Date.now());
-  await assert.rejects(accounts.consumeLogin(c.browserId, c.sessionIdHash, old.stateHash, Date.now()), errorCode('STALE_CONTEXT'));
-  const consumed = await accounts.consumeLogin(c.browserId, c.sessionIdHash, latest.stateHash, Date.now());
-  assert.equal(consumed.nonce, latest.nonce); assert.equal(consumed.binding.contextToken, latest.binding.contextToken);
-});
-test('logout or a newer initiation during token exchange prevents the delayed callback from authenticating', async () => {
-  for (const change of ['logout', 'new-login']) {
-    const c = await anonymous(), attempt = await start(c);
-    await accounts.consumeLogin(c.browserId, c.sessionIdHash, attempt.stateHash, Date.now());
-    const current = (await accounts.getContext(c.browserId, c.sessionIdHash, Date.now()))!;
-    if (change === 'logout') await accounts.logout(binding(current), Date.now()); else await start(current);
-    await assert.rejects(accounts.finishLogin(attempt, { issuer: 'https://late.example', subject: randomUUID() }, hash(), Date.now()), errorCode('STALE_CONTEXT'));
-  }
-});
-test('login cancellation retains the previous identity and selected workspace without restoring stale tokens', async () => {
-  const f = await withWorkspace(), attempt = await start(f.context);
-  await accounts.consumeLogin(f.context.browserId, f.context.sessionIdHash, attempt.stateHash, Date.now());
-  await accounts.cancelLogin(attempt, Date.now());
-  const after = (await accounts.getContext(f.context.browserId, f.context.sessionIdHash, Date.now()))!;
-  assert.equal(after.principalId, f.context.principalId); assert.equal(after.selectedWorkspaceId, f.workspace.id);
-  assert.notEqual(after.contextToken, f.context.contextToken); assert.notEqual(after.contextToken, attempt.binding.contextToken);
-  await assert.rejects(accounts.finishLogin(attempt, { issuer: 'https://other.example', subject: randomUUID() }, hash(), Date.now()), errorCode('STALE_CONTEXT'));
-});
-test('expired/unsafe login attempts fail closed and initiating repeatedly is bounded', async () => {
-  let c = await anonymous(); const now = Date.now();
-  for (const returnPath of ['//outside.example', 'https://outside.example', '/physical-draft?secret=1']) {
-    await assert.rejects(accounts.beginLogin(binding(c), fields(now, returnPath), now), errorCode('INVALID_REQUEST'));
-  }
-  await assert.rejects(accounts.beginLogin(binding(c), { ...fields(now), expiresAt: now + LOGIN_TRANSACTION_MS + 1 }, now), errorCode('INVALID_REQUEST'));
-  const attempt = await start(c, now);
-  await assert.rejects(accounts.consumeLogin(c.browserId, c.sessionIdHash, attempt.stateHash, now + LOGIN_TRANSACTION_MS), errorCode('STALE_CONTEXT'));
-  for (let i = 1; i < 10; i++) { c = (await accounts.getContext(c.browserId, c.sessionIdHash, now))!; await start(c, now); }
-  c = (await accounts.getContext(c.browserId, c.sessionIdHash, now))!;
-  await assert.rejects(start(c, now), errorCode('RATE_LIMIT'));
+  await assert.rejects(second.authenticate(binding(c), { issuer: 'https://synthetic.example/auth/v1', subject: randomUUID() }, hash(), Date.now()), errorCode('STALE_CONTEXT'));
 });
 test('issuer plus subject provisioning is concurrent/repeat-safe without email merge or membership creation', async () => {
   const subject = randomUUID(), exact = { issuer: 'https://one.example', subject };
@@ -198,9 +158,9 @@ test('selection is explicit, role-aware, current and atomically rotates the work
   const cleared = await accounts.selectWorkspace(binding(selected), null, Date.now());
   assert.equal(cleared.selectedWorkspaceId, null); await assert.rejects(plans.updateFloorPlan(identity(selected), w.id, saved.id, { name: 'Stale' }), errorCode('STALE_CONTEXT'));
 });
-test('the same cookie after another person signs in cannot reuse an old context or identity', async () => {
-  const a = await withWorkspace(), attempt = await start(a.context); await accounts.consumeLogin(a.context.browserId, a.context.sessionIdHash, attempt.stateHash, Date.now());
-  const b = await accounts.finishLogin(attempt, { issuer: a.context.issuer!, subject: randomUUID() }, hash(), Date.now());
+test('a replaced browser session cannot reuse an old context or identity', async () => {
+  const a = await withWorkspace(); await accounts.logout(binding(a.context), Date.now());
+  const b = await signIn(randomUUID(), Date.now(), a.context.issuer!);
   assert.notEqual(b.principalId, a.context.principalId); assert.equal(b.selectedWorkspaceId, null);
   await assert.rejects(plans.createFloorPlan(identity(a.context), a.workspace.id, plan), errorCode('STALE_CONTEXT'));
   await assert.rejects(accounts.logout(binding(a.context), Date.now()), errorCode('STALE_CONTEXT'));
@@ -251,25 +211,21 @@ test('session context and lifecycle schema reject malformed bindings; storage fa
 });
 
 
-test('stale callbacks cannot invoke destructive SID rotation for a newer pending login', async () => {
-  const c = await anonymous(), old = await start(c); await accounts.consumeLogin(c.browserId, c.sessionIdHash, old.stateHash, Date.now());
-  const pending = (await accounts.getContext(c.browserId, c.sessionIdHash, Date.now()))!, next = await start(pending);
-  let rotations = 0;
-  await assert.rejects(accounts.finishLogin(old, { issuer: 'https://stale-rotation.example', subject: randomUUID() }, async () => { rotations++; return hash(); }, Date.now()), errorCode('STALE_CONTEXT'));
-  assert.equal(rotations, 0);
-  await accounts.consumeLogin(c.browserId, c.sessionIdHash, next.stateHash, Date.now());
-  const completed = await accounts.finishLogin(next, { issuer: 'https://current-rotation.example', subject: randomUUID() }, async () => { rotations++; return hash(); }, Date.now());
-  assert.equal(rotations, 1); assert.equal(completed.status, 'authenticated');
+test('stale direct logins cannot invoke destructive SID rotation after another login wins', async () => {
+  const c = await anonymous(); let rotations = 0;
+  const first = accounts.authenticate(binding(c), { issuer: 'https://current.example/auth/v1', subject: randomUUID() }, async () => { rotations++; return hash(); }, Date.now());
+  const second = accounts.authenticate(binding(c), { issuer: 'https://stale.example/auth/v1', subject: randomUUID() }, async () => { rotations++; return hash(); }, Date.now());
+  const results = await Promise.allSettled([first, second]);
+  assert.equal(results.filter(value => value.status === 'fulfilled').length, 1);
+  assert.equal(rotations, 1);
 });
-test('SID rotation failure rolls back identity provisioning and context finalization', async () => {
-  const c = await anonymous(), attempt = await start(c); await accounts.consumeLogin(c.browserId, c.sessionIdHash, attempt.stateHash, Date.now());
+test('SID rotation failure rolls back direct identity provisioning and context finalization', async () => {
+  const c = await anonymous();
   const before = (await accounts.getContext(c.browserId, c.sessionIdHash, Date.now()))!;
   const verified = { issuer: 'https://failed-rotation.example', subject: randomUUID() };
-  await assert.rejects(accounts.finishLogin(attempt, verified, async () => { throw new Error('synthetic session store failure'); }, Date.now()), /synthetic session store failure/);
+  await assert.rejects(accounts.authenticate(binding(c), verified, async () => { throw new Error('synthetic session store failure'); }, Date.now()), /synthetic session store failure/);
   assert.deepEqual(await accounts.getContext(c.browserId, c.sessionIdHash, Date.now()), before);
   assert.equal((await db.select().from(schema.externalIdentities).where(and(eq(schema.externalIdentities.issuer, verified.issuer), eq(schema.externalIdentities.subject, verified.subject)))).length, 0);
-  const [stored] = await db.select().from(schema.loginTransactions).where(eq(schema.loginTransactions.stateHash, attempt.stateHash));
-  assert.ok(stored.consumedAt); assert.equal(stored.completedAt, null);
-  await assert.rejects(accounts.finishLogin(attempt, verified, async () => c.sessionIdHash, Date.now()), errorCode('INVALID_REQUEST'));
+  await assert.rejects(accounts.authenticate(binding(c), verified, async () => c.sessionIdHash, Date.now()), errorCode('INVALID_REQUEST'));
   assert.deepEqual(await accounts.getContext(c.browserId, c.sessionIdHash, Date.now()), before);
 });

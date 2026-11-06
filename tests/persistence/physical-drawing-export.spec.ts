@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { configureIssuer } from '../accounts/control';
+import { configureSupabase } from '../accounts/control';
 import { setup, counts, deferred } from '../autosave/helpers';
 import { account, panel, roomField, roomFields, commit, selectedPhysical } from './browser-helpers';
 const reports = (page: Page) => page.getByRole('region', { name: 'Quantity reports', exact: true });
@@ -14,7 +14,7 @@ async function prepare(page: Page) {
   await expect(preview(page).locator('.plan-sheet')).toHaveCount(1);
   await expect(reports(page).getByRole('button', { name: 'Print / Save PDF', exact: true })).toBeEnabled();
 }
-test.beforeEach(async ({}, info) => { await configureIssuer({ subjectPrefix: 'drawing-' + info.testId.replace(/[^A-Za-z0-9_-]/g, '').slice(-40) }); });
+test.beforeEach(async ({}, info) => { await configureSupabase({ subjectPrefix: 'drawing-' + info.testId.replace(/[^A-Za-z0-9_-]/g, '').slice(-40) }); });
 test('saved drawing report retains captured labels and quantities despite newer local changes', async ({ page }) => {
   const errors: string[] = []; page.on('pageerror', error => errors.push(error.message));
   const { saved } = await setup(page, 'Captured drawing'); const original = await selectedPhysical(page);

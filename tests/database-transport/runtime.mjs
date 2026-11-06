@@ -91,16 +91,15 @@ export async function createTransportFixture() {
     appTls = createFixtureTls();
     const env = Object.fromEntries(Object.entries(process.env).filter(([key]) => !/^(MFP_|PG|DATABASE_URL$|VERCEL|NODE_OPTIONS$|NODE_PATH$|NODE_EXTRA_CA_CERTS$|NODE_TLS_REJECT_UNAUTHORIZED$)/i.test(key)));
     Object.assign(env, { NODE_ENV: 'production', NODE_EXTRA_CA_CERTS: appTls.ca,
-      MFP_ACCOUNTS_APP_ORIGIN: 'https://127.0.0.2:54450', MFP_ACCOUNTS_ISSUER_ORIGIN: 'https://127.0.0.3:54451',
+      MFP_ACCOUNTS_APP_ORIGIN: 'https://127.0.0.2:54450', MFP_ACCOUNTS_SUPABASE_ORIGIN: 'https://127.0.0.3:54451',
       MFP_ACCOUNTS_TLS_KEY: appTls.key, MFP_ACCOUNTS_TLS_CERT: appTls.cert, MFP_ACCOUNTS_SPKI: appTls.spki,
       MFP_ACCOUNTS_CONTROL_SECRET: randomBytes(32).toString('base64url'), MFP_APP_ORIGIN: 'https://127.0.0.2:54450',
-      MFP_OIDC_ISSUER: 'https://127.0.0.3:54451', MFP_OIDC_CALLBACK_URI: 'https://127.0.0.2:54450/api/auth/callback',
-      MFP_OIDC_CLIENT_ID: 'mfp-database-transport-client', MFP_OIDC_CLIENT_AUTH_METHOD: 'client_secret_basic',
-      MFP_OIDC_CLIENT_SECRET: randomBytes(32).toString('base64url'), MFP_SESSION_SECRET: randomBytes(48).toString('base64url'),
+      VITE_SUPABASE_URL: 'https://127.0.0.3:54451', VITE_SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_' + randomBytes(32).toString('base64url'),
+      MFP_SESSION_SECRET: randomBytes(48).toString('base64url'),
       DATABASE_URL: runtimeUrl, MFP_DATABASE_CONNECTION_MODE: 'transaction', MFP_DATABASE_APP_MAX: '1', MFP_DATABASE_SESSION_MAX: '1', MFP_DATABASE_CA_CERT: ca,
       MFP_TRANSPORT_ADMIN_URL: adminUrl, MFP_TRANSPORT_DIRECT_URL: url('mfp_runtime', runtimePassword, 55489),
       MFP_TRANSPORT_POOL_ADMIN_URL: url('mfp_fixture_admin', adminPassword, 55490, 'pgbouncer'), MFP_TRANSPORT_WRONG_CA: readFileSync(tls.file('wrong-ca.pem'), 'utf8') });
-    await start('tests/accounts/issuer.ts', env, 'MFP_TEST_ISSUER_READY');
+    await start('tests/accounts/issuer.ts', env, 'MFP_TEST_SUPABASE_READY');
     let app;
     const startApp = async () => { app = await start('tests/accounts/app-server.ts', env, 'MFP_TEST_APP_READY'); };
     await startApp();

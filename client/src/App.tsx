@@ -10,7 +10,6 @@ import NotFound from "@/pages/not-found";
 import FloorPlanner from "@/pages/FloorPlanner";
 const QuickRooms = lazy(() => import("@/pages/QuickRooms"));
 const PhysicalDraft = lazy(() => import("@/pages/PhysicalDraft"));
-const SupabaseAuthorization = lazy(() => import("@/pages/SupabaseAuthorization"));
 
 function Router() {
   const [location] = useLocation();
@@ -67,8 +66,6 @@ function EditorApplication() {
 }
 
 function App() {
-  const [location] = useLocation();
-  if (location === '/oauth/consent') return <Suspense fallback={<p role="status" className="p-8">Loading owner authorization…</p>}><SupabaseAuthorization /></Suspense>;
   return <EditorApplication />;
 }
 

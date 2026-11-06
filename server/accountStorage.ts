@@ -10,22 +10,15 @@ export type { SessionBinding } from './authorizationTypes';
 export const SESSION_IDLE_MS = 30 * 60_000;
 export const SESSION_ABSOLUTE_MS = 8 * 60 * 60_000;
 export const ANONYMOUS_SESSION_MS = 30 * 60_000;
-export const LOGIN_TRANSACTION_MS = 5 * 60_000;
 export const WORKSPACE_CREATE_LIMIT = 5;
-export const LOGIN_START_LIMIT = 10;
 type Transaction = Parameters<Parameters<Database['transaction']>[0]>[0];
 type ContextRow = typeof browserContexts.$inferSelect;
-type LoginRow = typeof loginTransactions.$inferSelect;
 export interface BrowserContext {
   browserId: string; sessionIdHash: string; contextToken: string;
   status: 'anonymous' | 'authenticated' | 'revoked';
   issuer: string | null; subject: string | null; principalId: string | null;
   selectedWorkspaceId: string | null; authenticatedAt: number | null;
   lastSeenAt: number; absoluteExpiresAt: number; idleExpiresAt: number;
-}
-export interface LoginTransaction {
-  binding: SessionBinding; stateHash: string; nonce: string; codeVerifier: string;
-  returnPath: string; expiresAt: number;
 }
 export interface Principal { id: string }
 export interface AccountWorkspace { id: string; name: string; role: WorkspaceRole }
@@ -44,16 +37,11 @@ const uuid = z.string().uuid(), hash = z.string().regex(/^[0-9a-f]{64}$/);
 const part = z.string().max(2048).refine(v => v.trim().length > 0 && !/[\u0000-\u001f\u007f]/.test(v));
 export const sessionBindingSchema = z.object({ browserId: uuid, contextToken: uuid, sessionIdHash: hash }).strict();
 export const verifiedAccountIdentitySchema = z.object({ issuer: part, subject: part, sessionBinding: sessionBindingSchema.optional() }).strict();
-const secret = z.string().min(32).max(256).regex(/^[A-Za-z0-9._~-]+$/);
-const loginInput = z.object({ stateHash: hash, nonce: secret, codeVerifier: z.string().min(43).max(128).regex(/^[A-Za-z0-9._~-]+$/),
-  returnPath: z.enum(['/', '/quick-room', '/physical-draft']), expiresAt: z.number().int().nonnegative().max(8_640_000_000_000_000) }).strict();
 const creationInput = z.object({ name: z.string().trim().min(1).max(200), idempotencyKey: uuid }).strict();
 const time = (now: number) => { if (!Number.isSafeInteger(now) || now < 0 || now > 8_639_999_000_000_000) fail('INVALID_REQUEST'); return now; };
 const context = (row: ContextRow): BrowserContext => ({ ...row, authenticatedAt: row.authenticatedAt?.getTime() ?? null,
   lastSeenAt: row.lastSeenAt.getTime(), absoluteExpiresAt: row.absoluteExpiresAt.getTime(), idleExpiresAt: row.idleExpiresAt.getTime() });
 const bindingOf = (row: ContextRow): SessionBinding => ({ browserId: row.browserId, contextToken: row.contextToken, sessionIdHash: row.sessionIdHash });
-const login = (row: LoginRow): LoginTransaction => ({ binding: { browserId: row.browserId, contextToken: row.contextToken, sessionIdHash: row.sessionIdHash },
-  stateHash: row.stateHash, nonce: row.nonce!, codeVerifier: row.codeVerifier!, returnPath: row.returnPath, expiresAt: row.expiresAt.getTime() });
 function alive(row: ContextRow, now: number) {
   if (row.status === 'revoked') fail('SESSION_REVOKED');
   if (row.absoluteExpiresAt.getTime() <= now || row.idleExpiresAt.getTime() <= now) fail('SESSION_EXPIRED');
@@ -118,67 +106,37 @@ export class AccountStorage {
       alive(row, now); return context(row); // Never overwrites an existing authenticated or revoked row.
     });
   }
-  async beginLogin(binding: SessionBinding, input: { stateHash: string; nonce: string; codeVerifier: string; returnPath: string; expiresAt: number }, now: number): Promise<LoginTransaction> {
-    time(now); const parsed = loginInput.safeParse(input); if (!parsed.success || input.expiresAt <= now || input.expiresAt > now + LOGIN_TRANSACTION_MS) return fail('INVALID_REQUEST');
+  async authenticate(binding: SessionBinding, identity: VerifiedIdentity, newSessionIdHash: string | (() => Promise<string>), now: number): Promise<BrowserContext> {
+    time(now);
+    if ((typeof newSessionIdHash !== 'function' && !hash.safeParse(newSessionIdHash).success) ||
+        !verifiedAccountIdentitySchema.safeParse(identity).success) return fail('INVALID_REQUEST');
     return this.database().transaction(async tx => {
       const row = await lockedContext(tx, binding); alive(row, now);
-      if (row.status === 'authenticated') await activePrincipal(tx, { issuer: row.issuer!, subject: row.subject! });
-      const [count] = await tx.select({ count: sql<number>`count(*)::int` }).from(loginTransactions)
-        .where(and(eq(loginTransactions.browserId, binding.browserId), gte(loginTransactions.createdAt, new Date(now - LOGIN_TRANSACTION_MS))));
-      if (count.count >= LOGIN_START_LIMIT) return fail('RATE_LIMIT');
-      const token = randomUUID();
-      await tx.update(browserContexts).set({ contextToken: token }).where(eq(browserContexts.browserId, row.browserId));
-      await tx.update(loginTransactions).set({ nonce: null, codeVerifier: null, completedAt: new Date(now) })
-        .where(eq(loginTransactions.browserId, row.browserId));
-      const [created] = await tx.insert(loginTransactions).values({ ...parsed.data, browserId: row.browserId, contextToken: token,
-        sessionIdHash: row.sessionIdHash, createdAt: new Date(now), expiresAt: new Date(input.expiresAt) }).returning();
-      return login(created);
-    });
-  }
-  async consumeLogin(browserId: string, sessionIdHash: string, stateHash: string, now: number): Promise<LoginTransaction> {
-    time(now); if (!uuid.safeParse(browserId).success || !hash.safeParse(sessionIdHash).success || !hash.safeParse(stateHash).success) return fail('STALE_CONTEXT');
-    return this.database().transaction(async tx => {
-      const [row] = await tx.select().from(browserContexts).where(eq(browserContexts.browserId, browserId)).for('update');
-      if (!row || row.sessionIdHash !== sessionIdHash) return fail('STALE_CONTEXT'); alive(row, now);
-      const [attempt] = await tx.select().from(loginTransactions).where(eq(loginTransactions.stateHash, stateHash)).for('update');
-      if (!attempt || attempt.browserId !== browserId || attempt.sessionIdHash !== sessionIdHash || attempt.contextToken !== row.contextToken
-        || attempt.consumedAt || attempt.completedAt || !attempt.nonce || !attempt.codeVerifier || attempt.expiresAt.getTime() <= now) return fail('STALE_CONTEXT');
-      await tx.update(loginTransactions).set({ consumedAt: new Date(now) }).where(eq(loginTransactions.stateHash, stateHash));
-      return login(attempt);
-    });
-  }
-  async finishLogin(transaction: LoginTransaction, identity: VerifiedIdentity, newSessionIdHash: string | (() => Promise<string>), now: number): Promise<BrowserContext> {
-    time(now); if ((typeof newSessionIdHash !== 'function' && !hash.safeParse(newSessionIdHash).success) || !hash.safeParse(transaction.stateHash).success || !verifiedAccountIdentitySchema.safeParse(identity).success) return fail('INVALID_REQUEST');
-    return this.database().transaction(async tx => {
-      const row = await lockedContext(tx, transaction.binding); alive(row, now);
-      const [attempt] = await tx.select().from(loginTransactions).where(eq(loginTransactions.stateHash, transaction.stateHash)).for('update');
-      if (!attempt || !attempt.consumedAt || attempt.completedAt || attempt.expiresAt.getTime() <= now || !attempt.nonce || !attempt.codeVerifier
-        || attempt.browserId !== row.browserId || attempt.sessionIdHash !== row.sessionIdHash || attempt.contextToken !== row.contextToken) return fail('STALE_CONTEXT');
+      if (row.status !== 'anonymous') return fail('STALE_CONTEXT');
       const principal = await provision(tx, identity);
-      // Validate the current attempt while holding the context UPDATE lock before
-      // express-session destructively regenerates its old SID. A stale callback
-      // must never destroy the SID still needed by a newer pending login.
+      // Hold the browser-context lock while express-session rotates the SID so
+      // concurrent login, logout, and workspace requests cannot win with stale state.
       alive(row, Math.max(now, Date.now()));
-      if (attempt.expiresAt.getTime() <= Math.max(now, Date.now())) return fail('STALE_CONTEXT');
       const nextHash = typeof newSessionIdHash === 'function' ? await newSessionIdHash() : newSessionIdHash;
       if (!hash.safeParse(nextHash).success || nextHash === row.sessionIdHash) return fail('INVALID_REQUEST');
-      if (attempt.expiresAt.getTime() <= Math.max(now, Date.now())) return fail('STALE_CONTEXT');
-      const [updated] = await tx.update(browserContexts).set({ sessionIdHash: nextHash, contextToken: randomUUID(), status: 'authenticated',
-        issuer: identity.issuer, subject: identity.subject, principalId: principal.id, selectedWorkspaceId: null, authenticatedAt: new Date(now), lastSeenAt: new Date(now),
-        absoluteExpiresAt: new Date(now + SESSION_ABSOLUTE_MS), idleExpiresAt: new Date(now + SESSION_IDLE_MS) }).where(eq(browserContexts.browserId, row.browserId)).returning();
-      await tx.update(loginTransactions).set({ nonce: null, codeVerifier: null, completedAt: new Date(now) }).where(eq(loginTransactions.stateHash, attempt.stateHash));
+      alive(row, Math.max(now, Date.now()));
+      const [updated] = await tx.update(browserContexts).set({
+        sessionIdHash: nextHash,
+        contextToken: randomUUID(),
+        status: 'authenticated',
+        issuer: identity.issuer,
+        subject: identity.subject,
+        principalId: principal.id,
+        selectedWorkspaceId: null,
+        authenticatedAt: new Date(now),
+        lastSeenAt: new Date(now),
+        absoluteExpiresAt: new Date(now + SESSION_ABSOLUTE_MS),
+        idleExpiresAt: new Date(now + SESSION_IDLE_MS),
+      }).where(eq(browserContexts.browserId, row.browserId)).returning();
+      // Complete any historical OAuth correlation rows left by an older build.
+      await tx.update(loginTransactions).set({ nonce: null, codeVerifier: null, completedAt: new Date(now) })
+        .where(eq(loginTransactions.browserId, row.browserId));
       return context(updated);
-    });
-  }
-  async cancelLogin(transaction: LoginTransaction, now: number): Promise<void> {
-    time(now); if (!sessionBindingSchema.safeParse(transaction.binding).success || !hash.safeParse(transaction.stateHash).success) return;
-    await this.database().transaction(async tx => {
-      const [row] = await tx.select().from(browserContexts).where(eq(browserContexts.browserId, transaction.binding.browserId)).for('update');
-      if (!row || row.contextToken !== transaction.binding.contextToken || row.sessionIdHash !== transaction.binding.sessionIdHash) return;
-      const [attempt] = await tx.select().from(loginTransactions).where(eq(loginTransactions.stateHash, transaction.stateHash)).for('update');
-      if (!attempt || attempt.browserId !== row.browserId || attempt.contextToken !== row.contextToken || attempt.completedAt) return;
-      await tx.update(loginTransactions).set({ nonce: null, codeVerifier: null, completedAt: new Date(now) }).where(eq(loginTransactions.stateHash, attempt.stateHash));
-      await tx.update(browserContexts).set({ contextToken: randomUUID() }).where(eq(browserContexts.browserId, row.browserId));
     });
   }
   async getContext(browserId: string, sessionIdHash: string, now: number, options: { touch?: boolean } = {}): Promise<BrowserContext | null> {

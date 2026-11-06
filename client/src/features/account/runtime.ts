@@ -131,12 +131,14 @@ export async function contextFetch(method: string, url: string, data?: unknown, 
     throw error;
   } finally { controllers.delete(controller); }
 }
-export async function accountAction(path: string, data: unknown) {
+export async function accountAction(path: string, data: unknown, extraHeaders?: Record<string, string>) {
   const intended = identity(snapshot.session);
   const context = await captureRequestContext();
   if (intended !== identity(snapshot.session)) throw new AccountContextChanged();
-  const response = await contextFetch('POST', path, data, context);
-  if (!response.ok) throw new Error(response.status === 503 ? 'Sign-in services are unavailable. Your local work is unchanged.' : 'The account request was not accepted. Refresh account access and try again.');
+  const response = await contextFetch('POST', path, data, context, extraHeaders);
+  if (!response.ok) throw new Error(response.status === 503 ? 'Sign-in services are unavailable. Your local work is unchanged.' :
+    path === '/api/auth/login' && response.status === 401 ? 'Sign-in could not be verified. Check your email and password, then try again.' :
+      'The account request was not accepted. Refresh account access and try again.');
   return response.json();
 }
 export function resumeLocalContext(context: string) {
@@ -162,7 +164,7 @@ export function initializeAccountEvents() {
   const visibility = () => { if (document.visibilityState === 'visible') changed(); };
   try { channel = new BroadcastChannel('modern-floor-planner:account-events:v1'); channel.onmessage = event => { if (event.data?.type === 'session-changed') { invalidateAccount(); void refreshAccount().catch(() => {}); } }; } catch { /* focus and pre-action revalidation remain */ }
   window.addEventListener('focus', changed); document.addEventListener('visibilitychange', visibility);
-  if (savedContext !== UNASSIGNED_CONTEXT || location.pathname === '/account/callback') void refreshAccount().catch(() => {});
+  if (savedContext !== UNASSIGNED_CONTEXT || location.pathname.startsWith('/account/')) void refreshAccount().catch(() => {});
   return () => { channel?.close(); channel = null; window.removeEventListener('focus', changed); document.removeEventListener('visibilitychange', visibility); };
 }
 export const accountStore = { getSnapshot: () => snapshot, subscribe: (listener: () => void) => { listeners.add(listener); return () => { listeners.delete(listener); }; } };

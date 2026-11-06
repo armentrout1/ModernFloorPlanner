@@ -1,13 +1,23 @@
 # Modern Floor Planner — executable product and build roadmap
 
-Version: 1.29 — M4 live Supabase/Vercel binding entry, 2026-11-04
+Version: 1.30 — native Supabase Auth migration, 2026-11-05
 Repository: `armentrout1/ModernFloorPlanner`; delivery branch: `main`.
 Original audit baseline: 876968e78d7070775e7924f33a3164ba20905d42; #22 entry main: 08ec2a89a0492823c5629143930960b59a6d1aad; #22 implementation: `f6ba3d388937c2815366be31532bbdd3a4cc594c`, integrated with all 310 committed source/configuration/test/migration files matching the final tested manifest.
-Status: **M4 live Supabase/Vercel resources: CREATED / PARTIALLY BOUND / NOT DEPLOYED.** The approved Free Supabase project and empty Vercel project now exist; browser-public Supabase configuration, sensitive production `DATABASE_URL` and session secret, plus bounded production issuer/pool settings are configured. Confidential OAuth client values, canonical origin/callback, live database bootstrap/grants, owner-only deployment protection, Git linkage and deployment remain gated. [Live binding record](MFP_M4_LIVE_BINDING_RECORD.md). The previously verified owner sign-in/consent implementation `ab2a64ad3f635fe996763796fd75c8466316106f` remains unchanged. Broad #4 remains OPEN; calculator packets 1–4 remain complete locally, #9/#10 stay open, #2 unreleased and M5 not started.
+Status: **M4 native Supabase Auth migration implemented and locally verified; production deployment/acceptance pending.** Email/password sign-in, sign-up, confirmation, password recovery and local guest mode replace the former OAuth-client redirect/consent flow. The server independently verifies the short-lived Supabase token, then rotates the existing protected MFP session; passwords and provider tokens are not stored. [Live binding record](MFP_M4_LIVE_BINDING_RECORD.md). Broad #4 remains OPEN until deployed owner acceptance; calculator packets 1–4 remain complete, #9/#10 stay open, #2 unreleased and M5 not started.
 
 Evidence and dated external research: [research and audit](RESEARCH_AND_AUDIT_2026-09-06.md).
 
 Calculator delivery checkpoint, 2026-11-04: [area calculator architecture and UX blueprint](MFP_AREA_CALCULATOR_BLUEPRINT.md). Packets 1-4 are implemented and producer-verified locally under issue #9 and DR-002; [Packet 4 results](MFP_AREA_CALCULATOR_EXPORT_RESULTS.md) record grouped export parity. This is **NOT DEPLOYED**, and it does not displace the current #4 live provider-binding gate, M5 pilot, or later M6/M7 contracts.
+
+## 0. Current M4 native Supabase Auth checkpoint — 2026-11-05
+
+Assigned bounded scope: [issue #4](https://github.com/armentrout1/ModernFloorPlanner/issues/4), remove the failing OAuth redirect loop and use ordinary Supabase Auth. **IMPLEMENTED / LOCALLY VERIFIED / DEPLOYMENT PENDING.**
+
+**Delivered:** normal Account-dialog Sign in and Create account forms; Forgot password and update-password route; exact email-confirmation route; explicit **Continue as guest (local only)**; direct Supabase password handling; independent server `getUser(token)` verification; UUID-only identity mapping; protected MFP SID rotation; unchanged membership/workspace/session binding; no automatic local-draft upload or assignment. Removed `/oauth/consent`, `/api/auth/callback`, `openid-client`, Passport packages, consent UI, OAuth runtime and active login-transaction storage API. The historical SQL table remains inert for nondestructive deployed-schema compatibility.
+
+**Verification:** `npm test` **720/720 PASS**; `npm run check` PASS; `npm run build` PASS; focused browser account-choice test **1/1 PASS**. The repository's disposable PostgreSQL/HTTPS suites did not start because their explicit loopback database URL and data-directory proof were absent; no owner/live database was used as a substitute.
+
+**Production gates:** deploy the reviewed commit; set Supabase Site URL and exact `/account/confirm` plus `/account/reset-password` redirects; prove owner sign-in, sign-out, refresh and guest mode on the canonical Vercel domain; then remove the five obsolete `MFP_OIDC_*` Production variables and record the deployment evidence.
 
 ## 0. Current M4 live Supabase/Vercel binding checkpoint — 2026-11-04
 

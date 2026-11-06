@@ -4,7 +4,7 @@ import { before, after, beforeEach, test } from 'node:test';
 import { randomUUID } from 'node:crypto';
 import postgres from 'postgres';
 import { startFixtureProcess } from '../accounts/runtime.mjs';
-import { configureIssuer } from '../accounts/control';
+import { configureSupabase } from '../accounts/control';
 import { PhysicalHttpClient } from './http-client';
 import { selectedSaveWork, richPhysicalSaveDraft } from '../fixtures/physicalSave';
 import { createLevelDraft } from '../../client/src/features/physical-draft/levelCommands';
@@ -22,7 +22,7 @@ let app: Awaited<ReturnType<typeof startFixtureProcess>>;
 async function restart() { if (app) await app.stop(); app = await startFixtureProcess('tests/accounts/app-server.ts', { ...process.env }, 'MFP_TEST_APP_READY'); }
 before(async () => restart());
 after(async () => { if (app) await app.stop(); await db.end(); });
-beforeEach(async () => configureIssuer({ subjectPrefix: 'physical-' + randomUUID() }));
+beforeEach(async () => configureSupabase({ subjectPrefix: 'physical-' + randomUUID() }));
 const AT = '2026-09-10T12:00:00.000Z';
 function draft(height = '8 ft') {
   let d = addRoom(createLevelDraft('local-source', 'main', 'Synthetic complete physical plan'), 'room', 'Test room');
@@ -47,7 +47,7 @@ async function counts() { return (await db`select (select count(*)::int from phy
 function amount(saved:PhysicalPlanRevision, output:string) { const result=saved.evaluation.snapshot.evaluation.calculation.outputs.find(x=>x.output===output); assert.ok(result?.total); return result.total.net/(304.8*304.8); }
 const close = (actual:number, expected:number) => assert.ok(Math.abs(actual-expected)<1e-8,`${actual} != ${expected}`);
 
-test('normal OIDC/session route creates complete physical revision and authoritative evaluation, distinct from local IDs', async () => {
+test('native Supabase/session route creates complete physical revision and authoritative evaluation, distinct from local IDs', async () => {
   const {client,identity,workspace}=await member(); const body=capturePhysicalSaveEnvelope(draft()); const saved=await save(client,body);
   assert.equal(saved.workspaceId,workspace.id); assert.equal(saved.createdBy,identity.principal!.id);
   assert.notEqual(saved.planId,'layout-copy'); assert.notEqual(saved.revisionId,body.document.revisionId);

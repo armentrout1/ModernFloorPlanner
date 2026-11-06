@@ -83,9 +83,9 @@ test('actual Vercel artifact retains complete routing and a cold, production-onl
     assert.equal(runtime.framework.slug, 'express');
     const spa = config.routes.filter(route => route.dest === '/index.html');
     assert.equal(spa.length, 1); assert.deepEqual(spa[0].methods, ['GET', 'HEAD']);
-    for (const path of ['/', '/quick-room', '/physical-draft', '/account/callback', '/oauth/consent'])
+    for (const path of ['/', '/quick-room', '/physical-draft', '/account/confirm', '/account/reset-password'])
       assert.match(path, new RegExp(spa[0].src));
-    for (const path of ['/api', '/api/auth/callback', '/api/physical-plans', '/assets/missing.js', '/unknown'])
+    for (const path of ['/api', '/api/auth/login', '/api/physical-plans', '/assets/missing.js', '/unknown'])
       assert.doesNotMatch(path, new RegExp(spa[0].src));
     const reject = config.routes.find(route => route.status === 405);
     assert.equal(reject.src, spa[0].src); assert.equal(reject.headers.Allow, 'GET, HEAD');
@@ -93,7 +93,7 @@ test('actual Vercel artifact retains complete routing and a cold, production-onl
     const handlerRoute = config.routes.find(route => route.transforms?.some(change => change.type === 'request.path'));
     assert.equal(handlerRoute.dest, '/');
     assert.deepEqual(handlerRoute.transforms, [{ type: 'request.path', op: 'set', args: '/$1' }]);
-    for (const path of ['/api', '/api/auth/callback', '/api/physical-plans/example/revisions'])
+    for (const path of ['/api', '/api/auth/login', '/api/physical-plans/example/revisions'])
       assert.equal(path.replace(new RegExp(handlerRoute.src), handlerRoute.transforms[0].args), path);
     const staticNames = (await readdir(join(root, 'static'), { recursive: true })).filter(name => !['assets'].includes(name));
     assert.equal(staticNames.filter(name => name.endsWith('.html')).length, 1);
@@ -135,8 +135,8 @@ test('actual Vercel artifact retains complete routing and a cold, production-onl
       assert.equal(missing.status, 404); assert.match(missing.headers.get('content-type'), /application\/json/); await missing.json();
       const malformed = await request('/api/physical-plans', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{"synthetic-secret":' });
       assert.equal(malformed.status, 400); assert.deepEqual(await malformed.json(), { message: 'Invalid JSON body' });
-      const callback = await request('/api/auth/callback?state=synthetic&code=synthetic');
-      assert.equal(callback.status, 303); assert.equal(callback.headers.get('location'), '/account/callback?result=failed&returnTo=%2F');
+      const removedCallback = await request('/api/auth/callback?state=synthetic&code=synthetic');
+      assert.equal(removedCallback.status, 503); assert.deepEqual((await removedCallback.json()).code, 'SIGN_IN_UNAVAILABLE');
       for (const path of ['/assets/missing.js', '/assets/missing']) {
         const response = await request(path); assert.equal(response.status, 404);
         assert.doesNotMatch(response.headers.get('content-type'), /text\/html/); await response.text();

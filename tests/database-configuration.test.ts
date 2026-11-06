@@ -156,8 +156,8 @@ test('createDatabase keeps the explicit binding interface and public error class
 
 test('invalid transport configuration makes trusted account configuration unavailable', () => {
   const env = {
-    MFP_OIDC_ISSUER: 'https://identity.example', MFP_OIDC_CLIENT_ID: 'fixture', MFP_OIDC_CLIENT_AUTH_METHOD: 'none',
-    MFP_APP_ORIGIN: 'https://app.example', MFP_OIDC_CALLBACK_URI: 'https://app.example/api/auth/callback',
+    VITE_SUPABASE_URL: 'https://abcdefghijklmnopqrst.supabase.co',
+    VITE_SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_' + 'a'.repeat(40), MFP_APP_ORIGIN: 'https://app.example',
     MFP_SESSION_SECRET: 'a'.repeat(43), DATABASE_URL: local,
   };
   assert.equal(readAuthConfiguration(env)?.database.host, '127.0.0.1');

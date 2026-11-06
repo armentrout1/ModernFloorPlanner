@@ -2,17 +2,16 @@ import type { Express, Request, Response, RequestHandler } from 'express';
 import session from 'express-session';
 import connectPgSimple from 'connect-pg-simple';
 import { createHash, randomUUID } from 'node:crypto';
-import * as oidc from 'openid-client';
 import { z } from 'zod';
-import { readAuthConfiguration, safeReturnPath } from './authConfiguration';
-import { createOidcClient } from './oidcClient';
+import { readAuthConfiguration } from './authConfiguration';
 import { getDatabase } from './db';
 import { toSessionPoolOptions } from './databaseConfiguration';
-import { AccountStorage, AccountStorageError, type BrowserContext, type LoginTransaction } from './accountStorage';
+import { AccountStorage, AccountStorageError, type BrowserContext } from './accountStorage';
 import { privateApiResponses } from './authorizedRoutes';
 import { sessionCookiePolicy, type IdentityResolver } from './identity';
 import type { VerifiedIdentity, SessionBinding } from './authorizationTypes';
 import { sessionProxyFor } from './hosting';
+import { bearerAccessToken, SupabaseVerificationError, verifySupabaseAccessToken } from './supabaseAuth';
 
 declare module 'express-session' { interface SessionData { browserId?: string } }
 const hash = (value: string) => createHash('sha256').update(value).digest('hex');
@@ -57,14 +56,12 @@ export function mountAccounts(app: Express): IdentityResolver {
   const settings = readAuthConfiguration(process.env);
   if (!settings) {
     app.get('/api/auth/session', (_req, res) => res.json(emptyStatus('unavailable')));
-    app.get('/api/auth/callback', (_req, res) => res.set('Referrer-Policy', 'no-referrer').redirect(303, '/account/callback?result=failed&returnTo=%2F'));
     app.use('/api/auth', (_req, res) => { unavailable(res); });
     app.get('/api/workspaces', (_req, res) => { unavailable(res); });
     app.post('/api/workspaces', (_req, res) => { unavailable(res); });
     return async () => ({ status: 'unavailable' });
   }
   const accounts = new AccountStorage(getDatabase);
-  const protocol = createOidcClient(settings);
   const PgStore = connectPgSimple(session);
   const store = new PgStore({
     conObject: toSessionPoolOptions(settings.database),
@@ -87,14 +84,10 @@ export function mountAccounts(app: Express): IdentityResolver {
   });
   const contexts = new WeakMap<Request, BrowserContext>();
   const failures = new WeakMap<Request, 'absent' | 'expired' | 'revoked' | 'unavailable'>();
-  const callbackRedirect = (res: Response, result: string, returnPath = '/') => {
-    res.setHeader('Referrer-Policy', 'no-referrer');
-    res.redirect(303, '/account/callback?result=' + result + '&returnTo=' + encodeURIComponent(returnPath));
-  };
   app.use('/api', (req, res, next) => middleware(req, res, error => {
     if (error) {
       console.error('account_session_request_error', { category: databaseFailureClass(error), code: databaseFailureCode(error) });
-      if (req.path === '/auth/callback') callbackRedirect(res, 'failed'); else unavailable(res);
+      unavailable(res);
       return;
     }
     next();
@@ -150,6 +143,9 @@ export function mountAccounts(app: Express): IdentityResolver {
         res.status(error.status).json({ code, message: error.status === 429 ? 'Please wait before creating another workspace.' :
           error.status === 409 ? 'Your account context changed. Review the current account before continuing.' :
             'Account access could not be confirmed. Your local drawing is unchanged.' });
+      } else if (error instanceof SupabaseVerificationError) {
+        if (error.status === 503) unavailable(res);
+        else res.status(401).json({ code: 'SIGN_IN_DENIED', message: 'Sign-in could not be verified. Check your details and try again.' });
       } else if (error instanceof z.ZodError) res.status(400).json({ code: 'INVALID_REQUEST', message: 'Invalid request.' });
       else unavailable(res);
     }
@@ -161,53 +157,22 @@ export function mountAccounts(app: Express): IdentityResolver {
     res.json(await statusView(context, priorStatus === 'expired' || priorStatus === 'revoked' ? priorStatus : undefined));
   }));
   app.post('/api/auth/login', handle(async (req, res) => {
-    const input = z.object({ returnPath: z.string() }).strict().parse(req.body);
-    const returnPath = safeReturnPath(input.returnPath);
-    if (!returnPath) { res.status(400).json({ code: 'INVALID_REQUEST', message: 'Invalid return path.' }); return; }
+    z.object({}).strict().parse(req.body);
     const context = current(req);
     if (context.status === 'authenticated') throw new AccountStorageError('STALE_CONTEXT');
-    const state = oidc.randomState(), nonce = oidc.randomNonce(), codeVerifier = oidc.randomPKCECodeVerifier();
-    // Discovery can fail without changing a valid draft/session context.
-    const authorizationUrl = await protocol.authorizationUrl(state, nonce, codeVerifier);
-    await accounts.beginLogin(binding(context), { stateHash: hash(state), nonce, codeVerifier, returnPath,
-      expiresAt: Date.now() + 5 * 60 * 1000 }, Date.now());
+    const token = bearerAccessToken(req.get('Authorization'));
+    if (!token) throw new SupabaseVerificationError(401);
+    const verified = await verifySupabaseAccessToken(settings, token);
+    const browserId = req.session.browserId!;
+    const authenticated = await accounts.authenticate(binding(context), verified, async () => {
+      await regenerate(req);
+      req.session.browserId = browserId;
+      return hash(req.sessionID);
+    }, Date.now());
     await persist(req);
-    res.json({ authorizationUrl });
+    contexts.set(req, authenticated);
+    res.json(await statusView(authenticated));
   }, true));
-  app.get('/api/auth/callback', async (req, res) => {
-    let transaction: LoginTransaction | undefined;
-    try {
-      if (!req.session.browserId || failures.get(req) === 'unavailable' || req.originalUrl.length > 8192) throw new Error();
-      const url = new URL(settings.callbackUri);
-      url.search = new URL(req.originalUrl, settings.origin).search;
-      const state = url.searchParams.get('state');
-      if (!state || !/^[A-Za-z0-9_-]{32,128}$/.test(state) || url.searchParams.getAll('state').length !== 1) throw new Error();
-      transaction = await accounts.consumeLogin(req.session.browserId, hash(req.sessionID), hash(state), Date.now());
-      if (url.searchParams.has('error')) {
-        await accounts.cancelLogin(transaction, Date.now());
-        delete (req as Partial<Request>).session;
-        callbackRedirect(res, 'cancelled', transaction.returnPath); return;
-      }
-      if (!url.searchParams.get('code') || url.searchParams.getAll('code').length !== 1) throw new Error();
-      const verified = await protocol.exchange(url, { state, nonce: transaction.nonce, codeVerifier: transaction.codeVerifier });
-      const browserId = req.session.browserId;
-      // Recheck/lock the live login context BEFORE destroying the old SID. An
-      // older token exchange must not destroy a newer pending attempt's session.
-      await accounts.finishLogin(transaction, verified, async () => {
-        await regenerate(req);
-        req.session.browserId = browserId;
-        return hash(req.sessionID);
-      }, Date.now());
-      await persist(req);
-      callbackRedirect(res, 'success', transaction.returnPath);
-    } catch {
-      // Never reflect provider errors, codes, tokens or database details in the URL or response.
-      if (transaction) await accounts.cancelLogin(transaction, Date.now()).catch(() => undefined);
-      // A failed/stale callback must not overwrite a newer tab's cookie.
-      delete (req as Partial<Request>).session;
-      callbackRedirect(res, 'failed', transaction?.returnPath);
-    }
-  });
   app.post('/api/auth/logout', handle(async (req, res) => {
     const context = current(req);
     await accounts.logout(binding(context), Date.now());

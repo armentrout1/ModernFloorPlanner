@@ -62,13 +62,12 @@ export async function createHostingFixture() {
     const env = { ...clean, NODE_ENV: 'production', VERCEL: '1', NODE_EXTRA_CA_CERTS: tls.ca,
       MFP_TEST_DATABASE_URL: supplied, MFP_TEST_DATA_DIRECTORY: directory,
       MFP_ACCOUNTS_TLS_KEY: tls.key, MFP_ACCOUNTS_TLS_CERT: tls.cert, MFP_ACCOUNTS_SPKI: tls.spki,
-      MFP_ACCOUNTS_APP_ORIGIN: 'https://127.0.0.2:54440', MFP_ACCOUNTS_ISSUER_ORIGIN: 'https://127.0.0.3:54441',
+      MFP_ACCOUNTS_APP_ORIGIN: 'https://127.0.0.2:54440', MFP_ACCOUNTS_SUPABASE_ORIGIN: 'https://127.0.0.3:54441',
       MFP_ACCOUNTS_CONTROL_SECRET: randomBytes(32).toString('base64url'),
-      MFP_APP_ORIGIN: 'https://127.0.0.2:54440', MFP_OIDC_ISSUER: 'https://127.0.0.3:54441',
-      MFP_OIDC_CALLBACK_URI: 'https://127.0.0.2:54440/api/auth/callback', MFP_OIDC_CLIENT_ID: 'mfp-isolated-hosting-client',
-      MFP_OIDC_CLIENT_AUTH_METHOD: 'client_secret_basic', MFP_OIDC_CLIENT_SECRET: randomBytes(32).toString('base64url'),
+      MFP_APP_ORIGIN: 'https://127.0.0.2:54440', VITE_SUPABASE_URL: 'https://127.0.0.3:54441',
+      VITE_SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_' + randomBytes(32).toString('base64url'),
       MFP_SESSION_SECRET: randomBytes(48).toString('base64url'), DATABASE_URL: url.href };
-    await start('tests/accounts/issuer.ts', env, 'MFP_TEST_ISSUER_READY');
+    await start('tests/accounts/issuer.ts', env, 'MFP_TEST_SUPABASE_READY');
     let hosted;
     const startHosted = async () => { hosted = await start('tests/hosting/handler-server.ts', env, 'MFP_TEST_HOSTING_HANDLER_READY'); return hosted; };
     await startHosted();

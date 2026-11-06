@@ -17,6 +17,7 @@ if (!selection.includes('--browser-only')) {
 if (!selection.includes('--protocol-only')) {
   const fixture = await createAccountsFixture(); let app;
   try {
+    await run(['node_modules/vite/bin/vite.js', 'build'], 'physical browser build', fixture.env);
     app = await fixture.startApp();
     await run(['node_modules/@playwright/test/cli.js', 'test', '--config=playwright.physical.config.ts', '--reporter=line'], 'physical Save/Open browser', fixture.env);
   } finally { if (app) await app.stop(); await fixture.cleanup(); }

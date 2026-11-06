@@ -22,7 +22,7 @@ app.use((req, res, next) => {
 // the selected five page routes plus public build assets needed by browser acceptance.
 const publicPath = resolve('public');
 app.use(express.static(publicPath));
-for (const path of ['/', '/physical-draft', '/quick-room', '/account/callback', '/oauth/consent'])
+for (const path of ['/', '/physical-draft', '/quick-room', '/account/confirm', '/account/reset-password'])
   app.get(path, (_req, res) => res.sendFile(resolve(publicPath, 'index.html')));
 app.use((_req, res) => res.sendStatus(404));
 const server = createServer({ key: readFileSync(process.env.MFP_ACCOUNTS_TLS_KEY!), cert: readFileSync(process.env.MFP_ACCOUNTS_TLS_CERT!) }, app);

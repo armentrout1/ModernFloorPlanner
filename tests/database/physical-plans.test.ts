@@ -9,7 +9,7 @@ import { and, eq } from 'drizzle-orm';
 import * as schema from '../../shared/schema';
 import { PhysicalPlanStorage, PhysicalPlanStorageError } from '../../server/physicalPlanStorage';
 import { DatabaseStorage } from '../../server/storage';
-import { AccountStorage, AccountStorageError, LOGIN_TRANSACTION_MS, type BrowserContext } from '../../server/accountStorage';
+import { AccountStorage, AccountStorageError, type BrowserContext } from '../../server/accountStorage';
 import { AuthorizationError, type VerifiedIdentity } from '../../server/authorizationTypes';
 import type { Database } from '../../server/db';
 import { createDraft, addRoom, editField, commitField } from '../../client/src/features/physical-draft/state';
@@ -122,9 +122,7 @@ const binding = (c: BrowserContext) => ({ browserId: c.browserId, contextToken: 
 const identity = (c: BrowserContext): VerifiedIdentity => ({ issuer: c.issuer!, subject: c.subject!, sessionBinding: binding(c) });
 async function signedWorkspace() {
   const now = Date.now(), anonymous = await accounts.createAnonymousContext(randomUUID(), hash(), now);
-  const attempt = await accounts.beginLogin(binding(anonymous), { stateHash: hash(), nonce: hash(), codeVerifier: hash(), returnPath: '/physical-draft', expiresAt: now + LOGIN_TRANSACTION_MS }, now);
-  await accounts.consumeLogin(anonymous.browserId, anonymous.sessionIdHash, attempt.stateHash, now);
-  const authenticated = await accounts.finishLogin(attempt, { issuer: 'https://synthetic.example', subject: randomUUID() }, hash(), now);
+  const authenticated = await accounts.authenticate(binding(anonymous), { issuer: 'https://synthetic.example/auth/v1', subject: randomUUID() }, hash(), now);
   const workspace = await accounts.createWorkspace(identity(authenticated), { name: 'Explicit SQL context', idempotencyKey: randomUUID() }, now);
   return { workspace, context: await accounts.selectWorkspace(binding(authenticated), workspace.id, now) };
 }

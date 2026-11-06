@@ -1,10 +1,10 @@
 import { test, expect } from '@playwright/test';
-import { configureIssuer } from '../accounts/control';
+import { configureSupabase } from '../accounts/control';
 import { account, panel, signIn, createWorkspace, selectWorkspace, physical, roomField, selectedPhysical, savePanel, savePhysical } from '../persistence/browser-helpers';
 import { capturePhysicalSaveEnvelope } from '../../shared/persistence/physicalSave';
 import { PHYSICAL_DRAFT_STORAGE_KEY } from '../../client/src/features/physical-draft/storage';
 
-test.beforeEach(async ({}, info) => configureIssuer({ subjectPrefix: 'host-ui-' + info.testId.replace(/[^A-Za-z0-9_-]/g, '').slice(-35) }));
+test.beforeEach(async ({}, info) => configureSupabase({ subjectPrefix: 'host-ui-' + info.testId.replace(/[^A-Za-z0-9_-]/g, '').slice(-35) }));
 
 test('HTTPS edge login rotates Secure cookies and preserves unapplied anonymous work across the real callback', async ({ page, context }) => {
   const errors: string[] = []; page.on('pageerror', error => errors.push(error.message));
@@ -19,7 +19,7 @@ test('HTTPS edge login rotates Secure cookies and preserves unapplied anonymous 
   expect(cookie && { secure: cookie.secure, httpOnly: cookie.httpOnly, sameSite: cookie.sameSite, path: cookie.path }).toEqual({ secure: true, httpOnly: true, sameSite: 'Lax', path: '/' });
   expect(page.url()).toBe(process.env.MFP_ACCOUNTS_APP_ORIGIN + '/physical-draft');
   await expect(panel(page)).toContainText('Local drafts have not been uploaded or assigned');
-  await panel(page).getByRole('button', { name: 'Resume unassigned local-only work', exact: true }).click();
+  await panel(page).getByRole('button', { name: 'Continue as guest (local only)', exact: true }).click();
   await expect(roomField(page, 'Length')).toHaveValue('12 ft -'); expect(await selectedPhysical(page)).toEqual(rawBefore);
   expect(await page.evaluate(key => sessionStorage.getItem(key), PHYSICAL_DRAFT_STORAGE_KEY)).toBe(before);
   expect(uploads).toBe(0); expect(errors).toEqual([]);

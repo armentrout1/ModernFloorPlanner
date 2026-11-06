@@ -1,11 +1,11 @@
 import {test,expect} from '@playwright/test';
-import {configureIssuer} from '../accounts/control';
+import {configureSupabase} from '../accounts/control';
 import {capturePhysicalSaveEnvelope} from '../../shared/persistence/physicalSave';
 import {richPhysicalSaveDraft} from '../fixtures/physicalSave';
 import {setup,autosave,recoveryStatus,counts,api,roomField,roomFields,commit,selectedPhysical,savePanel,saveButton,
   signIn,selectWorkspace,closeAccount,openFirst,resumeLocal,discoverResume,deferred,account,panel,membership,quantity,setAutosave,branchForSelected} from './helpers';
 
-test.beforeEach(async({},info)=>configureIssuer({subjectPrefix:'autosave-'+info.testId.replace(/[^A-Za-z0-9_-]/g,'').slice(-40)}));
+test.beforeEach(async({},info)=>configureSupabase({subjectPrefix:'autosave-'+info.testId.replace(/[^A-Za-z0-9_-]/g,'').slice(-40)}));
 
 test('A: explicit first Save and opt-in produce one immutable height revision, retrieved by a fresh authorized browser',async({page,browser})=>{
   const {saved,workspace}=await setup(page,'ceiling');

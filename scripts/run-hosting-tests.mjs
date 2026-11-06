@@ -18,5 +18,8 @@ try {
   if (!modes.includes('--browser-only'))
     await run(['--import', 'tsx', '--test', '--test-isolation=none', '--test-concurrency=1', 'tests/hosting/proxy-protocol.test.ts'], fixture.env, fixture.restartHosted);
   if (!modes.includes('--protocol-only'))
-    await run(['node_modules/@playwright/test/cli.js', 'test', '--config=playwright.hosting.config.ts', '--reporter=line'], fixture.env, fixture.restartHosted);
+    {
+      await run(['node_modules/vite/bin/vite.js', 'build'], fixture.env, fixture.restartHosted);
+      await run(['node_modules/@playwright/test/cli.js', 'test', '--config=playwright.hosting.config.ts', '--reporter=line'], fixture.env, fixture.restartHosted);
+    }
 } finally { await fixture.cleanup(); }

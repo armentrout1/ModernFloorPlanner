@@ -29,11 +29,8 @@ async function member() {
   const browserId=randomUUID(), firstHash='a'.repeat(64), now=Date.now();
   const anonymous=await accounts.createAnonymousContext(browserId,firstHash,now);
   const binding=(row:BrowserContext)=>({browserId:row.browserId,sessionIdHash:row.sessionIdHash,contextToken:row.contextToken});
-  const transaction=await accounts.beginLogin(binding(anonymous),{stateHash:randomUUID().replaceAll('-','').repeat(2),
-    nonce:'n'.repeat(40),codeVerifier:'v'.repeat(43),returnPath:'/physical-draft',expiresAt:now+60_000},now);
-  const consumed=await accounts.consumeLogin(browserId,firstHash,transaction.stateHash,now);
   const identity={issuer:'https://synthetic-provider.invalid',subject:randomUUID()};
-  const signedIn=await accounts.finishLogin(consumed,identity,'b'.repeat(64),now);
+  const signedIn=await accounts.authenticate(binding(anonymous),identity,'b'.repeat(64),now);
   const workspace=await accounts.createWorkspace({...identity,sessionBinding:binding(signedIn)},{name:'Restricted SQL workspace',idempotencyKey:randomUUID()},now);
   const selected=await accounts.selectWorkspace(binding(signedIn),workspace.id,now);
   return {identity:{...identity,sessionBinding:binding(selected)},workspace,context:selected};

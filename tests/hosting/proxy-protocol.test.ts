@@ -3,7 +3,7 @@ import { after, beforeEach, test } from 'node:test';
 import { request as httpRequest } from 'node:http';
 import { randomUUID } from 'node:crypto';
 import postgres from 'postgres';
-import { configureIssuer, issuerEvents } from '../accounts/control';
+import { configureSupabase, supabaseEvents } from '../accounts/control';
 import { PhysicalHttpClient } from '../persistence/http-client';
 import { basicPhysicalSaveDraft } from '../fixtures/physicalSave';
 import { capturePhysicalSaveEnvelope } from '../../shared/persistence/physicalSave';
@@ -13,7 +13,7 @@ assert.equal(process.env.MFP_ACCOUNTS_APP_ORIGIN, origin);
 assert.match(new URL(process.env.DATABASE_URL!).pathname, /^\/mfp_hosting_[a-f0-9]{32}_test$/);
 const db = postgres(process.env.DATABASE_URL!, { max: 2, onnotice: () => {} });
 after(async () => db.end());
-beforeEach(async () => configureIssuer({ subjectPrefix: 'host-' + randomUUID() }));
+beforeEach(async () => configureSupabase({ subjectPrefix: 'host-' + randomUUID() }));
 const hostedHeaders = ['Host', '127.0.0.2:54440', 'X-Forwarded-Host', '127.0.0.2:54440', 'X-Forwarded-Proto', 'https'];
 function rawRequest(port: number, headers: string[], path = '/api/auth/session') {
   return new Promise<{ status: number; cookie: string[]; value: any; cache: string }>((done, reject) => {
@@ -48,22 +48,20 @@ async function restartHosted() {
   });
 }
 
-test('actual hosted entry over an HTTP hop supports secure OIDC cookies, PKCE, SID rotation and one-time callback', async () => {
+test('actual hosted entry over an HTTP hop supports secure Supabase verification and SID rotation', async () => {
   const client = new PhysicalHttpClient(); const anonymous = await client.request('/api/auth/session');
   const initial = await anonymous.json(); client.context = initial.contextToken;
   assert.equal(initial.status, 'anonymous'); const prior = client.cookie;
   const cookie = anonymous.headers.getSetCookie().find(value => value.startsWith('__Host-mfp-session=')) ?? '';
   assert.ok(/; Secure/i.test(cookie) && /; HttpOnly/i.test(cookie) && /; SameSite=Lax/i.test(cookie) && /; Path=\//i.test(cookie));
   assert.ok(!/; Domain=/i.test(cookie));
-  const callback = await client.choose(await client.begin()); await client.callback(callback);
-  const authenticated = await client.status(); assert.equal(authenticated.status, 'authenticated');
+  const authenticated = await client.login(); assert.equal(authenticated.status, 'authenticated');
   assert.ok(prior !== client.cookie, 'Successful hosted login rotates the opaque session.');
   const [identity] = await db`select issuer,subject from external_identities where principal_id=${authenticated.principal!.id}`;
-  assert.equal(identity.issuer, process.env.MFP_OIDC_ISSUER); assert.ok(identity.subject.endsWith('account-a'));
-  const counts = await issuerEvents(); assert.ok(counts.discovery > 0 && counts.token > 0 && counts.jwks > 0);
-  const replay = await client.callback(callback, 'failed'); assert.equal(replay.headers.getSetCookie().length, 0);
+  assert.equal(identity.issuer, process.env.VITE_SUPABASE_URL + '/auth/v1'); assert.match(identity.subject, /^[0-9a-f-]{36}$/);
+  const counts = await supabaseEvents(); assert.ok(counts.password > 0 && counts.user > 0);
   const status = await client.request('/api/auth/session'); assert.equal(status.headers.getSetCookie().length, 0);
-  assert.ok(!/access_token|id_token|refresh_token|client_secret|code_verifier|sessionID/.test(await status.text()));
+  assert.ok(!/access_token|refresh_token|password|authorization|sessionID/.test(await status.text()));
 });
 
 test('missing, conflicting and duplicate trusted forwarding metadata fail before durable sessions are created', async () => {
@@ -118,16 +116,16 @@ test('saved physical revisions and every export remain workspace-private through
   assert.equal((await outsider.client.request('/api/physical-plans', 'POST', envelope, { 'Idempotency-Key': randomUUID() })).status, 403);
 });
 
-test('a cold hosted handler replacement preserves the server session, saved revision and pending OIDC callback', async () => {
+test('a cold hosted handler replacement preserves the server session, saved revision and anonymous context for later native sign-in', async () => {
   const { client } = await member();
   const response = await client.request('/api/physical-plans', 'POST', capturePhysicalSaveEnvelope(basicPhysicalSaveDraft()), { 'Idempotency-Key': randomUUID() });
   assert.equal(response.status, 201); const saved = await response.json();
-  const pending = new PhysicalHttpClient(); const callback = await pending.choose(await pending.begin(), 'account-b');
+  const pending = new PhysicalHttpClient(); const anonymous = await pending.status(); assert.equal(anonymous.status, 'anonymous');
   await restartHosted();
   assert.equal((await client.status()).status, 'authenticated');
   const recovered = await client.request('/api/physical-plans/' + saved.planId); assert.equal(recovered.status, 200);
   assert.deepEqual(await recovered.json(), saved);
-  await pending.callback(callback); assert.equal((await pending.status()).status, 'authenticated');
+  await pending.login('account-b'); assert.equal((await pending.status()).status, 'authenticated');
 });
 
 test('hosted mutations still reject CSRF and stale contexts and logout revokes the old SID', async () => {
