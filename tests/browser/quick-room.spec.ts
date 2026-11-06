@@ -2,6 +2,7 @@ import { expect, test, type Locator, type Page } from '@playwright/test';
 import { parseDraft } from '../../client/src/features/quick-room/storage';
 import type { QuickRoomDraft } from '../../client/src/features/quick-room/state';
 import type { Room } from '../../shared/schema';
+import { choosePlanCommand } from './editor-header-helpers';
 
 // Real application route; the existing disposable backend is loopback-only.
 const KEY = 'modern-floor-planner:quick-rooms:v1';
@@ -305,7 +306,7 @@ async function seedLegacy(page: Page) {
   expect(response.status()).toBe(201);
   const saved = await response.json();
   await page.goto('/');
-  await page.getByRole('button', { name: 'Load Sketch', exact: true }).click();
+  await choosePlanCommand(page, 'Open plan');
   const dialog = page.getByRole('dialog', { name: 'Load Sketch', exact: true });
   await dialog.getByText(name, { exact: true }).click();
   await dialog.getByRole('button', { name: 'Load Selected Sketch' }).click();

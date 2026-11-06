@@ -1,5 +1,6 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import type { Room } from '../../shared/schema';
+import { choosePlanCommand } from './editor-header-helpers';
 
 // These cases exercise browser history while transient editor state is active.
 test.use({ viewport: { width: 1920, height: 1080 } });
@@ -20,7 +21,7 @@ async function loadSketchWithQuickRoomsBehindIt(page: Page) {
   const saved = await response.json();
   await page.goto('/quick-room');
   await page.getByRole('link', { name: 'Sketch editor', exact: true }).click();
-  await page.getByRole('button', { name: 'Load Sketch', exact: true }).click();
+  await choosePlanCommand(page, 'Open plan');
   const dialog = page.getByRole('dialog', { name: 'Load Sketch', exact: true });
   await dialog.getByText(name, { exact: true }).click();
   await dialog.getByRole('button', { name: 'Load Selected Sketch' }).click();
@@ -46,7 +47,7 @@ async function position(room: Locator) {
   });
 }
 async function saveCurrentSketch(page: Page, id: number) {
-  await page.getByRole('button', { name: 'Save Sketch', exact: true }).click();
+  await choosePlanCommand(page, 'Save plan');
   const dialog = page.getByRole('dialog', { name: 'Save Sketch', exact: true });
   const response = page.waitForResponse(response =>
     response.url().endsWith('/api/floor-plans/' + id) && response.request().method() === 'PATCH');

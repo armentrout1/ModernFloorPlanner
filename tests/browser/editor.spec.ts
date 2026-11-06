@@ -1,5 +1,6 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import type { Room, RoomObject, WallSide } from '../../shared/schema';
+import { choosePlanCommand, openPlanMenu } from './editor-header-helpers';
 
 // Every plan is created in the disposable local fixture. Never use a deployed API.
 test.use({ viewport: { width: 1920, height: 1080 } });
@@ -26,7 +27,7 @@ async function seedAndLoad(page: Page, rooms: Room[]) {
   expect(response.status()).toBe(201);
   const saved = await response.json();
   await page.goto('/');
-  await page.getByRole('button', { name: 'Load Sketch', exact: true }).click();
+  await choosePlanCommand(page, 'Open plan');
   const dialog = page.getByRole('dialog', { name: 'Load Sketch', exact: true });
   await dialog.getByText(name, { exact: true }).click();
   // Redirect recovery intentionally retains the prior sketch. A second fixture
@@ -51,7 +52,7 @@ async function seedAndLoad(page: Page, rooms: Room[]) {
 }
 
 async function save(page: Page, id: number, name?: string) {
-  await page.getByRole('button', { name: 'Save Sketch', exact: true }).click();
+  await choosePlanCommand(page, 'Save plan');
   const dialog = page.getByRole('dialog', { name: 'Save Sketch', exact: true });
   if (name) await dialog.getByLabel('Sketch Name').fill(name);
   const result = page.waitForResponse(response =>
@@ -126,7 +127,7 @@ test.afterEach(async ({ page }) => {
   expect((page as Page & { m1Errors?: string[] }).m1Errors, 'uncaught browser errors').toEqual([]);
 });
 
-test('editor identity and action controls remain in two stable rows while resizing', async ({ page }) => {
+test('editor identity and essential actions remain in two stable rows without horizontal action scrolling', async ({ page }) => {
   await page.goto('/');
   const identity = page.getByTestId('editor-identity-row');
   const actions = page.getByTestId('editor-action-row');
@@ -139,6 +140,18 @@ test('editor identity and action controls remain in two stable rows while resizi
     await expect(page.getByRole('heading', { name: 'Modern Floor Planner', exact: true })).toBeVisible();
     await expect(title).toBeVisible();
     await expect(page.getByRole('button', { name: 'Account', exact: true })).toBeVisible();
+    const essentialActions = [
+      page.getByRole('button', { name: 'Plan menu', exact: true }),
+      page.getByRole('link', { name: 'Quick Rooms', exact: true }),
+      page.getByRole('button', { name: 'Undo delete', exact: true }),
+      page.getByRole('button', { name: 'Materials', exact: true }),
+      page.getByRole('button', { name: 'Help', exact: true }),
+      page.getByRole('button', { name: 'Floor Plan Preview', exact: true }),
+    ];
+    for (const action of essentialActions) {
+      await expect(action).toBeVisible();
+      await expect(action).toBeInViewport();
+    }
 
     const identityBox = await identity.boundingBox();
     const actionsBox = await actions.boundingBox();
@@ -146,10 +159,38 @@ test('editor identity and action controls remain in two stable rows while resizi
     expect(actionsBox).not.toBeNull();
     expect(actionsBox!.y, `actions stay below identity at ${width}px`).toBeGreaterThanOrEqual(identityBox!.y + identityBox!.height - 1);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), `${width}px page has no horizontal overflow`).toBe(true);
+    expect(await actions.evaluate(element => element.scrollWidth <= element.clientWidth + 1), `${width}px actions do not scroll horizontally`).toBe(true);
 
-    await page.getByRole('button', { name: 'New Sketch', exact: true }).scrollIntoViewIfNeeded();
-    await expect(page.getByRole('button', { name: 'New Sketch', exact: true })).toBeInViewport();
+    await openPlanMenu(page);
+    for (const name of ['New plan', 'Open plan', 'Save plan', 'Open a physical copy']) {
+      await expect(page.getByRole('menuitem', { name, exact: true })).toBeVisible();
+    }
+    if (width === 390) await page.screenshot({ path: test.info().outputPath('header-phone-plan-menu.png') });
+    if (width === 820) await page.screenshot({ path: test.info().outputPath('header-tablet-plan-menu.png') });
+    if (width === 1280) await page.screenshot({ path: test.info().outputPath('header-desktop-plan-menu.png') });
+    await page.keyboard.press('Escape');
+    await expect(page.getByRole('button', { name: 'Plan menu', exact: true })).toBeFocused();
   }
+});
+
+test('Plan and Help menus expose their commands to keyboard users', async ({ page }) => {
+  await page.goto('/');
+  const plan = page.getByRole('button', { name: 'Plan menu', exact: true });
+  await plan.focus();
+  await page.keyboard.press('Enter');
+  await expect(page.getByRole('menuitem', { name: 'New plan', exact: true })).toBeFocused();
+  await page.keyboard.press('ArrowDown');
+  await expect(page.getByRole('menuitem', { name: 'Open plan', exact: true })).toBeFocused();
+  await page.keyboard.press('Escape');
+  await expect(plan).toBeFocused();
+
+  const help = page.getByRole('button', { name: 'Help', exact: true });
+  await help.focus();
+  await page.keyboard.press('Enter');
+  const shortcuts = page.getByRole('menuitem', { name: 'Keyboard shortcuts', exact: true });
+  await expect(shortcuts).toBeFocused();
+  await page.keyboard.press('Enter');
+  await expect(page.getByRole('dialog', { name: 'Keyboard Shortcuts', exact: true })).toBeVisible();
 });
 
 test('local draft-name confirmation hides ten seconds after the latest edit', async ({ page }) => {
@@ -204,7 +245,7 @@ for (const type of ['door', 'window'] as const) {
         await expect(page.getByTestId('door-swing-placement-preview')).toHaveCount(0);
       }
       await page.reload();
-      await page.getByRole('button', { name: 'Load Sketch', exact: true }).click();
+      await choosePlanCommand(page, 'Open plan');
       const dialog = page.getByRole('dialog', { name: 'Load Sketch', exact: true });
       await dialog.getByText(plan.name, { exact: true }).click();
       await dialog.getByRole('button', { name: 'Load Selected Sketch' }).click();
@@ -347,7 +388,8 @@ test('typing, contenteditable, dialogs, repeat and handled keys do not delete ge
     window.dispatchEvent(handled);
   });
   await expect(page.getByTestId('room-room-a')).toBeVisible();
-  await page.getByTitle('Keyboard Shortcuts', { exact: true }).click();
+  await page.getByRole('button', { name: 'Help', exact: true }).click();
+  await page.getByRole('menuitem', { name: 'Keyboard shortcuts', exact: true }).click();
   const shortcuts = page.getByRole('dialog', { name: 'Keyboard Shortcuts' });
   await expect(shortcuts).toBeVisible();
   await shortcuts.focus();
@@ -370,7 +412,7 @@ test('a failed save retains the entered name and geometry and can be retried', a
       await route.fulfill({ status: 500, contentType: 'application/json', body: JSON.stringify({ message: 'Simulated save failure' }) });
     } else await route.continue();
   });
-  await page.getByRole('button', { name: 'Save Sketch', exact: true }).click();
+  await choosePlanCommand(page, 'Save plan');
   const dialog = page.getByRole('dialog', { name: 'Save Sketch', exact: true });
   await dialog.getByLabel('Sketch Name').fill(draftName);
   await dialog.getByRole('button', { name: 'Save Sketch', exact: true }).click();
@@ -408,7 +450,7 @@ test('conflicting saved widths remain untouched until the entered width is confi
 test('failed rename keeps the draft and Enter plus blur sends one pending request', async ({ page }) => {
   const original = room([opening()]);
   const plan = await seedAndLoad(page, [original]);
-  await page.getByRole('button', { name: 'Load Sketch', exact: true }).click();
+  await choosePlanCommand(page, 'Open plan');
   const dialog = page.getByRole('dialog', { name: 'Load Sketch', exact: true });
   await dialog.getByRole('button', { name: `Options for ${plan.name}`, exact: true }).click();
   await page.getByRole('menuitem', { name: 'Rename', exact: true }).click();
@@ -443,14 +485,14 @@ test('failed rename keeps the draft and Enter plus blur sends one pending reques
   await expect(dialog.getByText(draftName, { exact: true })).toBeVisible();
   expect((await (await page.request.get(`/api/floor-plans/${plan.id}`)).json()).name).toBe(draftName);
 });
-test('declining New Sketch and replacement Load keeps the unsaved current draft', async ({ page }) => {
+test('declining New plan and replacement Open keeps the unsaved current draft', async ({ page }) => {
   const original = room([opening()]);
   const plan = await seedAndLoad(page, [original]);
   const draftRoom = { ...original, name: 'Unsaved current room' };
   await page.getByTestId('room-room-a').click();
   await page.locator('#roomName').fill(draftRoom.name);
   page.once('dialog', dialog => dialog.dismiss());
-  await page.getByRole('button', { name: 'New Sketch', exact: true }).click();
+  await choosePlanCommand(page, 'New plan');
   await expect(page.getByTestId('room-room-a')).toBeVisible();
   await expect(page.locator('#roomName')).toHaveValue(draftRoom.name);
   const replacementName = `Replacement ${Date.now()}`;
@@ -459,7 +501,7 @@ test('declining New Sketch and replacement Load keeps the unsaved current draft'
     createdAt: '2025-06-01T00:00:00.000Z', updatedAt: '2025-06-01T00:00:00.000Z',
   } });
   expect(replacement.status()).toBe(201);
-  await page.getByRole('button', { name: 'Load Sketch', exact: true }).click();
+  await choosePlanCommand(page, 'Open plan');
   const dialog = page.getByRole('dialog', { name: 'Load Sketch', exact: true });
   await dialog.getByText(replacementName, { exact: true }).click();
   page.once('dialog', dialog => dialog.dismiss());
@@ -473,7 +515,7 @@ test('tooltip timers cannot dismiss a save dialog or erase its draft', async ({ 
   await page.clock.install();
   const original = room([opening()]);
   await seedAndLoad(page, [original]);
-  await page.getByRole('button', { name: 'Save Sketch', exact: true }).click();
+  await choosePlanCommand(page, 'Save plan');
   const dialog = page.getByRole('dialog', { name: 'Save Sketch', exact: true });
   const draftName = 'Still editing after tooltip expiry';
   await dialog.getByLabel('Sketch Name').fill(draftName);

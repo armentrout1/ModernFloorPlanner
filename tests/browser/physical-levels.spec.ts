@@ -5,6 +5,7 @@ import { adoptPhysicalDraft, createRegistry, insertDraft, type PhysicalDraft } f
 import { evaluateQuantities, createQuantitySnapshot, verifyQuantitySnapshot } from '../../shared/quantities/snapshot';
 import { q001, room as fixtureRoom, measured, AT } from '../fixtures/physical';
 import { openResponsiveInspector, closeResponsiveInspector } from './physical-inspector-helpers';
+import { choosePlanCommand } from './editor-header-helpers';
 
 const QUICK_KEY = 'modern-floor-planner:quick-rooms:v1';
 const OLD_KEY = 'modern-floor-planner:editor-draft:v1';
@@ -370,9 +371,9 @@ test('upgrading the latest physical and legacy copies preserves originals unknow
     objects: [{ id: 'legacy-window', type: 'window', wallSide: 'right', position: 50, size: 60, windowProperties: { height: 48 }, metadata: { keep: 'window' } }] }];
   const response = await page.request.post('/api/floor-plans', { data: { name: 'Level upgrade ' + test.info().testId, rooms: legacyRooms, createdAt: AT, updatedAt: AT } });
   expect(response.status()).toBe(201); const saved = await response.json(); await page.goto('/');
-  await page.getByRole('button', { name: 'Load Sketch', exact: true }).click(); const load = page.getByRole('dialog', { name: 'Load Sketch', exact: true });
+  await choosePlanCommand(page, 'Open plan'); const load = page.getByRole('dialog', { name: 'Load Sketch', exact: true });
   await load.getByText(saved.name, { exact: true }).click(); await load.getByRole('button', { name: 'Load Selected Sketch', exact: true }).click();
-  await page.getByRole('button', { name: 'Open a physical copy', exact: true }).click();
+  await choosePlanCommand(page, 'Open a physical copy');
   await rooms(page).getByLabel('Room name', { exact: true }).fill('Latest legacy copy'); await rooms(page).getByLabel('Room name', { exact: true }).press('Enter'); await field(page, 'Length').press('Tab');
   const latest = await selected(page), current = await upgrade(page);
   expect(geometry(current)).toEqual(geometry(latest)); expect(current.source).toEqual(latest.source); expect(current.levelUpgradeLineage!.originalDraft).toEqual(latest);

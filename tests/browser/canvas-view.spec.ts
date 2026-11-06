@@ -1,5 +1,6 @@
 import { expect, test, type Locator, type Page, type CDPSession } from '@playwright/test';
 import type { Room } from '../../shared/schema';
+import { choosePlanCommand } from './editor-header-helpers';
 
 // Tests use only the existing disposable loopback fixture and the real legacy editor.
 const view = (page: Page) => page.getByTestId('canvas-viewport');
@@ -23,7 +24,7 @@ async function seedAndLoad(page: Page, rooms: Room[]) {
   expect(response.status()).toBe(201);
   const saved = await response.json();
   await page.goto('/');
-  await page.getByRole('button', { name: 'Load Sketch', exact: true }).click();
+  await choosePlanCommand(page, 'Open plan');
   const dialog = page.getByRole('dialog', { name: 'Load Sketch', exact: true });
   await dialog.getByText(name, { exact: true }).click();
   await dialog.getByRole('button', { name: 'Load Selected Sketch' }).click();
@@ -35,7 +36,7 @@ async function seedAndLoad(page: Page, rooms: Room[]) {
   return { id: saved.id as number, name };
 }
 async function save(page: Page, id: number) {
-  await page.getByRole('button', { name: 'Save Sketch', exact: true }).click();
+  await choosePlanCommand(page, 'Save plan');
   const dialog = page.getByRole('dialog', { name: 'Save Sketch', exact: true });
   const result = page.waitForResponse(response =>
     response.url().endsWith('/api/floor-plans/' + id) && response.request().method() === 'PATCH');
@@ -542,7 +543,7 @@ test('Ctrl-wheel zoom anchors at the pointer in both directions while ordinary/o
 
   const surface = page.getByTestId('canvas-surface');
   const editorTransform = await surface.evaluate(node => getComputedStyle(node).transform);
-  const outside = await page.getByRole('button', { name: 'Load Sketch', exact: true }).boundingBox();
+  const outside = await page.getByRole('button', { name: 'Plan menu', exact: true }).boundingBox();
   expect(outside).not.toBeNull();
   await page.mouse.move(outside!.x + outside!.width / 2, outside!.y + outside!.height / 2);
   await page.keyboard.down('Control');

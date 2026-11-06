@@ -1,5 +1,6 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import type { Room, RoomObject, WallSide } from '../../shared/schema';
+import { choosePlanCommand, openPlanMenu } from './editor-header-helpers';
 
 // Use only the existing disposable loopback acceptance API, never a deployed API.
 test.use({ viewport: { width: 1440, height: 1000 } });
@@ -33,7 +34,7 @@ async function seedAndLoad(page: Page, rooms: Room[], history = false) {
   const saved = await result.json();
   await page.goto(history ? '/quick-room' : '/');
   if (history) await page.getByRole('link', { name: 'Sketch editor', exact: true }).click();
-  await page.getByRole('button', { name: 'Load Sketch', exact: true }).click();
+  await choosePlanCommand(page, 'Open plan');
   const dialog = page.getByRole('dialog', { name: 'Load Sketch', exact: true });
   await dialog.getByText(name, { exact: true }).click();
   // Redirect recovery intentionally retains the prior sketch. A second fixture
@@ -56,7 +57,7 @@ async function seedAndLoad(page: Page, rooms: Room[], history = false) {
 }
 
 async function save(page: Page, id: number) {
-  await page.getByRole('button', { name: 'Save Sketch', exact: true }).click();
+  await choosePlanCommand(page, 'Save plan');
   const dialog = page.getByRole('dialog', { name: 'Save Sketch', exact: true });
   const result = page.waitForResponse(response => response.url().endsWith('/api/floor-plans/' + id)
     && response.request().method() === 'PATCH');
@@ -241,7 +242,9 @@ test('empty preview is usable and a populated preview refits when the browser vi
   await expect(preview(page).locator('[data-testid^="preview-room-"]')).toHaveCount(0);
   await expect(preview(page)).toContainText(/no rooms|draw a room|empty/i);
   await closePreview(page);
-  await expect(page.getByRole('button', { name: 'Save Sketch', exact: true })).toBeDisabled();
+  await openPlanMenu(page);
+  await expect(page.getByRole('menuitem', { name: 'Save plan', exact: true })).toBeDisabled();
+  await page.keyboard.press('Escape');
   await expect(page.locator('.room-box')).toHaveCount(0);
   expect((await (await page.request.get('/api/floor-plans/' + empty.id)).json()).rooms).toEqual([]);
   const plan = await seedAndLoad(page, fixture(-5000, -4000));

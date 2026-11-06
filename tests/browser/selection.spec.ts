@@ -1,5 +1,6 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import type { Room, RoomObject } from '../../shared/schema';
+import { choosePlanCommand } from './editor-header-helpers';
 
 // Every record belongs to the existing disposable loopback acceptance API.
 test.use({ viewport: { width: 1920, height: 1080 } });
@@ -36,7 +37,7 @@ async function expectSelected(page: Page, ids: string[]) {
 
 // Adapted from the existing editor.spec.ts seed/load/save helpers.
 async function loadSaved(page: Page, name: string, rooms: SketchRoom[]) {
-  await page.getByRole('button', { name: 'Load Sketch', exact: true }).click();
+  await choosePlanCommand(page, 'Open plan');
   const dialog = page.getByRole('dialog', { name: 'Load Sketch', exact: true });
   await dialog.getByText(name, { exact: true }).click();
   await dialog.getByRole('button', { name: 'Load Selected Sketch' }).click();
@@ -57,7 +58,7 @@ async function seedAndLoad(page: Page, rooms = fixture()) {
   return { id: saved.id as number, name, rooms };
 }
 async function save(page: Page, id: number): Promise<Saved> {
-  await page.getByRole('button', { name: 'Save Sketch', exact: true }).click();
+  await choosePlanCommand(page, 'Save plan');
   const dialog = page.getByRole('dialog', { name: 'Save Sketch', exact: true });
   const response = page.waitForResponse(item => item.url().endsWith('/api/floor-plans/' + id) && item.request().method() === 'PATCH');
   await dialog.getByRole('button', { name: 'Save Sketch', exact: true }).click();
@@ -239,7 +240,7 @@ test('Ctrl+A respects room-name input, open dialogs and inactive sketch, and sel
   })).toEqual({ value: 'Alpha', start: 0, end: 5 });
   await expectSelected(page, [plan.rooms[0].id]);
 
-  await page.getByRole('button', { name: 'Save Sketch', exact: true }).click();
+  await choosePlanCommand(page, 'Save plan');
   const dialog = page.getByRole('dialog', { name: 'Save Sketch', exact: true });
   await expect(dialog).toBeVisible();
   await blurFocus(page); // Exercise the global dialog guard, not only an input guard.

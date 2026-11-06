@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { choosePlanCommand } from './editor-header-helpers';
 
 const NORMAL = 'http://127.0.0.1:4175';
 const saveDialog = (page: Page) => page.getByRole('dialog', { name: 'Save Sketch', exact: true });
@@ -22,7 +23,7 @@ async function drawLocal(page: Page, url = '/') {
   await localRooms(page).click(); await page.locator('#roomName').fill('Unsaved local room');
 }
 async function openSave(page: Page, name = 'Unfinished local save name') {
-  await page.getByRole('button', { name: 'Save Sketch', exact: true }).click();
+  await choosePlanCommand(page, 'Save plan');
   await saveDialog(page).getByLabel('Sketch Name').fill(name);
 }
 async function seed(page: Page) {
@@ -58,10 +59,10 @@ test('normal production composition denies Save and Load while preserving a real
   expect(sent.rooms).toHaveLength(1); expect(sent.rooms[0].name).toBe('Unsaved local room');
   await page.screenshot({path:test.info().outputPath('authorization-save-denied.png')});
   await saveDialog(page).getByRole('button',{name:'Cancel',exact:true}).click(); await expectLocal(page);
-  await page.getByRole('button',{name:'Save Sketch',exact:true}).click();
+  await choosePlanCommand(page, 'Save plan');
   await expect(saveDialog(page).getByLabel('Sketch Name')).toHaveValue('Unfinished local save name');
   await saveDialog(page).getByRole('button',{name:'Cancel',exact:true}).click();
-  await page.getByRole('button',{name:'Load Sketch',exact:true}).click();
+  await choosePlanCommand(page, 'Open plan');
   await expect(loadDialog(page).getByRole('alert')).toHaveText(messages[503]);
   await expect(loadDialog(page).getByText("You don't have any saved sketches yet.",{exact:true})).toHaveCount(0);
   await expect(loadDialog(page).getByRole('button',{name:'Load Selected Sketch',exact:true})).toBeDisabled();
@@ -81,7 +82,7 @@ test('client distinguishes401 and403 without clearing local input or disguising 
     await expect(saveDialog(page).getByLabel('Sketch Name')).toHaveValue('Keep this name '+status);
     await expect(page.getByText('Private server detail must not be displayed',{exact:true})).toHaveCount(0);
     await saveDialog(page).getByRole('button',{name:'Cancel',exact:true}).click();
-    await page.getByRole('button',{name:'Load Sketch',exact:true}).click();
+    await choosePlanCommand(page, 'Open plan');
     await expect(loadDialog(page).getByRole('alert')).toHaveText(messages[status]);
     await expect(loadDialog(page).getByText("You don't have any saved sketches yet.",{exact:true})).toHaveCount(0);
     await loadDialog(page).getByRole('button',{name:'Cancel',exact:true}).click(); await expectLocal(page);
@@ -91,7 +92,7 @@ test('client distinguishes401 and403 without clearing local input or disguising 
 
 for (const denial of [403,404] as const) test('Load rechecks a selected private record and clears cached rows after denial '+denial, async ({ page }) => {
   const plan=await seed(page); await drawLocal(page);
-  await page.getByRole('button',{name:'Load Sketch',exact:true}).click();
+  await choosePlanCommand(page, 'Open plan');
   await loadDialog(page).getByText(plan.name,{exact:true}).click();
   let checks=0;
   await page.route('**/api/floor-plans/'+plan.id,route=>{checks++;return route.fulfill({status:denial,contentType:'application/json',body:'{}'});});
@@ -100,14 +101,14 @@ for (const denial of [403,404] as const) test('Load rechecks a selected private 
   await expect(loadDialog(page).getByText(plan.name,{exact:true})).toHaveCount(0);
   await page.route('**/api/floor-plans',route=>route.fulfill({status:401,contentType:'application/json',body:'{}'}));
   await loadDialog(page).getByRole('button',{name:'Cancel',exact:true}).click(); await expectLocal(page);
-  await page.getByRole('button',{name:'Load Sketch',exact:true}).click();
+  await choosePlanCommand(page, 'Open plan');
   await expect(loadDialog(page).getByRole('alert')).toHaveText(messages[401]);
   await expect(loadDialog(page).getByText(plan.name,{exact:true})).toHaveCount(0);
 });
 
 test('denied rename preserves its raw name, respects composition and removes stale private previews', async ({ page }) => {
   const plan=await seed(page); await drawLocal(page);
-  await page.getByRole('button',{name:'Load Sketch',exact:true}).click();
+  await choosePlanCommand(page, 'Open plan');
   await loadDialog(page).getByRole('button',{name:'Options for '+plan.name,exact:true}).click();
   await page.getByRole('menuitem',{name:'Rename',exact:true}).click();
   const input=loadDialog(page).getByLabel('New sketch name'); await input.fill('Preserve my unfinished rename');
@@ -135,9 +136,9 @@ test('a late list response cannot repopulate private previews after a newer deni
     return route.fulfill({status:403,contentType:'application/json',body:'{}'});
   });
   try {
-    await page.getByRole('button',{name:'Load Sketch',exact:true}).click(); await expect.poll(()=>calls).toBe(1);
+    await choosePlanCommand(page, 'Open plan'); await expect.poll(()=>calls).toBe(1);
     await loadDialog(page).getByRole('button',{name:'Cancel',exact:true}).click();
-    await page.getByRole('button',{name:'Load Sketch',exact:true}).click();
+    await choosePlanCommand(page, 'Open plan');
     await expect(loadDialog(page).getByRole('alert')).toHaveText(messages[403]);
     const lateResponse=page.waitForResponse(response=>new URL(response.url()).pathname==='/api/floor-plans' && response.status()===200);
     release(); await lateResponse;

@@ -3,6 +3,7 @@ import { readFile } from 'node:fs/promises';
 import { parseRegistry, PHYSICAL_DRAFT_STORAGE_KEY as KEY } from '../../client/src/features/physical-draft/storage';
 import type { PhysicalDraft, PhysicalDraftRegistry } from '../../client/src/features/physical-draft/state';
 import type { Room } from '../../shared/schema';
+import { choosePlanCommand } from './editor-header-helpers';
 
 const QUICK_KEY = 'modern-floor-planner:quick-rooms:v1';
 const OTHER_KEY = 'physical-draft-unrelated';
@@ -236,14 +237,14 @@ test('legacy adoption preserves groups, recorded window height and door appearan
   expect(response.status()).toBe(201);
   const saved = await response.json();
   await page.goto('/');
-  await page.getByRole('button', { name: 'Load Sketch', exact: true }).click();
+  await choosePlanCommand(page, 'Open plan');
   const load = page.getByRole('dialog', { name: 'Load Sketch', exact: true });
   await load.getByText(name, { exact: true }).click();
   await load.getByRole('button', { name: 'Load Selected Sketch', exact: true }).click();
   await expect(page.getByRole('dialog')).toHaveCount(0);
   const originalOutline = await outline(page.locator('body'), 'physical-legacy-door');
   const writes = watchApiWrites(page);
-  await page.getByRole('button', { name: 'Open a physical copy', exact: true }).click();
+  await choosePlanCommand(page, 'Open a physical copy');
   await expect(page).toHaveURL(/\/physical-draft$/);
   const draft = await selected(page);
   expect(draft.source.kind).toBe('legacy');

@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import type { Room } from '../../shared/schema';
+import { choosePlanCommand } from './editor-header-helpers';
 
 test.use({ viewport: { width: 1280, height: 600 } });
 
@@ -23,7 +24,7 @@ test('Materials fits a narrow sidebar and scrolls to its bottom totals at a shor
   } });
   expect(response.status()).toBe(201);
   await page.goto('/');
-  await page.getByRole('button', { name: 'Load Sketch', exact: true }).click();
+  await choosePlanCommand(page, 'Open plan');
   const dialog = page.getByRole('dialog', { name: 'Load Sketch', exact: true });
   await dialog.getByText(name, { exact: true }).click();
   await dialog.getByRole('button', { name: 'Load Selected Sketch' }).click();
