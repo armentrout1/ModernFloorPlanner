@@ -4,7 +4,7 @@ Date: 2026-11-05
 
 Repository: `armentrout1/ModernFloorPlanner`
 
-Status: **LIVE PROVIDER BINDING COMPLETE / DATABASE HARDENED / NATIVE AUTH MIGRATION READY FOR DEPLOYMENT**
+Status: **LIVE PROVIDER BINDING COMPLETE / DATABASE HARDENED / NATIVE SUPABASE AUTH DEPLOYED AND OWNER-VERIFIED**
 
 This record captures the approved live-provider setup without storing passwords, private keys, session secrets, or the owner's personal email address in the public repository. The exact owner email is recorded only in the ignored local operator note `docs/MFP_SUPABASE_OWNER.local.md`.
 
@@ -25,6 +25,10 @@ Email, user metadata, organization ownership and the Supabase dashboard account 
 Required Supabase Auth URL configuration for production is the exact site URL `https://modern-floor-planner.vercel.app` plus redirects `https://modern-floor-planner.vercel.app/account/confirm` and `https://modern-floor-planner.vercel.app/account/reset-password`.
 
 Local verification for this migration: TypeScript PASS; production build PASS; unit suite **720/720 PASS**; focused account-choice browser test **1/1 PASS**. The disposable PostgreSQL/HTTPS acceptance suite stopped at its mandatory preflight because `MFP_TEST_DATABASE_URL` and `MFP_TEST_DATA_DIRECTORY` were not supplied; no live database was substituted.
+
+Production acceptance on 2026-11-05 used commit `9b24c947b1b3b6ed0dc29a2f2871006bcac3aad1` (native-auth implementation commit `3734ed4`) and Vercel deployment `dpl_92ScmpbnzUw1jTkhsnNzkEa4NuEV`. The canonical page, confirmation route, reset route, compiled client asset and anonymous account-session API all returned `200`. A deliberately invalid bearer token reached the application boundary and returned `401 SIGN_IN_DENIED` with no redirect. The owner then completed the ordinary email/password form and the live UI rendered **Signed in with Supabase Auth**. The first-login result correctly showed no selected workspace; authentication does not invent a membership or attach local drafts.
+
+The Supabase dashboard visibly confirmed the exact production Site URL and both redirect URLs, with **Total URLs: 2**. Vercel Authentication was disabled after explicit owner approval because it prevented public visitors from reaching Supabase Auth or local guest mode. Password Protection and Trusted IP restrictions remain disabled; application accounts and server workspaces continue to be protected by Supabase Auth plus the MFP session/membership boundary.
 
 ## Supabase resource
 
@@ -69,6 +73,7 @@ Supabase's provider-managed admin-only role memberships were retained. They cann
 - Git repository: `armentrout1/ModernFloorPlanner`
 - Canonical production domain: `https://modern-floor-planner.vercel.app`
 - Production deployment before the native-auth migration: `dpl_684M2MQv39xjMeZN4HCHyhnXePjh`, commit `1f574154e29e3a7f37caeee35ef5819b2af4636b`
+- Verified native-auth production deployment: `dpl_92ScmpbnzUw1jTkhsnNzkEa4NuEV`, commit `9b24c947b1b3b6ed0dc29a2f2871006bcac3aad1`
 
 The original binding step created no deployment; the production deployment above was created later and is recorded here so the current operational state is not mistaken for the earlier checkpoint.
 
@@ -78,16 +83,16 @@ The original binding step created no deployment; the production deployment above
 |---|---|---|---|
 | `VITE_SUPABASE_URL` | Browser-public | Development, Preview, Production | Configured |
 | `VITE_SUPABASE_PUBLISHABLE_KEY` | Browser-public | Development, Preview, Production | Configured |
-| `MFP_OIDC_ISSUER` | Server | Production | Obsolete; remove after the native-auth deployment is verified |
+| `MFP_OIDC_ISSUER` | Server | Production | Removed after verified native-auth owner sign-in |
 | `MFP_DATABASE_CONNECTION_MODE` | Server | Production | Configured as `transaction` |
 | `MFP_DATABASE_APP_MAX` | Server | Production | Configured as `1` |
 | `MFP_DATABASE_SESSION_MAX` | Server | Production | Configured as `1` |
 | `DATABASE_URL` | Secret | Production | Configured with restricted `mfp_app` transaction-pooler login; value remains concealed |
-| `MFP_OIDC_CLIENT_ID` | Server | Production | Obsolete; remove after the native-auth deployment is verified |
-| `MFP_OIDC_CLIENT_AUTH_METHOD` | Server | Production | Obsolete; remove after the native-auth deployment is verified |
-| `MFP_OIDC_CLIENT_SECRET` | Secret | Production | Obsolete; keep concealed and remove after verified deployment |
+| `MFP_OIDC_CLIENT_ID` | Server | Production | Removed after verified native-auth owner sign-in |
+| `MFP_OIDC_CLIENT_AUTH_METHOD` | Server | Production | Removed after verified native-auth owner sign-in |
+| `MFP_OIDC_CLIENT_SECRET` | Secret | Production | Removed from Vercel after verified native-auth owner sign-in; value was never exposed |
 | `MFP_APP_ORIGIN` | Server | Production | Configured |
-| `MFP_OIDC_CALLBACK_URI` | Server | Production | Obsolete; remove after the native-auth deployment is verified |
+| `MFP_OIDC_CALLBACK_URI` | Server | Production | Removed after verified native-auth owner sign-in |
 | `MFP_SESSION_SECRET` | Secret | Production | Configured; generated securely and concealed |
 
 The public client uses only the publishable key. A Supabase secret key or legacy service-role key must never be exposed through a `VITE_` variable.
@@ -96,15 +101,14 @@ The public client uses only the publishable key. A Supabase secret key or legacy
 
 On 2026-11-05 the reviewed empty-database bootstrap boundary was completed against the live Supabase project. Direct catalog verification confirmed exact object ownership, role memberships, grants, forced RLS, zero application rows and no residual temporary owner membership. A login using the restricted role passed through both the direct endpoint and the shared transaction pooler. Vercel's encrypted Production `DATABASE_URL` was then replaced with the restricted pooled login. No password was printed or committed, and the clipboard was cleared by the bootstrap runner.
 
-Supabase Auth, the controlled owner user, trusted application origin, restricted database binding and Vercel deployment protection are configured. The former confidential OAuth client is no longer an application dependency and its variables are scheduled for removal after native-auth production acceptance.
+Supabase Auth, the controlled owner user, trusted application origin and restricted database binding are configured. The former confidential OAuth client is no longer an application dependency, and all five obsolete `MFP_OIDC_*` Production variables were removed after native-auth production acceptance. Vercel's separate login gate is intentionally off so public guest mode and Supabase Auth are reachable.
 
 The connected Supabase advisor API denied this operator connection permission, so no dashboard-advisor result is claimed. The direct PostgreSQL catalog, privilege, RLS and login checks above are the authoritative acceptance evidence for this binding.
 
 ## Remaining release gates
 
-1. Deploy the native-auth migration and record its SHA plus Vercel deployment ID.
-2. Prove real owner sign-in, sign-out, refresh, password-recovery entry and local guest journeys against the canonical domain.
-3. Remove the obsolete `MFP_OIDC_*` Production variables only after that smoke passes.
-4. Review backup/recovery behavior and the already recorded dependency advisories before customer onboarding.
+1. Owner sign-in, password-recovery entry and local guest journeys are verified against the canonical domain; complete a separate sign-out/refresh acceptance pass before customer onboarding.
+2. Create and select the first server workspace only after the owner chooses its name; first login correctly creates no implicit workspace.
+3. Review backup/recovery behavior and the already recorded dependency advisories before customer onboarding.
 
 Supabase dashboard ownership is operational metadata only. Runtime identity remains the verified issuer-plus-subject pair and workspace membership; neither an email address nor organization name grants application access.
