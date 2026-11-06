@@ -1243,6 +1243,8 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
       >
         <div
           ref={stageRef}
+          data-testid="canvas-stage"
+          data-touch-gesture={zoom.pinching ? 'pinch' : 'idle'}
           className={`relative overflow-hidden bg-white cursor-crosshair ${pan.dragging ? '!cursor-grabbing [&_*]:!cursor-grabbing' : pan.ready ? '!cursor-grab [&_*]:!cursor-grab' : ''}`}
           onMouseDownCapture={pan.onMouseDownCapture}
           onClickCapture={pan.onClickCapture}

@@ -27,7 +27,7 @@ async function seedAndLoad(page: Page, rooms: Room[]) {
   const dialog = page.getByRole('dialog', { name: 'Load Sketch', exact: true });
   await dialog.getByText(name, { exact: true }).click();
   await dialog.getByRole('button', { name: 'Load Selected Sketch' }).click();
-  await expect(page.locator('[role="dialog"]')).toHaveCount(0);
+  await expect(dialog).toHaveCount(0);
   await expect(page.getByTestId('canvas-surface')).toHaveCount(1);
   for (const room of rooms) await expect(roomNode(page, room.id)).toHaveCount(1);
   await page.locator("[toast-close]").click();
@@ -41,7 +41,7 @@ async function save(page: Page, id: number) {
     response.url().endsWith('/api/floor-plans/' + id) && response.request().method() === 'PATCH');
   await dialog.getByRole('button', { name: 'Save Sketch', exact: true }).click();
   expect((await result).status()).toBe(200);
-  await expect(page.locator('[role="dialog"]')).toHaveCount(0);
+  await expect(dialog).toHaveCount(0);
   const response = await page.request.get('/api/floor-plans/' + id);
   expect(response.ok()).toBeTruthy();
   return await response.json() as { rooms: Room[]; name: string; createdAt: string };
@@ -562,6 +562,7 @@ test.describe('two-finger zoom through browser touch input', () => {
     const rooms = layout(0, 0), saved = await seedAndLoad(page, rooms);
     const cdp = await page.context().newCDPSession(page);
     await cdp.send('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 5 });
+    let nextTouchId = 1;
     try {
       for (const [targetId, tool] of [
         ['room-fit-bedroom', 'Select & Move'], ['opening-fit-door', 'Add Door'], ['opening-fit-window', 'Add Window'],
@@ -578,15 +579,27 @@ test.describe('two-finger zoom through browser touch input', () => {
         const midpoint = { x: (first.x + second.x) / 2, y: (first.y + second.y) / 2 };
         const marker = roomNode(page, rooms[0].id), initial = await zoomBox(marker);
         const local = { x: (midpoint.x - initial.x) / initial.width, y: (midpoint.y - initial.y) / initial.height };
+        const touchIds = [nextTouchId++, nextTouchId++];
         const pointsAt = (ratio: number) => [
-          zoomTouch({ x: midpoint.x - vector.x * ratio / 2, y: midpoint.y - vector.y * ratio / 2 }, 1),
-          zoomTouch({ x: midpoint.x + vector.x * ratio / 2, y: midpoint.y + vector.y * ratio / 2 }, 2),
+          zoomTouch({ x: midpoint.x - vector.x * ratio / 2, y: midpoint.y - vector.y * ratio / 2 }, touchIds[0]),
+          zoomTouch({ x: midpoint.x + vector.x * ratio / 2, y: midpoint.y + vector.y * ratio / 2 }, touchIds[1]),
         ];
+        await expect(page.locator('[role="dialog"][data-state="open"], [role="alertdialog"][data-state="open"], dialog[open]'),
+          `${targetId}: no open dialog should block canvas zoom`).toHaveCount(0);
+        const pinchHits = await page.evaluate(points => points.map(position => {
+          const hit = document.elementFromPoint(position.x, position.y);
+          return { inStage: !!hit?.closest('[data-testid="canvas-stage"]'), tag: hit?.tagName,
+            testId: hit?.getAttribute('data-testid'), className: hit?.getAttribute('class') };
+        }), pointsAt(1));
+        expect(pinchHits, `${targetId}: each pinch point must target the canvas stage`)
+          .toEqual(pinchHits.map(hit => ({ ...hit, inStage: true })));
         await dispatchZoomTouches(cdp, 'touchStart', pointsAt(1));
+        await expect(page.getByTestId('canvas-stage'), `${targetId}: canvas must accept the two-finger gesture`)
+          .toHaveAttribute('data-touch-gesture', 'pinch');
         for (const ratio of [1.08, 1.19, 1.35, 1.12, 0.97, 0.85]) {
           await dispatchZoomTouches(cdp, 'touchMove', pointsAt(ratio));
           await expect.poll(async () => Math.abs((await zoomBox(marker)).width - initial.width * ratio),
-            { message: 'Pinch must follow the actual finger-distance ratio, not fixed zoom steps' }).toBeLessThanOrEqual(2);
+            { message: `${targetId}: pinch must follow the actual finger-distance ratio, not fixed zoom steps` }).toBeLessThanOrEqual(2);
           await expectZoomAnchor(marker, local, midpoint);
         }
         const remaining = pointsAt(0.85)[1];
@@ -649,8 +662,15 @@ test.describe('two-finger zoom through browser touch input', () => {
       await page.getByRole('button', { name: 'Draw Room', exact: true }).click();
       const freshView = await visibleViewport(page);
       const fresh = zoomTouch({ x: freshView.x + 6, y: freshView.y + 6 }, 3);
+      expect(await page.evaluate(point => {
+        const hit = document.elementFromPoint(point.x, point.y);
+        return { tag: hit?.tagName, testId: hit?.getAttribute('data-testid'),
+          inViewport: !!hit?.closest('[data-testid="canvas-viewport"]'),
+          inRoom: !!hit?.closest('.room-box') };
+      }, fresh)).toEqual(expect.objectContaining({ inViewport: true, inRoom: false }));
       await dispatchZoomTouches(cdp, 'touchStart', [fresh]);
-      await dispatchZoomTouches(cdp, 'touchMove', [{ ...fresh, x: freshView.x + 60, y: freshView.y + 58 }]);
+      // Keep the gesture above the 60-model-pixel room minimum at a 100% fit.
+      await dispatchZoomTouches(cdp, 'touchMove', [{ ...fresh, x: freshView.x + 86, y: freshView.y + 84 }]);
       await dispatchZoomTouches(cdp, 'touchEnd', []);
       await expect(page.locator('.room-box')).toHaveCount(4);
       await expect(page.locator('[data-testid^="opening-"]')).toHaveCount(2);
@@ -699,14 +719,19 @@ async function expectRightPanelState(page: Page, expanded: boolean) {
   await expect(toggle).toHaveCount(1);
   await expect(toggle).toHaveAttribute('aria-label', (expanded ? 'Close ' : 'Open ') + 'right panel');
   await expect(toggle).toHaveAttribute('aria-expanded', String(expanded));
-  const arrow = expanded ? 'right' : 'left';
-  await expect(toggle.locator('svg.lucide-chevron-' + arrow)).toHaveCount(1);
   const panel = page.getByTestId('right-editor-panel');
   await expect(panel).toHaveCount(1);
+  const presentation = await panel.getAttribute('data-presentation');
+  const pinned = await panel.getAttribute('data-pinned') === 'true';
+  if (expanded && !(presentation === 'desktop' && pinned)) await expect(toggle.locator('svg.lucide-x')).toHaveCount(1);
+  else {
+    const arrow = expanded ? 'right' : 'left';
+    await expect(toggle.locator('svg.lucide-chevron-' + arrow)).toHaveCount(1);
+  }
   await expect.poll(() => panel.evaluate(node => node.getBoundingClientRect().width))
     [expanded ? 'toBeGreaterThan' : 'toBeLessThanOrEqual'](expanded ? 40 : 1);
-  if (expanded) await expect(page.getByTestId('right-panel-resizer')).toBeVisible();
-  else await expect(page.getByTestId('right-panel-resizer')).toBeHidden();
+  if (expanded && presentation === 'desktop' && pinned) await expect(page.getByTestId('right-panel-resizer')).toBeVisible();
+  else await expect(page.getByTestId('right-panel-resizer')).toHaveCount(0);
 }
 
 for (const width of [1920, 1280, 820]) {
@@ -714,7 +739,7 @@ for (const width of [1920, 1280, 820]) {
     await page.setViewportSize({ width, height: 1000 });
     const rooms = layout(0, 0), saved = await seedAndLoad(page, rooms);
     await expect(page.getByTestId('panel-toggles')).toHaveCount(0);
-    await expectRightPanelState(page, true);
+    await expectRightPanelState(page, false);
     await setLeftMode(page, 'expanded');
     await expectLeftMode(page, 'expanded');
     const expandedCanvas = (await visibleViewport(page)).width;
@@ -735,10 +760,12 @@ for (const width of [1920, 1280, 820]) {
     await page.getByTestId('toggle-left-panel').click();
     await expectLeftMode(page, 'expanded');
     await expect(page.getByRole('status')).toContainText('Tools expanded');
-    await page.getByTestId('toggle-right-panel').click();
-    await expectRightPanelState(page, false);
+    const canvasBeforeInspector = (await visibleViewport(page)).width;
     await page.getByTestId('toggle-right-panel').click();
     await expectRightPanelState(page, true);
+    await expect.poll(async () => Math.abs((await visibleViewport(page)).width - canvasBeforeInspector)).toBeLessThanOrEqual(2);
+    await page.getByTestId('toggle-right-panel').click();
+    await expectRightPanelState(page, false);
     await fit(page).click();
     await expectCenteredAndVisible(page, rooms);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
@@ -788,6 +815,7 @@ test('panel toggles restore resized widths with Enter and Space while retaining 
   const rooms = layout(0, 0), saved = await seedAndLoad(page, rooms);
   await setLeftMode(page, 'expanded');
   if (await page.getByTestId('toggle-right-panel').getAttribute('aria-expanded') === 'false') await page.getByTestId('toggle-right-panel').click();
+  await page.getByTestId('pin-right-panel').click();
   const resized: Record<string, number> = {};
   for (const [side, delta] of [['left', 48], ['right', -48]] as const) {
     const panel = page.getByTestId(side + '-editor-panel');
@@ -831,9 +859,95 @@ test('panel toggles restore resized widths with Enter and Space while retaining 
   await expectLeftMode(page, 'expanded');
   for (const side of ['left', 'right']) {
     await expect.poll(async () => Math.abs(await page.getByTestId(side + '-editor-panel')
-      .evaluate(node => node.getBoundingClientRect().width) - resized[side])).toBeLessThanOrEqual(2);
+      .evaluate(node => node.getBoundingClientRect().width) - resized[side]),
+      { message: `${side} panel should restore its resized width` }).toBeLessThanOrEqual(2);
   }
   await fit(page).click();
   await expectCenteredAndVisible(page, rooms);
+  expect((await save(page, saved.id)).rooms).toEqual(rooms);
+});
+
+test('desktop inspector opens for selection, stays pinned for contents, and minimizes when unpinned', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  const rooms = layout(0, 0), saved = await seedAndLoad(page, rooms);
+  await expectRightPanelState(page, false);
+  await page.getByRole('button', { name: 'Select & Move', exact: true }).click();
+  await roomNode(page, 'fit-bedroom').click();
+  await expectRightPanelState(page, true);
+  const panel = page.getByTestId('right-editor-panel');
+  await expect(panel).toHaveAttribute('data-presentation', 'desktop');
+  await expect(panel.getByText('Bedroom with bifold door properties', { exact: true })).toBeVisible();
+  const overlayCanvas = (await visibleViewport(page)).width;
+  const pin = page.getByTestId('pin-right-panel');
+  await pin.click();
+  await expect(pin).toHaveAttribute('aria-pressed', 'true');
+  await expect.poll(async () => (await visibleViewport(page)).width).toBeLessThan(overlayCanvas - 200);
+  await panel.getByRole('button', { name: 'All rooms', exact: true }).click();
+  await expect(panel.getByText('Plan contents', { exact: true })).toBeVisible();
+  await expectRightPanelState(page, true);
+  await page.getByTestId('pin-right-panel').click();
+  await expectRightPanelState(page, false);
+  await page.keyboard.press('Control+a');
+  await expectRightPanelState(page, true);
+  await expect(panel.getByRole('heading', { name: '3 rooms selected', exact: true })).toBeVisible();
+  await page.screenshot({ path: test.info().outputPath('inspector-desktop-multi-selection.png') });
+  expect((await save(page, saved.id)).rooms).toEqual(rooms);
+});
+
+test('tablet inspector overlays the canvas, contains focus, restores its opener, and shows Materials', async ({ page }) => {
+  await page.setViewportSize({ width: 820, height: 900 });
+  const rooms = layout(0, 0), saved = await seedAndLoad(page, rooms);
+  const canvasWidth = (await visibleViewport(page)).width;
+  await page.getByRole('button', { name: 'Select & Move', exact: true }).click();
+  await page.getByTestId('opening-fit-door').click();
+  const panel = page.getByTestId('right-editor-panel');
+  await expect(panel).toHaveAttribute('data-presentation', 'tablet');
+  await expect(page.getByRole('dialog', { name: 'Door properties', exact: true })).toBeVisible();
+  expect(Math.abs((await visibleViewport(page)).width - canvasWidth)).toBeLessThanOrEqual(2);
+  await expect(page.getByRole('button', { name: 'Close right panel' })).toBeFocused();
+  await page.keyboard.press('Shift+Tab');
+  expect(await panel.evaluate(node => node.contains(document.activeElement))).toBe(true);
+  await page.getByRole('button', { name: 'Close right panel' }).click();
+  const opener = page.getByRole('button', { name: 'Open right panel' });
+  await opener.click();
+  await expect(page.getByRole('dialog', { name: 'Door properties', exact: true })).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(opener).toBeFocused();
+  await page.getByRole('button', { name: 'Materials', exact: true }).click();
+  await expect(page.getByRole('dialog', { name: 'Materials', exact: true })).toBeVisible();
+  await expect(panel.getByText('Material Calculations', { exact: true })).toBeVisible();
+  await expect(panel.getByText('478 sq ft', { exact: true })).toBeVisible();
+  await page.screenshot({ path: test.info().outputPath('inspector-tablet-materials.png') });
+  expect((await save(page, saved.id)).rooms).toEqual(rooms);
+});
+
+test('one inspector keeps an invalid opening draft across desktop, tablet, and phone presentations', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  const rooms = layout(0, 0), saved = await seedAndLoad(page, rooms);
+  await page.getByRole('button', { name: 'Select & Move', exact: true }).click();
+  await page.getByTestId('opening-fit-door').click();
+  const panel = page.getByTestId('right-editor-panel');
+  const draft = panel.getByRole('spinbutton', { name: 'Door width', exact: true });
+  const original = await draft.elementHandle();
+  expect(original).not.toBeNull();
+  await draft.fill('');
+  for (const [width, presentation] of [[820, 'tablet'], [390, 'phone'], [1440, 'desktop']] as const) {
+    await page.setViewportSize({ width, height: width === 390 ? 844 : 1000 });
+    await expect(panel).toHaveAttribute('data-presentation', presentation);
+    await expect(draft).toHaveValue('');
+    expect(await draft.evaluate((node, prior) => node === prior, original)).toBe(true);
+    expect(await original!.evaluate(node => node.isConnected)).toBe(true);
+  }
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect.poll(async () => (await panel.boundingBox())?.width ?? 0).toBeGreaterThanOrEqual(388);
+  const sheet = await panel.boundingBox();
+  const shell = await page.getByTestId('editor-shell').boundingBox();
+  expect(sheet).not.toBeNull();
+  expect(shell).not.toBeNull();
+  expect(sheet!.width).toBeGreaterThanOrEqual(388);
+  expect(Math.abs(sheet!.y + sheet!.height - (shell!.y + shell!.height))).toBeLessThanOrEqual(2);
+  await page.screenshot({ path: test.info().outputPath('inspector-phone-opening.png') });
+  await draft.press('Escape');
+  await expect(draft).toHaveValue('32');
   expect((await save(page, saved.id)).rooms).toEqual(rooms);
 });

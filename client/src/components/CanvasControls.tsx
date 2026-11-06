@@ -30,7 +30,8 @@ const CanvasControls: React.FC<CanvasControlsProps> = ({
   isPanMode,
 }) => {
   return (
-    <div className="absolute right-14 top-3 z-30 flex flex-col items-end gap-2">
+    <div className="absolute top-3 z-50 flex flex-col items-end gap-2 transition-[right] duration-150 motion-reduce:transition-none"
+      style={{ right: 'var(--canvas-control-right, 3.5rem)' }}>
     <div data-testid="canvas-view-controls" role="toolbar" aria-label="Canvas navigation"
       className="overflow-hidden rounded-lg border border-slate-200 bg-white/95 shadow-md backdrop-blur-sm">
       <div className="flex items-center border-b border-slate-200">

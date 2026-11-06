@@ -111,6 +111,8 @@ function expectRigidMove(before: SketchRoom[], after: SketchRoom[], movedIds: st
 }
 async function openContentsRoom(page: Page, name: string) {
   const inspector = page.getByTestId('selection-inspector');
+  const openInspector = page.getByRole('button', { name: 'Open right panel', exact: true });
+  if (await openInspector.count()) await openInspector.click();
   const allRooms = inspector.getByRole('button', { name: 'All rooms', exact: true });
   if (await allRooms.isVisible()) await allRooms.click();
   await inspector.getByRole('button', { name: `Edit room ${name}`, exact: true }).click();
@@ -428,6 +430,7 @@ test('changing tabs commits valid size drafts and superseded room browsing canno
   await clickRoom(page, 'selection-b');
   await expect(inspector.getByTestId('inspector-room-name')).toHaveText('Bravo');
   await blurFocus(page); await page.keyboard.press('Escape');
+  await page.getByRole('button', { name: 'Open right panel', exact: true }).click();
   await expect(inspector.getByRole('button', { name: 'Edit room Alpha', exact: true })).toBeVisible();
   await expect(inspector.getByRole('tab')).toHaveCount(0);
   expect((await save(page, plan.id)).rooms).toEqual(expected);

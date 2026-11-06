@@ -11,7 +11,7 @@ import { useLocalState } from '@/features/account/useLocalState';
  * Last verified: June 1, 2025
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { expandRoomGroups } from '@/utils/roomSelection';
 import SelectionPanel from '@/components/SelectionPanel';
 import { deleteSelection, restoreDeletion, type DeletedItem } from '@/utils/editorCommands';
@@ -58,6 +58,9 @@ const FloorPlanner: React.FC<{ active?: boolean }> = ({ active = true }) => {
   const [showMaterialPanel, setShowMaterialPanel] = useState(false);
   const [showKeyboardShortcuts, setShowKeyboardShortcuts] = useState(false);
   const [requestedToolSection, setRequestedToolSection] = useState<'align' | 'transform' | null>(null);
+  const [rightCollapsed, setRightCollapsed] = useState(() => selectedRoomIds.length === 0 && !selectedObjectId);
+  const [rightPinned, setRightPinned] = useState(false);
+  const [keepContentsOpen, setKeepContentsOpen] = useState(false);
   const { toast } = useToast();
   const editorLayout = useEditorLayout();
 
@@ -74,8 +77,9 @@ const FloorPlanner: React.FC<{ active?: boolean }> = ({ active = true }) => {
   };
 
   const handleSelectTool = (tool: string) => {
-    // Clear selections when switching tools
+    // Placement tools keep the current selection but move the unpinned inspector out of the way.
     if (['door', 'window'].includes(tool)) {
+      if (!rightPinned) setRightCollapsed(true);
       // When selecting door or window tool, set the placing object type
       setPlacingObjectType(tool as ObjectType);
       // Keep the tool active to show visual feedback
@@ -381,8 +385,65 @@ const FloorPlanner: React.FC<{ active?: boolean }> = ({ active = true }) => {
     ? selectedRoom.objects.find(obj => obj.id === selectedObjectId) || null
     : null;
 
-  const [rightCollapsed, setRightCollapsed] = useState(false);
+  const inspectorContextKey = showMaterialPanel ? 'materials'
+    : selectedObject ? `${selectedObject.type}:${selectedObject.id}`
+      : selectedRoomIds.length ? `rooms:${[...selectedRoomIds].sort().join(',')}` : 'contents';
+  const inspectorTitle = showMaterialPanel ? 'Materials'
+    : selectedObject ? `${selectedObject.type === 'door' ? 'Door' : 'Window'} properties`
+      : selectedRoomIds.length > 1 ? `${selectedRoomIds.length} rooms selected`
+        : selectedRoom ? `${selectedRoom.name || 'Room'} properties` : 'Plan contents';
+  const previousInspectorContext = useRef(inspectorContextKey);
+
+  useEffect(() => {
+    const previous = previousInspectorContext.current;
+    if (inspectorContextKey !== previous) {
+      if (inspectorContextKey === 'contents') {
+        if (!rightPinned && !keepContentsOpen) setRightCollapsed(true);
+      } else if (editorLayout.inspectorPresentation === 'desktop') {
+        if (keepContentsOpen) setKeepContentsOpen(false);
+        setRightCollapsed(false);
+      } else {
+        if (keepContentsOpen) setKeepContentsOpen(false);
+        let finished = false;
+        let timer = 0;
+        function detach() {
+          window.clearTimeout(timer);
+          window.removeEventListener('mouseup', reveal);
+          window.removeEventListener('touchend', finishTouch);
+          window.removeEventListener('touchcancel', reveal);
+        }
+        function reveal() {
+          if (finished) return;
+          finished = true;
+          detach();
+          setRightCollapsed(false);
+        }
+        function finishTouch(event: TouchEvent) {
+          if (event.touches.length === 0) reveal();
+        }
+        window.addEventListener('mouseup', reveal, { once: true });
+        window.addEventListener('touchend', finishTouch);
+        window.addEventListener('touchcancel', reveal, { once: true });
+        timer = window.setTimeout(reveal, 250);
+        previousInspectorContext.current = inspectorContextKey;
+        return detach;
+      }
+      previousInspectorContext.current = inspectorContextKey;
+    }
+  }, [editorLayout.inspectorPresentation, inspectorContextKey, keepContentsOpen, rightPinned]);
+
+  useEffect(() => {
+    if (editorLayout.inspectorPresentation !== 'desktop' && inspectorContextKey === 'contents' && !keepContentsOpen) {
+      setRightCollapsed(true);
+    }
+  }, [editorLayout.inspectorPresentation, inspectorContextKey, keepContentsOpen]);
+
   const handleToggleRightPanel = (collapsed: boolean) => setRightCollapsed(collapsed);
+  const handlePinRightPanel = (pinned: boolean) => {
+    setRightPinned(pinned);
+    if (pinned) setRightCollapsed(false);
+    else if (inspectorContextKey === 'contents') setRightCollapsed(true);
+  };
 
   return (
     <div className="bg-slate-50 text-slate-800 h-screen flex flex-col">
@@ -414,13 +475,16 @@ const FloorPlanner: React.FC<{ active?: boolean }> = ({ active = true }) => {
           layoutAnnouncement={editorLayout.announcement}
           rightPanelWidth={30}
           leftPanelTitle="Tools & Actions"
-          rightPanelTitle={showMaterialPanel ? "Materials" : "Properties"}
+          rightPanelTitle={inspectorTitle}
           rightPanelMinSize={15}
+          rightPresentation={editorLayout.inspectorPresentation}
           rightCollapsed={rightCollapsed}
+          rightPinned={rightPinned}
           onCycleLeftMode={editorLayout.cycleTools}
           onLeftModeChange={editorLayout.setLeftMode}
           onLeftExpandedWidthChange={editorLayout.setLeftExpandedWidth}
           onRightCollapsedChange={handleToggleRightPanel}
+          onRightPinnedChange={handlePinRightPanel}
           leftPanel={active ? (
             <div className="h-full">
               <Sidebar 
@@ -460,14 +524,17 @@ const FloorPlanner: React.FC<{ active?: boolean }> = ({ active = true }) => {
           }
           rightPanel={active ? (
             <div className="h-full">
-              {showMaterialPanel ? (
-                <MaterialCalculationPanel
-                  rooms={rooms}
-                />
-              ) : (
+              <div className={showMaterialPanel ? 'h-full' : 'hidden'} aria-hidden={!showMaterialPanel}>
+                <MaterialCalculationPanel rooms={rooms} />
+              </div>
+              <div className={showMaterialPanel ? 'hidden' : 'h-full'} aria-hidden={showMaterialPanel}>
                 <SelectionPanel rooms={rooms} selectedRoomIds={selectedRoomIds} selectedObjectId={selectedObjectId}
                   onSelectRoom={id => handleSelectRoom(id, true)} onSelectObject={handleSelectObject}
-                  onClearSelection={() => handleSelectRoom(null, true)}
+                  onClearSelection={() => {
+                    setKeepContentsOpen(true);
+                    setRightCollapsed(false);
+                    handleSelectRoom(null, true);
+                  }}
                   onGroup={handleGroup} onUngroup={handleUngroup} onDelete={handleDeleteSelectedRoom}>
                 <PropertyPanel
                   selectedRoom={selectedRoomIds.length > 1 ? null : selectedRoom}
@@ -476,7 +543,7 @@ const FloorPlanner: React.FC<{ active?: boolean }> = ({ active = true }) => {
                   onDeleteRoom={handleDeleteSelectedRoom}
                 />
                 </SelectionPanel>
-              )}
+              </div>
             </div>
           ) : null}
         />

@@ -31,20 +31,22 @@ test('Materials fits a narrow sidebar and scrolls to its bottom totals at a shor
   await page.getByRole('button', { name: 'Materials', exact: true }).click();
 
   const panel = page.getByTestId('right-editor-panel');
+  await page.getByTestId('pin-right-panel').click();
+  await expect.poll(() => panel.evaluate(element => element.getAnimations().filter(animation => animation.playState === 'running').length)).toBe(0);
   const resizer = page.getByTestId('right-panel-resizer');
   const panelBefore = await panel.boundingBox();
   const handle = await resizer.boundingBox();
   expect(panelBefore).not.toBeNull();
   expect(handle).not.toBeNull();
-  // Resize through the real splitter, giving the inspector less than its old320px width.
+  // Pin, then resize through the real splitter to the compact supported width.
   const x = handle!.x + handle!.width / 2;
   const y = handle!.y + handle!.height / 2;
   await page.mouse.move(x, y);
   await page.mouse.down();
   await page.mouse.move(x + panelBefore!.width - 240, y, { steps: 8 });
   await page.mouse.up();
-  await expect.poll(async () => (await panel.boundingBox())!.width).toBeLessThan(260);
-  expect((await panel.boundingBox())!.width).toBeGreaterThan(210);
+  await expect.poll(async () => (await panel.boundingBox())!.width).toBeLessThanOrEqual(280);
+  expect((await panel.boundingBox())!.width).toBeGreaterThanOrEqual(260);
 
   const materials = panel.getByRole('heading', { name: 'Material Calculations', exact: true }).locator('..');
   const panelBox = (await panel.boundingBox())!;
