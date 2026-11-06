@@ -11,10 +11,12 @@ import { publishClientAssets, publishHostedHandler } from '../../scripts/build-v
 test('Vercel rebuilds the generated server and collects the newly built client output', async () => {
   const ignored = new Set((await readFile(resolve('.vercelignore'), 'utf8'))
     .split(/\r?\n/).map(line => line.trim()).filter(line => line && !line.startsWith('#')));
-  for (const path of ['/app.js', '/dist/', '/mfp-client-files.generated.json'])
+  for (const path of ['/app.js', '/dist/'])
     assert.ok(ignored.has(path), `${path} must be rebuilt remotely instead of uploaded`);
   assert.equal(ignored.has('/public/'), false,
     '/public must remain collectible after the Vercel build creates it');
+  assert.equal(ignored.has('/mfp-client-files.generated.json'), false,
+    'the non-secret ownership receipt must accompany an uploaded generated public directory');
 });
 
 async function fixture(run) {
