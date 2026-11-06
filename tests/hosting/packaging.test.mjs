@@ -8,11 +8,13 @@ import { createServer, Server, request as httpRequest } from 'node:http';
 import { once } from 'node:events';
 import { publishClientAssets, publishHostedHandler } from '../../scripts/build-vercel.mjs';
 
-test('Vercel upload excludes generated server and client build output', async () => {
+test('Vercel rebuilds the generated server and collects the newly built client output', async () => {
   const ignored = new Set((await readFile(resolve('.vercelignore'), 'utf8'))
     .split(/\r?\n/).map(line => line.trim()).filter(line => line && !line.startsWith('#')));
-  for (const path of ['/app.js', '/dist/', '/public/', '/mfp-client-files.generated.json'])
+  for (const path of ['/app.js', '/dist/', '/mfp-client-files.generated.json'])
     assert.ok(ignored.has(path), `${path} must be rebuilt remotely instead of uploaded`);
+  assert.equal(ignored.has('/public/'), false,
+    '/public must remain collectible after the Vercel build creates it');
 });
 
 async function fixture(run) {

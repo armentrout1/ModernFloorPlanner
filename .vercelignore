@@ -1,7 +1,6 @@
 # Generated artifacts are rebuilt by Vercel from reviewed source.
 /app.js
 /dist/
-/public/
 /mfp-client-files.generated.json
 /server/public/
 
