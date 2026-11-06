@@ -28,6 +28,13 @@ import KeyboardShortcutsDialog from '@/components/KeyboardShortcutsDialog';
 import { ResizablePanels } from '@/components/ResizablePanels';
 import ToolRail from '@/components/editor/ToolRail';
 import { useEditorLayout } from '@/components/editor/useEditorLayout';
+import {
+  getEditorCommand,
+  getEditorCommandAvailability,
+  PRIMARY_EDITOR_TOOLS,
+  type EditorCommandContext,
+  type EditorCommandId,
+} from '@/features/editor-tools/registry';
 import { Room, ObjectType } from '@/utils/types';
 import { SavedSketch } from '@/utils/api';
 import { useToast } from '@/hooks/use-toast';
@@ -37,6 +44,8 @@ import {
   mirrorRoom,
   centerRoomInViewport
 } from '@/utils/canvas';
+
+const EditorCommandPalette = React.lazy(() => import('@/features/editor-tools/EditorCommandPalette'));
 
 const FloorPlanner: React.FC<{ active?: boolean }> = ({ active = true }) => {
   const [rooms, setRooms] = useLocalState<Room[]>('legacy:rooms', []);
@@ -57,6 +66,9 @@ const FloorPlanner: React.FC<{ active?: boolean }> = ({ active = true }) => {
   const [isLoadDialogOpen, setIsLoadDialogOpen] = useState(false);
   const [showMaterialPanel, setShowMaterialPanel] = useState(false);
   const [showKeyboardShortcuts, setShowKeyboardShortcuts] = useState(false);
+  const [showCommandSearch, setShowCommandSearch] = useState(false);
+  const [commandPaletteLoaded, setCommandPaletteLoaded] = useState(false);
+  const commandSearchReturnFocus = useRef<HTMLElement | null>(null);
   const [requestedToolSection, setRequestedToolSection] = useState<'align' | 'transform' | null>(null);
   const [rightCollapsed, setRightCollapsed] = useState(() => selectedRoomIds.length === 0 && !selectedObjectId);
   const [rightPinned, setRightPinned] = useState(false);
@@ -256,6 +268,50 @@ const FloorPlanner: React.FC<{ active?: boolean }> = ({ active = true }) => {
     setShowMaterialPanel(false);
   };
 
+  const commandContext: EditorCommandContext = {
+    roomCount: rooms.length,
+    selectionCount: selectedRoomIds.length,
+    hasGroupedRooms: rooms.some(room => Boolean(room.groupId)),
+    selectedRoomIsGrouped: selectedRoomIds.length === 1 && Boolean(
+      rooms.find(room => room.id === selectedRoomIds[0])?.groupId,
+    ),
+    showRoomNames,
+  };
+
+  const handleRunEditorCommand = (commandId: EditorCommandId) => {
+    const command = getEditorCommand(commandId);
+    const availability = getEditorCommandAvailability(command, commandContext);
+    if (!availability.available) {
+      toast({ title: `${command.label} is unavailable`, description: availability.reason });
+      return;
+    }
+    if (command.kind === 'tool') {
+      handleSelectTool(command.id);
+    } else if (command.kind === 'action') {
+      handleApplyAction(command.actionId);
+    } else if (command.id === 'select-all') {
+      handleSelectAll();
+    } else {
+      setShowRoomNames(value => !value);
+    }
+  };
+
+  const handleOpenCommandSearch = () => {
+    commandSearchReturnFocus.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    setCommandPaletteLoaded(true);
+    setShowCommandSearch(true);
+  };
+
+  const handleCommandSearchOpenChange = (open: boolean) => {
+    setShowCommandSearch(open);
+    if (!open) {
+      const returnTarget = commandSearchReturnFocus.current;
+      window.requestAnimationFrame(() => {
+        if (returnTarget?.isConnected) returnTarget.focus();
+      });
+    }
+  };
+
   const handleGroup = () => {
     const ids = expandRoomGroups(rooms, selectedRoomIds);
     if (ids.length < 2) return;
@@ -359,22 +415,33 @@ const FloorPlanner: React.FC<{ active?: boolean }> = ({ active = true }) => {
   useEffect(() => {
     if (!active) return;
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (shouldIgnoreEditorShortcut(event) || isSaveModalOpen || isLoadDialogOpen || showKeyboardShortcuts) return;
-      if ((event.ctrlKey || event.metaKey) && !event.altKey && !event.shiftKey && event.key.toLowerCase() === 'a') {
+      if (shouldIgnoreEditorShortcut(event) || isSaveModalOpen || isLoadDialogOpen || showKeyboardShortcuts || showCommandSearch) return;
+      if ((event.ctrlKey || event.metaKey) && !event.altKey && !event.shiftKey && event.key.toLowerCase() === 'k') {
+        event.preventDefault();
+        commandSearchReturnFocus.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+        setCommandPaletteLoaded(true); setShowCommandSearch(true);
+      } else if ((event.ctrlKey || event.metaKey) && !event.altKey && !event.shiftKey && event.key.toLowerCase() === 'a') {
         event.preventDefault(); handleSelectAll();
       } else if (event.key === 'Escape') {
         handleMultiSelectRooms([]);
       } else if ((event.ctrlKey || event.metaKey) && !event.altKey && !event.shiftKey && event.key.toLowerCase() === 'z') {
         if (deletions.length) { event.preventDefault(); handleUndoDelete(); }
-      } else if (!event.ctrlKey && !event.metaKey && !event.altKey &&
-                 (event.key === 'Delete' || event.key === 'Backspace') && (selectedRoomId || selectedObjectId)) {
-        event.preventDefault();
-        handleDeleteSelectedRoom();
+      } else if (!event.ctrlKey && !event.metaKey && !event.altKey) {
+        const shortcutTool = PRIMARY_EDITOR_TOOLS.find(
+          tool => tool.shortcut?.toLowerCase() === event.key.toLowerCase(),
+        );
+        if (shortcutTool) {
+          event.preventDefault();
+          handleSelectTool(shortcutTool.id);
+        } else if ((event.key === 'Delete' || event.key === 'Backspace') && (selectedRoomId || selectedObjectId)) {
+          event.preventDefault();
+          handleDeleteSelectedRoom();
+        }
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [active, rooms, deletions, selectedRoomIds, selectedRoomId, selectedObjectId, isSaveModalOpen, isLoadDialogOpen, showKeyboardShortcuts]);
+  }, [active, rooms, deletions, selectedRoomIds, selectedRoomId, selectedObjectId, isSaveModalOpen, isLoadDialogOpen, showKeyboardShortcuts, showCommandSearch]);
 
   const selectedRoom = (selectedObjectId
     ? rooms.find(room => room.objects?.some(object => object.id === selectedObjectId))
@@ -461,6 +528,7 @@ const FloorPlanner: React.FC<{ active?: boolean }> = ({ active = true }) => {
         showMaterialPanel={showMaterialPanel}
         canSave={rooms.length > 0}
         onShowKeyboardShortcuts={() => setShowKeyboardShortcuts(true)}
+        onShowCommandSearch={handleOpenCommandSearch}
         currentSketchId={currentSketchId}
         currentSketchName={currentSketchName}
         onSketchNameChange={setCurrentSketchName}
@@ -489,21 +557,18 @@ const FloorPlanner: React.FC<{ active?: boolean }> = ({ active = true }) => {
             <div className="h-full">
               <Sidebar 
                 activeTool={activeTool} 
-                onSelectTool={handleSelectTool} 
-                onApplyAction={handleApplyAction}
-                onSelectAll={handleSelectAll}
-                roomCount={rooms.length}
-                showRoomNames={showRoomNames}
-                onToggleRoomNames={() => setShowRoomNames(value => !value)}
+                commandContext={commandContext}
+                onRunCommand={handleRunEditorCommand}
+                onOpenCommandSearch={handleOpenCommandSearch}
                 requestedSection={requestedToolSection}
               />
             </div>
           ) : null}
-          leftRail={active ? <ToolRail activeTool={activeTool} onSelectTool={handleSelectTool}
+          leftRail={active ? <ToolRail activeTool={activeTool} onRunCommand={handleRunEditorCommand}
             onRequestSection={section => {
               setRequestedToolSection(section);
               editorLayout.setLeftMode('expanded');
-            }} /> : null}
+            }} onOpenCommandSearch={handleOpenCommandSearch} /> : null}
           centerPanel={
             <CanvasContainer
               active={active}
@@ -548,6 +613,18 @@ const FloorPlanner: React.FC<{ active?: boolean }> = ({ active = true }) => {
           ) : null}
         />
       </div>
+
+      {commandPaletteLoaded ? (
+        <React.Suspense fallback={null}>
+          <EditorCommandPalette
+            open={active && showCommandSearch}
+            onOpenChange={handleCommandSearchOpenChange}
+            activeTool={activeTool}
+            context={commandContext}
+            onRunCommand={handleRunEditorCommand}
+          />
+        </React.Suspense>
+      ) : null}
 
       {/* Save Sketch Modal */}
       <SaveSketchModal

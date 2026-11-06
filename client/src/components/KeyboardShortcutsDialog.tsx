@@ -1,8 +1,8 @@
-import { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Keyboard, X } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { PRIMARY_EDITOR_TOOLS } from '@/features/editor-tools/registry';
 
 interface KeyboardShortcut {
   keys: string[];
@@ -17,10 +17,10 @@ interface KeyboardShortcutsDialogProps {
 
 const shortcuts: KeyboardShortcut[] = [
   // Primary Tools
-  { keys: ['R'], description: 'Activate Room drawing tool', category: 'Tools' },
-  { keys: ['M'], description: 'Activate Move/Select tool', category: 'Tools' },
-  { keys: ['D'], description: 'Activate Door placement tool', category: 'Tools' },
-  { keys: ['W'], description: 'Activate Window placement tool', category: 'Tools' },
+  ...PRIMARY_EDITOR_TOOLS.map(tool => ({
+    keys: [tool.shortcut], description: `Activate ${tool.label}`, category: 'Tools',
+  })),
+  { keys: ['Ctrl/Cmd', 'K'], description: 'Search tools and commands', category: 'Tools' },
   
   // Object Manipulation
   { keys: ['Delete'], description: 'Remove selected room or object', category: 'Edit' },

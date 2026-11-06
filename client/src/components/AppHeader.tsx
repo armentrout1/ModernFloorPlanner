@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'wouter';
 import { Button } from '@/components/ui/button';
-import { Calculator, CircleHelp, Keyboard, LayoutGrid, Undo2 } from 'lucide-react';
+import { Calculator, CircleHelp, Keyboard, LayoutGrid, Search, Undo2 } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -24,6 +24,7 @@ interface AppHeaderProps {
   showMaterialPanel: boolean;
   canSave: boolean;
   onShowKeyboardShortcuts: () => void;
+  onShowCommandSearch: () => void;
   currentSketchId?: number;
   currentSketchName: string;
   onSketchNameChange: (name: string) => void;
@@ -41,6 +42,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({
   showMaterialPanel,
   canSave,
   onShowKeyboardShortcuts,
+  onShowCommandSearch,
   currentSketchId,
   currentSketchName,
   onSketchNameChange,
@@ -107,6 +109,10 @@ const AppHeader: React.FC<AppHeaderProps> = ({
                 <DropdownMenuItem onSelect={onShowKeyboardShortcuts}>
                   <Keyboard aria-hidden="true" />
                   Keyboard shortcuts
+                </DropdownMenuItem>
+                <DropdownMenuItem onSelect={onShowCommandSearch}>
+                  <Search aria-hidden="true" />
+                  Search tools and commands
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>

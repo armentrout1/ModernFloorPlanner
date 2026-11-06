@@ -11,14 +11,7 @@
  */
 
 import React, { useEffect, useState } from 'react';
-import { 
-  FlipHorizontal,
-  FlipVertical,
-  LayoutGrid,
-  ChevronsLeftRight,
-  ChevronsUpDown,
-  LayoutTemplate
-} from 'lucide-react';
+import { Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Accordion,
@@ -28,28 +21,33 @@ import {
 } from '@/components/ui/accordion';
 import {
   Tooltip,
-  TooltipContent,
   TooltipTrigger,
   TooltipProvider,
   CenteredTooltipContent,
 } from '@/components/ui/tooltip';
-import { PRIMARY_EDITOR_TOOLS, type PrimaryEditorTool } from '@/components/editor/editorToolDefinitions';
+import {
+  EDITOR_COMMANDS,
+  getEditorCommand,
+  getEditorCommandAvailability,
+  getEditorCommandLabel,
+  type EditorCommand,
+  type EditorCommandContext,
+  type EditorCommandId,
+} from '@/features/editor-tools/registry';
 
 interface SidebarProps {
   activeTool: string;
-  onSelectTool: (tool: string) => void;
-  onApplyAction: (action: string) => void;
-  onSelectAll: () => void;
-  roomCount: number;
-  showRoomNames: boolean;
-  onToggleRoomNames: () => void;
+  commandContext: EditorCommandContext;
+  onRunCommand: (commandId: EditorCommandId) => void;
+  onOpenCommandSearch: () => void;
   requestedSection?: 'align' | 'transform' | null;
 }
 
 const Sidebar: React.FC<SidebarProps> = ({
   activeTool,
-  onSelectTool,
-  onApplyAction, onSelectAll, roomCount, showRoomNames, onToggleRoomNames,
+  commandContext,
+  onRunCommand,
+  onOpenCommandSearch,
   requestedSection,
 }) => {
   const [openSections, setOpenSections] = useState<string[]>(['drawing', 'objects']);
@@ -59,18 +57,27 @@ const Sidebar: React.FC<SidebarProps> = ({
     setOpenSections(previous => previous.includes(requestedSection) ? previous : [...previous, requestedSection]);
   }, [requestedSection]);
 
-  const renderPrimaryTool = (tool: PrimaryEditorTool) => {
-    const Icon = tool.icon;
-    const active = activeTool === tool.id;
-    return <Tooltip key={tool.id}>
+  const renderCommand = (command: EditorCommand) => {
+    const Icon = command.icon;
+    const active = command.kind === 'tool' && activeTool === command.id;
+    const label = getEditorCommandLabel(command, commandContext);
+    const availability = getEditorCommandAvailability(command, commandContext);
+    return <Tooltip key={command.id}>
       <TooltipTrigger asChild>
-        <Button type="button" variant={active ? 'default' : 'outline'} size="sm"
-          className="w-full justify-start" aria-pressed={active} onClick={() => onSelectTool(tool.id)}>
-          <Icon className="mr-2 h-4 w-4 flex-shrink-0" aria-hidden="true" />
-          <span className="truncate">{tool.label}</span>
-        </Button>
+        <span className="block">
+          <Button type="button" variant={active ? 'default' : 'outline'} size="sm"
+            className="w-full justify-start" aria-pressed={command.kind === 'tool' ? active : undefined}
+            aria-label={label}
+            disabled={!availability.available} onClick={() => onRunCommand(command.id)}>
+            <Icon className="mr-2 h-4 w-4 flex-shrink-0" aria-hidden="true" />
+            <span className="truncate">{label}</span>
+            {command.shortcut ? <span className="ml-auto pl-2 text-[10px] text-slate-500">{command.shortcut}</span> : null}
+          </Button>
+        </span>
       </TooltipTrigger>
-      <CenteredTooltipContent><p>{tool.description}</p></CenteredTooltipContent>
+      <CenteredTooltipContent>
+        <p>{availability.available ? command.help : `Unavailable: ${availability.reason}`}</p>
+      </CenteredTooltipContent>
     </Tooltip>;
   };
 
@@ -83,21 +90,27 @@ const Sidebar: React.FC<SidebarProps> = ({
               <AccordionTrigger className="px-2 py-2 text-sm">Drawing Tools</AccordionTrigger>
               <AccordionContent className="pt-2 pb-2">
                 <div className="grid grid-cols-1 gap-2">
-                  {PRIMARY_EDITOR_TOOLS.filter(tool => tool.group === 'drawing').map(renderPrimaryTool)}
+                  {EDITOR_COMMANDS.filter(command => command.group === 'drawing').map(renderCommand)}
                 </div>
               </AccordionContent>
             </AccordionItem>
             
             <div className="py-3 space-y-2 border-b">
-              <Button variant="outline" size="sm" className="w-full justify-start" onClick={onSelectAll} disabled={!roomCount}>Select all rooms</Button>
-              <Button variant="outline" size="sm" className="w-full justify-start" aria-pressed={showRoomNames} onClick={onToggleRoomNames}>{showRoomNames ? 'Hide room names' : 'Show room names'}</Button>
+              {renderCommand(getEditorCommand('select-all'))}
+              {renderCommand(getEditorCommand('toggle-room-names'))}
+              <Button type="button" variant="outline" size="sm" className="w-full justify-start"
+                aria-label="More tools" onClick={onOpenCommandSearch}>
+                <Search className="mr-2 h-4 w-4 flex-shrink-0" aria-hidden="true" />
+                <span className="truncate">More tools</span>
+                <span className="ml-auto pl-2 text-[10px] text-slate-500">Ctrl/Cmd+K</span>
+              </Button>
               <p className="text-xs text-slate-500">Select &amp; Move: drag on empty grid to select rooms. Shift-click adds or removes rooms.</p>
             </div>
             <AccordionItem value="objects">
               <AccordionTrigger className="px-2 py-2 text-sm">Room Objects</AccordionTrigger>
               <AccordionContent className="pt-2 pb-2">
                 <div className="grid grid-cols-1 gap-2">
-                  {PRIMARY_EDITOR_TOOLS.filter(tool => tool.group === 'objects').map(renderPrimaryTool)}
+                  {EDITOR_COMMANDS.filter(command => command.group === 'objects').map(renderCommand)}
                 </div>
               </AccordionContent>
             </AccordionItem>
@@ -106,56 +119,7 @@ const Sidebar: React.FC<SidebarProps> = ({
               <AccordionTrigger className="px-2 py-2 text-sm">Room Alignment</AccordionTrigger>
               <AccordionContent className="pt-2 pb-2">
                 <div className="space-y-2">
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="w-full justify-start"
-                        onClick={() => onApplyAction('auto-align')}
-                      >
-                        <LayoutTemplate className="h-4 w-4 mr-2 flex-shrink-0" />
-                        <span className="truncate">Auto-Align Rooms</span>
-                      </Button>
-                    </TooltipTrigger>
-                    <CenteredTooltipContent>
-                      <p>Automatically align rooms by their edges</p>
-                    </CenteredTooltipContent>
-                  </Tooltip>
-                  
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="w-full justify-start"
-                        onClick={() => onApplyAction('distribute-horizontal')}
-                      >
-                        <ChevronsLeftRight className="h-4 w-4 mr-2 flex-shrink-0" />
-                        <span className="truncate">Distribute Horizontally</span>
-                      </Button>
-                    </TooltipTrigger>
-                    <CenteredTooltipContent>
-                      <p>Evenly space rooms horizontally</p>
-                    </CenteredTooltipContent>
-                  </Tooltip>
-                  
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="w-full justify-start"
-                        onClick={() => onApplyAction('distribute-vertical')}
-                      >
-                        <ChevronsUpDown className="h-4 w-4 mr-2 flex-shrink-0" />
-                        <span className="truncate">Distribute Vertically</span>
-                      </Button>
-                    </TooltipTrigger>
-                    <CenteredTooltipContent>
-                      <p>Evenly space rooms vertically</p>
-                    </CenteredTooltipContent>
-                  </Tooltip>
+                  {EDITOR_COMMANDS.filter(command => command.group === 'alignment').map(renderCommand)}
                 </div>
               </AccordionContent>
             </AccordionItem>
@@ -164,56 +128,7 @@ const Sidebar: React.FC<SidebarProps> = ({
               <AccordionTrigger className="px-2 py-2 text-sm">Room Transform</AccordionTrigger>
               <AccordionContent className="pt-2 pb-2">
                 <div className="space-y-2">
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="w-full justify-start"
-                        onClick={() => onApplyAction('mirror-horizontal')}
-                      >
-                        <FlipHorizontal className="h-4 w-4 mr-2 flex-shrink-0" />
-                        <span className="truncate">Mirror Horizontally</span>
-                      </Button>
-                    </TooltipTrigger>
-                    <CenteredTooltipContent>
-                      <p>Flip selected room horizontally</p>
-                    </CenteredTooltipContent>
-                  </Tooltip>
-                  
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="w-full justify-start"
-                        onClick={() => onApplyAction('mirror-vertical')}
-                      >
-                        <FlipVertical className="h-4 w-4 mr-2 flex-shrink-0" />
-                        <span className="truncate">Mirror Vertically</span>
-                      </Button>
-                    </TooltipTrigger>
-                    <CenteredTooltipContent>
-                      <p>Flip selected room vertically</p>
-                    </CenteredTooltipContent>
-                  </Tooltip>
-                  
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="w-full justify-start"
-                        onClick={() => onApplyAction('center-room')}
-                      >
-                        <LayoutGrid className="h-4 w-4 mr-2 flex-shrink-0" />
-                        <span className="truncate">Reposition Room</span>
-                      </Button>
-                    </TooltipTrigger>
-                    <CenteredTooltipContent>
-                      <p>Move one ungrouped room; use Fit drawing to center the view</p>
-                    </CenteredTooltipContent>
-                  </Tooltip>
+                  {EDITOR_COMMANDS.filter(command => command.group === 'transform').map(renderCommand)}
                 </div>
               </AccordionContent>
             </AccordionItem>

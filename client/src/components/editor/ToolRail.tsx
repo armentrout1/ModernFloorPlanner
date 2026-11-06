@@ -1,15 +1,17 @@
-import { AlignHorizontalJustifyCenter, FlipHorizontal } from 'lucide-react';
+import { AlignHorizontalJustifyCenter, FlipHorizontal, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { PRIMARY_EDITOR_TOOLS } from './editorToolDefinitions';
+import type { EditorCommandId } from '@/features/editor-tools/registry';
 
 interface ToolRailProps {
   activeTool: string;
-  onSelectTool: (tool: string) => void;
+  onRunCommand: (commandId: EditorCommandId) => void;
   onRequestSection: (section: 'align' | 'transform') => void;
+  onOpenCommandSearch: () => void;
 }
 
-export default function ToolRail({ activeTool, onSelectTool, onRequestSection }: ToolRailProps) {
+export default function ToolRail({ activeTool, onRunCommand, onRequestSection, onOpenCommandSearch }: ToolRailProps) {
   return <TooltipProvider>
     <nav aria-label="Drawing tools" className="flex min-h-0 flex-1 flex-col items-center gap-1 overflow-y-auto px-2 py-2">
       {PRIMARY_EDITOR_TOOLS.map(tool => {
@@ -19,7 +21,7 @@ export default function ToolRail({ activeTool, onSelectTool, onRequestSection }:
           <TooltipTrigger asChild>
             <Button type="button" variant={active ? 'default' : 'ghost'} size="icon"
               className="h-10 w-10 shrink-0" aria-label={tool.label} aria-pressed={active}
-              data-testid={`rail-tool-${tool.id}`} onClick={() => onSelectTool(tool.id)}>
+              data-testid={`rail-tool-${tool.id}`} onClick={() => onRunCommand(tool.id)}>
               <Icon className="h-5 w-5" aria-hidden="true" />
             </Button>
           </TooltipTrigger>
@@ -44,6 +46,16 @@ export default function ToolRail({ activeTool, onSelectTool, onRequestSection }:
           </Button>
         </TooltipTrigger>
         <TooltipContent side="right"><p>Open room transform tools</p></TooltipContent>
+      </Tooltip>
+      <div className="my-1 h-px w-8 shrink-0 bg-slate-200" aria-hidden="true" />
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button type="button" variant="ghost" size="icon" className="h-10 w-10 shrink-0"
+            aria-label="More tools" onClick={onOpenCommandSearch}>
+            <Search className="h-5 w-5" aria-hidden="true" />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent side="right"><p>Search all tools and commands (Ctrl/Cmd+K)</p></TooltipContent>
       </Tooltip>
     </nav>
   </TooltipProvider>;
