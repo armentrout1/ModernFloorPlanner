@@ -32,7 +32,7 @@ function draft(height = '8 ft') {
 }
 async function member(account = 'account-a') {
   const client = new PhysicalHttpClient(); const identity = await client.login(account);
-  const workspace = await client.create(); await client.select(workspace.id);
+  const workspace = await client.create(); await client.status();
   return { client, identity, workspace };
 }
 async function save(client: PhysicalHttpClient, body = capturePhysicalSaveEnvelope(draft()), key = randomUUID()) {

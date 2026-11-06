@@ -12,34 +12,36 @@ export async function signIn(p: Page, who: 'A' | 'B' | 'C' = 'A') {
   await panel(p).getByLabel('Email address', { exact: true }).fill(`account-${who.toLowerCase()}@example.test`);
   await panel(p).getByLabel('Password', { exact: true }).fill(`Password-ACCOUNT-${who}-1234`);
   await panel(p).getByRole('button', { name: 'Sign in', exact: true }).click();
-  await expect(panel(p)).toContainText('Signed in with Supabase Auth');
+  await expect.poll(() => p.evaluate(() => fetch('/api/auth/session', { cache: 'no-store' }).then(response => response.json()).then(session => session.status))).toBe('authenticated');
   expect(new URL(p.url()).search).toBe('');
 }
 export async function createWorkspace(p: Page, suffix: string) {
   await account(p);
   const name = 'Synthetic ' + suffix + ' ' + test.info().testId.slice(-12);
-  if (await panel(p).getByRole('textbox', { name: 'New workspace name', exact: true }).count() === 0) {
-    await panel(p).getByRole('combobox', { name: 'Workspace', exact: true }).selectOption('');
-    await panel(p).getByRole('button', { name: 'Select workspace', exact: true }).click(); await expect(panel(p).getByRole('button', { name: 'Select workspace', exact: true })).toBeEnabled();
-  }
-  await panel(p).getByRole('textbox', { name: 'New workspace name', exact: true }).fill(name);
-  await panel(p).getByRole('button', { name: 'Create workspace', exact: true }).click();
-  await expect(panel(p)).toContainText('Workspace created. Select it explicitly');
-  await expect(panel(p).getByRole('combobox', { name: 'Workspace', exact: true })).toHaveValue('');
-  await panel(p).getByRole('combobox', { name: 'Workspace', exact: true }).selectOption({ label: name + ' · owner' });
-  const id = await panel(p).getByRole('combobox', { name: 'Workspace', exact: true }).inputValue();
-  await panel(p).getByRole('button', { name: 'Select workspace', exact: true }).click(); await expect(panel(p)).toBeHidden();
-  return { id, name };
+  if (await panel(p).getByRole('textbox', { name: 'Workspace name', exact: true }).count() === 0)
+    await panel(p).getByRole('button', { name: 'New workspace', exact: true }).click();
+  const response = p.waitForResponse(value => new URL(value.url()).pathname === '/api/workspaces' && value.request().method() === 'POST');
+  await panel(p).getByRole('textbox', { name: 'Workspace name', exact: true }).fill(name);
+  await panel(p).getByRole('button', { name: 'Create workspace and start planning', exact: true }).click();
+  const created = await response; expect(created.status()).toBe(201);
+  const workspace = await created.json();
+  await expect(panel(p)).toBeHidden();
+  return { id: workspace.id as string, name };
 }
 export async function selectWorkspace(p: Page, id: string) {
-  await account(p); await panel(p).getByRole('combobox', { name: 'Workspace', exact: true }).selectOption(id);
-  await panel(p).getByRole('button', { name: 'Select workspace', exact: true }).click(); await expect(panel(p)).toBeHidden();
+  await account(p);
+  const chooser = panel(p).getByRole('combobox', { name: 'Workspace', exact: true });
+  if (await chooser.count()) {
+    await chooser.selectOption(id);
+    await panel(p).getByRole('button', { name: /^(Switch|Open) workspace$/ }).click();
+  } else await panel(p).getByRole('button', { name: 'Continue planning', exact: true }).click();
+  await expect(panel(p)).toBeHidden();
 }
 export async function commit(field: Locator, value: string) { await field.fill(value); await field.press('Enter'); await field.press('Tab'); }
 export async function physical(p: Page, name = 'Local Alpha') {
   if (!p.url().endsWith('/physical-draft')) await p.goto('/physical-draft');
   if (await p.getByRole('region', { name: 'Choose local working context' }).isVisible()) {
-    await account(p); await panel(p).getByRole('button', { name: 'Resume workspace local work', exact: true }).click();
+    await account(p); await panel(p).getByRole('button', { name: 'Continue planning', exact: true }).click();
   }
   await p.getByRole('button', { name: 'New building draft', exact: true }).click();
   await p.getByRole('button', { name: 'Add room', exact: true }).click();

@@ -146,6 +146,27 @@ test('workspace creation rate bound counts fresh receipts and never restores rev
   await assert.rejects(accounts.createWorkspace(identity(c), first, now), errorCode('NOT_FOUND'));
   assert.equal((await accounts.listWorkspaces(identity(c))).length, 4);
 });
+test('onboarding creates and selects one workspace atomically while exact retries stay idempotent', async () => {
+  const c = await signIn(), input = { name: 'First workspace', idempotencyKey: randomUUID() };
+  const [first, replay] = await Promise.all([
+    accounts.createWorkspaceAndSelect(binding(c), input, Date.now()),
+    accounts.createWorkspaceAndSelect(binding(c), input, Date.now()),
+  ]);
+  assert.equal(first.workspace.id, replay.workspace.id);
+  assert.equal(first.context.selectedWorkspaceId, first.workspace.id);
+  assert.equal(replay.context.selectedWorkspaceId, first.workspace.id);
+  assert.notEqual(first.context.contextToken, c.contextToken);
+  await assert.rejects(accounts.createWorkspaceAndSelect(binding(c), { ...input, name: 'Changed' }, Date.now()), errorCode('IDEMPOTENCY_CONFLICT'));
+  assert.deepEqual(await accounts.listWorkspaces(identity(first.context)), [{ id: first.workspace.id, name: 'First workspace', role: 'owner' }]);
+});
+test('a returning principal with exactly one active workspace enters it automatically', async () => {
+  const subject = randomUUID(), issuer = 'https://returning.example', first = await signIn(subject, Date.now(), issuer);
+  const workspace = await accounts.createWorkspace(identity(first), { name: 'Only workspace', idempotencyKey: randomUUID() }, Date.now());
+  await accounts.logout(binding(first), Date.now());
+  const anonymousContext = await anonymous();
+  const returned = await accounts.authenticate(binding(anonymousContext), { issuer, subject }, hash(), Date.now());
+  assert.equal(returned.selectedWorkspaceId, workspace.id);
+});
 test('selection is explicit, role-aware, current and atomically rotates the workspace context', async () => {
   const c = await signIn(), w = await accounts.createWorkspace(identity(c), { name: 'Allowed', idempotencyKey: randomUUID() }, Date.now());
   const outsider = await signIn(); await assert.rejects(accounts.selectWorkspace(binding(outsider), w.id, Date.now()), errorCode('NOT_FOUND'));

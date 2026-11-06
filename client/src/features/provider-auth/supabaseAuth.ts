@@ -6,7 +6,7 @@ export interface PublicSupabaseConfiguration {
 }
 
 export class SupabaseAccountError extends Error {
-  constructor(readonly code: 'NOT_CONFIGURED' | 'SIGN_IN_FAILED' | 'SIGN_UP_FAILED' | 'RESET_FAILED' | 'PASSWORD_UPDATE_FAILED') {
+  constructor(readonly code: 'NOT_CONFIGURED' | 'SIGN_IN_FAILED' | 'SIGN_UP_FAILED' | 'OAUTH_FAILED' | 'RESET_FAILED' | 'PASSWORD_UPDATE_FAILED') {
     super(code);
     this.name = 'SupabaseAccountError';
   }
@@ -61,6 +61,14 @@ export async function signInWithSupabase(email: string, password: string): Promi
   const result = await supabase().auth.signInWithPassword({ email, password });
   if (result.error || !result.data.user) throw new SupabaseAccountError('SIGN_IN_FAILED');
   return accessToken(result.data.session);
+}
+
+export async function signInWithGoogle(): Promise<void> {
+  const result = await supabase().auth.signInWithOAuth({
+    provider: 'google',
+    options: { redirectTo: location.origin + '/account/confirm' },
+  });
+  if (result.error) throw new SupabaseAccountError('OAUTH_FAILED');
 }
 
 export async function signUpWithSupabase(email: string, password: string): Promise<string | null> {

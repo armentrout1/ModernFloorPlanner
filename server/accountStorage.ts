@@ -92,6 +92,24 @@ async function memberWorkspace(tx: Transaction, principalId: string, workspaceId
   if (!membership) return fail('NOT_FOUND');
   return { ...workspace, role: membership.role };
 }
+async function createWorkspaceForPrincipal(tx: Transaction, principal: Principal, input: z.infer<typeof creationInput>, now: number): Promise<Workspace> {
+  // Serialize creation retries/rate accounting for this exact principal without
+  // upgrading principal locks and inverting the existing workspace lock order.
+  await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${principal.id}, 92341))`);
+  const [receipt] = await tx.select().from(workspaceCreationReceipts).where(and(eq(workspaceCreationReceipts.principalId, principal.id), eq(workspaceCreationReceipts.idempotencyKey, input.idempotencyKey)));
+  if (receipt) {
+    if (receipt.name !== input.name) return fail('IDEMPOTENCY_CONFLICT');
+    await memberWorkspace(tx, principal.id, receipt.workspaceId);
+    return (await tx.select().from(workspaces).where(eq(workspaces.id, receipt.workspaceId)))[0];
+  }
+  const [count] = await tx.select({ count: sql<number>`count(*)::int` }).from(workspaceCreationReceipts)
+    .where(and(eq(workspaceCreationReceipts.principalId, principal.id), gte(workspaceCreationReceipts.createdAt, new Date(now - 60 * 60_000))));
+  if (count.count >= WORKSPACE_CREATE_LIMIT) return fail('RATE_LIMIT');
+  const [workspace] = await tx.insert(workspaces).values({ name: input.name }).returning();
+  await tx.insert(workspaceMemberships).values({ workspaceId: workspace.id, principalId: principal.id, role: 'owner', status: 'active' });
+  await tx.insert(workspaceCreationReceipts).values({ principalId: principal.id, idempotencyKey: input.idempotencyKey, workspaceId: workspace.id, name: input.name, createdAt: new Date(now) });
+  return workspace;
+}
 export class AccountStorage {
   constructor(private readonly database: () => Database = getDatabase) {}
   async createAnonymousContext(browserId: string, sessionIdHash: string, now: number): Promise<BrowserContext> {
@@ -114,6 +132,9 @@ export class AccountStorage {
       const row = await lockedContext(tx, binding); alive(row, now);
       if (row.status !== 'anonymous') return fail('STALE_CONTEXT');
       const principal = await provision(tx, identity);
+      const activeMemberships = await tx.select({ workspaceId: workspaceMemberships.workspaceId }).from(workspaceMemberships)
+        .where(and(eq(workspaceMemberships.principalId, principal.id), eq(workspaceMemberships.status, 'active'))).limit(2);
+      const selectedWorkspaceId = activeMemberships.length === 1 ? activeMemberships[0].workspaceId : null;
       // Hold the browser-context lock while express-session rotates the SID so
       // concurrent login, logout, and workspace requests cannot win with stale state.
       alive(row, Math.max(now, Date.now()));
@@ -127,7 +148,7 @@ export class AccountStorage {
         issuer: identity.issuer,
         subject: identity.subject,
         principalId: principal.id,
-        selectedWorkspaceId: null,
+        selectedWorkspaceId,
         authenticatedAt: new Date(now),
         lastSeenAt: new Date(now),
         absoluteExpiresAt: new Date(now + SESSION_ABSOLUTE_MS),
@@ -196,23 +217,36 @@ export class AccountStorage {
     time(now); const parsed = creationInput.safeParse(input); if (!parsed.success || !verifiedAccountIdentitySchema.safeParse(identity).success) return fail('INVALID_REQUEST');
     return this.database().transaction(async tx => {
       await assertSessionBinding(tx, identity, null, now);
-      // Serialize creation retries/rate accounting for this exact principal without
-      // upgrading principal locks and inverting the existing workspace lock order.
       const principal = await activePrincipal(tx, identity);
-      await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${principal.id}, 92341))`);
-      const [receipt] = await tx.select().from(workspaceCreationReceipts).where(and(eq(workspaceCreationReceipts.principalId, principal.id), eq(workspaceCreationReceipts.idempotencyKey, parsed.data.idempotencyKey)));
+      return createWorkspaceForPrincipal(tx, principal, parsed.data, now);
+    });
+  }
+  async createWorkspaceAndSelect(binding: SessionBinding, input: { name: string; idempotencyKey: string }, now: number): Promise<{ workspace: Workspace; context: BrowserContext }> {
+    time(now); const parsed = creationInput.safeParse(input);
+    if (!parsed.success || !sessionBindingSchema.safeParse(binding).success) return fail('INVALID_REQUEST');
+    return this.database().transaction(async tx => {
+      const [row] = await tx.select().from(browserContexts).where(eq(browserContexts.browserId, binding.browserId)).for('update');
+      if (!row || row.sessionIdHash !== binding.sessionIdHash) return fail('STALE_CONTEXT');
+      alive(row, now);
+      if (row.status !== 'authenticated') return fail('STALE_CONTEXT');
+      const principal = await activePrincipal(tx, { issuer: row.issuer!, subject: row.subject! });
+      if (principal.id !== row.principalId) return fail('STALE_CONTEXT');
+      const [receipt] = await tx.select().from(workspaceCreationReceipts).where(and(
+        eq(workspaceCreationReceipts.principalId, principal.id),
+        eq(workspaceCreationReceipts.idempotencyKey, parsed.data.idempotencyKey),
+      ));
       if (receipt) {
         if (receipt.name !== parsed.data.name) return fail('IDEMPOTENCY_CONFLICT');
+        if (row.selectedWorkspaceId !== receipt.workspaceId) return fail('STALE_CONTEXT');
         await memberWorkspace(tx, principal.id, receipt.workspaceId);
-        return (await tx.select().from(workspaces).where(eq(workspaces.id, receipt.workspaceId)))[0];
+        const [workspace] = await tx.select().from(workspaces).where(eq(workspaces.id, receipt.workspaceId));
+        return { workspace, context: context(row) };
       }
-      const [count] = await tx.select({ count: sql<number>`count(*)::int` }).from(workspaceCreationReceipts)
-        .where(and(eq(workspaceCreationReceipts.principalId, principal.id), gte(workspaceCreationReceipts.createdAt, new Date(now - 60 * 60_000))));
-      if (count.count >= WORKSPACE_CREATE_LIMIT) return fail('RATE_LIMIT');
-      const [workspace] = await tx.insert(workspaces).values({ name: parsed.data.name }).returning();
-      await tx.insert(workspaceMemberships).values({ workspaceId: workspace.id, principalId: principal.id, role: 'owner', status: 'active' });
-      await tx.insert(workspaceCreationReceipts).values({ principalId: principal.id, idempotencyKey: parsed.data.idempotencyKey, workspaceId: workspace.id, name: parsed.data.name, createdAt: new Date(now) });
-      return workspace;
+      if (row.contextToken !== binding.contextToken) return fail('STALE_CONTEXT');
+      const workspace = await createWorkspaceForPrincipal(tx, principal, parsed.data, now);
+      const [updated] = await tx.update(browserContexts).set({ selectedWorkspaceId: workspace.id, contextToken: randomUUID() })
+        .where(eq(browserContexts.browserId, row.browserId)).returning();
+      return { workspace, context: context(updated) };
     });
   }
 }

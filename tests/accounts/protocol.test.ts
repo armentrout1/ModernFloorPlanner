@@ -176,19 +176,18 @@ for (const column of ['idle_expires_at', 'absolute_expires_at']) test(`server en
   assert.equal((await client.status()).status, 'expired');
 });
 
-test('workspace creation remains atomic, selection explicit, and stale context cannot write', async () => {
-  const client = new Client(); const status = await client.login('account-b'); const key = randomUUID();
+test('workspace creation atomically selects the result, remains idempotent, and stale context cannot write', async () => {
+  const client = new Client(); const status = await client.login('account-b'); const key = randomUUID(), stale = client.context!;
   const [a, b] = await Promise.all([client.create('Retry-safe workspace', key), client.create('Retry-safe workspace', key)]);
-  assert.equal(a.id, b.id); assert.equal((await client.status()).workspace, null);
+  assert.equal(a.id, b.id); assert.equal((await client.status()).workspace?.id, a.id);
   const [membership] = await db`select role,status from workspace_memberships where workspace_id=${a.id} and principal_id=${status.principal!.id}`;
   assert.deepEqual(membership, { role: 'owner', status: 'active' });
-  const stale = client.context!; await client.select(a.id);
   const denied = await client.request('/api/floor-plans', 'POST', { name: 'stale operation' }, { 'X-MFP-Context': stale, 'x-mfp-role': 'owner' });
   assert.equal(denied.status, 409); assert.equal((await denied.json()).code, 'ACCOUNT_CONTEXT_CHANGED');
 });
 
 test('principal and membership revocation remain effective for native Supabase sessions', async () => {
-  const client = new Client(); const status = await client.login('account-c'); const workspace = await client.create(); await client.select(workspace.id);
+  const client = new Client(); const status = await client.login('account-c'); const workspace = await client.create(); await client.status();
   await db`update workspace_memberships set status='revoked' where principal_id=${status.principal!.id} and workspace_id=${workspace.id}`;
   assert.equal((await client.request('/api/floor-plans')).status, 404); assert.equal((await client.status()).workspace, null);
   await db`update application_principals set status='revoked' where id=${status.principal!.id}`;

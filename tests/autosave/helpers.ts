@@ -49,7 +49,7 @@ export async function membership(workspaceId:string,principalId:string,values:{r
 export async function resumeLocal(page:Page){
   const active=await page.evaluate(()=>sessionStorage.getItem('modern-floor-planner:working-context:v1'));
   if(!active?.startsWith('workspace:')||await page.getByRole('region',{name:'Choose local working context'}).isVisible()){
-    await account(page);await panel(page).getByRole('button',{name:'Resume workspace local work',exact:true}).click();
+    await account(page);await panel(page).getByRole('button',{name:'Continue planning',exact:true}).click();
   }
 }
 export async function openFirst(page:Page){

@@ -194,7 +194,9 @@ export function mountAccounts(app: Express): IdentityResolver {
     const input = z.object({ name: z.string().trim().min(1).max(200), idempotencyKey: z.string().uuid() }).strict().parse(req.body);
     const context = current(req);
     if (context.status !== 'authenticated') throw new AccountStorageError('SESSION_EXPIRED');
-    res.status(201).json(await accounts.createWorkspace(identity(context), input, Date.now()));
+    const created = await accounts.createWorkspaceAndSelect(binding(context), input, Date.now());
+    contexts.set(req, created.context);
+    res.status(201).json(created.workspace);
   }, true));
   return async req => {
     const context = contexts.get(req);
