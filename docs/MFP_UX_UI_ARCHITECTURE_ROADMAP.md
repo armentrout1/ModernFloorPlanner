@@ -1,8 +1,8 @@
 # Modern Floor Planner UX/UI architecture and build roadmap
 
 - Date: 2026-11-06
-- Version: 1.4
-- Status: PACKETS 1–3 DEPLOYED AND LIVE-VERIFIED
+- Version: 1.5
+- Status: PACKETS 1–5 DEPLOYED AND LIVE-VERIFIED
 - Baseline reviewed: `a80ccbd1c72e9825f72c1694d6e2e66b43f2c0e3` on `main`
 - Packet 2 implementation: `933a7ba0329bda2236a15fd8a6e6e3bdbed03aef` on `main`
 - Packet 3 implementation: `07c39cc7489cc9f957e636115b521f72b7f744fc` on `main`
@@ -704,6 +704,21 @@ Acceptance:
 - search never executes destructive commands without confirmation;
 - bundle and render costs remain proportionate;
 - no dynamic code path bypasses existing authorization or plan-state guards.
+
+Implementation checkpoint — 2026-11-06:
+
+- the activation condition is satisfied: the audited editor already has 12 safe tools/actions and the approved roadmap adds more categories, so one registry and search surface now reduce duplicated growth work;
+- `client/src/features/editor-tools/registry.ts` is the typed source for IDs, labels, icons, groups, shortcuts, help, tested aliases, availability prerequisites and the explicit safe risk class for all 12 current commands;
+- the expanded sidebar, compact rail and keyboard-shortcut reference consume shared registry metadata; tool active state remains synchronized across clicks, search and the real R/M/D/W shortcuts;
+- **More tools** is reachable from the expanded sidebar, compact rail, Help menu and Ctrl/Cmd+K, while its command palette is lazy-loaded only after first use;
+- search supports the verified beginner terms pointer, opening, flip and space evenly; unavailable commands stay visible with exact prerequisites instead of disappearing;
+- the shared dispatcher reuses existing tool/action callbacks and availability guards, and the searchable registry excludes Delete and every destructive/replacement command, so discovery cannot bypass confirmation, authorization or plan-state rules;
+- keyboard focus enters search and returns to its opener, semantic dialog/combobox/command roles are exposed, and phone, tablet and desktop layouts retain access without horizontal page overflow;
+- the command palette is a separate 15.99 kB minified / 5.96 kB gzip chunk; the existing large main-bundle warning remains explicit and unchanged in kind;
+- producer verification passed TypeScript, production build, 726/726 unit and integration tests and 207/207 full browser regressions in 15.6 minutes, including every current door/window path and the new Packet 5 responsive/keyboard tests;
+- implementation commit `34297e27cfbb3fa3f3fc8ed90225e196dcfd048d` is pushed to `main`;
+- production deployment `dpl_7MAo1nM2iLaL94vMvAYK9doEdCJP` is READY at `https://modern-floor-planner.vercel.app` and serves `index-FUOywOcL.js`, `index-0VT_F8QP.css` and the lazy `EditorCommandPalette-BVGfg_pB.js` chunk;
+- isolated live smoke passed alias search, unavailable prerequisites and no horizontal overflow at 390, 820 and 1280 pixels; `/`, `/quick-room` and `/physical-draft` returned 200 with zero browser/server errors, and the bounded one-hour production-log scan found zero warning or error entries.
 
 ### Packet 6: usability hardening and governance
 
