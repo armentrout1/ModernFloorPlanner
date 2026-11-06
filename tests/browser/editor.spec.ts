@@ -126,6 +126,22 @@ test.afterEach(async ({ page }) => {
   expect((page as Page & { m1Errors?: string[] }).m1Errors, 'uncaught browser errors').toEqual([]);
 });
 
+test('local draft-name confirmation hides ten seconds after the latest edit', async ({ page }) => {
+  await page.clock.install();
+  await page.goto('/');
+  const title = page.getByLabel('Current floor plan name', { exact: true });
+  const status = page.getByText('Draft name saved locally', { exact: true });
+  await title.fill('Kitchen refresh');
+  await expect(status).toBeVisible();
+  await page.waitForTimeout(50);
+  await page.clock.fastForward(9_000);
+  await expect(status).toBeVisible();
+  await page.clock.fastForward(1_000);
+  await expect(status).toBeHidden();
+  await title.fill('Kitchen refresh updated');
+  await expect(status).toBeVisible();
+});
+
 for (const type of ['door', 'window'] as const) {
   for (const side of ['top', 'right', 'bottom', 'left'] as const) {
     test(`${type} placement on ${side} wall survives save and reload`, async ({ page }) => {

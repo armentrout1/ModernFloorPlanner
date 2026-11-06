@@ -23,6 +23,7 @@ const labels: Record<SaveState, string> = {
 
 export default function PlanTitleEditor({ sketchId, value, onChange, onSaved }: PlanTitleEditorProps) {
   const [saveState, setSaveState] = useState<SaveState>(value ? (sketchId ? 'saved' : 'local') : 'idle');
+  const [localStatusVisible, setLocalStatusVisible] = useState(true);
   const [error, setError] = useState('');
   const generation = useRef(0);
   const savedName = useRef(value.trim());
@@ -78,7 +79,18 @@ export default function PlanTitleEditor({ sketchId, value, onChange, onSaved }: 
     return () => window.clearTimeout(timer);
   }, [sketchId, value]);
 
+  useEffect(() => {
+    if (saveState !== 'local') {
+      setLocalStatusVisible(true);
+      return;
+    }
+    setLocalStatusVisible(true);
+    const timer = window.setTimeout(() => setLocalStatusVisible(false), 10_000);
+    return () => window.clearTimeout(timer);
+  }, [saveState, value]);
+
   const StatusIcon = saveState === 'saving' ? LoaderCircle : saveState === 'saved' ? Check : saveState === 'error' ? CloudOff : Cloud;
+  const statusHidden = saveState === 'local' && !localStatusVisible;
   return (
     <div className="min-w-[12rem] max-w-xs flex-1">
       <Input
@@ -90,7 +102,7 @@ export default function PlanTitleEditor({ sketchId, value, onChange, onSaved }: 
         maxLength={200}
         className="h-9 border-transparent bg-transparent px-2 text-base font-semibold shadow-none hover:border-slate-200 focus-visible:border-slate-300 focus-visible:ring-1"
       />
-      <p className={`flex items-center gap-1 px-2 text-[11px] ${saveState === 'error' || saveState === 'required' ? 'text-red-700' : 'text-slate-500'}`} aria-live="polite" title={error || labels[saveState]}>
+      <p className={`flex items-center gap-1 px-2 text-[11px] ${saveState === 'error' || saveState === 'required' ? 'text-red-700' : 'text-slate-500'} ${statusHidden ? 'invisible' : ''}`} aria-live="polite" aria-hidden={statusHidden} title={statusHidden ? undefined : error || labels[saveState]}>
         <StatusIcon className={`h-3 w-3 ${saveState === 'saving' ? 'animate-spin' : ''}`} />
         <span className="truncate">{error || labels[saveState]}</span>
       </p>
