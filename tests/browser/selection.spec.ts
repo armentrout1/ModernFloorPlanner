@@ -43,7 +43,7 @@ async function loadSaved(page: Page, name: string, rooms: SketchRoom[]) {
   await expect(page.locator('[role="dialog"]')).toHaveCount(0);
   for (const room of rooms) await expect(roomNode(page, room.id)).toBeVisible();
   await page.getByRole('button', { name: 'Select & Move', exact: true }).click();
-  await page.getByTitle('Fit All Rooms', { exact: true }).click();
+  await page.getByTitle('Fit to Screen', { exact: true }).click();
 }
 async function seedAndLoad(page: Page, rooms = fixture()) {
   const name = 'Selection UX ' + test.info().testId;

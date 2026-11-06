@@ -1,4 +1,4 @@
-import { useLayoutEffect, useMemo, useState } from 'react';
+import { useLayoutEffect, useMemo, useState, type RefObject } from 'react';
 import type { Room } from '@/utils/types';
 import { formatDimensions } from '@/utils/canvas';
 import { getPlanPreviewBounds } from '@/utils/planPreview';
@@ -9,10 +9,11 @@ import RoomObject from './RoomObject';
 interface PreviewModeProps {
   rooms: Room[];
   showRoomNames?: boolean;
+  returnFocusRef: RefObject<HTMLButtonElement>;
   onClose: () => void;
 }
 
-export default function PreviewMode({ rooms, showRoomNames = true, onClose }: PreviewModeProps) {
+export default function PreviewMode({ rooms, showRoomNames = true, returnFocusRef, onClose }: PreviewModeProps) {
   const [viewportElement, setViewportElement] = useState<HTMLDivElement | null>(null);
   const [viewport, setViewport] = useState({ width: 0, height: 0 });
   const [names, setNames] = useState(showRoomNames);
@@ -32,6 +33,10 @@ export default function PreviewMode({ rooms, showRoomNames = true, onClose }: Pr
     Math.max(1, viewport.height - 48) / Math.max(1, bounds.height)) : 1;
 
   return <DialogContent style={{ animation: 'none', transition: 'none' }} className="flex h-[calc(100dvh-2rem)] max-h-[960px] w-[calc(100vw-2rem)] max-w-6xl flex-col gap-3 overflow-hidden p-4 sm:p-6"
+    onCloseAutoFocus={event => {
+      event.preventDefault();
+      returnFocusRef.current?.focus();
+    }}
     onKeyDown={event => {
       if (event.key.toLowerCase() === 'p' && !event.ctrlKey && !event.metaKey && !event.altKey
           && !event.repeat && !event.nativeEvent.isComposing) {

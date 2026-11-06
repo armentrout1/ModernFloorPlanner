@@ -40,6 +40,7 @@ const shortcuts: KeyboardShortcut[] = [
   { keys: ['Space', 'Drag'], description: 'Pan canvas', category: 'Navigation' },
   { keys: ['+', '='], description: 'Zoom in', category: 'Navigation' },
   { keys: ['-'], description: 'Zoom out', category: 'Navigation' },
+  { keys: ['Home'], description: 'Reset canvas zoom to 100%', category: 'Navigation' },
   { keys: ['P'], description: 'Toggle preview mode', category: 'Navigation' },
   
   // Text Editing

@@ -19,11 +19,9 @@ import { useCanvasPan } from '@/hooks/useCanvasPan';
 import { useCanvasZoom } from '@/hooks/useCanvasZoom';
 import RoomBox from './RoomBox';
 import RoomObject from './RoomObject';
-import TotalAreaDisplay from './TotalAreaDisplay';
+import { EditorStatusBar } from './editor/EditorStatusBar';
 import PreviewMode from './PreviewMode';
-import { MoveHorizontal, MoveVertical, RotateCcw } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Dialog, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog } from '@/components/ui/dialog';
 import { expandRoomGroups, translateRooms, roomBounds } from '@/utils/roomSelection';
 import { useToast } from '@/hooks/use-toast';
 import { 
@@ -71,6 +69,7 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
   const canvasRef = useRef<HTMLDivElement>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
+  const previewButtonRef = useRef<HTMLButtonElement>(null);
   const marqueeBase = useRef<string[]>([]);
   const roomDrag = useRef<{ ids: string[]; anchorId: string; rooms: Room[]; x: number; y: number; moved: boolean } | null>(null);
   
@@ -237,6 +236,9 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
       } else if (e.key === '-') {
         // Zoom out
         handleZoomOut();
+      } else if (e.key === 'Home' && !state.isPreviewMode) {
+        e.preventDefault();
+        handleResetZoom();
       } else if (e.key === 'p' || e.key === 'P') {
         // Toggle preview mode
         setPreviewOpen(!state.isPreviewMode);
@@ -255,7 +257,7 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
     return () => {
       window.removeEventListener('keydown', handleKeyDown, true);
     };
-  }, [active, state.isPanning, state.isPreviewMode, selectedRoomId, onRoomsChange, onSelectRoom, rooms, handleZoomIn, handleZoomOut, setPreviewOpen]);
+  }, [active, state.isPanning, state.isPreviewMode, selectedRoomId, onRoomsChange, onSelectRoom, rooms, handleZoomIn, handleZoomOut, handleResetZoom, setPreviewOpen]);
   
   // Check for rooms that are close to each other for snapping
   const checkRoomProximity = (testRoom: Room, excluded: string[] = [testRoom.id]): Room => {
@@ -1220,11 +1222,16 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
     <Dialog open={active && state.isPreviewMode} onOpenChange={setPreviewOpen}>
     <main className="relative flex h-full min-h-0 min-w-0 flex-col overflow-hidden">
       <CanvasControls
+        scale={state.scale}
         onZoomIn={handleZoomIn}
         onZoomOut={handleZoomOut}
         onResetZoom={handleResetZoom}
         onFitToScreen={handleResetView}
         onTogglePanMode={pan.toggleHand}
+        onCenterSelected={selectedRoomId ? handleCenterView : undefined}
+        onPreview={() => setPreviewOpen(true)}
+        previewButtonRef={previewButtonRef}
+        isPreviewMode={state.isPreviewMode}
         isPanMode={pan.ready || pan.dragging}
       />
       
@@ -1402,73 +1409,13 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
         </div>
         </div>
       </div>
-      <div className="flex shrink-0 flex-wrap items-center justify-center gap-2 border-t border-slate-200 bg-white p-2 sm:justify-between">
-        <TotalAreaDisplay rooms={rooms} />
-        {/* Canvas Navigation Controls */}
-        <div data-testid="canvas-view-controls" className="flex flex-wrap items-center justify-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-8 whitespace-nowrap"
-            onClick={handleResetView}
-            title="Fit All Rooms"
-            aria-label="Fit All Rooms"
-          >
-            <RotateCcw className="mr-1.5 h-4 w-4" />Fit drawing
-          </Button>
-
-          {selectedRoomId && (
-            <Button
-              variant="outline"
-              size="icon"
-              className="h-8 w-8 rounded-full"
-              onClick={handleCenterView}
-              title="Center Selected Room"
-            >
-              <MoveHorizontal className="h-4 w-4" />
-            </Button>
-          )}
-
-          {/* Preview Mode Toggle */}
-          <DialogTrigger asChild>
-          <Button
-            variant={state.isPreviewMode ? "default" : "outline"}
-            size="sm"
-            className="h-8 gap-1.5"
-            title="Toggle Preview Mode"
-            aria-label="Floor Plan Preview"
-            onKeyDown={event => {
-              if (event.key.toLowerCase() === 'p' && !event.ctrlKey && !event.metaKey && !event.altKey
-                  && !event.repeat && !event.nativeEvent.isComposing) {
-                event.preventDefault(); setPreviewOpen(true);
-              }
-            }}
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="h-4 w-4"
-            >
-              <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
-              <circle cx="12" cy="12" r="3" />
-            </svg>
-            Preview
-          </Button>
-          </DialogTrigger>
-
-          <div className="text-xs bg-slate-100 px-2 py-1 rounded">
-            {Math.round(state.scale * 100)}%
-          </div>
-        </div>
-
-      </div>
+      <footer data-testid="editor-footer" className="flex h-9 shrink-0 min-w-0 items-center border-t border-slate-200 bg-white">
+        <EditorStatusBar rooms={rooms} activeTool={activeTool}
+          selectionCount={selectedObjectId ? 1 : selectedRoomIds.length} />
+      </footer>
     </main>
-    {active && state.isPreviewMode && <PreviewMode rooms={rooms} showRoomNames={showRoomNames} onClose={() => setPreviewOpen(false)} />}
+    {active && state.isPreviewMode && <PreviewMode rooms={rooms} showRoomNames={showRoomNames}
+      returnFocusRef={previewButtonRef} onClose={() => setPreviewOpen(false)} />}
     </Dialog>
   );
 };

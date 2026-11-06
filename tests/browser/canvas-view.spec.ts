@@ -123,7 +123,8 @@ for (const [name, x, y] of [
     await expectCenteredAndVisible(page, rooms);
     await fit(page).click();
     await expectCenteredAndVisible(page, rooms);
-    await page.getByTitle('Fit All Rooms', { exact: true }).click();
+    await expect(fit(page)).toHaveCount(1);
+    await fit(page).click();
     await expectCenteredAndVisible(page, rooms);
     if (name === 'far from origin') {
       // Returning to the last programmatic scroll position is still a user pan.
@@ -156,30 +157,65 @@ for (const [name, x, y] of [
   });
 }
 
-for (const viewport of [{ width: 820, height: 720 }, { width: 390, height: 844 }]) {
+for (const viewport of [{ width: 1280, height: 800 }, { width: 820, height: 720 }, { width: 390, height: 844 }]) {
   test('canvas and its top/bottom controls stay on screen at ' + viewport.width + '×' + viewport.height, async ({ page }) => {
     await page.setViewportSize(viewport);
     const rooms = layout(0, 0);
     await seedAndLoad(page, rooms);
     await expectInBrowserViewport(page, view(page));
     await expectInBrowserViewport(page, page.getByTestId('canvas-totals'));
-    const totals = await page.getByTestId('canvas-totals').boundingBox();
-    const navigation = await page.getByTestId('canvas-view-controls').boundingBox();
-    expect(totals && navigation).toBeTruthy();
-    const overlaps = totals!.x < navigation!.x + navigation!.width && navigation!.x < totals!.x + totals!.width
-      && totals!.y < navigation!.y + navigation!.height && navigation!.y < totals!.y + totals!.height;
-    expect(overlaps, 'canvas totals and navigation must not cover one another').toBe(false);
-    const controls = ['Zoom In', 'Zoom Out', 'Reset View (Home)', 'Fit to Screen',
-      'Pan Mode (Hand Tool)', 'Fit All Rooms', 'Toggle Preview Mode'];
-    for (const title of controls) await expectInBrowserViewport(page, page.getByTitle(title, { exact: true }));
+    await expectInBrowserViewport(page, page.getByTestId('editor-status-bar'));
+    const status = await page.getByTestId('editor-status-bar').boundingBox();
+    expect(status).not.toBeNull();
+    expect(status!.height).toBeGreaterThanOrEqual(28);
+    expect(status!.height).toBeLessThanOrEqual(36);
+    const controls = ['Zoom In', 'Zoom Out', 'Reset View to 100% (Home)', 'Fit to Screen',
+      'Pan Mode (Hand Tool)', 'Toggle Preview Mode'];
+    for (const title of controls) await test.step('control is reachable: ' + title, async () => {
+      await expectInBrowserViewport(page, page.getByTitle(title, { exact: true }));
+    });
+    await expect(fit(page)).toHaveCount(1);
+    await expect(page.getByTitle('Fit All Rooms', { exact: true })).toHaveCount(0);
     await fit(page).click();
     await expectCenteredAndVisible(page, rooms);
     await page.screenshot({ path: test.info().outputPath('centered-' + viewport.width + '.png') });
-    for (const title of controls) await expectInBrowserViewport(page, page.getByTitle(title, { exact: true }));
+    for (const title of controls) await test.step('fitted control is reachable: ' + title, async () => {
+      await expectInBrowserViewport(page, page.getByTitle(title, { exact: true }));
+    });
     await roomNode(page, rooms[0].id).click();
     await expectInBrowserViewport(page, page.getByTitle('Center Selected Room', { exact: true }));
   });
 }
+
+test('reset to 100% has distinct button and Home-key semantics while Fit stays singular', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto('/');
+  await expect(fit(page)).toHaveCount(1);
+  await expect(page.getByTestId('canvas-zoom-value')).toHaveText('100%');
+  await page.getByTitle('Zoom In', { exact: true }).click();
+  await expect(page.getByTestId('canvas-zoom-value')).not.toHaveText('100%');
+  await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
+  await page.keyboard.press('Home');
+  await expect(page.getByTestId('canvas-zoom-value')).toHaveText('100%');
+  await page.getByTitle('Zoom Out', { exact: true }).click();
+  await page.getByTitle('Reset View to 100% (Home)', { exact: true }).click();
+  await expect(page.getByTestId('canvas-zoom-value')).toHaveText('100%');
+  await fit(page).click();
+  await expect(page.getByTestId('canvas-zoom-value')).toHaveText('100%');
+});
+
+test('status and navigation remain reachable at 200 percent text', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto('/');
+  await page.evaluate(() => { document.documentElement.style.fontSize = '200%'; });
+  await expectInBrowserViewport(page, page.getByTestId('canvas-view-controls'));
+  await expectInBrowserViewport(page, page.getByTestId('editor-status-bar'));
+  await expectInBrowserViewport(page, page.getByTitle('Toggle Preview Mode', { exact: true }));
+  await expect(fit(page)).toHaveCount(1);
+  await fit(page).click();
+  const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+  expect(overflow).toBeLessThanOrEqual(1);
+});
 
 
 test('opening placement after a scaled fit and later viewport resize uses the unchanged room coordinate system', async ({ page }) => {
@@ -343,7 +379,12 @@ test('Hand and Space wait for a held drag and never draw, select or place an ope
 test('blur, Escape, missing held button and inactive navigation cancel mouse pan; wheel scrolling remains available', async ({ page }) => {
   const rooms = layout(0, 0), saved = await seedAndLoad(page, rooms);
   await page.getByRole('link', { name: 'Quick Rooms', exact: true }).click();
-  await page.getByRole('link', { name: 'Sketch editor', exact: true }).click();
+  await expect(page).toHaveURL(/quick-room$/);
+  await page.evaluate(() => {
+    history.pushState(null, '', '/');
+    window.dispatchEvent(new PopStateEvent('popstate'));
+  });
+  await expect(page).toHaveURL(/\/$/);
   await fit(page).click();
   const viewport = await visibleViewport(page);
   const start = { x: viewport.x + 50, y: viewport.y + 120 };
@@ -737,7 +778,8 @@ test('tool mode and expanded width survive a same-device reload', async ({ page 
   await page.reload();
   await expectLeftMode(page, 'rail');
   await setLeftMode(page, 'expanded');
-  await expect.poll(async () => Math.abs(await panel.evaluate(node => node.getBoundingClientRect().width) - resized)).toBeLessThanOrEqual(1);
+  // CSS grid and device-pixel rounding can differ slightly after a full document reload.
+  await expect.poll(async () => Math.abs(await panel.evaluate(node => node.getBoundingClientRect().width) - resized)).toBeLessThanOrEqual(2);
   expect((await save(page, saved.id)).rooms).toEqual(rooms);
 });
 

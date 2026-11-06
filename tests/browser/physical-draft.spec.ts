@@ -303,7 +303,7 @@ test('blocked browser storage permits an honest memory-only physical draft witho
   await page.addInitScript(() => Object.defineProperty(window, 'sessionStorage', { configurable: true,
     get() { throw new DOMException('Denied for isolated acceptance', 'SecurityError'); } }));
   await page.goto('/physical-draft');
-  await expect(page.locator('[role="status"]:not([data-testid="physical-save-status"])')).toContainText(/storage is unavailable|only in memory/i);
+  await expect(page.getByTestId('physical-view').locator('[role="status"]:not([data-testid="physical-save-status"])')).toContainText(/storage is unavailable|only in memory/i);
   await page.getByRole('button', { name: 'New physical draft', exact: true }).click();
   await page.getByRole('button', { name: 'Add room', exact: true }).click();
   await dimensions(page);
@@ -329,7 +329,7 @@ test('quota failure preserves the previous full registry and original keys while
   }, { key: KEY, quick: QUICK_KEY, other: OTHER_KEY });
   await commit(page, 'Ceiling height', '9 ft');
   await quantities(page, '120.00 sq ft', '120.00 sq ft', '396.00 sq ft');
-  await expect(page.locator('[role="status"]:not([data-testid="physical-save-status"])')).toContainText(/held in memory|could not be saved/i);
+  await expect(page.getByTestId('physical-view').locator('[role="status"]:not([data-testid="physical-save-status"])')).toContainText(/held in memory|could not be saved/i);
   expect(await page.evaluate(key => sessionStorage.getItem(key), KEY)).toBe(previous);
   expect(await page.evaluate(key => sessionStorage.getItem(key), QUICK_KEY)).toBe('untouched Quick Rooms cache');
   expect(await page.evaluate(key => sessionStorage.getItem(key), OTHER_KEY)).toBe('untouched unrelated cache');

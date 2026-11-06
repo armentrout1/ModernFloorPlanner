@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useState, useSyncExternalStore } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import AccountPanel from '@/features/account/AccountPanel';
 import { accountStore } from '@/features/account/runtime';
 import { LocalEditorContext } from '@/features/account/useLocalState';
@@ -8,8 +8,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import NotFound from "@/pages/not-found";
 import FloorPlanner from "@/pages/FloorPlanner";
-const QuickRooms = lazy(() => import("@/pages/QuickRooms"));
-const PhysicalDraft = lazy(() => import("@/pages/PhysicalDraft"));
+import QuickRooms from "@/pages/QuickRooms";
+import PhysicalDraft from "@/pages/PhysicalDraft";
 
 function Router() {
   const [location] = useLocation();
@@ -26,11 +26,11 @@ function Router() {
     <>
       <div hidden={location !== "/"}><FloorPlanner active={location === "/"} /></div>
       {(quickVisited || location === "/quick-room") ?
-        <div hidden={location !== "/quick-room"}><Suspense fallback={<p role="status" className="p-8">Loading Quick Rooms…</p>}><QuickRooms active={location === "/quick-room"} /></Suspense></div> : null}
+        <div hidden={location !== "/quick-room"}><QuickRooms active={location === "/quick-room"} /></div> : null}
       <Switch>
         <Route path="/">{null}</Route>
         <Route path="/quick-room">{null}</Route>
-        <Route path="/physical-draft"><Suspense fallback={<p role="status" className="p-8">Loading physical draft...</p>}><PhysicalDraft /></Suspense></Route>
+        <Route path="/physical-draft"><PhysicalDraft /></Route>
         <Route component={NotFound} />
       </Switch>
     </>
