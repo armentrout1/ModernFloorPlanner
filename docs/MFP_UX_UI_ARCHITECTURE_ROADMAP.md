@@ -1,10 +1,11 @@
 # Modern Floor Planner UX/UI architecture and build roadmap
 
 - Date: 2026-11-06
-- Version: 1.3
-- Status: PACKETS 1–2 DEPLOYED AND LIVE-VERIFIED
+- Version: 1.4
+- Status: PACKETS 1–3 DEPLOYED AND LIVE-VERIFIED
 - Baseline reviewed: `a80ccbd1c72e9825f72c1694d6e2e66b43f2c0e3` on `main`
 - Packet 2 implementation: `933a7ba0329bda2236a15fd8a6e6e3bdbed03aef` on `main`
+- Packet 3 implementation: `07c39cc7489cc9f957e636115b521f72b7f744fc` on `main`
 - Owning requirement: [issue #29](https://github.com/armentrout1/ModernFloorPlanner/issues/29), `MFP-UX-CANVAS-SHELL`
 - Primary workflow: the main sketch editor at `/`
 - Related architecture: [area calculator blueprint](MFP_AREA_CALCULATOR_BLUEPRINT.md) and [canonical build roadmap](BUILD_ROADMAP.md)
@@ -629,6 +630,21 @@ Acceptance:
 - focus containment, Escape and focus restoration pass;
 - the canvas remains independently pannable;
 - materials display existing calculations without new arithmetic.
+
+Implementation checkpoint — 2026-11-06:
+
+- one explicit inspector context now owns Materials, door/window properties, multi-room selection, single-room properties and Plan contents;
+- the empty Plan contents state is minimized automatically, while an explicit All rooms navigation choice remains open long enough to support room and opening browsing;
+- desktop uses a non-squeezing overlay by default and an explicit pin control for a docked, keyboard- and pointer-resizable inspector; unpinning empty contents minimizes it again;
+- tablet uses a right overlay drawer and phone uses a full-width bottom sheet; only one inspector DOM tree is retained across all three presentations, preserving pending and invalid input, the active inspector tab and element identity;
+- non-desktop overlays contain focus, close with Escape and restore focus to their opener; context reveal waits for the selecting gesture to finish so the inspector cannot steal a room, opening, pan or pinch gesture;
+- a collapsed inspector becomes inert immediately, and open overlays move the floating canvas-navigation cluster clear without changing canvas coordinates, geometry, selection, saved plans or quantity calculations;
+- Materials continues to display the existing calculator result, and room/opening/multi-selection actions continue to use their existing command and persistence contracts;
+- producer verification passed: TypeScript check, production build, 723/723 unit and integration tests, 42/42 focused inspector/canvas/selection browser tests and 204/204 full browser regressions;
+- fresh visual review passed for the desktop multi-selection overlay, tablet Materials drawer and phone opening sheet; the existing large main-bundle warning remains tracked separately and did not block this bounded UX packet;
+- implementation commit `07c39cc7489cc9f957e636115b521f72b7f744fc` is pushed to `main`;
+- production deployment `dpl_D327Cswqg44M3wzonFQYJRTX6AE8` is READY at `https://modern-floor-planner.vercel.app`;
+- isolated live smoke passed the empty state, desktop room context and pinning, tablet drawer and Materials context, phone bottom-sheet fit, Quick Rooms and Physical Draft routes, with zero browser/console errors and no errors in the bounded Vercel production-log scan.
 
 ### Packet 4: header action architecture and Plan menu
 
