@@ -5,6 +5,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const projectRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const assetTypes = new Set(['.html', '.js', '.css', '.svg', '.png', '.jpg', '.jpeg', '.gif', '.webp', '.avif', '.ico', '.woff', '.woff2', '.ttf', '.otf']);
+const staticRootMarker = '.vercel-static-root';
 async function inventory(directory, relative = '') {
   const files = {};
   for (const entry of await readdir(join(directory, relative), { withFileTypes: true })) {
@@ -43,15 +44,20 @@ export async function publishClientAssets(root = projectRoot) {
   }
   if (await exists(destination)) {
     const current = await inventory(destination);
+    const currentWithoutMarker = { ...current };
+    delete currentWithoutMarker[staticRootMarker];
     let previous;
     try { previous = JSON.parse(await readFile(metadata, 'utf8')); } catch { /* Missing ownership record must not authorize deletion. */ }
-    const currentFiles = JSON.stringify(current);
+    const currentFiles = JSON.stringify(currentWithoutMarker);
     const ownedFiles = JSON.stringify(previous);
     const freshlyBuiltFiles = JSON.stringify(files);
+    // Keep a tracked marker so Vercel's Express builder discovers the static
+    // root before the build command replaces it with compiled assets.
+    const bootstrapOnly = Object.keys(currentWithoutMarker).length === 0 && Object.hasOwn(current, staticRootMarker);
     // Vercel uploads the ignored-by-Git generated client but not local .vercel
     // ownership metadata. Adopt that upload only when every byte exactly matches
     // this fresh build; any extra, missing, or changed asset still fails closed.
-    if (Object.keys(current).length && currentFiles !== ownedFiles && currentFiles !== freshlyBuiltFiles)
+    if (Object.keys(current).length && !bootstrapOnly && currentFiles !== ownedFiles && currentFiles !== freshlyBuiltFiles)
       throw new Error('Existing public files are unmanaged or changed; preserve them before rebuilding.');
     // Both source/destination are fixed children of this project, checked above.
     await rm(destination, { recursive: true });
@@ -61,6 +67,7 @@ export async function publishClientAssets(root = projectRoot) {
     await mkdir(dirname(join(destination, name)), { recursive: true });
     await copyFile(join(source, name), join(destination, name));
   }
+  await writeFile(join(destination, staticRootMarker), 'Vercel static root\n');
   await mkdir(dirname(metadata), { recursive: true });
   await writeFile(metadata, JSON.stringify(files, null, 2) + '\n');
   return files;

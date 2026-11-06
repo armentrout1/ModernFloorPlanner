@@ -15,6 +15,9 @@ test('Vercel rebuilds the generated server and collects the newly built client o
     assert.ok(ignored.has(path), `${path} must be rebuilt remotely instead of uploaded`);
   assert.equal(ignored.has('/public/'), false,
     '/public must remain collectible after the Vercel build creates it');
+  const gitIgnored = await readFile(resolve('.gitignore'), 'utf8');
+  assert.match(gitIgnored, /^!\/public\/\.vercel-static-root$/m,
+    'the static-root marker must be tracked so Vercel discovers public before building');
 });
 
 async function fixture(run) {
@@ -35,7 +38,7 @@ test('CDN packaging copies only the client, preserves standalone/server source, 
   assert.deepEqual(Object.keys(result), ['assets/editor.js', 'index.html']);
   assert.equal(await readFile(join(root, 'dist/index.js'), 'utf8'), 'private server');
   assert.equal(await readFile(join(root, 'owner-draft.json'), 'utf8'), '{"name":"preserve"}');
-  assert.deepEqual((await readdir(join(root, 'public'))).sort(), ['assets', 'index.html']);
+  assert.deepEqual((await readdir(join(root, 'public'))).sort(), ['.vercel-static-root', 'assets', 'index.html']);
   await rm(join(root, 'dist/public/assets/editor.js'));
   await writeFile(join(root, 'dist/public/assets/new.js'), 'new bundle');
   await publishClientAssets(root);
@@ -55,7 +58,14 @@ test('a byte-identical uploaded client can be adopted without local ownership me
   await writeFile(join(root, 'public/assets/editor.js'), 'console.log("synthetic editor")');
   const result = await publishClientAssets(root);
   assert.deepEqual(Object.keys(result), ['assets/editor.js', 'index.html']);
-  assert.deepEqual((await readdir(join(root, 'public'))).sort(), ['assets', 'index.html']);
+  assert.deepEqual((await readdir(join(root, 'public'))).sort(), ['.vercel-static-root', 'assets', 'index.html']);
+}));
+
+test('the tracked Vercel static-root marker can be replaced by compiled client assets', async () => fixture(async root => {
+  await mkdir(join(root, 'public'));
+  await writeFile(join(root, 'public/.vercel-static-root'), 'Vercel static root\n');
+  await publishClientAssets(root);
+  assert.deepEqual((await readdir(join(root, 'public'))).sort(), ['.vercel-static-root', 'assets', 'index.html']);
 }));
 
 test('edits to previous generated assets are preserved instead of silently erased', async () => fixture(async root => {
@@ -74,7 +84,7 @@ test('a private file mixed into build output cannot be published', async () => f
 test('generated handler stays outside CDN assets and refuses to overwrite owner edits', async () => fixture(async root => {
   await publishHostedHandler('import express from "express"; // synthetic server', root);
   await publishClientAssets(root);
-  assert.deepEqual((await readdir(join(root, 'public'))).sort(), ['assets', 'index.html']);
+  assert.deepEqual((await readdir(join(root, 'public'))).sort(), ['.vercel-static-root', 'assets', 'index.html']);
   await publishHostedHandler('import express from "express"; // updated synthetic server', root);
   await writeFile(join(root, 'app.js'), 'owner edit');
   await assert.rejects(publishHostedHandler('replacement', root), /unmanaged or changed/);
@@ -107,7 +117,7 @@ test('actual Vercel artifact retains complete routing and a cold, production-onl
     const staticNames = (await readdir(join(root, 'static'), { recursive: true })).filter(name => !['assets'].includes(name));
     assert.equal(staticNames.filter(name => name.endsWith('.html')).length, 1);
     assert.ok(staticNames.some(name => name.endsWith('.js')));
-    assert.ok(staticNames.every(name => /(?:^index\.html$|^assets[/\\][^/\\]+\.(?:js|css)$)/.test(name)));
+    assert.ok(staticNames.every(name => /(?:^\.vercel-static-root$|^index\.html$|^assets[/\\][^/\\]+\.(?:js|css)$)/.test(name)));
 
     const prior = { ...process.env }, originalListen = Server.prototype.listen;
     let server;
