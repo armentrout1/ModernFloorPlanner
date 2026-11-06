@@ -668,6 +668,21 @@ Acceptance:
 - save state and account controls remain visible and accurate;
 - command placement matches the registry in this document.
 
+Implementation checkpoint — 2026-11-06:
+
+- header row 1 remains the approved identity row: brand, editable plan name and save state, account workspace and avatar were not restructured;
+- header row 2 now exposes **Plan**, **Quick Rooms**, the existing **Undo delete**, **Materials** and **Help** without a horizontally scrolling action strip;
+- the Plan menu owns New plan, Open plan, Save plan and Open a physical copy in the main editor; route-specific Quick Rooms copy/adoption behavior remains unchanged;
+- Save plan and Open a physical copy preserve their existing availability guards, while New/Open retain the existing destructive replacement confirmation and modal behavior;
+- Keyboard shortcuts moved into Help, and Preview remains continuously reachable in the canvas view controls; no false general Redo command was added beyond the product's current deletion-recovery scope;
+- labels collapse to accessible icon controls at compact widths while the Plan menu remains keyboard navigable, returns focus correctly and stays above floating canvas controls;
+- the React quality review kept one extracted Plan menu component, semantic Radix menu roles, shared browser command helpers, existing dependencies and unchanged command callbacks;
+- producer verification passed TypeScript, production build, 723/723 unit and integration tests, 72/72 focused migrated browser tests and 205/205 full browser regressions; after the final visual stacking-only adjustment, the responsive and keyboard acceptance cases passed again;
+- fresh visual review passed for desktop, tablet and phone Plan menus, including no page/action-row horizontal overflow and the existing 200 percent text regression;
+- implementation commit `99d48b5c686027a4029bf2c6b22e0f4a2eb9aa35` is pushed to `main`;
+- production deployment `dpl_3bDWXBhcABUEeER1rUgJsXkFEhCS` is READY at `https://modern-floor-planner.vercel.app` and serves the expected `index-C_QWPB-S.js` plus `index-Bxttijb5.css` assets;
+- isolated live smoke passed the editor header and Plan menu at 390, 820 and 1280 pixels plus Quick Rooms and Physical Draft routes, with zero unexpected browser errors; the bounded production-log scan found no Packet 4 failure and one pre-existing Node negative-timeout warning on a successful 200 `/api/auth/session` request, retained outside this UX packet.
+
 ### Packet 5: scalable tool registry and command discovery
 
 **Goal:** let future tools grow without adding permanent chrome.
