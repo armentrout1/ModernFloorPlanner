@@ -165,7 +165,7 @@ test('logout during an accepted project action cannot repaint private lists or r
     await row(page, saved.planId).getByRole('button', { name: 'Duplicate saved revision', exact: true }).click(); await received.promise;
     await account(page); await panel(page).getByRole('button', { name: 'Sign out', exact: true }).click(); release.resolve(); await finished.promise;
     await expect(projects(page)).toHaveCount(0); await expect(page.getByText('Private lifecycle', { exact: true })).toHaveCount(0);
-    await panel(page).getByRole('button', { name: 'Continue as guest (local only)', exact: true }).click();
+    await panel(page).getByRole('button', { name: 'Continue as guest', exact: true }).click();
     await expect(page.getByTestId('physical-saved-revision')).toHaveCount(0); await expect(savePanel(page)).not.toContainText('independent project');
   } finally { release.resolve(); await page.unroute('**/api/physical-plans/*/duplicate'); }
 });

@@ -132,7 +132,7 @@ test('logout during a held real export response cancels delivery and removes the
     await received.promise; expect(actualStatus).toBe(200);
     await account(page); await panel(page).getByRole('button', { name: 'Sign out', exact: true }).click();
     await expect(frame(page)).toHaveCount(0); release.resolve(); await settled.promise;
-    await panel(page).getByRole('button', { name: 'Continue as guest (local only)', exact: true }).click();
+    await panel(page).getByRole('button', { name: 'Continue as guest', exact: true }).click();
     await expect(page.getByTestId('physical-draft-id')).toHaveCount(0);
     expect(downloads).toEqual([]); expect(await retainedDraft(page, key, original.id)).toEqual(original);
     expect(await counts(saved.planId)).toEqual({ revisions: 1, receipts: 1 });

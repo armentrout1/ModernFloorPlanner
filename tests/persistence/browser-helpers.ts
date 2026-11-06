@@ -1,11 +1,22 @@
 import { test, expect, type Page, type Locator } from '@playwright/test';
 import { parseRegistry, PHYSICAL_DRAFT_STORAGE_KEY } from '../../client/src/features/physical-draft/storage';
-export const panel = (p: Page) => p.getByRole('dialog', { name: 'Account and local work', exact: true });
+export const panel = (p: Page) => p.getByRole('dialog', { name: 'Account', exact: true });
 export const roomFields = (p: Page) => p.getByTestId('physical-room-inspector');
 export const roomField = (p: Page, label: string) => roomFields(p).getByLabel(new RegExp('^' + label + ' \\((ft|m)\\)$'));
 const openingFields = (p: Page) => p.getByTestId('physical-opening-inspector');
 const currentKey = (context: string) => context === 'unassigned' ? PHYSICAL_DRAFT_STORAGE_KEY : `modern-floor-planner:context:v1:${context}:${PHYSICAL_DRAFT_STORAGE_KEY}`;
-export async function account(p: Page) { if (!await panel(p).isVisible()) await p.getByRole('button', { name: 'Account', exact: true }).click(); await expect(panel(p)).toBeVisible(); }
+export async function account(p: Page) {
+  if (!await panel(p).isVisible()) {
+    const accountButton = p.getByRole('button', { name: 'Account', exact: true });
+    if (await accountButton.isVisible()) {
+      await accountButton.click();
+      const signInItem = p.getByRole('menuitem', { name: 'Sign in or create account', exact: true });
+      if (await signInItem.isVisible()) await signInItem.click();
+      else await p.getByRole('menuitem', { name: 'Settings', exact: true }).click();
+    } else await p.getByRole('button', { name: 'Sign in with email', exact: true }).click();
+  }
+  await expect(panel(p)).toBeVisible();
+}
 export async function closeAccount(p: Page) { await panel(p).getByRole('button', { name: 'Close', exact: true }).click(); await expect(panel(p)).toBeHidden(); }
 export async function signIn(p: Page, who: 'A' | 'B' | 'C' = 'A') {
   await account(p);
@@ -40,7 +51,7 @@ export async function selectWorkspace(p: Page, id: string) {
 export async function commit(field: Locator, value: string) { await field.fill(value); await field.press('Enter'); await field.press('Tab'); }
 export async function physical(p: Page, name = 'Local Alpha') {
   if (!p.url().endsWith('/physical-draft')) await p.goto('/physical-draft');
-  if (await p.getByRole('region', { name: 'Choose local working context' }).isVisible()) {
+  if (await p.getByRole('region', { name: 'Welcome to Modern Floor Planner' }).isVisible()) {
     await account(p); await panel(p).getByRole('button', { name: 'Continue planning', exact: true }).click();
   }
   await p.getByRole('button', { name: 'New building draft', exact: true }).click();

@@ -7,12 +7,13 @@ test('account panel exposes normal sign-in, sign-up, password reset, and local g
   });
   await page.goto('/');
   await page.getByRole('button', { name: 'Account', exact: true }).click();
-  const panel = page.getByRole('dialog', { name: 'Account and local work', exact: true });
+  await page.getByRole('menuitem', { name: 'Sign in or create account', exact: true }).click();
+  const panel = page.getByRole('dialog', { name: 'Account', exact: true });
   await expect(panel.getByRole('heading', { name: 'Sign in', exact: true })).toBeVisible();
   await expect(panel.getByLabel('Email address', { exact: true })).toBeVisible();
   await expect(panel.getByLabel('Password', { exact: true })).toBeVisible();
   await expect(panel.getByRole('button', { name: 'Continue with Google', exact: true })).toBeVisible();
-  await expect(panel.getByRole('button', { name: 'Continue as guest (local only)', exact: true })).toBeVisible();
+  await expect(panel.getByRole('button', { name: 'Continue as guest', exact: true })).toBeVisible();
   await panel.getByRole('button', { name: 'Create account', exact: true }).click();
   await expect(panel.getByRole('heading', { name: 'Create an account', exact: true })).toBeVisible();
   await expect(panel.getByLabel('Confirm password', { exact: true })).toBeVisible();

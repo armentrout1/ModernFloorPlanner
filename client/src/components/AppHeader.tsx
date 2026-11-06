@@ -2,6 +2,9 @@ import React from 'react';
 import { Link } from 'wouter';
 import { Button } from '@/components/ui/button';
 import { FileIcon, SaveIcon, FolderOpenIcon, CalculatorIcon, Keyboard } from 'lucide-react';
+import AccountControls from '@/features/account/AccountControls';
+import PlanTitleEditor from '@/components/PlanTitleEditor';
+import type { SavedSketch } from '@/utils/api';
 
 interface AppHeaderProps {
   onOpenPhysicalCopy: () => void;
@@ -14,6 +17,10 @@ interface AppHeaderProps {
   showMaterialPanel: boolean;
   canSave: boolean;
   onShowKeyboardShortcuts: () => void;
+  currentSketchId?: number;
+  currentSketchName: string;
+  onSketchNameChange: (name: string) => void;
+  onSketchNameSaved: (sketch: SavedSketch) => void;
 }
 
 const AppHeader: React.FC<AppHeaderProps> = ({ 
@@ -26,17 +33,27 @@ const AppHeader: React.FC<AppHeaderProps> = ({
   onToggleMaterialPanel,
   showMaterialPanel,
   canSave,
-  onShowKeyboardShortcuts
+  onShowKeyboardShortcuts,
+  currentSketchId,
+  currentSketchName,
+  onSketchNameChange,
+  onSketchNameSaved,
 }) => {
   return (
-    <header className="bg-white shadow-sm border-b border-slate-200 px-4 py-3 flex flex-wrap gap-3 justify-between items-center">
-      <div className="flex flex-wrap items-center gap-4">
-        <h1 className="text-xl font-bold text-primary">Modern Floor Planner</h1>
-        <Button asChild variant="outline"><Link href="/quick-room">Quick Rooms</Link></Button>
-        <Button variant="outline" onClick={onOpenPhysicalCopy} disabled={!canSave}>Open a physical copy</Button>
-      </div>
-      <div className="flex flex-wrap items-center gap-3">
-        <Button onClick={onUndoDelete} disabled={!canUndoDelete} variant="outline" title="Restore the last deletion (Ctrl/Cmd+Z)">Undo delete</Button>
+    <header className="border-b border-slate-200 bg-white px-4 py-2 shadow-sm">
+      <div className="flex min-w-0 flex-wrap items-center gap-2 xl:flex-nowrap">
+        <h1 className="shrink-0 text-xl font-bold text-primary">Modern Floor Planner</h1>
+        <span className="hidden h-7 w-px bg-slate-200 sm:block" aria-hidden="true" />
+        <PlanTitleEditor
+          sketchId={currentSketchId}
+          value={currentSketchName}
+          onChange={onSketchNameChange}
+          onSaved={onSketchNameSaved}
+        />
+        <nav aria-label="Floor plan actions" className="order-3 flex w-full flex-wrap items-center justify-end gap-2 border-t border-slate-100 pt-2 xl:order-none xl:w-auto xl:flex-nowrap xl:border-0 xl:pt-0">
+        <Button asChild variant="outline" size="sm"><Link href="/quick-room">Quick Rooms</Link></Button>
+        <Button variant="outline" size="sm" onClick={onOpenPhysicalCopy} disabled={!canSave}>Open a physical copy</Button>
+        <Button onClick={onUndoDelete} disabled={!canUndoDelete} variant="outline" size="sm" title="Restore the last deletion (Ctrl/Cmd+Z)">Undo delete</Button>
         <Button 
           onClick={onShowKeyboardShortcuts}
           variant="outline"
@@ -50,6 +67,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({
         <Button 
           onClick={onToggleMaterialPanel}
           variant={showMaterialPanel ? "default" : "outline"}
+          size="sm"
           className="flex items-center"
         >
           <CalculatorIcon className="mr-2 h-4 w-4" />
@@ -59,6 +77,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({
         <Button 
           onClick={onLoadSketch}
           variant="outline"
+          size="sm"
           className="flex items-center"
         >
           <FolderOpenIcon className="mr-2 h-4 w-4" />
@@ -68,6 +87,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({
         <Button 
           onClick={onSaveSketch}
           variant="outline"
+          size="sm"
           className="flex items-center"
           disabled={!canSave}
         >
@@ -77,11 +97,14 @@ const AppHeader: React.FC<AppHeaderProps> = ({
         
         <Button 
           onClick={onNewSketch}
+          size="sm"
           className="bg-primary hover:bg-primary/90 text-white flex items-center"
         >
           <FileIcon className="mr-2 h-4 w-4" />
           New Sketch
         </Button>
+        </nav>
+        <AccountControls />
       </div>
     </header>
   );

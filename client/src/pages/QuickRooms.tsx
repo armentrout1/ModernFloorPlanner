@@ -6,6 +6,7 @@ import { Plus, Copy, Trash2, ArrowLeft, Ruler, Layers, Info } from 'lucide-react
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import AccountControls from '@/features/account/AccountControls';
 import { QuantitySummary } from '@/features/quick-room/QuantitySummary';
 import { useQuickRoomDraft } from '@/features/quick-room/useQuickRoomDraft';
 import { addRoom, renameRoom, editField, commitField, switchUnit, duplicateRoom, removeRoom, previewDocument,
@@ -97,10 +98,11 @@ export default function QuickRooms({ active = true }: { active?: boolean }) {
       <header className="border-b border-slate-200 bg-white">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-4 sm:px-6 lg:px-8">
           <span className="font-semibold tracking-tight text-primary">Modern Floor Planner</span>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Button variant="outline" size="sm" disabled={blocked} onClick={() => openQuickPhysicalCopy(draft)}>Open a physical copy</Button>
             <Button variant="outline" size="sm" asChild><Link href="/physical-draft">Physical drafts</Link></Button>
             <Button variant="outline" size="sm" asChild><Link href="/"><ArrowLeft className="mr-2 h-4 w-4" />Sketch editor</Link></Button>
+            <AccountControls />
           </div>
         </div>
       </header>

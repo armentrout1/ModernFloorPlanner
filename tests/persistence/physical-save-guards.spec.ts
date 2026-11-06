@@ -83,7 +83,7 @@ test('late SQL Save response after logout cannot repaint prior private revision 
   await page.route('**/api/physical-plans',async route=>{if(route.request().method()!=='POST')return route.continue();const response=await route.fetch();expect(response.status()).toBe(201);received.resolve();await release.promise;try{await route.fulfill({response});}catch{/* Browser aborts old generation. */}});
   await saveButton(page).click();await received.promise;await account(page);await panel(page).getByRole('button',{name:'Sign out',exact:true}).click();release.resolve();
   await expect(page.getByTestId('physical-saved-revision')).toHaveCount(0);await expect(page.getByText('Private old account',{exact:true})).toHaveCount(0);
-  await panel(page).getByRole('button',{name:'Continue as guest (local only)',exact:true}).click();await expect(page.getByTestId('physical-draft-id')).toHaveCount(0);
+  await panel(page).getByRole('button',{name:'Continue as guest',exact:true}).click();await expect(page.getByTestId('physical-draft-id')).toHaveCount(0);
   await page.getByRole('button',{name:'New physical draft',exact:true}).click();expect((await selectedPhysical(page)).id).not.toBe(old.id);await expect(page.getByTestId('physical-save-status')).toHaveText('Local-only');
 });
 

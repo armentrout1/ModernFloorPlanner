@@ -402,6 +402,10 @@ const FloorPlanner: React.FC<{ active?: boolean }> = ({ active = true }) => {
         showMaterialPanel={showMaterialPanel}
         canSave={rooms.length > 0}
         onShowKeyboardShortcuts={() => setShowKeyboardShortcuts(true)}
+        currentSketchId={currentSketchId}
+        currentSketchName={currentSketchName}
+        onSketchNameChange={setCurrentSketchName}
+        onSketchNameSaved={handleSaveComplete}
       />
       
       {/* Panel controls header */}

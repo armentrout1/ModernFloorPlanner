@@ -1,4 +1,5 @@
 import { AccountSavePanel } from '@/features/physical-draft/AccountSavePanel';
+import AccountControls from '@/features/account/AccountControls';
 import { useTransientLocalState } from '@/features/account/useLocalState';
 import { LayoutControls } from '@/features/physical-draft/LayoutControls';
 import { LayoutInspector } from '@/features/physical-draft/LayoutInspector';
@@ -273,9 +274,10 @@ function DraftWorkspace() {
     <header className="border-b bg-white px-5 py-4">
       <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3">
         <div><p className="font-semibold text-primary">Modern Floor Planner</p><h1 className="mt-1 text-xl font-semibold">Unified physical draft</h1></div>
-        <nav aria-label="Other workflows" className="flex flex-wrap gap-2">
+        <nav aria-label="Other workflows" className="flex flex-wrap items-center gap-2">
           <Button asChild size="sm" variant="outline"><Link href="/">Standalone sketch</Link></Button>
           <Button asChild size="sm" variant="outline"><Link href="/quick-room">Standalone Quick Rooms</Link></Button>
+          <AccountControls />
         </nav>
       </div>
     </header>

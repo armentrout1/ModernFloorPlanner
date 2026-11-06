@@ -1,12 +1,23 @@
 import { test, expect, chromium, type Page, type Locator } from '@playwright/test';
 import { configureSupabase } from './control';
 import { parseRegistry, PHYSICAL_DRAFT_STORAGE_KEY } from '../../client/src/features/physical-draft/storage';
-const panel = (p: Page) => p.getByRole('dialog', { name: 'Account and local work', exact: true });
+const panel = (p: Page) => p.getByRole('dialog', { name: 'Account', exact: true });
 const roomFields = (p: Page) => p.getByTestId('physical-room-inspector');
 const roomField = (p: Page, label: string) => roomFields(p).getByLabel(new RegExp('^' + label + ' \\((ft|m)\\)$'));
 const openingFields = (p: Page) => p.getByTestId('physical-opening-inspector');
 const currentKey = (context: string) => context === 'unassigned' ? PHYSICAL_DRAFT_STORAGE_KEY : `modern-floor-planner:context:v1:${context}:${PHYSICAL_DRAFT_STORAGE_KEY}`;
-async function account(p: Page) { if (!await panel(p).isVisible()) await p.getByRole('button', { name: 'Account', exact: true }).click(); await expect(panel(p)).toBeVisible(); }
+async function account(p: Page) {
+  if (!await panel(p).isVisible()) {
+    const accountButton = p.getByRole('button', { name: 'Account', exact: true });
+    if (await accountButton.isVisible()) {
+      await accountButton.click();
+      const signInItem = p.getByRole('menuitem', { name: 'Sign in or create account', exact: true });
+      if (await signInItem.isVisible()) await signInItem.click();
+      else await p.getByRole('menuitem', { name: 'Settings', exact: true }).click();
+    } else await p.getByRole('button', { name: 'Sign in with email', exact: true }).click();
+  }
+  await expect(panel(p)).toBeVisible();
+}
 async function closeAccount(p: Page) { await panel(p).getByRole('button', { name: 'Close', exact: true }).click(); await expect(panel(p)).toBeHidden(); }
 async function signIn(p: Page, who: 'A' | 'B' | 'C' = 'A') {
   await account(p);
@@ -41,7 +52,7 @@ async function selectWorkspace(p: Page, id: string) {
 async function commit(field: Locator, value: string) { await field.fill(value); await field.press('Enter'); await field.press('Tab'); }
 async function physical(p: Page, name = 'Local Alpha') {
   if (!p.url().endsWith('/physical-draft')) await p.goto('/physical-draft');
-  if (await p.getByRole('region', { name: 'Choose local working context' }).isVisible()) {
+  if (await p.getByRole('region', { name: 'Welcome to Modern Floor Planner' }).isVisible()) {
     await account(p); await panel(p).getByRole('button', { name: 'Continue planning', exact: true }).click();
   }
   await p.getByRole('button', { name: 'New physical draft', exact: true }).click();
@@ -69,7 +80,7 @@ async function pending(p: Page) {
 }
 async function drawLegacy(p: Page, name: string) {
   await p.goto('/');
-  if (await p.getByRole('region', { name: 'Choose local working context' }).isVisible()) {
+  if (await p.getByRole('region', { name: 'Welcome to Modern Floor Planner' }).isVisible()) {
     await account(p); await panel(p).getByRole('button', { name: 'Continue planning', exact: true }).click();
   }
   await p.getByRole('button', { name: 'Draw Room', exact: true }).click();
@@ -113,7 +124,7 @@ test('native Supabase sign-in preserves unapplied local dimensions, opening and 
   await expect(page.getByRole('button',{name:'New physical draft',exact:true})).toBeVisible();
   await expect(page.getByTestId('physical-draft-id')).toHaveCount(0);
   expect((await registry(page,'unassigned')).raw).toBe(before.raw);
-  await account(page); await panel(page).getByRole('button',{name:'Continue as guest (local only)',exact:true}).click();
+  await account(page); await panel(page).getByRole('button',{name:'Continue as guest',exact:true}).click();
   await expect(roomField(page,'Length')).toHaveValue('12 ft -');
   expect((await registry(page,'unassigned')).draft).toEqual(before.draft);
   await page.getByTestId('takeoff-panel').getByLabel('Waste percentage',{exact:true}).focus();
@@ -125,7 +136,7 @@ test('native Supabase sign-in preserves unapplied local dimensions, opening and 
 test('private legacy records cannot enter unassigned recovery or reappear after A signs out and B signs in', async ({ page }) => {
   await page.goto('/'); await signIn(page); await createWorkspace(page,'private-A');
   await drawLegacy(page,'Private room A'); await saveLegacy(page,'Private saved sketch A');
-  await account(page); await panel(page).getByRole('button',{name:'Continue as guest (local only)',exact:true}).click();
+  await account(page); await panel(page).getByRole('button',{name:'Continue as guest',exact:true}).click();
   await page.getByRole('button',{name:'Load Sketch',exact:true}).click();
   await expect(page.getByRole('dialog',{name:'Load Sketch',exact:true}).getByRole('alert')).toContainText('Select and resume');
   await expect(page.getByText('Private saved sketch A',{exact:true})).toHaveCount(0);
@@ -212,7 +223,7 @@ test('phone account controls preserve a valid unapplied field on pointer and key
   await page.goto('/quick-room'); await page.getByRole('button',{name:'Add room',exact:true}).click();
   const quick = page.getByTestId('quick-room-card').first();
   await commit(quick.getByLabel('Length',{exact:true}), '12 ft');
-  await account(page); await panel(page).getByRole('button',{name:'Continue as guest (local only)',exact:true}).click();
+  await account(page); await panel(page).getByRole('button',{name:'Continue as guest',exact:true}).click();
   await expect(panel(page)).toBeHidden();
   await quick.getByLabel('Length',{exact:true}).fill('13 ft -');
   const raw = await page.evaluate(()=>sessionStorage.getItem('modern-floor-planner:quick-rooms:v1'));
