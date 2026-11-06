@@ -73,6 +73,7 @@ const FloorPlanner: React.FC<{ active?: boolean }> = ({ active = true }) => {
   const [rightCollapsed, setRightCollapsed] = useState(() => selectedRoomIds.length === 0 && !selectedObjectId);
   const [rightPinned, setRightPinned] = useState(false);
   const [keepContentsOpen, setKeepContentsOpen] = useState(false);
+  const [focusMode, setFocusMode] = useState(false);
   const { toast } = useToast();
   const editorLayout = useEditorLayout();
 
@@ -100,6 +101,7 @@ const FloorPlanner: React.FC<{ active?: boolean }> = ({ active = true }) => {
       setPlacingObjectType(null);
       setActiveTool(tool);
     }
+    if (editorLayout.isPhone) editorLayout.setLeftMode('hidden');
   };
 
   const handleObjectPlaced = () => {
@@ -276,6 +278,14 @@ const FloorPlanner: React.FC<{ active?: boolean }> = ({ active = true }) => {
       rooms.find(room => room.id === selectedRoomIds[0])?.groupId,
     ),
     showRoomNames,
+    focusMode,
+  };
+
+  const handleToggleFocusMode = () => setFocusMode(current => !current);
+
+  const handleEditFocusSelection = () => {
+    setFocusMode(false);
+    setRightCollapsed(false);
   };
 
   const handleRunEditorCommand = (commandId: EditorCommandId) => {
@@ -291,8 +301,10 @@ const FloorPlanner: React.FC<{ active?: boolean }> = ({ active = true }) => {
       handleApplyAction(command.actionId);
     } else if (command.id === 'select-all') {
       handleSelectAll();
-    } else {
+    } else if (command.id === 'toggle-room-names') {
       setShowRoomNames(value => !value);
+    } else if (command.id === 'focus-mode') {
+      handleToggleFocusMode();
     }
   };
 
@@ -415,7 +427,21 @@ const FloorPlanner: React.FC<{ active?: boolean }> = ({ active = true }) => {
   useEffect(() => {
     if (!active) return;
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (shouldIgnoreEditorShortcut(event) || isSaveModalOpen || isLoadDialogOpen || showKeyboardShortcuts || showCommandSearch) return;
+      if (isSaveModalOpen || isLoadDialogOpen || showKeyboardShortcuts || showCommandSearch) return;
+      const shortcutTarget = event.target instanceof Element ? event.target : null;
+      if (focusMode && event.key === 'Escape' &&
+          !shortcutTarget?.closest('input, textarea, select, [contenteditable]:not([contenteditable="false"]), [role="dialog"], [role="menu"]')) {
+        event.preventDefault();
+        setFocusMode(false);
+        return;
+      }
+      if (!event.ctrlKey && !event.metaKey && !event.altKey && event.shiftKey && event.key.toLowerCase() === 'f' &&
+          !shortcutTarget?.closest('input, textarea, select, [contenteditable]:not([contenteditable="false"]), [role="dialog"], [role="menu"]')) {
+        event.preventDefault();
+        handleToggleFocusMode();
+        return;
+      }
+      if (shouldIgnoreEditorShortcut(event)) return;
       if ((event.ctrlKey || event.metaKey) && !event.altKey && !event.shiftKey && event.key.toLowerCase() === 'k') {
         event.preventDefault();
         commandSearchReturnFocus.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
@@ -423,7 +449,8 @@ const FloorPlanner: React.FC<{ active?: boolean }> = ({ active = true }) => {
       } else if ((event.ctrlKey || event.metaKey) && !event.altKey && !event.shiftKey && event.key.toLowerCase() === 'a') {
         event.preventDefault(); handleSelectAll();
       } else if (event.key === 'Escape') {
-        handleMultiSelectRooms([]);
+        if (focusMode) setFocusMode(false);
+        else handleMultiSelectRooms([]);
       } else if ((event.ctrlKey || event.metaKey) && !event.altKey && !event.shiftKey && event.key.toLowerCase() === 'z') {
         if (deletions.length) { event.preventDefault(); handleUndoDelete(); }
       } else if (!event.ctrlKey && !event.metaKey && !event.altKey) {
@@ -441,7 +468,7 @@ const FloorPlanner: React.FC<{ active?: boolean }> = ({ active = true }) => {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [active, rooms, deletions, selectedRoomIds, selectedRoomId, selectedObjectId, isSaveModalOpen, isLoadDialogOpen, showKeyboardShortcuts, showCommandSearch]);
+  }, [active, rooms, deletions, selectedRoomIds, selectedRoomId, selectedObjectId, isSaveModalOpen, isLoadDialogOpen, showKeyboardShortcuts, showCommandSearch, focusMode]);
 
   const selectedRoom = (selectedObjectId
     ? rooms.find(room => room.objects?.some(object => object.id === selectedObjectId))
@@ -462,6 +489,10 @@ const FloorPlanner: React.FC<{ active?: boolean }> = ({ active = true }) => {
   const previousInspectorContext = useRef(inspectorContextKey);
 
   useEffect(() => {
+    if (focusMode) {
+      previousInspectorContext.current = inspectorContextKey;
+      return;
+    }
     const previous = previousInspectorContext.current;
     if (inspectorContextKey !== previous) {
       if (inspectorContextKey === 'contents') {
@@ -497,13 +528,13 @@ const FloorPlanner: React.FC<{ active?: boolean }> = ({ active = true }) => {
       }
       previousInspectorContext.current = inspectorContextKey;
     }
-  }, [editorLayout.inspectorPresentation, inspectorContextKey, keepContentsOpen, rightPinned]);
+  }, [editorLayout.inspectorPresentation, focusMode, inspectorContextKey, keepContentsOpen, rightPinned]);
 
   useEffect(() => {
-    if (editorLayout.inspectorPresentation !== 'desktop' && inspectorContextKey === 'contents' && !keepContentsOpen) {
+    if (!focusMode && editorLayout.inspectorPresentation !== 'desktop' && inspectorContextKey === 'contents' && !keepContentsOpen) {
       setRightCollapsed(true);
     }
-  }, [editorLayout.inspectorPresentation, inspectorContextKey, keepContentsOpen]);
+  }, [editorLayout.inspectorPresentation, focusMode, inspectorContextKey, keepContentsOpen]);
 
   const handleToggleRightPanel = (collapsed: boolean) => setRightCollapsed(collapsed);
   const handlePinRightPanel = (pinned: boolean) => {
@@ -537,17 +568,20 @@ const FloorPlanner: React.FC<{ active?: boolean }> = ({ active = true }) => {
       
       <div className="min-h-0 flex-grow overflow-hidden">
         <ResizablePanels
-          leftMode={editorLayout.leftMode}
+          leftMode={focusMode ? 'hidden' : editorLayout.leftMode}
           leftExpandedWidth={editorLayout.leftExpandedWidth}
           isPhone={editorLayout.isPhone}
-          layoutAnnouncement={editorLayout.announcement}
+          layoutAnnouncement={`${editorLayout.announcement}${focusMode ? ' Focus mode is on.' : ''}`}
           rightPanelWidth={30}
           leftPanelTitle="Tools & Actions"
           rightPanelTitle={inspectorTitle}
           rightPanelMinSize={15}
           rightPresentation={editorLayout.inspectorPresentation}
-          rightCollapsed={rightCollapsed}
+          rightCollapsed={focusMode || rightCollapsed}
           rightPinned={rightPinned}
+          focusMode={focusMode}
+          focusModeHasSelection={selectedRoomIds.length > 0 || Boolean(selectedObjectId)}
+          onEditFocusSelection={handleEditFocusSelection}
           onCycleLeftMode={editorLayout.cycleTools}
           onLeftModeChange={editorLayout.setLeftMode}
           onLeftExpandedWidthChange={editorLayout.setLeftExpandedWidth}
@@ -585,6 +619,8 @@ const FloorPlanner: React.FC<{ active?: boolean }> = ({ active = true }) => {
               onSelectObject={handleSelectObject}
               onUpdateRoom={handleUpdateRoom}
               onObjectPlaced={handleObjectPlaced}
+              focusMode={focusMode}
+              onToggleFocusMode={handleToggleFocusMode}
             />
           }
           rightPanel={active ? (

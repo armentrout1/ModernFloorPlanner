@@ -15,10 +15,11 @@ const emptyContext: EditorCommandContext = {
   hasGroupedRooms: false,
   selectedRoomIsGrouped: false,
   showRoomNames: true,
+  focusMode: false,
 };
 
 test('editor registry owns unique command metadata and only exposes guarded safe commands', () => {
-  assert.equal(EDITOR_COMMANDS.length, 12);
+  assert.equal(EDITOR_COMMANDS.length, 13);
   assert.equal(new Set(EDITOR_COMMANDS.map(command => command.id)).size, EDITOR_COMMANDS.length);
   assert.deepEqual(PRIMARY_EDITOR_TOOLS.map(command => command.id), ['move', 'room', 'door', 'window']);
   for (const command of EDITOR_COMMANDS) {
@@ -26,6 +27,7 @@ test('editor registry owns unique command metadata and only exposes guarded safe
     assert.ok(command.help);
     assert.ok(command.aliases.length > 0);
     assert.equal(command.risk, 'safe');
+    assert.ok(['tool-rail', 'tool-panel', 'canvas-navigation'].includes(command.primaryHome));
   }
   assert.equal(EDITOR_COMMANDS.some(command => command.id.includes('delete')), false);
 });
@@ -48,7 +50,7 @@ test('registry availability explains prerequisites instead of hiding commands', 
   }), { available: false, reason: 'Ungroup the room before transforming it.' });
 });
 
-test('registry provides tested beginner aliases and dynamic visibility labels', () => {
+test('registry provides tested beginner aliases and dynamic view labels', () => {
   assert.ok(getEditorCommand('move').aliases.includes('pointer'));
   assert.ok(getEditorCommand('door').aliases.includes('opening'));
   assert.ok(getEditorCommand('mirror-horizontal').aliases.includes('flip'));
@@ -56,4 +58,9 @@ test('registry provides tested beginner aliases and dynamic visibility labels', 
   const visibility = getEditorCommand('toggle-room-names');
   assert.equal(getEditorCommandLabel(visibility, emptyContext), 'Hide room names');
   assert.equal(getEditorCommandLabel(visibility, { ...emptyContext, showRoomNames: false }), 'Show room names');
+  const focus = getEditorCommand('focus-mode');
+  assert.equal(focus.primaryHome, 'canvas-navigation');
+  assert.ok(focus.aliases.includes('canvas only'));
+  assert.equal(getEditorCommandLabel(focus, emptyContext), 'Enter focus mode');
+  assert.equal(getEditorCommandLabel(focus, { ...emptyContext, focusMode: true }), 'Exit focus mode');
 });

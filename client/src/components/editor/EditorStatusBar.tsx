@@ -6,9 +6,10 @@ interface EditorStatusBarProps {
   rooms: Room[];
   activeTool: string;
   selectionCount: number;
+  focusMode?: boolean;
 }
 
-export const EditorStatusBar = ({ rooms, activeTool, selectionCount }: EditorStatusBarProps) => {
+export const EditorStatusBar = ({ rooms, activeTool, selectionCount, focusMode = false }: EditorStatusBarProps) => {
   const totalArea = calculateTotalArea(rooms);
   const tool = PRIMARY_EDITOR_TOOLS.find(candidate => candidate.id === activeTool);
   const toolLabel = tool?.label ?? 'Canvas';
@@ -25,6 +26,11 @@ export const EditorStatusBar = ({ rooms, activeTool, selectionCount }: EditorSta
       <span aria-hidden="true" className="hidden text-slate-300 sm:inline">|</span>
       <span className="min-w-0 truncate font-medium text-slate-800">{toolLabel}</span>
       <span className="hidden min-w-0 truncate lg:inline">{toolHint}</span>
+      {focusMode && (
+        <span className="shrink-0 rounded bg-blue-50 px-2 py-0.5 font-medium text-blue-700">
+          Focus mode
+        </span>
+      )}
       {selectionCount > 0 && (
         <span className="ml-auto shrink-0 rounded bg-slate-100 px-2 py-0.5 text-slate-700">
           {selectionCount} selected

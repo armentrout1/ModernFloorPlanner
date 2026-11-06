@@ -1,5 +1,5 @@
 import React from 'react';
-import { Crosshair, Eye, Hand, Home, Maximize2, ZoomIn, ZoomOut } from 'lucide-react';
+import { Crosshair, Eye, Focus, Hand, Home, Maximize2, ZoomIn, ZoomOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 interface CanvasControlsProps {
@@ -14,6 +14,8 @@ interface CanvasControlsProps {
   previewButtonRef?: React.Ref<HTMLButtonElement>;
   isPreviewMode: boolean;
   isPanMode: boolean;
+  isFocusMode: boolean;
+  onToggleFocusMode: () => void;
 }
 
 const CanvasControls: React.FC<CanvasControlsProps> = ({
@@ -28,6 +30,8 @@ const CanvasControls: React.FC<CanvasControlsProps> = ({
   previewButtonRef,
   isPreviewMode,
   isPanMode,
+  isFocusMode,
+  onToggleFocusMode,
 }) => {
   return (
     <div className="absolute top-3 z-50 flex flex-col items-end gap-2 transition-[right] duration-150 motion-reduce:transition-none"
@@ -71,20 +75,33 @@ const CanvasControls: React.FC<CanvasControlsProps> = ({
         )}
       </div>
     </div>
-    <Button ref={previewButtonRef} type="button" variant={isPreviewMode ? 'default' : 'outline'} size="sm"
-      className="gap-1.5 bg-white/95 shadow-sm backdrop-blur-sm"
-      onClick={onPreview}
-      onKeyDown={event => {
-        if ((event.key === 'p' || event.key === 'P') && !event.ctrlKey && !event.metaKey && !event.altKey
-            && !event.repeat && !event.nativeEvent.isComposing) {
-          event.preventDefault();
-          onPreview();
-        }
-      }}
-      title="Toggle Preview Mode" aria-label="Floor Plan Preview">
-      <Eye className="h-4 w-4" />
-      <span className="hidden sm:inline">Preview</span>
-    </Button>
+    <div className="flex items-center gap-2">
+      <Button type="button" variant={isFocusMode ? 'default' : 'outline'} size="sm"
+        data-testid="toggle-focus-mode" aria-pressed={isFocusMode}
+        className={`gap-1.5 shadow-sm ${isFocusMode
+          ? 'bg-blue-600 text-white hover:bg-blue-700'
+          : 'bg-white/95 backdrop-blur-sm'}`}
+        onClick={onToggleFocusMode}
+        title={isFocusMode ? 'Exit focus mode (Shift+F)' : 'Focus mode (Shift+F)'}
+        aria-label={isFocusMode ? 'Exit focus mode' : 'Enter focus mode'}>
+        <Focus className="h-4 w-4" />
+        <span className="hidden sm:inline">{isFocusMode ? 'Exit focus' : 'Focus'}</span>
+      </Button>
+      <Button ref={previewButtonRef} type="button" variant={isPreviewMode ? 'default' : 'outline'} size="sm"
+        className="gap-1.5 bg-white/95 shadow-sm backdrop-blur-sm"
+        onClick={onPreview}
+        onKeyDown={event => {
+          if ((event.key === 'p' || event.key === 'P') && !event.ctrlKey && !event.metaKey && !event.altKey
+              && !event.repeat && !event.nativeEvent.isComposing) {
+            event.preventDefault();
+            onPreview();
+          }
+        }}
+        title="Toggle Preview Mode" aria-label="Floor Plan Preview">
+        <Eye className="h-4 w-4" />
+        <span className="hidden sm:inline">Preview</span>
+      </Button>
+    </div>
     </div>
   );
 };

@@ -42,6 +42,7 @@ const shortcuts: KeyboardShortcut[] = [
   { keys: ['-'], description: 'Zoom out', category: 'Navigation' },
   { keys: ['Home'], description: 'Reset canvas zoom to 100%', category: 'Navigation' },
   { keys: ['P'], description: 'Toggle preview mode', category: 'Navigation' },
+  { keys: ['Shift', 'F'], description: 'Enter or exit focus mode', category: 'Navigation' },
   
   // Text Editing
   { keys: ['Enter'], description: 'Save room name', category: 'Text' },

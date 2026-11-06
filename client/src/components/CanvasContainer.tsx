@@ -51,6 +51,8 @@ interface CanvasContainerProps {
   onMultiSelectRooms: (roomIds: string[]) => void;
   showRoomNames?: boolean;
   onObjectPlaced?: () => void; // Callback when an object is placed
+  focusMode?: boolean;
+  onToggleFocusMode?: () => void;
 }
 
 const CanvasContainer: React.FC<CanvasContainerProps> = ({
@@ -65,6 +67,7 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
   onSelectObject,
   onUpdateRoom,
   onObjectPlaced, selectedRoomIds, onMultiSelectRooms, showRoomNames = true,
+  focusMode = false, onToggleFocusMode = () => undefined,
 }) => {
   const canvasRef = useRef<HTMLDivElement>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
@@ -1233,6 +1236,8 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
         previewButtonRef={previewButtonRef}
         isPreviewMode={state.isPreviewMode}
         isPanMode={pan.ready || pan.dragging}
+        isFocusMode={focusMode}
+        onToggleFocusMode={onToggleFocusMode}
       />
       
       <div 
@@ -1412,7 +1417,7 @@ const CanvasContainer: React.FC<CanvasContainerProps> = ({
         </div>
       </div>
       <footer data-testid="editor-footer" className="flex h-9 shrink-0 min-w-0 items-center border-t border-slate-200 bg-white">
-        <EditorStatusBar rooms={rooms} activeTool={activeTool}
+        <EditorStatusBar rooms={rooms} activeTool={activeTool} focusMode={focusMode}
           selectionCount={selectedObjectId ? 1 : selectedRoomIds.length} />
       </footer>
     </main>

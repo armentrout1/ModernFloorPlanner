@@ -1,5 +1,5 @@
 import React, { type ReactNode } from 'react';
-import { ChevronLeft, ChevronRight, Pin, PinOff, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Pencil, Pin, PinOff, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import {
@@ -29,6 +29,9 @@ interface ResizablePanelsProps {
   onLeftModeChange: (mode: EditorLeftMode) => void;
   onRightCollapsedChange?: (collapsed: boolean) => void;
   onRightPinnedChange?: (pinned: boolean) => void;
+  focusMode?: boolean;
+  focusModeHasSelection?: boolean;
+  onEditFocusSelection?: () => void;
 }
 
 const RAIL_WIDTH = 56;
@@ -62,6 +65,9 @@ export function ResizablePanels({
   onLeftModeChange,
   onRightCollapsedChange,
   onRightPinnedChange,
+  focusMode = false,
+  focusModeHasSelection = false,
+  onEditFocusSelection,
 }: ResizablePanelsProps) {
   const rightPanelRef = React.useRef<HTMLElement>(null);
   const rightCloseRef = React.useRef<HTMLButtonElement>(null);
@@ -78,6 +84,13 @@ export function ResizablePanels({
     const viewport = typeof window === 'undefined' ? 1280 : window.innerWidth;
     return Math.max(280, Math.min(560, viewport * rightPanelWidth / 100));
   });
+
+  React.useEffect(() => {
+    const panel = rightPanelRef.current;
+    if (!panel) return;
+    if (rightCollapsed) panel.setAttribute('inert', '');
+    else panel.removeAttribute('inert');
+  }, [rightCollapsed]);
 
   React.useEffect(() => {
     if (!isResizingLeft) return;
@@ -248,7 +261,8 @@ export function ResizablePanels({
     setIsResizingRight(true);
   };
 
-  return <div className={cn('relative flex h-full min-h-0 min-w-0 overflow-hidden', className)} data-testid="editor-shell">
+  return <div className={cn('relative flex h-full min-h-0 min-w-0 overflow-hidden', className)} data-testid="editor-shell"
+    data-focus-mode={focusMode ? 'true' : 'false'}>
     <p className="sr-only" role="status" aria-live="polite" aria-atomic="true">{layoutAnnouncement}</p>
 
     {phoneOverlayOpen && <button type="button" aria-label="Close tools overlay"
@@ -300,7 +314,7 @@ export function ResizablePanels({
         onLeftExpandedWidthChange(displayLeftWidth + (event.key === 'ArrowRight' ? 16 : -16));
       }} />}
 
-    {leftMode === 'hidden' && <Button type="button" variant="outline" size="icon"
+    {leftMode === 'hidden' && !focusMode && <Button type="button" variant="outline" size="icon"
       className="absolute left-1 top-1 z-20 h-8 w-8 bg-white shadow-sm"
       data-testid="toggle-left-panel" data-left-mode={leftMode} aria-label={toggleLabel}
       aria-expanded="false" aria-controls="left-editor-panel-content" title={toggleLabel}
@@ -337,16 +351,17 @@ export function ResizablePanels({
         aria-label={rightPanelTitle}
         aria-hidden={rightCollapsed}
         className={cn('overflow-hidden bg-white motion-reduce:transition-none',
-          rightCollapsed && 'invisible pointer-events-none',
+          rightCollapsed && 'invisible opacity-0 pointer-events-none',
           rightDocked && 'relative z-10 h-full shrink-0 transition-[width] duration-150',
           rightPresentation === 'desktop' && !rightDocked && 'absolute inset-y-0 right-0 z-40 h-full shadow-xl transition-[width] duration-150',
           rightPresentation === 'tablet' && 'absolute bottom-14 right-0 top-28 z-40 rounded-l-lg shadow-xl transition-[width] duration-150',
           rightPresentation === 'phone' && 'absolute inset-x-0 bottom-0 z-40 max-h-full rounded-t-xl shadow-2xl transition-[width,height] duration-150')}
         style={rightPresentation === 'desktop'
-          ? { width: rightCollapsed ? 0 : rightWidth }
+          ? { width: rightCollapsed ? 0 : rightWidth, visibility: rightCollapsed ? 'hidden' : undefined }
           : rightPresentation === 'tablet'
-            ? { width: rightCollapsed ? 0 : 'min(420px, calc(100% - 48px))' }
-            : { width: rightCollapsed ? 0 : '100%', height: rightCollapsed ? 0 : 'min(78%, 680px)' }}>
+            ? { width: rightCollapsed ? 0 : 'min(420px, calc(100% - 48px))', visibility: rightCollapsed ? 'hidden' : undefined }
+            : { width: rightCollapsed ? 0 : '100%', height: rightCollapsed ? 0 : 'min(78%, 680px)',
+              visibility: rightCollapsed ? 'hidden' : undefined }}>
         <div id="right-editor-panel-content" className={cn('flex min-h-0 h-full flex-col border-l border-gray-200',
           rightCollapsed && 'invisible pointer-events-none')}>
           <div className="flex h-10 shrink-0 items-center justify-between gap-2 border-b border-gray-200 bg-gray-50 px-3">
@@ -371,13 +386,20 @@ export function ResizablePanels({
       </aside>
     </div>
 
-    {rightCollapsed && <Button type="button" variant="outline" size="icon"
+    {rightCollapsed && !focusMode && <Button type="button" variant="outline" size="icon"
       className="absolute right-1 top-1 z-20 h-8 w-8 bg-white shadow-sm"
       autoFocus={rightPresentation !== 'desktop' && overlayWasOpen.current}
       data-testid="toggle-right-panel" aria-label="Open right panel" aria-expanded="false"
       aria-controls="right-editor-panel-content" title={`Open ${rightPanelTitle}`}
       onClick={() => onRightCollapsedChange?.(false)}>
       <ChevronLeft className="h-4 w-4" aria-hidden="true" />
+    </Button>}
+    {rightCollapsed && focusMode && focusModeHasSelection && <Button type="button" variant="outline" size="sm"
+      className="absolute right-1 top-1 z-20 h-8 gap-1.5 bg-white shadow-sm"
+      data-testid="edit-focus-selection" aria-label="Edit selected item" title="Edit selected item"
+      onClick={onEditFocusSelection}>
+      <Pencil className="h-4 w-4" aria-hidden="true" />
+      <span className="hidden sm:inline">Edit</span>
     </Button>}
   </div>;
 }

@@ -3,6 +3,7 @@ import {
   ChevronsUpDown,
   DoorOpenIcon,
   Eye,
+  Focus,
   FlipHorizontal,
   FlipVertical,
   LayoutGrid,
@@ -21,8 +22,9 @@ export type EditorActionId =
   | 'mirror-horizontal'
   | 'mirror-vertical'
   | 'center-room';
-export type EditorCommandId = EditorToolId | EditorActionId | 'select-all' | 'toggle-room-names';
-export type EditorCommandGroup = 'drawing' | 'objects' | 'selection' | 'alignment' | 'transform';
+export type EditorCommandId = EditorToolId | EditorActionId | 'select-all' | 'toggle-room-names' | 'focus-mode';
+export type EditorCommandGroup = 'drawing' | 'objects' | 'selection' | 'alignment' | 'transform' | 'view';
+export type EditorCommandPrimaryHome = 'tool-rail' | 'tool-panel' | 'canvas-navigation';
 export type EditorCommandAvailability =
   | 'always'
   | 'has-rooms'
@@ -40,6 +42,7 @@ interface EditorCommandBase {
   aliases: readonly string[];
   availability: EditorCommandAvailability;
   risk: 'safe';
+  primaryHome: EditorCommandPrimaryHome;
 }
 
 export interface EditorToolCommand extends EditorCommandBase {
@@ -58,7 +61,7 @@ export interface EditorActionCommand extends EditorCommandBase {
 }
 
 export interface EditorUtilityCommand extends EditorCommandBase {
-  id: 'select-all' | 'toggle-room-names';
+  id: 'select-all' | 'toggle-room-names' | 'focus-mode';
   kind: 'utility';
 }
 
@@ -70,6 +73,7 @@ export interface EditorCommandContext {
   hasGroupedRooms: boolean;
   selectedRoomIsGrouped: boolean;
   showRoomNames: boolean;
+  focusMode: boolean;
 }
 
 export interface CommandAvailabilityResult {
@@ -83,6 +87,7 @@ export const EDITOR_COMMAND_GROUPS: readonly { id: EditorCommandGroup; label: st
   { id: 'selection', label: 'Selection and view' },
   { id: 'alignment', label: 'Room alignment' },
   { id: 'transform', label: 'Room transform' },
+  { id: 'view', label: 'View' },
 ] as const;
 
 export const EDITOR_COMMANDS: readonly EditorCommand[] = [
@@ -91,65 +96,71 @@ export const EDITOR_COMMANDS: readonly EditorCommand[] = [
     description: 'Select and move rooms or objects (M)',
     help: 'Select, move or multi-select rooms and openings.',
     statusHint: 'Drag on the grid to select; Shift-click adds or removes rooms.',
-    aliases: ['pointer', 'cursor', 'choose', 'drag'], availability: 'always', risk: 'safe',
+    aliases: ['pointer', 'cursor', 'choose', 'drag'], availability: 'always', risk: 'safe', primaryHome: 'tool-rail',
   },
   {
     id: 'room', kind: 'tool', primary: true, label: 'Draw Room', icon: Square, group: 'drawing', shortcut: 'R',
     description: 'Click and drag to draw a room (R)', help: 'Draw a new room on the canvas.',
     statusHint: 'Click and drag on the grid to draw a room.',
-    aliases: ['space', 'area', 'wall', 'rectangle'], availability: 'always', risk: 'safe',
+    aliases: ['space', 'area', 'wall', 'rectangle'], availability: 'always', risk: 'safe', primaryHome: 'tool-rail',
   },
   {
     id: 'door', kind: 'tool', primary: true, label: 'Add Door', icon: DoorOpenIcon, group: 'objects', shortcut: 'D',
     description: 'Select a wall to place a door (D)', help: 'Place a door opening on a room wall.',
     statusHint: 'Click a room wall to place a door.',
-    aliases: ['opening', 'entry', 'entrance'], availability: 'always', risk: 'safe',
+    aliases: ['opening', 'entry', 'entrance'], availability: 'always', risk: 'safe', primaryHome: 'tool-rail',
   },
   {
     id: 'window', kind: 'tool', primary: true, label: 'Add Window', icon: Square, group: 'objects', shortcut: 'W',
     description: 'Select a wall to place a window (W)', help: 'Place a window opening on a room wall.',
     statusHint: 'Click a room wall to place a window.',
-    aliases: ['opening', 'glass'], availability: 'always', risk: 'safe',
+    aliases: ['opening', 'glass'], availability: 'always', risk: 'safe', primaryHome: 'tool-rail',
   },
   {
     id: 'select-all', kind: 'utility', label: 'Select all rooms', icon: ListChecks, group: 'selection', shortcut: 'Ctrl/Cmd+A',
     help: 'Select every room in the current plan.', aliases: ['everything', 'all spaces'],
-    availability: 'has-rooms', risk: 'safe',
+    availability: 'has-rooms', risk: 'safe', primaryHome: 'tool-panel',
   },
   {
     id: 'toggle-room-names', kind: 'utility', label: 'Show or hide room names', icon: Eye, group: 'selection',
     help: 'Change whether room names are visible on the canvas.', aliases: ['labels', 'titles', 'room text'],
-    availability: 'always', risk: 'safe',
+    availability: 'always', risk: 'safe', primaryHome: 'tool-panel',
+  },
+  {
+    id: 'focus-mode', kind: 'utility', label: 'Enter focus mode', icon: Focus, group: 'view', shortcut: 'Shift+F',
+    help: 'Temporarily hide side panels and give the canvas more room without changing your saved layout.',
+    aliases: ['distraction free', 'hide panels', 'canvas only', 'full canvas'],
+    availability: 'always', risk: 'safe', primaryHome: 'canvas-navigation',
   },
   {
     id: 'auto-align', kind: 'action', actionId: 'auto-align', label: 'Auto-Align Rooms', icon: LayoutTemplate, group: 'alignment',
     help: 'Automatically align room edges.', aliases: ['straighten', 'line up', 'snap rooms'],
-    availability: 'two-ungrouped-rooms', risk: 'safe',
+    availability: 'two-ungrouped-rooms', risk: 'safe', primaryHome: 'tool-panel',
   },
   {
     id: 'distribute-horizontal', kind: 'action', actionId: 'distribute-horizontal', label: 'Distribute Horizontally',
     icon: ChevronsLeftRight, group: 'alignment', help: 'Space rooms evenly from left to right.',
-    aliases: ['space evenly', 'horizontal spacing', 'spread across'], availability: 'three-ungrouped-rooms', risk: 'safe',
+    aliases: ['space evenly', 'horizontal spacing', 'spread across'], availability: 'three-ungrouped-rooms', risk: 'safe', primaryHome: 'tool-panel',
   },
   {
     id: 'distribute-vertical', kind: 'action', actionId: 'distribute-vertical', label: 'Distribute Vertically',
     icon: ChevronsUpDown, group: 'alignment', help: 'Space rooms evenly from top to bottom.',
-    aliases: ['space evenly', 'vertical spacing', 'spread down'], availability: 'three-ungrouped-rooms', risk: 'safe',
+    aliases: ['space evenly', 'vertical spacing', 'spread down'], availability: 'three-ungrouped-rooms', risk: 'safe', primaryHome: 'tool-panel',
   },
   {
     id: 'mirror-horizontal', kind: 'action', actionId: 'mirror-horizontal', label: 'Mirror Horizontally',
     icon: FlipHorizontal, group: 'transform', help: 'Flip one selected room from left to right.',
-    aliases: ['flip', 'reverse', 'left right'], availability: 'one-ungrouped-room', risk: 'safe',
+    aliases: ['flip', 'reverse', 'left right'], availability: 'one-ungrouped-room', risk: 'safe', primaryHome: 'tool-panel',
   },
   {
     id: 'mirror-vertical', kind: 'action', actionId: 'mirror-vertical', label: 'Mirror Vertically',
     icon: FlipVertical, group: 'transform', help: 'Flip one selected room from top to bottom.',
-    aliases: ['flip', 'reverse', 'top bottom'], availability: 'one-ungrouped-room', risk: 'safe',
+    aliases: ['flip', 'reverse', 'top bottom'], availability: 'one-ungrouped-room', risk: 'safe', primaryHome: 'tool-panel',
   },
   {
     id: 'center-room', kind: 'action', actionId: 'center-room', label: 'Reposition Room', icon: LayoutGrid, group: 'transform',
     help: 'Move one selected room toward the center of the canvas.', aliases: ['center room', 'move to center', 'reposition'],
-    availability: 'one-ungrouped-room', risk: 'safe',
+    availability: 'one-ungrouped-room', risk: 'safe', primaryHome: 'tool-panel',
   },
 ] as const;
 
@@ -165,6 +176,7 @@ export function getEditorCommand(id: EditorCommandId): EditorCommand {
 
 export function getEditorCommandLabel(command: EditorCommand, context: EditorCommandContext): string {
   if (command.id === 'toggle-room-names') return context.showRoomNames ? 'Hide room names' : 'Show room names';
+  if (command.id === 'focus-mode') return context.focusMode ? 'Exit focus mode' : 'Enter focus mode';
   return command.label;
 }
 
