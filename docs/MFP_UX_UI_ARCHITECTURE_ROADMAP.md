@@ -1,9 +1,10 @@
 # Modern Floor Planner UX/UI architecture and build roadmap
 
-- Date: 2026-11-05
-- Version: 1.2
-- Status: PACKET 1 DEPLOYED AND LIVE-VERIFIED
+- Date: 2026-11-06
+- Version: 1.3
+- Status: PACKETS 1–2 DEPLOYED AND LIVE-VERIFIED
 - Baseline reviewed: `a80ccbd1c72e9825f72c1694d6e2e66b43f2c0e3` on `main`
+- Packet 2 implementation: `933a7ba0329bda2236a15fd8a6e6e3bdbed03aef` on `main`
 - Owning requirement: [issue #29](https://github.com/armentrout1/ModernFloorPlanner/issues/29), `MFP-UX-CANVAS-SHELL`
 - Primary workflow: the main sketch editor at `/`
 - Related architecture: [area calculator blueprint](MFP_AREA_CALCULATOR_BLUEPRINT.md) and [canonical build roadmap](BUILD_ROADMAP.md)
@@ -591,6 +592,21 @@ Acceptance:
 - keyboard shortcuts and accessible names remain intact;
 - fit/reset results are unchanged for empty, one-room and multi-room drawings;
 - canvas and status remain usable at phone, tablet, desktop and 200 percent text.
+
+Implementation checkpoint — 2026-11-06:
+
+- one compact floating navigation toolbar now owns Zoom Out, the current zoom value, Zoom In, Reset to 100 percent, the single Fit command, Pan and contextual Center Selected;
+- Reset and Fit have distinct behavior and accessible names; `Home` resets zoom to 100 percent while Fit continues to center the real drawing bounds without changing coordinates;
+- the duplicate footer Fit control and the obsolete `TotalAreaDisplay` component are retired;
+- a 36-pixel informational status bar now owns total area, room count, active tool, a responsive tool hint and selection count without adding another command surface;
+- Preview remains an adjacent whole-editor view action; pointer activation, `P`, Escape, explicit close and focus return are preserved;
+- room coordinates, drawing/opening placement, pan, zoom, selection, grouping, save/recovery and material calculations are unchanged;
+- Quick Rooms and Physical Draft use reliable direct route imports after production-bundle verification found their former lazy promises could leave a successful chunk request on the loading fallback; no route data contract changed;
+- producer verification passed: 723/723 unit tests, TypeScript check, production build, 201/201 full browser regressions and a final focused Preview regression;
+- responsive and enlarged-text checks passed at 390, 820 and 1280 pixels plus 200 percent text; visual review confirms the narrow desktop inspector is the intentional Packet 3 target;
+- implementation commit `933a7ba0329bda2236a15fd8a6e6e3bdbed03aef` is pushed to `main`;
+- production deployment `dpl_67jtF42dEn4GPQ3tnVCqKssA1xEm` is READY at `https://modern-floor-planner.vercel.app`;
+- isolated live desktop/phone and route smoke passed the canonical URL with zero console or page errors, and the first-hour Vercel error scan returned no errors.
 
 ### Packet 3: contextual inspector and responsive properties
 
