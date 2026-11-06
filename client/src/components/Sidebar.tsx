@@ -10,14 +10,8 @@
  * Last verified: June 1, 2025
  */
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { 
-  Square,
-  Move,
-  DoorOpenIcon,
-  Square as WindowIcon,
-  AlignHorizontalJustifyCenter,
-  AlignVerticalJustifyCenter,
   FlipHorizontal,
   FlipVertical,
   LayoutGrid,
@@ -39,6 +33,7 @@ import {
   TooltipProvider,
   CenteredTooltipContent,
 } from '@/components/ui/tooltip';
+import { PRIMARY_EDITOR_TOOLS, type PrimaryEditorTool } from '@/components/editor/editorToolDefinitions';
 
 interface SidebarProps {
   activeTool: string;
@@ -48,59 +43,47 @@ interface SidebarProps {
   roomCount: number;
   showRoomNames: boolean;
   onToggleRoomNames: () => void;
+  requestedSection?: 'align' | 'transform' | null;
 }
 
 const Sidebar: React.FC<SidebarProps> = ({
   activeTool,
   onSelectTool,
   onApplyAction, onSelectAll, roomCount, showRoomNames, onToggleRoomNames,
+  requestedSection,
 }) => {
+  const [openSections, setOpenSections] = useState<string[]>(['drawing', 'objects']);
+
+  useEffect(() => {
+    if (!requestedSection) return;
+    setOpenSections(previous => previous.includes(requestedSection) ? previous : [...previous, requestedSection]);
+  }, [requestedSection]);
+
+  const renderPrimaryTool = (tool: PrimaryEditorTool) => {
+    const Icon = tool.icon;
+    const active = activeTool === tool.id;
+    return <Tooltip key={tool.id}>
+      <TooltipTrigger asChild>
+        <Button type="button" variant={active ? 'default' : 'outline'} size="sm"
+          className="w-full justify-start" aria-pressed={active} onClick={() => onSelectTool(tool.id)}>
+          <Icon className="mr-2 h-4 w-4 flex-shrink-0" aria-hidden="true" />
+          <span className="truncate">{tool.label}</span>
+        </Button>
+      </TooltipTrigger>
+      <CenteredTooltipContent><p>{tool.description}</p></CenteredTooltipContent>
+    </Tooltip>;
+  };
+
   return (
     <TooltipProvider>
       <div className="flex flex-col overflow-y-auto h-full">
-        <div className="p-4 border-b border-slate-200">
-          <h2 className="text-lg font-medium">Tools</h2>
-        </div>
-        
         <div className="p-3 pb-4 flex-grow">
-          <Accordion type="multiple" defaultValue={['drawing', 'objects']}>
+          <Accordion type="multiple" value={openSections} onValueChange={setOpenSections}>
             <AccordionItem value="drawing">
               <AccordionTrigger className="px-2 py-2 text-sm">Drawing Tools</AccordionTrigger>
               <AccordionContent className="pt-2 pb-2">
                 <div className="grid grid-cols-1 gap-2">
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant={activeTool === 'room' ? 'default' : 'outline'}
-                        size="sm"
-                        className="justify-start w-full"
-                        onClick={() => onSelectTool('room')}
-                      >
-                        <Square className="h-4 w-4 mr-2 flex-shrink-0" />
-                        <span className="truncate">Draw Room</span>
-                      </Button>
-                    </TooltipTrigger>
-                    <CenteredTooltipContent>
-                      <p>Click and drag to draw a room (R)</p>
-                    </CenteredTooltipContent>
-                  </Tooltip>
-                  
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant={activeTool === 'move' ? 'default' : 'outline'}
-                        size="sm"
-                        className="justify-start w-full"
-                        onClick={() => onSelectTool('move')}
-                      >
-                        <Move className="h-4 w-4 mr-2 flex-shrink-0" />
-                        <span className="truncate">Select & Move</span>
-                      </Button>
-                    </TooltipTrigger>
-                    <CenteredTooltipContent>
-                      <p>Select and move rooms or objects (M)</p>
-                    </CenteredTooltipContent>
-                  </Tooltip>
+                  {PRIMARY_EDITOR_TOOLS.filter(tool => tool.group === 'drawing').map(renderPrimaryTool)}
                 </div>
               </AccordionContent>
             </AccordionItem>
@@ -114,39 +97,7 @@ const Sidebar: React.FC<SidebarProps> = ({
               <AccordionTrigger className="px-2 py-2 text-sm">Room Objects</AccordionTrigger>
               <AccordionContent className="pt-2 pb-2">
                 <div className="grid grid-cols-1 gap-2">
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant={activeTool === 'door' ? 'default' : 'outline'}
-                        size="sm"
-                        className="justify-start w-full"
-                        onClick={() => onSelectTool('door')}
-                      >
-                        <DoorOpenIcon className="h-4 w-4 mr-2 flex-shrink-0" />
-                        <span className="truncate">Add Door</span>
-                      </Button>
-                    </TooltipTrigger>
-                    <CenteredTooltipContent>
-                      <p>Select a wall to place a door (D)</p>
-                    </CenteredTooltipContent>
-                  </Tooltip>
-                  
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant={activeTool === 'window' ? 'default' : 'outline'}
-                        size="sm"
-                        className="justify-start w-full"
-                        onClick={() => onSelectTool('window')}
-                      >
-                        <WindowIcon className="h-4 w-4 mr-2 flex-shrink-0" />
-                        <span className="truncate">Add Window</span>
-                      </Button>
-                    </TooltipTrigger>
-                    <CenteredTooltipContent>
-                      <p>Select a wall to place a window (W)</p>
-                    </CenteredTooltipContent>
-                  </Tooltip>
+                  {PRIMARY_EDITOR_TOOLS.filter(tool => tool.group === 'objects').map(renderPrimaryTool)}
                 </div>
               </AccordionContent>
             </AccordionItem>

@@ -1,13 +1,13 @@
 # Modern Floor Planner — executable product and build roadmap
 
-Version: 1.31 — UX/UI architecture roadmap, 2026-11-05
+Version: 1.32 — UX/UI Packet 1 implementation, 2026-11-05
 Repository: `armentrout1/ModernFloorPlanner`; delivery branch: `main`.
 Original audit baseline: 876968e78d7070775e7924f33a3164ba20905d42; #22 entry main: 08ec2a89a0492823c5629143930960b59a6d1aad; #22 implementation: `f6ba3d388937c2815366be31532bbdd3a4cc594c`, integrated with all 310 committed source/configuration/test/migration files matching the final tested manifest.
 Status: **M4 native Supabase Auth migration deployed and owner sign-in verified.** Email/password sign-in, sign-up, confirmation, password recovery and local guest mode replace the former OAuth-client redirect/consent flow. The server independently verifies the short-lived Supabase token, then rotates the existing protected MFP session; passwords and provider tokens are not stored. Production deployment `dpl_92ScmpbnzUw1jTkhsnNzkEa4NuEV` serves commit `9b24c947b1b3b6ed0dc29a2f2871006bcac3aad1`; exact Supabase redirects, public reachability, guest mode and real owner sign-in are verified. [Live binding record](MFP_M4_LIVE_BINDING_RECORD.md). Calculator packets 1–4 remain complete, #9/#10 stay open, #2 unreleased and M5 not started.
 
 Evidence and dated external research: [research and audit](RESEARCH_AND_AUDIT_2026-09-06.md).
 
-UX/UI architecture checkpoint, 2026-11-05: [canvas-first editor architecture and build roadmap](MFP_UX_UI_ARCHITECTURE_ROADMAP.md). Issue #29 records the owner-requested research and planning. The document defines the stable two-row header, three-state left tool system, contextual inspector, canvas navigation, status bar, command-placement rules, responsive behavior and six bounded implementation packets. **The architecture artifact is published; application implementation has not started.**
+UX/UI architecture checkpoint, 2026-11-05: [canvas-first editor architecture and build roadmap](MFP_UX_UI_ARCHITECTURE_ROADMAP.md). Issue #29 records the owner-requested research and planning. The document defines the stable two-row header, three-state left tool system, contextual inspector, canvas navigation, status bar, command-placement rules, responsive behavior and six bounded implementation packets. **Packet 1 is producer-verified locally:** the three-state left tools, shared icon rail, validated layout persistence, accessible phone overlay and removal of the full-width toggle strip passed 723 unit tests, TypeScript, production build, 83 browser regressions and responsive visual review. Production deployment and live smoke verification are pending; Packets 2–6 have not started.
 
 Calculator delivery checkpoint, 2026-11-04: [area calculator architecture and UX blueprint](MFP_AREA_CALCULATOR_BLUEPRINT.md). Packets 1-4 are implemented and producer-verified locally under issue #9 and DR-002; [Packet 4 results](MFP_AREA_CALCULATOR_EXPORT_RESULTS.md) record grouped export parity. This is **NOT DEPLOYED**, and it does not displace the current #4 live provider-binding gate, M5 pilot, or later M6/M7 contracts.
 

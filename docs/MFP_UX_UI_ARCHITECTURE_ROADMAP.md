@@ -1,8 +1,8 @@
 # Modern Floor Planner UX/UI architecture and build roadmap
 
 - Date: 2026-11-05
-- Version: 1.0
-- Status: OWNER-REQUESTED ARCHITECTURE COMPLETE — IMPLEMENTATION PACKETS NOT STARTED
+- Version: 1.1
+- Status: PACKET 1 PRODUCER-VERIFIED — PRODUCTION DEPLOYMENT PENDING
 - Baseline reviewed: `a80ccbd1c72e9825f72c1694d6e2e66b43f2c0e3` on `main`
 - Owning requirement: [issue #29](https://github.com/armentrout1/ModernFloorPlanner/issues/29), `MFP-UX-CANVAS-SHELL`
 - Primary workflow: the main sketch editor at `/`
@@ -555,6 +555,18 @@ Release gate:
 - existing editor and selection regressions;
 - desktop/tablet/phone visual review;
 - normal production deployment and live resize/state smoke after separate authorization.
+
+Implementation checkpoint — 2026-11-05:
+
+- `expanded`, `rail` and `hidden` modes are implemented with one-step pointer and keyboard cycling;
+- expanded width and the validated, versioned layout preference persist locally;
+- the icon rail and expanded panel share the same primary-tool definitions and active state;
+- the former full-width panel-toggle strip is retired while the existing right-panel contract remains intact;
+- phone expanded mode is an accessible overlay with focus containment, Escape dismissal and focus return;
+- room, opening, selection, authorization-preservation and inspector regressions remain green;
+- producer verification passed: 723 unit tests, TypeScript check, production build and 83 browser tests;
+- visual review passed at 390, 820, 1280 and 1920 pixels; existing narrow-header command crowding is intentionally deferred to Packet 3;
+- production deployment and live smoke verification remain pending.
 
 ### Packet 2: canvas navigation and status bar consolidation
 

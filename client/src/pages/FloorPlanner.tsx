@@ -26,7 +26,8 @@ import SaveSketchModal from '@/components/SaveSketchModal';
 import LoadSketchDialog from '@/components/LoadSketchDialog';
 import KeyboardShortcutsDialog from '@/components/KeyboardShortcutsDialog';
 import { ResizablePanels } from '@/components/ResizablePanels';
-import PanelHeaderControls from '@/components/PanelHeaderControls';
+import ToolRail from '@/components/editor/ToolRail';
+import { useEditorLayout } from '@/components/editor/useEditorLayout';
 import { Room, ObjectType } from '@/utils/types';
 import { SavedSketch } from '@/utils/api';
 import { useToast } from '@/hooks/use-toast';
@@ -56,7 +57,9 @@ const FloorPlanner: React.FC<{ active?: boolean }> = ({ active = true }) => {
   const [isLoadDialogOpen, setIsLoadDialogOpen] = useState(false);
   const [showMaterialPanel, setShowMaterialPanel] = useState(false);
   const [showKeyboardShortcuts, setShowKeyboardShortcuts] = useState(false);
+  const [requestedToolSection, setRequestedToolSection] = useState<'align' | 'transform' | null>(null);
   const { toast } = useToast();
+  const editorLayout = useEditorLayout();
 
   const handleNewSketch = () => {
     if (rooms.length === 0 || window.confirm('This will clear your current sketch. Continue?')) {
@@ -378,12 +381,7 @@ const FloorPlanner: React.FC<{ active?: boolean }> = ({ active = true }) => {
     ? selectedRoom.objects.find(obj => obj.id === selectedObjectId) || null
     : null;
 
-  // Add state for panel controls
-  const [leftCollapsed, setLeftCollapsed] = useState(false);
   const [rightCollapsed, setRightCollapsed] = useState(false);
-  
-  // Panel control handlers
-  const handleToggleLeftPanel = (collapsed: boolean) => setLeftCollapsed(collapsed);
   const handleToggleRightPanel = (collapsed: boolean) => setRightCollapsed(collapsed);
 
   return (
@@ -408,27 +406,20 @@ const FloorPlanner: React.FC<{ active?: boolean }> = ({ active = true }) => {
         onSketchNameSaved={handleSaveComplete}
       />
       
-      {/* Panel controls header */}
-      <PanelHeaderControls
-        leftPanelTitle="Tools & Actions"
-        rightPanelTitle={showMaterialPanel ? "Materials" : "Properties"}
-        leftCollapsed={leftCollapsed}
-        rightCollapsed={rightCollapsed}
-        onToggleLeftPanel={handleToggleLeftPanel}
-        onToggleRightPanel={handleToggleRightPanel}
-      />
-      
       <div className="min-h-0 flex-grow overflow-hidden">
         <ResizablePanels
-          leftPanelWidth={20}
-          rightPanelWidth={25}
+          leftMode={editorLayout.leftMode}
+          leftExpandedWidth={editorLayout.leftExpandedWidth}
+          isPhone={editorLayout.isPhone}
+          layoutAnnouncement={editorLayout.announcement}
+          rightPanelWidth={30}
           leftPanelTitle="Tools & Actions"
           rightPanelTitle={showMaterialPanel ? "Materials" : "Properties"}
-          leftPanelMinSize={15}
           rightPanelMinSize={15}
-          leftCollapsed={leftCollapsed}
           rightCollapsed={rightCollapsed}
-          onLeftCollapsedChange={handleToggleLeftPanel}
+          onCycleLeftMode={editorLayout.cycleTools}
+          onLeftModeChange={editorLayout.setLeftMode}
+          onLeftExpandedWidthChange={editorLayout.setLeftExpandedWidth}
           onRightCollapsedChange={handleToggleRightPanel}
           leftPanel={active ? (
             <div className="h-full">
@@ -440,9 +431,15 @@ const FloorPlanner: React.FC<{ active?: boolean }> = ({ active = true }) => {
                 roomCount={rooms.length}
                 showRoomNames={showRoomNames}
                 onToggleRoomNames={() => setShowRoomNames(value => !value)}
+                requestedSection={requestedToolSection}
               />
             </div>
           ) : null}
+          leftRail={active ? <ToolRail activeTool={activeTool} onSelectTool={handleSelectTool}
+            onRequestSection={section => {
+              setRequestedToolSection(section);
+              editorLayout.setLeftMode('expanded');
+            }} /> : null}
           centerPanel={
             <CanvasContainer
               active={active}
