@@ -1,7 +1,7 @@
 # Modern Floor Planner UX/UI architecture and build roadmap
 
 - Date: 2026-11-06
-- Version: 1.5
+- Version: 1.6
 - Status: PACKETS 1–5 DEPLOYED AND LIVE-VERIFIED
 - Baseline reviewed: `a80ccbd1c72e9825f72c1694d6e2e66b43f2c0e3` on `main`
 - Packet 2 implementation: `933a7ba0329bda2236a15fd8a6e6e3bdbed03aef` on `main`
@@ -743,6 +743,21 @@ Targets for a later measured pilot:
 - panel changes produce no data loss or unexplained canvas jump;
 - users can identify where future categories belong;
 - the four-of-five users / under-two-minutes milestone remains a measured pilot target, not an unverified claim.
+
+#### Packet 6 implementation receipt — 2026-11-06
+
+- focus mode is transient and non-destructive: it hides both side panels without rewriting the saved shell preference, retains room/opening selection and mounted drafts, exposes one small **Edit** affordance for the current selection, and restores the exact prior shell with Exit, Escape or Shift+F;
+- choosing **Edit** exits focus mode and intentionally opens the selected target's inspector; hidden inspector content is inert, invisible and outside the keyboard order;
+- choosing a tool from the phone overlay closes that overlay immediately so the canvas is ready for the next gesture;
+- the typed registry now contains 13 safe commands, including Focus mode, and every command declares one governed `primaryHome`;
+- [the UX/UI governance checklist](MFP_UX_UI_GOVERNANCE_CHECKLIST.md) records the control-placement decision, feature-intake checklist, core-flow acceptance matrix, release evidence, focus contract and later measured-pilot protocol;
+- TypeScript, production build and whitespace checks passed; the full unit/integration suite passed 726/726 and the full browser suite passed 213/213 in 15.8 minutes, including all door/window, geometry, calculation, auth and responsive regressions;
+- Packet 6 browser acceptance passed at 390, 820, 1280 and 1920 pixels, including exact shell restore, retained selection, phone tool-to-canvas flow, no page overflow and 200 percent text sizing;
+- implementation commit `7fadc44ec83384a46f7bc90a316b7fea08b0a06c` is pushed to `main`;
+- production deployment `dpl_7UvNV8WwCffApkFkfAMLq6Q9hUyj` is READY at `https://modern-floor-planner.vercel.app` and serves `index-Dt30sj6F.js`, `index-Du8qP-Ph.css` and lazy `EditorCommandPalette-CM57H-VZ.js`;
+- the canonical `/`, `/quick-room` and `/physical-draft` routes returned 200; live focus-mode smoke passed at 390, 820 and 1280 pixels with no horizontal overflow or browser errors, and the bounded one-hour production warning/error log scan was clean;
+- a pre-promotion route smoke caught an incomplete generated-static package; production was restored immediately with an ordinary rollback, then the synchronized Vercel prebuilt artifact was staged, verified and promoted. No database, auth, geometry, quantity or user data changed;
+- the later representative-user pilot remains unstarted and is not claimed by this automated release evidence.
 
 ## Cross-packet invariants
 
