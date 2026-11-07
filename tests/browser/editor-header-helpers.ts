@@ -2,7 +2,7 @@ import type { Page } from '@playwright/test';
 
 export type PlanCommand =
   | 'New plan'
-  | 'Open plan'
+  | 'My Plans'
   | 'Save plan'
   | 'Open a physical copy';
 

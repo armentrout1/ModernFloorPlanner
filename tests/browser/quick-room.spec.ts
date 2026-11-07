@@ -306,10 +306,10 @@ async function seedLegacy(page: Page) {
   expect(response.status()).toBe(201);
   const saved = await response.json();
   await page.goto('/');
-  await choosePlanCommand(page, 'Open plan');
-  const dialog = page.getByRole('dialog', { name: 'Load Sketch', exact: true });
+  await choosePlanCommand(page, 'My Plans');
+  const dialog = page.getByRole('dialog', { name: 'My Plans', exact: true });
   await dialog.getByText(name, { exact: true }).click();
-  await dialog.getByRole('button', { name: 'Load Selected Sketch' }).click();
+  await dialog.getByRole('button', { name: 'Open plan' }).click();
   await expect(page.locator('[role="dialog"]')).toHaveCount(0);
   await page.getByRole('button', { name: 'Select & Move', exact: true }).click();
   return { id: saved.id as number, room };

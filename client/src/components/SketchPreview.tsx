@@ -48,8 +48,10 @@ const SketchPreview: React.FC<SketchPreviewProps> = ({
   };
   
   return (
-    <div 
-      className={`p-3 border rounded-md cursor-pointer transition-colors ${
+    <button
+      type="button"
+      aria-pressed={selected}
+      className={`w-full p-3 border rounded-md cursor-pointer text-left transition-colors ${
         selected ? 'bg-accent/10 border-accent' : 'bg-white hover:bg-slate-50 border-slate-200'
       }`}
       onClick={onClick}
@@ -90,7 +92,7 @@ const SketchPreview: React.FC<SketchPreviewProps> = ({
           {sketch.rooms.length} rooms
         </div>
       </div>
-    </div>
+    </button>
   );
 };
 

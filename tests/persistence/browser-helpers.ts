@@ -39,7 +39,7 @@ export async function createWorkspace(p: Page, suffix: string) {
     await panel(p).getByRole('button', { name: 'New workspace', exact: true }).click();
   const response = p.waitForResponse(value => new URL(value.url()).pathname === '/api/workspaces' && value.request().method() === 'POST');
   await panel(p).getByRole('textbox', { name: 'Workspace name', exact: true }).fill(name);
-  await panel(p).getByRole('button', { name: 'Create workspace and start planning', exact: true }).click();
+  await panel(p).getByRole('button', { name: /^Create workspace and (continue|start planning)$/ }).click();
   const created = await response; expect(created.status()).toBe(201);
   const workspace = await created.json();
   await expect(panel(p)).toBeHidden();

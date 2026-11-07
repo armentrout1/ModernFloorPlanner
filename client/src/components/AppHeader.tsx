@@ -27,6 +27,7 @@ interface AppHeaderProps {
   onShowCommandSearch: () => void;
   currentSketchId?: number;
   currentSketchName: string;
+  contentDirty: boolean;
   onSketchNameChange: (name: string) => void;
   onSketchNameSaved: (sketch: SavedSketch) => void;
 }
@@ -45,6 +46,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({
   onShowCommandSearch,
   currentSketchId,
   currentSketchName,
+  contentDirty,
   onSketchNameChange,
   onSketchNameSaved,
 }) => {
@@ -63,6 +65,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({
           value={currentSketchName}
           onChange={onSketchNameChange}
           onSaved={onSketchNameSaved}
+          contentDirty={contentDirty}
         />
         <AccountControls />
       </div>

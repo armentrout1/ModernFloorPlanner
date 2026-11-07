@@ -37,10 +37,10 @@ async function expectSelected(page: Page, ids: string[]) {
 
 // Adapted from the existing editor.spec.ts seed/load/save helpers.
 async function loadSaved(page: Page, name: string, rooms: SketchRoom[]) {
-  await choosePlanCommand(page, 'Open plan');
-  const dialog = page.getByRole('dialog', { name: 'Load Sketch', exact: true });
+  await choosePlanCommand(page, 'My Plans');
+  const dialog = page.getByRole('dialog', { name: 'My Plans', exact: true });
   await dialog.getByText(name, { exact: true }).click();
-  await dialog.getByRole('button', { name: 'Load Selected Sketch' }).click();
+  await dialog.getByRole('button', { name: 'Open plan' }).click();
   await expect(page.locator('[role="dialog"]')).toHaveCount(0);
   for (const room of rooms) await expect(roomNode(page, room.id)).toBeVisible();
   await page.getByRole('button', { name: 'Select & Move', exact: true }).click();
@@ -59,9 +59,9 @@ async function seedAndLoad(page: Page, rooms = fixture()) {
 }
 async function save(page: Page, id: number): Promise<Saved> {
   await choosePlanCommand(page, 'Save plan');
-  const dialog = page.getByRole('dialog', { name: 'Save Sketch', exact: true });
+  const dialog = page.getByRole('dialog', { name: 'Save plan', exact: true });
   const response = page.waitForResponse(item => item.url().endsWith('/api/floor-plans/' + id) && item.request().method() === 'PATCH');
-  await dialog.getByRole('button', { name: 'Save Sketch', exact: true }).click();
+  await dialog.getByRole('button', { name: 'Save plan', exact: true }).click();
   expect((await response).status()).toBe(200);
   await expect(page.locator('[role="dialog"]')).toHaveCount(0);
   const result = await page.request.get('/api/floor-plans/' + id);
@@ -241,7 +241,7 @@ test('Ctrl+A respects room-name input, open dialogs and inactive sketch, and sel
   await expectSelected(page, [plan.rooms[0].id]);
 
   await choosePlanCommand(page, 'Save plan');
-  const dialog = page.getByRole('dialog', { name: 'Save Sketch', exact: true });
+  const dialog = page.getByRole('dialog', { name: 'Save plan', exact: true });
   await expect(dialog).toBeVisible();
   await blurFocus(page); // Exercise the global dialog guard, not only an input guard.
   await page.keyboard.press('Control+a');

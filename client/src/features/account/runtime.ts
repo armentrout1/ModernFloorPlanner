@@ -49,6 +49,12 @@ function accept(session: AccountSession) {
       suspended.context === workspaceContext(session.principal.id, session.workspace.id)) {
     editorContext = suspended.context; setLocalContext(editorContext);
   }
+  const verifiedSavedContext = session.principal && session.workspace
+    ? workspaceContext(session.principal.id, session.workspace.id) : null;
+  if (!editorContext && savedContext !== UNASSIGNED_CONTEXT && savedContext === verifiedSavedContext) {
+    editorContext = savedContext;
+    setLocalContext(editorContext);
+  }
   suspended = null;
   clearTimeout(expiryTimer);
   if (session.status === 'authenticated' && typeof session.expiresAt === 'number') {
@@ -99,7 +105,7 @@ export async function contextFetch(method: string, url: string, data?: unknown, 
   if ((url.startsWith('/api/floor-plans') || url.startsWith('/api/physical-plans')) && snapshot.session.status === 'authenticated' &&
       (!snapshot.session.principal || !snapshot.session.workspace ||
        snapshot.editorContext !== workspaceContext(snapshot.session.principal.id, snapshot.session.workspace.id))) {
-    throw new WorkspaceContextRequired('Select and resume the verified workspace local context before accessing server-saved sketches. Unassigned drafts remain separate.');
+    throw new WorkspaceContextRequired('Select and resume the verified workspace local context before accessing saved plans. Unassigned drafts remain separate.');
   }
   const controller = new AbortController(); controllers.add(controller);
   try {
@@ -164,7 +170,10 @@ export function initializeAccountEvents() {
   const visibility = () => { if (document.visibilityState === 'visible') changed(); };
   try { channel = new BroadcastChannel('modern-floor-planner:account-events:v1'); channel.onmessage = event => { if (event.data?.type === 'session-changed') { invalidateAccount(); void refreshAccount().catch(() => {}); } }; } catch { /* focus and pre-action revalidation remain */ }
   window.addEventListener('focus', changed); document.addEventListener('visibilitychange', visibility);
-  if (savedContext !== UNASSIGNED_CONTEXT || location.pathname.startsWith('/account/')) void refreshAccount().catch(() => {});
+  // Always discover an existing provider-backed browser session. A private
+  // editor context is restored only when its principal/workspace label exactly
+  // matches the freshly verified server selection above.
+  void refreshAccount().catch(() => {});
   return () => { channel?.close(); channel = null; window.removeEventListener('focus', changed); document.removeEventListener('visibilitychange', visibility); };
 }
 export const accountStore = { getSnapshot: () => snapshot, subscribe: (listener: () => void) => { listeners.add(listener); return () => { listeners.delete(listener); }; } };

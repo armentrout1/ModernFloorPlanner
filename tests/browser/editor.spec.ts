@@ -27,17 +27,17 @@ async function seedAndLoad(page: Page, rooms: Room[]) {
   expect(response.status()).toBe(201);
   const saved = await response.json();
   await page.goto('/');
-  await choosePlanCommand(page, 'Open plan');
-  const dialog = page.getByRole('dialog', { name: 'Load Sketch', exact: true });
+  await choosePlanCommand(page, 'My Plans');
+  const dialog = page.getByRole('dialog', { name: 'My Plans', exact: true });
   await dialog.getByText(name, { exact: true }).click();
   // Redirect recovery intentionally retains the prior sketch. A second fixture
   // load must explicitly accept its existing replacement confirmation.
   const replacement = await page.locator('.room-box').count() ? page.waitForEvent('dialog').then(async confirmation => {
     expect(confirmation.type()).toBe('confirm');
-    expect(confirmation.message()).toBe('Replace the current sketch? Save any changes you want to keep first.');
+    expect(confirmation.message()).toBe('Replace the current plan? Save any changes you want to keep first.');
     await confirmation.accept();
   }) : Promise.resolve();
-  await dialog.getByRole('button', { name: 'Load Selected Sketch' }).click();
+  await dialog.getByRole('button', { name: 'Open plan' }).click();
   await replacement;
   await expect.poll(() => page.evaluate(() => {
     const raw = sessionStorage.getItem('modern-floor-planner:local-fields:v1:unassigned');
@@ -53,11 +53,11 @@ async function seedAndLoad(page: Page, rooms: Room[]) {
 
 async function save(page: Page, id: number, name?: string) {
   await choosePlanCommand(page, 'Save plan');
-  const dialog = page.getByRole('dialog', { name: 'Save Sketch', exact: true });
-  if (name) await dialog.getByLabel('Sketch Name').fill(name);
+  const dialog = page.getByRole('dialog', { name: 'Save plan', exact: true });
+  if (name) await dialog.getByLabel('Plan name').fill(name);
   const result = page.waitForResponse(response =>
     response.url().endsWith(`/api/floor-plans/${id}`) && response.request().method() === 'PATCH');
-  await dialog.getByRole('button', { name: 'Save Sketch', exact: true }).click();
+  await dialog.getByRole('button', { name: 'Save plan', exact: true }).click();
   expect((await result).status()).toBe(200);
   await expect(dialog).toBeHidden();
   // Radix keeps closing portals mounted during their exit animation.
@@ -162,7 +162,7 @@ test('editor identity and essential actions remain in two stable rows without ho
     expect(await actions.evaluate(element => element.scrollWidth <= element.clientWidth + 1), `${width}px actions do not scroll horizontally`).toBe(true);
 
     await openPlanMenu(page);
-    for (const name of ['New plan', 'Open plan', 'Save plan', 'Open a physical copy']) {
+    for (const name of ['New plan', 'My Plans', 'Save plan', 'Open a physical copy']) {
       await expect(page.getByRole('menuitem', { name, exact: true })).toBeVisible();
     }
     if (width === 390) await page.screenshot({ path: test.info().outputPath('header-phone-plan-menu.png') });
@@ -180,7 +180,7 @@ test('Plan and Help menus expose their commands to keyboard users', async ({ pag
   await page.keyboard.press('Enter');
   await expect(page.getByRole('menuitem', { name: 'New plan', exact: true })).toBeFocused();
   await page.keyboard.press('ArrowDown');
-  await expect(page.getByRole('menuitem', { name: 'Open plan', exact: true })).toBeFocused();
+  await expect(page.getByRole('menuitem', { name: 'My Plans', exact: true })).toBeFocused();
   await page.keyboard.press('Escape');
   await expect(plan).toBeFocused();
 
@@ -245,10 +245,10 @@ for (const type of ['door', 'window'] as const) {
         await expect(page.getByTestId('door-swing-placement-preview')).toHaveCount(0);
       }
       await page.reload();
-      await choosePlanCommand(page, 'Open plan');
-      const dialog = page.getByRole('dialog', { name: 'Load Sketch', exact: true });
+      await choosePlanCommand(page, 'My Plans');
+      const dialog = page.getByRole('dialog', { name: 'My Plans', exact: true });
       await dialog.getByText(plan.name, { exact: true }).click();
-      await dialog.getByRole('button', { name: 'Load Selected Sketch' }).click();
+      await dialog.getByRole('button', { name: 'Open plan' }).click();
       await expect(page.getByTestId(`opening-${saved.rooms[0].objects![0].id}`)).toBeVisible();
     });
   }
@@ -413,18 +413,18 @@ test('a failed save retains the entered name and geometry and can be retried', a
     } else await route.continue();
   });
   await choosePlanCommand(page, 'Save plan');
-  const dialog = page.getByRole('dialog', { name: 'Save Sketch', exact: true });
-  await dialog.getByLabel('Sketch Name').fill(draftName);
-  await dialog.getByRole('button', { name: 'Save Sketch', exact: true }).click();
-  await expect(page.getByText('Error saving sketch', { exact: true })).toBeVisible();
-  await expect(dialog.getByLabel('Sketch Name')).toHaveValue(draftName);
+  const dialog = page.getByRole('dialog', { name: 'Save plan', exact: true });
+  await dialog.getByLabel('Plan name').fill(draftName);
+  await dialog.getByRole('button', { name: 'Save plan', exact: true }).click();
+  await expect(page.getByText('Plan was not saved', { exact: true })).toBeVisible();
+  await expect(dialog.getByLabel('Plan name')).toHaveValue(draftName);
   await expect(page.getByTestId('room-room-a')).toBeVisible();
   await expect(page.getByTestId('opening-opening-a')).toBeVisible();
   const persisted = await (await page.request.get(`/api/floor-plans/${plan.id}`)).json();
   expect(persisted.name).toBe(plan.name);
   expect(persisted.rooms).toEqual([original]);
   await page.unroute(`**/api/floor-plans/${plan.id}`);
-  await dialog.getByRole('button', { name: 'Save Sketch', exact: true }).click();
+  await dialog.getByRole('button', { name: 'Retry save', exact: true }).click();
   await expect(dialog).toBeHidden();
   // Radix keeps closing portals mounted during their exit animation.
   await expect(page.locator('[role="dialog"]')).toHaveCount(0);
@@ -450,12 +450,12 @@ test('conflicting saved widths remain untouched until the entered width is confi
 test('failed rename keeps the draft and Enter plus blur sends one pending request', async ({ page }) => {
   const original = room([opening()]);
   const plan = await seedAndLoad(page, [original]);
-  await choosePlanCommand(page, 'Open plan');
-  const dialog = page.getByRole('dialog', { name: 'Load Sketch', exact: true });
+  await choosePlanCommand(page, 'My Plans');
+  const dialog = page.getByRole('dialog', { name: 'My Plans', exact: true });
   await dialog.getByRole('button', { name: `Options for ${plan.name}`, exact: true }).click();
   await page.getByRole('menuitem', { name: 'Rename', exact: true }).click();
   const draftName = `Retained rename ${Date.now()}`;
-  const input = dialog.getByRole('textbox', { name: 'New sketch name', exact: true });
+  const input = dialog.getByRole('textbox', { name: 'New plan name', exact: true });
   await input.fill(draftName);
   let patches = 0;
   let releaseFailure!: () => void;
@@ -501,11 +501,11 @@ test('declining New plan and replacement Open keeps the unsaved current draft', 
     createdAt: '2025-06-01T00:00:00.000Z', updatedAt: '2025-06-01T00:00:00.000Z',
   } });
   expect(replacement.status()).toBe(201);
-  await choosePlanCommand(page, 'Open plan');
-  const dialog = page.getByRole('dialog', { name: 'Load Sketch', exact: true });
+  await choosePlanCommand(page, 'My Plans');
+  const dialog = page.getByRole('dialog', { name: 'My Plans', exact: true });
   await dialog.getByText(replacementName, { exact: true }).click();
   page.once('dialog', dialog => dialog.dismiss());
-  await dialog.getByRole('button', { name: 'Load Selected Sketch' }).click();
+  await dialog.getByRole('button', { name: 'Open plan' }).click();
   await expect(page.getByTestId('room-room-a')).toBeVisible();
   await expect(page.getByTestId('room-replacement-room')).toHaveCount(0);
   expect((await save(page, plan.id)).rooms).toEqual([draftRoom]);
@@ -516,13 +516,13 @@ test('tooltip timers cannot dismiss a save dialog or erase its draft', async ({ 
   const original = room([opening()]);
   await seedAndLoad(page, [original]);
   await choosePlanCommand(page, 'Save plan');
-  const dialog = page.getByRole('dialog', { name: 'Save Sketch', exact: true });
+  const dialog = page.getByRole('dialog', { name: 'Save plan', exact: true });
   const draftName = 'Still editing after tooltip expiry';
-  await dialog.getByLabel('Sketch Name').fill(draftName);
+  await dialog.getByLabel('Plan name').fill(draftName);
   // Advance through the old tooltip's 100ms startup + 3s close timer.
   await page.clock.runFor(4000);
   await expect(dialog).toBeVisible();
-  await expect(dialog.getByLabel('Sketch Name')).toHaveValue(draftName);
+  await expect(dialog.getByLabel('Plan name')).toHaveValue(draftName);
   await expect(page.getByTestId('opening-opening-a')).toBeVisible();
 });
 

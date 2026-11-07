@@ -40,7 +40,7 @@ export default function PlanMenu({
         </DropdownMenuItem>
         <DropdownMenuItem onSelect={onOpenPlan}>
           <FolderOpen aria-hidden="true" />
-          Open plan
+          My Plans
         </DropdownMenuItem>
         <DropdownMenuItem onSelect={onSavePlan} disabled={!canSave}>
           <Save aria-hidden="true" />

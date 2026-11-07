@@ -371,8 +371,8 @@ test('upgrading the latest physical and legacy copies preserves originals unknow
     objects: [{ id: 'legacy-window', type: 'window', wallSide: 'right', position: 50, size: 60, windowProperties: { height: 48 }, metadata: { keep: 'window' } }] }];
   const response = await page.request.post('/api/floor-plans', { data: { name: 'Level upgrade ' + test.info().testId, rooms: legacyRooms, createdAt: AT, updatedAt: AT } });
   expect(response.status()).toBe(201); const saved = await response.json(); await page.goto('/');
-  await choosePlanCommand(page, 'Open plan'); const load = page.getByRole('dialog', { name: 'Load Sketch', exact: true });
-  await load.getByText(saved.name, { exact: true }).click(); await load.getByRole('button', { name: 'Load Selected Sketch', exact: true }).click();
+  await choosePlanCommand(page, 'My Plans'); const load = page.getByRole('dialog', { name: 'My Plans', exact: true });
+  await load.getByText(saved.name, { exact: true }).click(); await load.getByRole('button', { name: 'Open plan', exact: true }).click();
   await choosePlanCommand(page, 'Open a physical copy');
   await rooms(page).getByLabel('Room name', { exact: true }).fill('Latest legacy copy'); await rooms(page).getByLabel('Room name', { exact: true }).press('Enter'); await field(page, 'Length').press('Tab');
   const latest = await selected(page), current = await upgrade(page);

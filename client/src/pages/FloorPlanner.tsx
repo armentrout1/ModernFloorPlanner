@@ -11,7 +11,7 @@ import { useLocalState } from '@/features/account/useLocalState';
  * Last verified: June 1, 2025
  */
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useSyncExternalStore } from 'react';
 import { expandRoomGroups } from '@/utils/roomSelection';
 import SelectionPanel from '@/components/SelectionPanel';
 import { deleteSelection, restoreDeletion, type DeletedItem } from '@/utils/editorCommands';
@@ -36,8 +36,11 @@ import {
   type EditorCommandId,
 } from '@/features/editor-tools/registry';
 import { Room, ObjectType } from '@/utils/types';
-import { SavedSketch } from '@/utils/api';
+import { fetchSavedSketches, SavedSketch } from '@/utils/api';
 import { useToast } from '@/hooks/use-toast';
+import { accountStore } from '@/features/account/runtime';
+import { workspaceContext } from '@/features/account/localContexts';
+import { forgetLastPlan, readLastPlan, rememberLastPlan } from '@/features/saved-plans/recentPlan';
 import { 
   autoAlignRooms, 
   distributeRooms, 
@@ -62,6 +65,7 @@ const FloorPlanner: React.FC<{ active?: boolean }> = ({ active = true }) => {
   const [placingObjectType, setPlacingObjectType] = useState<ObjectType | null>(null);
   const [currentSketchId, setCurrentSketchId] = useLocalState<number | undefined>('legacy:server-id', undefined);
   const [currentSketchName, setCurrentSketchName] = useLocalState<string>('legacy:server-name', '');
+  const [savedRoomSnapshot, setSavedRoomSnapshot] = useLocalState<string>('legacy:saved-room-snapshot', '');
   const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
   const [isLoadDialogOpen, setIsLoadDialogOpen] = useState(false);
   const [showMaterialPanel, setShowMaterialPanel] = useState(false);
@@ -76,9 +80,61 @@ const FloorPlanner: React.FC<{ active?: boolean }> = ({ active = true }) => {
   const [focusMode, setFocusMode] = useState(false);
   const { toast } = useToast();
   const editorLayout = useEditorLayout();
+  const account = useSyncExternalStore(accountStore.subscribe, accountStore.getSnapshot);
+  const roomSnapshot = useMemo(() => JSON.stringify(rooms), [rooms]);
+  const contentDirty = Boolean(currentSketchId) && savedRoomSnapshot !== roomSnapshot;
+  const restoreAttempt = useRef<string | null>(null);
+  const draftRef = useRef({ rooms, currentSketchId, currentSketchName });
+  draftRef.current = { rooms, currentSketchId, currentSketchName };
+
+  const rememberCurrentPlan = (planId: number) => {
+    const { session, editorContext } = accountStore.getSnapshot();
+    if (session.principal && session.workspace &&
+        editorContext === workspaceContext(session.principal.id, session.workspace.id)) {
+      rememberLastPlan(session.principal.id, session.workspace.id, planId);
+    }
+  };
+
+  useEffect(() => {
+    const { principal, workspace } = account.session;
+    if (!active || account.checking || account.session.status !== 'authenticated' || !principal || !workspace ||
+        account.editorContext !== workspaceContext(principal.id, workspace.id)) return;
+    const context = `${principal.id}:${workspace.id}`;
+    if (restoreAttempt.current === context) return;
+    restoreAttempt.current = context;
+    if (currentSketchId || currentSketchName.trim() || rooms.length) return;
+    let cancelled = false;
+    void fetchSavedSketches().then(plans => {
+      if (cancelled || draftRef.current.currentSketchId || draftRef.current.currentSketchName.trim() || draftRef.current.rooms.length) return;
+      const remembered = readLastPlan(principal.id, workspace.id);
+      const plan = plans.find(item => item.id === remembered) ?? plans[0];
+      if (!plan) {
+        forgetLastPlan(principal.id, workspace.id);
+        return;
+      }
+      const current = accountStore.getSnapshot();
+      if (current.session.principal?.id !== principal.id || current.session.workspace?.id !== workspace.id ||
+          current.editorContext !== workspaceContext(principal.id, workspace.id)) return;
+      setRooms(plan.rooms);
+      setSelectedRoomIds([]);
+      setSelectedRoomId(null);
+      setSelectedObjectId(null);
+      setDeletions([]);
+      setCurrentSketchId(plan.id);
+      setCurrentSketchName(plan.name);
+      setSavedRoomSnapshot(JSON.stringify(plan.rooms));
+      rememberLastPlan(principal.id, workspace.id, plan.id);
+      toast({ title: 'Plan reopened', description: `Continuing “${plan.name}”.` });
+    }).catch(() => {
+      // My Plans exposes a visible retry path; background recovery stays quiet.
+    });
+    return () => { cancelled = true; };
+  // Restore runs once per verified principal/workspace and never replaces a local draft.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [active, account.checking, account.editorContext, account.session.principal?.id, account.session.workspace?.id]);
 
   const handleNewSketch = () => {
-    if (rooms.length === 0 || window.confirm('This will clear your current sketch. Continue?')) {
+    if (rooms.length === 0 || window.confirm('This will clear your current plan. Continue?')) {
       setRooms([]);
       setSelectedRoomIds([]);
       setDeletions([]);
@@ -86,6 +142,7 @@ const FloorPlanner: React.FC<{ active?: boolean }> = ({ active = true }) => {
       setSelectedObjectId(null);
       setCurrentSketchId(undefined);
       setCurrentSketchName('');
+      setSavedRoomSnapshot('');
     }
   };
 
@@ -365,13 +422,20 @@ const FloorPlanner: React.FC<{ active?: boolean }> = ({ active = true }) => {
   };
 
   const handleSaveComplete = (savedSketch: SavedSketch) => {
-    // Update the current sketch information
     setCurrentSketchId(savedSketch.id);
     setCurrentSketchName(savedSketch.name);
+    setSavedRoomSnapshot(JSON.stringify(savedSketch.rooms));
+    rememberCurrentPlan(savedSketch.id);
+  };
+
+  const handleNameSaveComplete = (savedSketch: SavedSketch) => {
+    setCurrentSketchId(savedSketch.id);
+    setCurrentSketchName(savedSketch.name);
+    rememberCurrentPlan(savedSketch.id);
   };
 
   const handleLoadSketch = (sketch: SavedSketch) => {
-    if (rooms.length && !window.confirm("Replace the current sketch? Save any changes you want to keep first.")) return;
+    if (rooms.length && !window.confirm("Replace the current plan? Save any changes you want to keep first.")) return;
     setDeletions([]);
     // Clear the current state
     setSelectedRoomId(null);
@@ -382,10 +446,12 @@ const FloorPlanner: React.FC<{ active?: boolean }> = ({ active = true }) => {
     setSelectedRoomIds([]);
     setCurrentSketchId(sketch.id);
     setCurrentSketchName(sketch.name);
+    setSavedRoomSnapshot(JSON.stringify(sketch.rooms));
+    rememberCurrentPlan(sketch.id);
     
     toast({
-      title: 'Sketch loaded',
-      description: `"${sketch.name}" has been loaded successfully.`,
+      title: 'Plan opened',
+      description: `"${sketch.name}" is ready to edit.`,
     });
   };
   
@@ -562,8 +628,9 @@ const FloorPlanner: React.FC<{ active?: boolean }> = ({ active = true }) => {
         onShowCommandSearch={handleOpenCommandSearch}
         currentSketchId={currentSketchId}
         currentSketchName={currentSketchName}
+        contentDirty={contentDirty}
         onSketchNameChange={setCurrentSketchName}
-        onSketchNameSaved={handleSaveComplete}
+        onSketchNameSaved={handleNameSaveComplete}
       />
       
       <div className="min-h-0 flex-grow overflow-hidden">
@@ -662,7 +729,7 @@ const FloorPlanner: React.FC<{ active?: boolean }> = ({ active = true }) => {
         </React.Suspense>
       ) : null}
 
-      {/* Save Sketch Modal */}
+      {/* Save plan modal */}
       <SaveSketchModal
         open={active && isSaveModalOpen}
         onOpenChange={setIsSaveModalOpen}
@@ -672,11 +739,20 @@ const FloorPlanner: React.FC<{ active?: boolean }> = ({ active = true }) => {
         onSave={handleSaveComplete}
       />
 
-      {/* Load Sketch Dialog */}
+      {/* My Plans dialog */}
       <LoadSketchDialog
         open={active && isLoadDialogOpen}
         onOpenChange={setIsLoadDialogOpen}
         onLoadSketch={handleLoadSketch}
+        onNewPlan={handleNewSketch}
+        onDeleteSketch={id => {
+          const { principal, workspace } = accountStore.getSnapshot().session;
+          if (principal && workspace) forgetLastPlan(principal.id, workspace.id, id);
+          if (currentSketchId === id) {
+            setCurrentSketchId(undefined);
+            setSavedRoomSnapshot('');
+          }
+        }}
       />
 
       {/* Keyboard Shortcuts Dialog */}

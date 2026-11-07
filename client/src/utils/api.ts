@@ -45,18 +45,19 @@ export const isSketchAccessError = (error: unknown): boolean =>
 export const sketchErrorMessage = (error: unknown): string => {
   if (error instanceof AccountContextChanged || error instanceof WorkspaceContextRequired) return error.message;
   if (error instanceof ApiError) {
-    if (error.status === 401) return 'Sign in is required to access server-saved sketches. Your local drawing is unchanged.';
-    if (error.status === 403) return 'You do not have permission to access these server-saved sketches. Your local drawing is unchanged.';
-    if (error.status === 503) return 'Server-saved sketches are unavailable. Your local drawing and unfinished input are unchanged.';
-    if (error.status === 400) return 'The server could not accept this request. An authorized workspace selection is required for server-saved sketches.';
-    if (error.status === 404) return 'This saved sketch is unavailable. Your local drawing is unchanged.';
+    if (error.status === 401) return 'Sign in is required to access saved plans. Your local drawing is unchanged.';
+    if (error.status === 403) return 'You do not have permission to access these saved plans. Your local drawing is unchanged.';
+    if (error.status === 503) return 'Saved plans are unavailable. Your local drawing and unfinished input are unchanged.';
+    if (error.status === 400) return 'The server could not accept this request. An authorized workspace selection is required for saved plans.';
+    if (error.status === 404) return 'This saved plan is unavailable. Your local drawing is unchanged.';
   }
-  return 'The sketch request failed. Your local drawing and unfinished input are unchanged. Try again.';
+  return 'The plan request failed. Your local drawing and unfinished input are unchanged. Try again.';
 };
 
 export const fetchSavedSketches = async (): Promise<SavedSketch[]> => {
   const response = await apiRequest('GET', '/api/floor-plans');
-  return ((await response.json()) as FloorPlan[]).map(floorPlanToSavedSketch);
+  return ((await response.json()) as FloorPlan[]).map(floorPlanToSavedSketch)
+    .sort((left, right) => Date.parse(right.updatedAt) - Date.parse(left.updatedAt));
 };
 
 export const fetchSketch = async (id: number, context?: RequestContext): Promise<SavedSketch> => {
@@ -81,5 +82,13 @@ export const renameSketch = async (id: number, newName: string): Promise<SavedSk
   const response = await apiRequest('PATCH', `/api/floor-plans/${id}`, {
     name: newName, updatedAt: new Date().toISOString(),
   });
+  return floorPlanToSavedSketch(await response.json());
+};
+
+export const duplicateSketch = async (id: number): Promise<SavedSketch> => {
+  const context = await captureRequestContext();
+  const source = await fetchSketch(id, context);
+  const data = savedSketchToFloorPlan({ name: `${source.name.slice(0, 195)} copy`, rooms: source.rooms });
+  const response = await apiRequest('POST', '/api/floor-plans', data, context);
   return floorPlanToSavedSketch(await response.json());
 };

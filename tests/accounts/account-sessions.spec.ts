@@ -1,6 +1,7 @@
 import { test, expect, chromium, type Page, type Locator } from '@playwright/test';
 import { configureSupabase } from './control';
 import { parseRegistry, PHYSICAL_DRAFT_STORAGE_KEY } from '../../client/src/features/physical-draft/storage';
+import { choosePlanCommand } from '../browser/editor-header-helpers';
 const panel = (p: Page) => p.getByRole('dialog', { name: 'Account', exact: true })
   .or(p.getByRole('region', { name: 'Welcome to Modern Floor Planner', exact: true }));
 const roomFields = (p: Page) => p.getByTestId('physical-room-inspector');
@@ -40,7 +41,7 @@ async function createWorkspace(p: Page, suffix: string) {
     await panel(p).getByRole('button', { name: 'New workspace', exact: true }).click();
   const response = p.waitForResponse(value => new URL(value.url()).pathname === '/api/workspaces' && value.request().method() === 'POST');
   await panel(p).getByRole('textbox', { name: 'Workspace name', exact: true }).fill(name);
-  await panel(p).getByRole('button', { name: 'Create workspace and start planning', exact: true }).click();
+  await panel(p).getByRole('button', { name: /^Create workspace and (continue|start planning)$/ }).click();
   const created = await response; expect(created.status()).toBe(201);
   const workspace = await created.json();
   await expect(panel(p)).toBeHidden();
@@ -96,15 +97,58 @@ async function drawLegacy(p: Page, name: string) {
   await p.locator('.room-box').click(); await p.locator('#roomName').fill(name);
 }
 async function saveLegacy(p: Page, name: string) {
-  await p.getByRole('button', { name: 'Save Sketch', exact: true }).click();
-  const dialog = p.getByRole('dialog', { name: 'Save Sketch', exact: true });
-  await dialog.getByLabel('Sketch Name').fill(name); await dialog.getByRole('button', { name: 'Save Sketch', exact: true }).click();
+  await choosePlanCommand(p, 'Save plan');
+  const dialog = p.getByRole('dialog', { name: 'Save plan', exact: true });
+  await dialog.getByLabel('Plan name').fill(name); await dialog.getByRole('button', { name: 'Save plan', exact: true }).click();
   await expect(dialog).toBeHidden();
 }
 test.beforeEach(async ({}, info) => { await configureSupabase({ mode: 'normal', userDelayMs: 0, subjectPrefix: 'browser-' + info.testId.replace(/[^A-Za-z0-9_-]/g, '').slice(-40) }); });
 test.afterEach(async ({ page }) => {
   // No URL/header/body dump: protocol secrets are excluded from artifacts.
   if (!page.isClosed() && page.url().startsWith(process.env.MFP_ACCOUNTS_APP_ORIGIN!)) expect(await page.evaluate(() => Object.entries(sessionStorage).filter(([key,value]) => /access_token|refresh_token|id_token|contextToken|authorizationCode/i.test(key + value)).length)).toBe(0);
+});
+
+test('first sign-in waits for an explicit workspace name and refresh resumes it without another create', async ({ page }) => {
+  const creates: string[] = [];
+  page.on('request', request => {
+    if (request.method() === 'POST' && new URL(request.url()).pathname === '/api/workspaces') creates.push(request.url());
+  });
+  await page.goto('/');
+  await signIn(page);
+  await expect(panel(page).getByRole('heading', { name: 'Name your workspace', exact: true })).toBeVisible();
+  await expect(panel(page).getByLabel('Workspace name', { exact: true })).toHaveValue('');
+  expect(creates).toHaveLength(0);
+  const workspace = await createWorkspace(page, 'named-onboarding');
+  expect(creates).toHaveLength(1);
+  await expect(page.getByRole('button', { name: `Workspace: ${workspace.name}`, exact: true })).toBeVisible();
+  await page.reload();
+  await expect(panel(page)).toBeHidden();
+  await expect(page.getByRole('button', { name: `Workspace: ${workspace.name}`, exact: true })).toBeVisible();
+  expect(creates).toHaveLength(1);
+});
+
+test('My Plans duplicates a server plan and refresh reopens the verified current plan with honest save state', async ({ page }) => {
+  await page.goto('/');
+  await signIn(page);
+  await createWorkspace(page, 'my-plans');
+  await drawLegacy(page, 'Saved plan room');
+  await saveLegacy(page, 'Kitchen plan');
+  await expect(page.getByText('Saved to My Plans', { exact: true })).toBeVisible();
+
+  await choosePlanCommand(page, 'My Plans');
+  const plans = page.getByRole('dialog', { name: 'My Plans', exact: true });
+  await expect(plans.getByText('Kitchen plan', { exact: true })).toBeVisible();
+  const duplicated = page.waitForResponse(response => new URL(response.url()).pathname === '/api/floor-plans' && response.request().method() === 'POST');
+  await plans.getByRole('button', { name: 'Options for Kitchen plan', exact: true }).click();
+  await page.getByRole('menuitem', { name: 'Duplicate', exact: true }).click();
+  expect((await duplicated).status()).toBe(201);
+  await expect(plans.getByText('Kitchen plan copy', { exact: true })).toBeVisible();
+  await plans.getByText('Kitchen plan copy', { exact: true }).click();
+  await plans.getByRole('button', { name: 'Open plan', exact: true }).click();
+  await expect(page.getByLabel('Current floor plan name', { exact: true })).toHaveValue('Kitchen plan copy');
+  await page.reload();
+  await expect(page.getByLabel('Current floor plan name', { exact: true })).toHaveValue('Kitchen plan copy');
+  await expect(page.getByText('Saved to My Plans', { exact: true })).toBeVisible();
 });
 
 test('Google sign-in starts the configured Supabase provider flow with the exact app callback', async ({ page }) => {
@@ -143,17 +187,17 @@ test('private legacy records cannot enter unassigned recovery or reappear after 
   await page.goto('/'); await signIn(page); await createWorkspace(page,'private-A');
   await drawLegacy(page,'Private room A'); await saveLegacy(page,'Private saved sketch A');
   await account(page); await panel(page).getByRole('button',{name:'Continue as guest',exact:true}).click();
-  await page.getByRole('button',{name:'Load Sketch',exact:true}).click();
-  await expect(page.getByRole('dialog',{name:'Load Sketch',exact:true}).getByRole('alert')).toContainText('Select and resume');
+  await choosePlanCommand(page, 'My Plans');
+  await expect(page.getByRole('dialog',{name:'My Plans',exact:true}).getByRole('alert')).toContainText('Select and resume');
   await expect(page.getByText('Private saved sketch A',{exact:true})).toHaveCount(0);
-  await page.getByRole('dialog',{name:'Load Sketch',exact:true}).getByRole('button',{name:'Cancel',exact:true}).click();
+  await page.getByRole('dialog',{name:'My Plans',exact:true}).getByRole('button',{name:'Cancel',exact:true}).click();
   await account(page); await panel(page).getByRole('button',{name:'Sign out',exact:true}).click();
   await signIn(page,'B'); await createWorkspace(page,'private-B');
   await expect(page.locator('.room-box')).toHaveCount(0);
-  await page.getByRole('button',{name:'Load Sketch',exact:true}).click();
+  await choosePlanCommand(page, 'My Plans');
   await expect(page.getByText('Private saved sketch A',{exact:true})).toHaveCount(0);
-  await expect(page.getByRole('dialog',{name:'Load Sketch',exact:true})).toContainText("You don't have any saved sketches yet.");
-  await page.getByRole('dialog',{name:'Load Sketch',exact:true}).getByRole('button',{name:'Cancel',exact:true}).click();
+  await expect(page.getByRole('dialog',{name:'My Plans',exact:true})).toContainText('No saved plans yet.');
+  await page.getByRole('dialog',{name:'My Plans',exact:true}).getByRole('button',{name:'Cancel',exact:true}).click();
   await page.goto('/quick-room'); await page.goBack();
   await expect(page.getByText('Private room A',{exact:true})).toHaveCount(0);
 });
@@ -176,7 +220,7 @@ test('cross-tab logout and identity change hide old private rows and reject an o
   const sessionA = await page.evaluate(async()=>fetch('/api/auth/session',{cache:'no-store'}).then(r=>r.json()));
   let release!:()=>void; const held=new Promise<void>(r=>release=r); let fetched!:()=>void; const received=new Promise<void>(r=>fetched=r);
   await page.route('**/api/floor-plans',async route=>{if(route.request().method()!=='GET')return route.continue(); const response=await route.fetch();fetched();await held;await route.fulfill({response});});
-  await page.getByRole('button',{name:'Load Sketch',exact:true}).click(); await received;
+  await choosePlanCommand(page, 'My Plans'); await received;
   const other=await context.newPage(); await other.goto('/'); await account(other);
   await panel(other).getByRole('button',{name:'Sign out',exact:true}).click();
   try { await signIn(other,'B'); } catch {

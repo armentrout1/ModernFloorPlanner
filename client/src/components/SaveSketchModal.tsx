@@ -46,8 +46,8 @@ const SaveSketchModal: React.FC<SaveSketchModalProps> = ({
     if (saving.current) return;
     if (!sketchName.trim()) {
       toast({
-        title: 'Sketch name required',
-        description: 'Please enter a name for your sketch.',
+        title: 'Plan name required',
+        description: 'Enter a name for this plan.',
         variant: 'destructive',
       });
       return;
@@ -60,8 +60,8 @@ const SaveSketchModal: React.FC<SaveSketchModalProps> = ({
     try {
       const savedSketch = await saveSketch(sketchName, rooms, currentSketchId);
       toast({
-        title: 'Sketch saved!',
-        description: `"${sketchName}" has been saved successfully.`,
+        title: 'Plan saved',
+        description: `“${sketchName}” is saved to My Plans.`,
       });
       
       // Pass the saved sketch back to the parent component
@@ -71,7 +71,7 @@ const SaveSketchModal: React.FC<SaveSketchModalProps> = ({
       const message = sketchErrorMessage(error);
       setErrorMessage(message);
       toast({
-        title: 'Error saving sketch',
+        title: 'Plan was not saved',
         description: message,
         variant: 'destructive',
       });
@@ -92,12 +92,12 @@ const SaveSketchModal: React.FC<SaveSketchModalProps> = ({
     <Dialog open={open} onOpenChange={nextOpen => { if (!saving.current) onOpenChange(nextOpen); }}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Save Sketch</DialogTitle>
+          <DialogTitle>Save plan</DialogTitle>
         </DialogHeader>
         <div className="grid gap-4 py-4">
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="sketch-name" className="text-right">
-              Sketch Name
+              Plan name
             </Label>
             <Input
               id="sketch-name"
@@ -111,7 +111,7 @@ const SaveSketchModal: React.FC<SaveSketchModalProps> = ({
             />
           </div>
           <div className="text-sm text-slate-500 col-span-4 pl-4">
-            Your sketch will be saved with {rooms.length} room{rooms.length !== 1 ? 's' : ''}.
+            This plan will be saved to the current workspace with {rooms.length} room{rooms.length !== 1 ? 's' : ''}.
           </div>
         </div>
         {errorMessage && <p role="alert" className="text-sm text-red-700">{errorMessage}</p>}
@@ -123,7 +123,7 @@ const SaveSketchModal: React.FC<SaveSketchModalProps> = ({
             onClick={handleSave} 
             disabled={isSaving}
           >
-            {isSaving ? 'Saving...' : 'Save Sketch'}
+            {isSaving ? 'Saving…' : errorMessage ? 'Retry save' : 'Save plan'}
           </Button>
         </DialogFooter>
       </DialogContent>

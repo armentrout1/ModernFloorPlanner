@@ -21,10 +21,10 @@ async function loadSketchWithQuickRoomsBehindIt(page: Page) {
   const saved = await response.json();
   await page.goto('/quick-room');
   await page.getByRole('link', { name: 'Sketch editor', exact: true }).click();
-  await choosePlanCommand(page, 'Open plan');
-  const dialog = page.getByRole('dialog', { name: 'Load Sketch', exact: true });
+  await choosePlanCommand(page, 'My Plans');
+  const dialog = page.getByRole('dialog', { name: 'My Plans', exact: true });
   await dialog.getByText(name, { exact: true }).click();
-  await dialog.getByRole('button', { name: 'Load Selected Sketch' }).click();
+  await dialog.getByRole('button', { name: 'Open plan' }).click();
   await expect(page.locator('[role="dialog"]')).toHaveCount(0);
   await expect(targetRoom(page)).toBeVisible();
   await page.getByRole('button', { name: 'Select & Move', exact: true }).click();
@@ -48,10 +48,10 @@ async function position(room: Locator) {
 }
 async function saveCurrentSketch(page: Page, id: number) {
   await choosePlanCommand(page, 'Save plan');
-  const dialog = page.getByRole('dialog', { name: 'Save Sketch', exact: true });
+  const dialog = page.getByRole('dialog', { name: 'Save plan', exact: true });
   const response = page.waitForResponse(response =>
     response.url().endsWith('/api/floor-plans/' + id) && response.request().method() === 'PATCH');
-  await dialog.getByRole('button', { name: 'Save Sketch', exact: true }).click();
+  await dialog.getByRole('button', { name: 'Save plan', exact: true }).click();
   expect((await response).status()).toBe(200);
   await expect(page.locator('[role="dialog"]')).toHaveCount(0);
   return (await (await page.request.get('/api/floor-plans/' + id)).json()).rooms as Room[];

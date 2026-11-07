@@ -24,10 +24,10 @@ test('Materials fits a narrow sidebar and scrolls to its bottom totals at a shor
   } });
   expect(response.status()).toBe(201);
   await page.goto('/');
-  await choosePlanCommand(page, 'Open plan');
-  const dialog = page.getByRole('dialog', { name: 'Load Sketch', exact: true });
+  await choosePlanCommand(page, 'My Plans');
+  const dialog = page.getByRole('dialog', { name: 'My Plans', exact: true });
   await dialog.getByText(name, { exact: true }).click();
-  await dialog.getByRole('button', { name: 'Load Selected Sketch' }).click();
+  await dialog.getByRole('button', { name: 'Open plan' }).click();
   await expect(dialog).toHaveCount(0);
   await page.getByRole('button', { name: 'Materials', exact: true }).click();
 

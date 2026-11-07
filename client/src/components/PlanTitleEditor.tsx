@@ -1,30 +1,34 @@
 import { useEffect, useRef, useState } from 'react';
 import { Check, Cloud, CloudOff, LoaderCircle } from 'lucide-react';
 import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 import { renameSketch, sketchErrorMessage, type SavedSketch } from '@/utils/api';
 
-type SaveState = 'idle' | 'local' | 'saving' | 'saved' | 'error' | 'required';
+type SaveState = 'idle' | 'local' | 'dirty' | 'saving' | 'saved' | 'error' | 'required';
 
 interface PlanTitleEditorProps {
   sketchId?: number;
   value: string;
   onChange: (value: string) => void;
   onSaved: (sketch: SavedSketch) => void;
+  contentDirty: boolean;
 }
 
 const labels: Record<SaveState, string> = {
   idle: 'Untitled draft',
   local: 'Draft name saved locally',
-  saving: 'Saving name…',
-  saved: 'Name saved',
-  error: 'Name not saved',
+  dirty: 'Unsaved changes',
+  saving: 'Saving to My Plans…',
+  saved: 'Saved to My Plans',
+  error: 'Save failed',
   required: 'Name required',
 };
 
-export default function PlanTitleEditor({ sketchId, value, onChange, onSaved }: PlanTitleEditorProps) {
-  const [saveState, setSaveState] = useState<SaveState>(value ? (sketchId ? 'saved' : 'local') : 'idle');
+export default function PlanTitleEditor({ sketchId, value, onChange, onSaved, contentDirty }: PlanTitleEditorProps) {
+  const [saveState, setSaveState] = useState<SaveState>(value ? (sketchId ? (contentDirty ? 'dirty' : 'saved') : 'local') : 'idle');
   const [localStatusVisible, setLocalStatusVisible] = useState(true);
   const [error, setError] = useState('');
+  const [retry, setRetry] = useState(0);
   const generation = useRef(0);
   const savedName = useRef(value.trim());
   const saveChain = useRef(Promise.resolve());
@@ -37,7 +41,7 @@ export default function PlanTitleEditor({ sketchId, value, onChange, onSaved }: 
     generation.current++;
     savedName.current = value.trim();
     setError('');
-    setSaveState(value ? (sketchId ? 'saved' : 'local') : 'idle');
+    setSaveState(value ? (sketchId ? (contentDirty ? 'dirty' : 'saved') : 'local') : 'idle');
   // A new server id represents a newly saved or loaded document baseline.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sketchId]);
@@ -56,7 +60,7 @@ export default function PlanTitleEditor({ sketchId, value, onChange, onSaved }: 
       return;
     }
     if (name === savedName.current) {
-      setSaveState('saved');
+      setSaveState(contentDirty ? 'dirty' : 'saved');
       return;
     }
     setSaveState('saving');
@@ -67,7 +71,7 @@ export default function PlanTitleEditor({ sketchId, value, onChange, onSaved }: 
           const saved = await renameSketch(sketchId, name);
           if (!mounted.current || currentGeneration !== generation.current) return;
           savedName.current = saved.name.trim();
-          setSaveState('saved');
+          setSaveState(contentDirty ? 'dirty' : 'saved');
           onSavedRef.current(saved);
         } catch (failure) {
           if (!mounted.current || currentGeneration !== generation.current) return;
@@ -77,7 +81,7 @@ export default function PlanTitleEditor({ sketchId, value, onChange, onSaved }: 
       });
     }, 650);
     return () => window.clearTimeout(timer);
-  }, [sketchId, value]);
+  }, [contentDirty, retry, sketchId, value]);
 
   useEffect(() => {
     if (saveState !== 'local') {
@@ -102,10 +106,11 @@ export default function PlanTitleEditor({ sketchId, value, onChange, onSaved }: 
         maxLength={200}
         className="h-9 border-transparent bg-transparent px-2 text-base font-semibold shadow-none hover:border-slate-200 focus-visible:border-slate-300 focus-visible:ring-1"
       />
-      <p className={`flex items-center gap-1 px-2 text-[11px] ${saveState === 'error' || saveState === 'required' ? 'text-red-700' : 'text-slate-500'} ${statusHidden ? 'invisible' : ''}`} aria-live="polite" aria-hidden={statusHidden} title={statusHidden ? undefined : error || labels[saveState]}>
+      <div className={`flex items-center gap-1 px-2 text-[11px] ${saveState === 'error' || saveState === 'required' ? 'text-red-700' : 'text-slate-500'} ${statusHidden ? 'invisible' : ''}`} aria-live="polite" aria-hidden={statusHidden} title={statusHidden ? undefined : error || labels[saveState]}>
         <StatusIcon className={`h-3 w-3 ${saveState === 'saving' ? 'animate-spin' : ''}`} />
         <span className="truncate">{error || labels[saveState]}</span>
-      </p>
+        {saveState === 'error' && <Button type="button" variant="link" className="h-auto p-0 text-[11px]" onClick={() => setRetry(value => value + 1)}>Retry</Button>}
+      </div>
     </div>
   );
 }

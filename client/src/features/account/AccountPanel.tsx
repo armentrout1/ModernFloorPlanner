@@ -126,7 +126,7 @@ export default function AccountPanel() {
   const [open, setOpen] = useState(false);
   const [authGatewayOpen, setAuthGatewayOpen] = useState(location.pathname.startsWith('/account/'));
   const [busy, setBusy] = useState(false), [error, setError] = useState('');
-  const [name, setName] = useState('My Workspace'), [selectedWorkspace, setSelectedWorkspace] = useState('');
+  const [name, setName] = useState(''), [selectedWorkspace, setSelectedWorkspace] = useState('');
   const [authView, setAuthView] = useState<AuthView>(initialView);
   const [creatingWorkspace, setCreatingWorkspace] = useState(false);
   const [email, setEmail] = useState(''), [password, setPassword] = useState(''), [passwordConfirmation, setPasswordConfirmation] = useState('');
@@ -151,6 +151,10 @@ export default function AccountPanel() {
   async function enterAuthenticatedSession(initial: AccountSession): Promise<boolean> {
     if (initial.status !== 'authenticated' || !initial.principal) return false;
     let next = initial;
+    if (!next.workspace && next.workspaces.length === 1) {
+      await accountAction('/api/auth/workspace', { workspaceId: next.workspaces[0].id });
+      next = await announceAccountChange();
+    }
     if (!next.workspace && next.workspaces.length > 1) {
       const remembered = rememberedWorkspace(initial.principal.id);
       if (remembered && next.workspaces.some(item => item.id === remembered)) {
@@ -160,15 +164,12 @@ export default function AccountPanel() {
     }
     if (!next.workspace && next.workspaces.length === 0) {
       workspaceBootstrap.current = initial.principal.id;
-      try {
-        await accountAction('/api/workspaces', { name: 'My Workspace', idempotencyKey: requestId });
-        next = await announceAccountChange();
-        setRequestId(crypto.randomUUID());
-        setAccountMessage('Your workspace is ready.');
-      } catch (failure) {
-        workspaceBootstrap.current = null;
-        throw failure;
-      }
+      setName('');
+      setRequestId(crypto.randomUUID());
+      setCreatingWorkspace(true);
+      setAuthGatewayOpen(true);
+      setOpen(false);
+      return false;
     }
     if (next.principal && next.workspace) {
       rememberWorkspace(next.principal.id, next.workspace.id);
@@ -232,6 +233,7 @@ export default function AccountPanel() {
     if (!name.trim()) throw new Error('Enter a workspace name.');
     await accountAction('/api/workspaces', { name: name.trim(), idempotencyKey: requestId });
     const next = await announceAccountChange();
+    workspaceBootstrap.current = null;
     setCreatingWorkspace(false);
     setAccountMessage('Workspace created. You can start planning.');
     await enterAuthenticatedSession(next);
@@ -301,8 +303,11 @@ export default function AccountPanel() {
     if (session.status !== 'authenticated' || !session.principal || session.workspace || session.workspaces.length ||
         workspaceBootstrap.current === session.principal.id || busyRef.current) return;
     workspaceBootstrap.current = session.principal.id;
-    void action(async () => { await enterAuthenticatedSession(session); });
-  // This is recovery for an authenticated account interrupted before its first workspace was created.
+    setName('');
+    setRequestId(crypto.randomUUID());
+    setCreatingWorkspace(true);
+    setAuthGatewayOpen(true);
+  // This is recovery for an authenticated account interrupted before naming its first workspace.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [account.session.status, account.session.principal?.id, account.session.workspace?.id, account.session.workspaces.length]);
 
@@ -342,6 +347,18 @@ export default function AccountPanel() {
   const { session } = account;
   const workspace = session.workspace;
   const needsFirstWorkspace = session.status === 'authenticated' && !workspace && session.workspaces.length === 0;
+
+  const workspaceCreation = (first = false) => <form className="grid gap-3" onSubmit={event => { event.preventDefault(); void action(submitWorkspaceCreation); }}>
+    <div>
+      <h2 className="text-lg font-semibold">{first ? 'Name your workspace' : 'Create a new workspace'}</h2>
+      <p className="mt-1 text-sm text-slate-600">{first
+        ? 'This is where your plans will be saved. You can rename it later in Settings.'
+        : 'Use another workspace for a different company, team, or collection of plans.'}</p>
+    </div>
+    <label className="grid gap-1 text-sm">Workspace name<Input aria-label="Workspace name" autoFocus value={name} onChange={event => { setName(event.target.value); setRequestId(crypto.randomUUID()); }} maxLength={120} placeholder="Example: Aaron's projects" required /></label>
+    <Button type="submit" disabled={busy || !name.trim()}>{first ? 'Create workspace and continue' : 'Create workspace and start planning'}</Button>
+    {!first && <Button type="button" variant="ghost" disabled={busy} onClick={() => setCreatingWorkspace(false)}>Cancel</Button>}
+  </form>;
 
   const signedOutGateway = <>
     {authView === 'reset-password' ? <form className="grid gap-3" onSubmit={event => { event.preventDefault(); void action(submitNewPassword, false); }}>
@@ -387,7 +404,7 @@ export default function AccountPanel() {
         {accountMessage && <p role="status" className="mt-5 rounded border border-blue-200 bg-blue-50 p-3 text-sm">{accountMessage}</p>}
         {account.checking && <p role="status" className="mt-5 text-sm">Checking account access…</p>}
         <div className="mt-7 grid gap-3">
-          {session.status === 'authenticated' && session.principal && workspace ? <>
+          {needsFirstWorkspace ? workspaceCreation(true) : session.status === 'authenticated' && session.principal && workspace ? <>
             <Button size="lg" disabled={busy} onClick={() => void action(async () => {
               const next = await refreshAccount();
               if (!next.principal || !next.workspace) throw new Error('Workspace access changed. Sign in again.');
@@ -406,19 +423,7 @@ export default function AccountPanel() {
         {accountMessage && <p role="status" className="rounded border border-blue-200 bg-blue-50 p-3 text-sm">{accountMessage}</p>}
         {account.checking && <p role="status">Checking account access…</p>}
         {session.status === 'authenticated' && <div className="grid gap-5">
-          {creatingWorkspace ? <form className="grid gap-3" onSubmit={event => { event.preventDefault(); void action(submitWorkspaceCreation); }}>
-            <div>
-              <h2 className="text-lg font-semibold">Create a new workspace</h2>
-              <p className="mt-1 text-sm text-slate-600">Use another workspace for a different company, team, or collection of plans.</p>
-            </div>
-            <label className="grid gap-1 text-sm">Workspace name<Input aria-label="Workspace name" autoFocus value={name} onChange={event => { setName(event.target.value); setRequestId(crypto.randomUUID()); }} maxLength={120} required /></label>
-            <Button type="submit" disabled={busy || !name.trim()}>Create workspace and start planning</Button>
-            <Button type="button" variant="ghost" disabled={busy} onClick={() => setCreatingWorkspace(false)}>Cancel</Button>
-          </form> : needsFirstWorkspace ? <div className="rounded-lg border bg-slate-50 p-4">
-            <p className="font-medium" role="status">Preparing your workspace…</p>
-            <p className="mt-1 text-sm text-slate-600">This only happens the first time you sign in.</p>
-            {!busy && <Button className="mt-3" size="sm" onClick={() => void action(async () => { await enterAuthenticatedSession(session); })}>Try again</Button>}
-          </div> : <>
+          {needsFirstWorkspace ? workspaceCreation(true) : creatingWorkspace ? workspaceCreation(false) : <>
             <div>
               <h2 className="text-lg font-semibold">Settings</h2>
               <p className="mt-1 text-sm text-slate-600">Manage your current workspace and account session.</p>

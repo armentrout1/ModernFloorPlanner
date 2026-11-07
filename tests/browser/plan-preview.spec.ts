@@ -34,17 +34,17 @@ async function seedAndLoad(page: Page, rooms: Room[], history = false) {
   const saved = await result.json();
   await page.goto(history ? '/quick-room' : '/');
   if (history) await page.getByRole('link', { name: 'Sketch editor', exact: true }).click();
-  await choosePlanCommand(page, 'Open plan');
-  const dialog = page.getByRole('dialog', { name: 'Load Sketch', exact: true });
+  await choosePlanCommand(page, 'My Plans');
+  const dialog = page.getByRole('dialog', { name: 'My Plans', exact: true });
   await dialog.getByText(name, { exact: true }).click();
   // Redirect recovery intentionally retains the prior sketch. A second fixture
   // load must explicitly accept its existing replacement confirmation.
   const replacement = await page.locator('.room-box').count() ? page.waitForEvent('dialog').then(async confirmation => {
     expect(confirmation.type()).toBe('confirm');
-    expect(confirmation.message()).toBe('Replace the current sketch? Save any changes you want to keep first.');
+    expect(confirmation.message()).toBe('Replace the current plan? Save any changes you want to keep first.');
     await confirmation.accept();
   }) : Promise.resolve();
-  await dialog.getByRole('button', { name: 'Load Selected Sketch', exact: true }).click();
+  await dialog.getByRole('button', { name: 'Open plan', exact: true }).click();
   await replacement;
   await expect.poll(() => page.evaluate(() => {
     const raw = sessionStorage.getItem('modern-floor-planner:local-fields:v1:unassigned');
@@ -58,10 +58,10 @@ async function seedAndLoad(page: Page, rooms: Room[], history = false) {
 
 async function save(page: Page, id: number) {
   await choosePlanCommand(page, 'Save plan');
-  const dialog = page.getByRole('dialog', { name: 'Save Sketch', exact: true });
+  const dialog = page.getByRole('dialog', { name: 'Save plan', exact: true });
   const result = page.waitForResponse(response => response.url().endsWith('/api/floor-plans/' + id)
     && response.request().method() === 'PATCH');
-  await dialog.getByRole('button', { name: 'Save Sketch', exact: true }).click();
+  await dialog.getByRole('button', { name: 'Save plan', exact: true }).click();
   expect((await result).status()).toBe(200);
   await expect(page.locator('[role="dialog"]')).toHaveCount(0);
   const response = await page.request.get('/api/floor-plans/' + id);
