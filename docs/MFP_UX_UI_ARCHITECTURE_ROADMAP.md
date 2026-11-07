@@ -1,11 +1,13 @@
 # Modern Floor Planner UX/UI architecture and build roadmap
 
 - Date: 2026-11-06
-- Version: 1.6
-- Status: PACKETS 1–5 DEPLOYED AND LIVE-VERIFIED
+- Version: 1.7
+- Status: PACKETS 1–6 AND BOUNDED MY PLANS FOLLOW-ON DEPLOYED AND LIVE-VERIFIED
 - Baseline reviewed: `a80ccbd1c72e9825f72c1694d6e2e66b43f2c0e3` on `main`
 - Packet 2 implementation: `933a7ba0329bda2236a15fd8a6e6e3bdbed03aef` on `main`
 - Packet 3 implementation: `07c39cc7489cc9f957e636115b521f72b7f744fc` on `main`
+- Packet 6 implementation: `7fadc44ec83384a46f7bc90a316b7fea08b0a06c` on `main`
+- My Plans follow-on implementation: `4f5845d75a602142439cc13cb8ff308eea210946` on `main`
 - Owning requirement: [issue #29](https://github.com/armentrout1/ModernFloorPlanner/issues/29), `MFP-UX-CANVAS-SHELL`
 - Primary workflow: the main sketch editor at `/`
 - Related architecture: [area calculator blueprint](MFP_AREA_CALCULATOR_BLUEPRINT.md) and [canonical build roadmap](BUILD_ROADMAP.md)
@@ -759,6 +761,20 @@ Targets for a later measured pilot:
 - a pre-promotion route smoke caught an incomplete generated-static package; production was restored immediately with an ordinary rollback, then the synchronized Vercel prebuilt artifact was staged, verified and promoted. No database, auth, geometry, quantity or user data changed;
 - the later representative-user pilot remains unstarted and is not claimed by this automated release evidence.
 
+### Activated follow-on: onboarding and My Plans
+
+The saved-project lifecycle activation condition was met on 2026-11-06. The owner approved a bounded **My Plans** surface inside the editor rather than a separate dashboard or another permanent header row.
+
+- First sign-in asks for an explicit workspace name; no invisible default workspace is created.
+- Returning users resume an exactly-one authorized workspace and the most recently opened authorized plan only after fresh server verification and only when no local draft would be replaced.
+- My Plans owns create, open, rename, duplicate and delete. The editable title remains the fast rename surface in the identity header.
+- Save feedback distinguishes local-only, unsaved, saving, saved and retryable failure states.
+- The recent-plan browser pointer is convenience state only and cannot authorize workspace or plan access.
+- Guest drafts remain local and separate; sign-in never uploads or assigns them automatically.
+- Implementation commit `4f5845d75a602142439cc13cb8ff308eea210946` passed 726/726 unit/integration tests and 213/213 full browser regressions and is live in deployment `dpl_Gv6dmHCqKUeC2untNKM9UEa6C8Ri`.
+
+This activation does not approve a full project dashboard. A separate dashboard still requires evidence that the bounded dialog cannot support the saved-plan lifecycle.
+
 ## Cross-packet invariants
 
 Every implementation packet must preserve:
@@ -816,7 +832,7 @@ These decisions are intentionally deferred until their activation conditions exi
 | Customizable rail order | Real users demonstrate materially different frequent-tool sets |
 | Shared shell across `/`, `/quick-room` and `/physical-draft` | State/persistence contracts can be preserved without route coupling or big-bang migration |
 | Collaboration/share controls | Collaboration capability is implemented and authorized |
-| Project dashboard replacing Load modal | Saved-project lifecycle and onboarding work are activated |
+| Full project dashboard replacing the bounded My Plans dialog | Evidence that saved-plan lifecycle volume or navigation no longer fits the dialog |
 
 Deferred does not mean approved for implementation. Each item needs a bounded owner decision and issue update.
 

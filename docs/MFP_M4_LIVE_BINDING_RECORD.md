@@ -1,10 +1,10 @@
 # M4 live Supabase and Vercel binding record
 
-Date: 2026-11-05
+Date: 2026-11-06
 
 Repository: `armentrout1/ModernFloorPlanner`
 
-Status: **LIVE PROVIDER BINDING COMPLETE / DATABASE HARDENED / NATIVE SUPABASE AUTH DEPLOYED AND OWNER-VERIFIED**
+Status: **LIVE PROVIDER BINDING COMPLETE / DATABASE HARDENED / NATIVE SUPABASE AUTH AND SAVED-PLAN ONBOARDING DEPLOYED**
 
 This record captures the approved live-provider setup without storing passwords, private keys, session secrets, or the owner's personal email address in the public repository. The exact owner email is recorded only in the ignored local operator note `docs/MFP_SUPABASE_OWNER.local.md`.
 
@@ -107,8 +107,9 @@ The connected Supabase advisor API denied this operator connection permission, s
 
 ## Remaining release gates
 
-1. Owner sign-in, password-recovery entry and local guest journeys are verified against the canonical domain; complete a separate sign-out/refresh acceptance pass before customer onboarding.
-2. Create and select the first server workspace only after the owner chooses its name; first login correctly creates no implicit workspace.
-3. Review backup/recovery behavior and the already recorded dependency advisories before customer onboarding.
+The 2026-11-06 onboarding release requires an explicit first-workspace name, resumes only freshly verified workspace/plan context, and passed automated sign-out/refresh, saved-plan and non-owner denial coverage. It is live in deployment `dpl_Gv6dmHCqKUeC2untNKM9UEa6C8Ri`; see [the release results](MFP_ONBOARDING_SAVED_PLANS_RESULTS.md).
+
+1. Review backup/recovery behavior and the already recorded dependency advisories before customer onboarding.
+2. Run the separate PostgreSQL/HTTPS account suite against a permitted disposable fixture, or perform an explicitly approved live non-owner acceptance. The required disposable database URL and data-directory proof were not configured for this release, so no live database was substituted.
 
 Supabase dashboard ownership is operational metadata only. Runtime identity remains the verified issuer-plus-subject pair and workspace membership; neither an email address nor organization name grants application access.
