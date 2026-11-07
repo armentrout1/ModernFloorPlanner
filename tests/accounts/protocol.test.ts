@@ -94,7 +94,7 @@ class Client {
   }
   async create(name = 'Synthetic workspace', key = randomUUID()) {
     const response = await this.request('/api/workspaces', 'POST', { name, idempotencyKey: key });
-    assert.equal(response.status, 201);
+    assert.equal(response.status, 201, `${response.status} ${await response.clone().text()}`);
     return response.json();
   }
   async select(id: string | null) {
@@ -144,8 +144,9 @@ test('concurrent login attempts on one anonymous context permit one SID rotation
   const tokenA = await providerToken('account-a'), tokenB = await providerToken('account-b'); assert.ok(tokenA && tokenB);
   const duplicate = new Client(); duplicate.cookie = original.cookie; duplicate.context = original.context;
   const responses = await Promise.all([original.authenticate(tokenA), duplicate.authenticate(tokenB)]);
-  assert.equal(responses.filter(response => response.status === 200).length, 1);
-  assert.equal(responses.filter(response => response.status === 409).length, 1);
+  const outcome = responses.map(response => ({ status: response.status, setCookies: response.headers.getSetCookie().length }));
+  assert.equal(responses.filter(response => response.status === 200).length, 1, JSON.stringify(outcome));
+  assert.equal(responses.filter(response => response.status === 409).length, 1, JSON.stringify(outcome));
   const loser = responses.find(response => response.status === 409)!;
   assert.equal(loser.headers.getSetCookie().length, 0);
   const winner = responses[0].status === 200 ? original : duplicate;

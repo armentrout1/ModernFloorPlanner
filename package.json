@@ -24,7 +24,9 @@
     "test:autosave": "node scripts/run-autosave-tests.mjs",
     "test:runtime": "node --test tests/runtime/start.test.mjs",
     "test:database:privileges": "node --import tsx --test tests/database/provider-privileges.test.ts",
-    "test:database:transport": "node scripts/run-database-transport-tests.mjs"
+    "test:database:transport": "node scripts/run-database-transport-tests.mjs",
+    "db:backup": "node scripts/backup-database.mjs",
+    "test:backup-restore": "node --import tsx scripts/verify-backup-restore.mjs"
   },
   "dependencies": {
     "@headlessui/react": "^2.2.1",

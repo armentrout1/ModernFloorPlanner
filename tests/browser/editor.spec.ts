@@ -30,15 +30,9 @@ async function seedAndLoad(page: Page, rooms: Room[]) {
   await choosePlanCommand(page, 'My Plans');
   const dialog = page.getByRole('dialog', { name: 'My Plans', exact: true });
   await dialog.getByText(name, { exact: true }).click();
-  // Redirect recovery intentionally retains the prior sketch. A second fixture
-  // load must explicitly accept its existing replacement confirmation.
-  const replacement = await page.locator('.room-box').count() ? page.waitForEvent('dialog').then(async confirmation => {
-    expect(confirmation.type()).toBe('confirm');
-    expect(confirmation.message()).toBe('Replace the current plan? Save any changes you want to keep first.');
-    await confirmation.accept();
-  }) : Promise.resolve();
+  // A clean server-backed plan may be replaced directly. The dedicated dirty
+  // draft test below proves that local or unsaved work still requires consent.
   await dialog.getByRole('button', { name: 'Open plan' }).click();
-  await replacement;
   await expect.poll(() => page.evaluate(() => {
     const raw = sessionStorage.getItem('modern-floor-planner:local-fields:v1:unassigned');
     return raw ? JSON.parse(raw).values['legacy:server-id'] : null;
@@ -506,8 +500,11 @@ test('declining New plan and replacement Open keeps the unsaved current draft', 
   await dialog.getByText(replacementName, { exact: true }).click();
   page.once('dialog', dialog => dialog.dismiss());
   await dialog.getByRole('button', { name: 'Open plan' }).click();
+  await expect(dialog).toBeVisible();
   await expect(page.getByTestId('room-room-a')).toBeVisible();
   await expect(page.getByTestId('room-replacement-room')).toHaveCount(0);
+  await dialog.getByRole('button', { name: 'Cancel' }).click();
+  await expect(dialog).toBeHidden();
   expect((await save(page, plan.id)).rooms).toEqual([draftRoom]);
 });
 

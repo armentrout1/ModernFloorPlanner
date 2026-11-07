@@ -422,9 +422,12 @@ const FloorPlanner: React.FC<{ active?: boolean }> = ({ active = true }) => {
   };
 
   const handleSaveComplete = (savedSketch: SavedSketch) => {
-    setCurrentSketchId(savedSketch.id);
     setCurrentSketchName(savedSketch.name);
-    setSavedRoomSnapshot(JSON.stringify(savedSketch.rooms));
+    setCurrentSketchId(savedSketch.id);
+    // The exact editor payload is the acknowledged save baseline. The legacy
+    // API may normalize JSON object ordering in its response, which must not
+    // make an unchanged plan immediately appear dirty.
+    setSavedRoomSnapshot(roomSnapshot);
     rememberCurrentPlan(savedSketch.id);
   };
 
@@ -435,7 +438,10 @@ const FloorPlanner: React.FC<{ active?: boolean }> = ({ active = true }) => {
   };
 
   const handleLoadSketch = (sketch: SavedSketch) => {
-    if (rooms.length && !window.confirm("Replace the current plan? Save any changes you want to keep first.")) return;
+    // A clean server-backed plan can be replaced directly. Prompt only when
+    // the current canvas contains local or unsaved work that could be lost.
+    if (rooms.length && (!currentSketchId || contentDirty) &&
+        !window.confirm("Replace the current plan? Save any changes you want to keep first.")) return false;
     setDeletions([]);
     // Clear the current state
     setSelectedRoomId(null);
@@ -444,8 +450,8 @@ const FloorPlanner: React.FC<{ active?: boolean }> = ({ active = true }) => {
     // Load the new sketch data
     setRooms(sketch.rooms);
     setSelectedRoomIds([]);
-    setCurrentSketchId(sketch.id);
     setCurrentSketchName(sketch.name);
+    setCurrentSketchId(sketch.id);
     setSavedRoomSnapshot(JSON.stringify(sketch.rooms));
     rememberCurrentPlan(sketch.id);
     
@@ -453,6 +459,7 @@ const FloorPlanner: React.FC<{ active?: boolean }> = ({ active = true }) => {
       title: 'Plan opened',
       description: `"${sketch.name}" is ready to edit.`,
     });
+    return true;
   };
   
   const handleDeleteSelectedRoom = () => {

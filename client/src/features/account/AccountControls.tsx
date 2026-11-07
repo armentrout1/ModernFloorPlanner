@@ -19,6 +19,11 @@ function initials(value: string) {
   return parts.slice(0, 2).map(part => part[0]?.toUpperCase()).join('');
 }
 
+// Radix restores focus while a dropdown closes. Open a modal on the following
+// frame so that restoration cannot immediately dismiss the new surface.
+const afterMenuClose = (command: Parameters<typeof sendAccountUiCommand>[0]) =>
+  window.requestAnimationFrame(() => sendAccountUiCommand(command));
+
 export default function AccountControls() {
   const account = useSyncExternalStore(accountStore.subscribe, accountStore.getSnapshot);
   const { session } = account;
@@ -51,10 +56,10 @@ export default function AccountControls() {
               </DropdownMenuItem>
             ))}
             <DropdownMenuSeparator />
-            <DropdownMenuItem onSelect={() => sendAccountUiCommand({ type: 'new-workspace' })}>
+            <DropdownMenuItem onSelect={() => afterMenuClose({ type: 'new-workspace' })}>
               <Plus /> New workspace
             </DropdownMenuItem>
-            <DropdownMenuItem onSelect={() => sendAccountUiCommand({ type: 'settings' })}>
+            <DropdownMenuItem onSelect={() => afterMenuClose({ type: 'settings' })}>
               <Settings /> Workspace settings
             </DropdownMenuItem>
           </DropdownMenuContent>
@@ -82,13 +87,13 @@ export default function AccountControls() {
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
           {authenticated ? <>
-            <DropdownMenuItem onSelect={() => sendAccountUiCommand({ type: 'settings' })}>
+            <DropdownMenuItem onSelect={() => afterMenuClose({ type: 'settings' })}>
               <Settings /> Settings
             </DropdownMenuItem>
             <DropdownMenuItem onSelect={() => sendAccountUiCommand({ type: 'sign-out' })}>
               <LogOut /> Sign out
             </DropdownMenuItem>
-          </> : <DropdownMenuItem onSelect={() => sendAccountUiCommand({ type: 'sign-in' })}>
+          </> : <DropdownMenuItem onSelect={() => afterMenuClose({ type: 'sign-in' })}>
             <LogIn /> Sign in or create account
           </DropdownMenuItem>}
         </DropdownMenuContent>

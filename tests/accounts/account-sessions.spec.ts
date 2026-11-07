@@ -30,18 +30,21 @@ async function signIn(p: Page, who: 'A' | 'B' | 'C' = 'A') {
   await account(p);
   await panel(p).getByLabel('Email address', { exact: true }).fill(`account-${who.toLowerCase()}@example.test`);
   await panel(p).getByLabel('Password', { exact: true }).fill(`Password-ACCOUNT-${who}-1234`);
+  const login = p.waitForResponse(response => new URL(response.url()).pathname === '/api/auth/login' && response.request().method() === 'POST');
   await panel(p).getByRole('button', { name: 'Sign in', exact: true }).click();
+  expect((await login).status()).toBe(200);
   await expect.poll(() => p.evaluate(() => fetch('/api/auth/session', { cache: 'no-store' }).then(response => response.json()).then(session => session.status))).toBe('authenticated');
   expect(new URL(p.url()).search).toBe('');
 }
 async function createWorkspace(p: Page, suffix: string) {
   await account(p);
   const name = 'Synthetic ' + suffix + ' ' + test.info().testId.slice(-12);
-  if (await panel(p).getByRole('textbox', { name: 'Workspace name', exact: true }).count() === 0)
+  const create = panel(p).getByRole('button', { name: /^Create workspace and (continue|start planning)$/ });
+  if (await create.count() === 0)
     await panel(p).getByRole('button', { name: 'New workspace', exact: true }).click();
   const response = p.waitForResponse(value => new URL(value.url()).pathname === '/api/workspaces' && value.request().method() === 'POST');
   await panel(p).getByRole('textbox', { name: 'Workspace name', exact: true }).fill(name);
-  await panel(p).getByRole('button', { name: /^Create workspace and (continue|start planning)$/ }).click();
+  await create.click();
   const created = await response; expect(created.status()).toBe(201);
   const workspace = await created.json();
   await expect(panel(p)).toBeHidden();
@@ -190,7 +193,10 @@ test('private legacy records cannot enter unassigned recovery or reappear after 
   await choosePlanCommand(page, 'My Plans');
   await expect(page.getByRole('dialog',{name:'My Plans',exact:true}).getByRole('alert')).toContainText('Select and resume');
   await expect(page.getByText('Private saved sketch A',{exact:true})).toHaveCount(0);
-  await page.getByRole('dialog',{name:'My Plans',exact:true}).getByRole('button',{name:'Cancel',exact:true}).click();
+  const myPlans = page.getByRole('dialog',{name:'My Plans',exact:true});
+  await myPlans.getByRole('button',{name:'Cancel',exact:true}).click();
+  // Do not race Radix's close/focus restoration with a second modal.
+  await expect(myPlans).toBeHidden();
   await account(page); await panel(page).getByRole('button',{name:'Sign out',exact:true}).click();
   await signIn(page,'B'); await createWorkspace(page,'private-B');
   await expect(page.locator('.room-box')).toHaveCount(0);

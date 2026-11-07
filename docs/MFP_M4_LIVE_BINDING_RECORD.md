@@ -105,11 +105,12 @@ Supabase Auth, the controlled owner user, trusted application origin and restric
 
 The connected Supabase advisor API denied this operator connection permission, so no dashboard-advisor result is claimed. The direct PostgreSQL catalog, privilege, RLS and login checks above are the authoritative acceptance evidence for this binding.
 
-## Remaining release gates
+## Pre-customer readiness review
 
 The 2026-11-06 onboarding release requires an explicit first-workspace name, resumes only freshly verified workspace/plan context, and passed automated sign-out/refresh, saved-plan and non-owner denial coverage. It is live in deployment `dpl_Gv6dmHCqKUeC2untNKM9UEa6C8Ri`; see [the release results](MFP_ONBOARDING_SAVED_PLANS_RESULTS.md).
 
-1. Review backup/recovery behavior and the already recorded dependency advisories before customer onboarding.
-2. Run the separate PostgreSQL/HTTPS account suite against a permitted disposable fixture, or perform an explicitly approved live non-owner acceptance. The required disposable database URL and data-directory proof were not configured for this release, so no live database was substituted.
+The previously open isolated acceptance gate is complete. On 2026-11-07 the verified loopback disposable cluster passed account protocol 14/14, database accounts 18/18, authorization 15/15, provider/runtime privileges 13/13 and native account browser acceptance 11/11. The tests use generated owner/non-owner principals and generated databases only; no customer or production rows were enumerated.
+
+The backup/recovery review is also complete and is recorded in the [backup and recovery runbook](MFP_BACKUP_RECOVERY_RUNBOOK.md). A real custom-format dump restored into a second disposable database with all 14 tables, forced RLS, schema/security fingerprint, representative saved plan, effective runtime restrictions and immutable history verified. The current Free-plan strategy adds no paid PITR service. Before customer onboarding, the operator must still create the first production logical export with a temporary direct administrative credential and copy its dump/manifest/checksum set to approved encrypted off-site storage; that production artifact is intentionally not committed.
 
 Supabase dashboard ownership is operational metadata only. Runtime identity remains the verified issuer-plus-subject pair and workspace membership; neither an email address nor organization name grants application access.

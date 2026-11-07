@@ -25,7 +25,7 @@ import SketchPreview from './SketchPreview';
 interface LoadSketchDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onLoadSketch: (sketch: SavedSketch) => void;
+  onLoadSketch: (sketch: SavedSketch) => boolean | void;
   onNewPlan: () => void;
   onDeleteSketch?: (id: number) => void;
 }
@@ -171,8 +171,9 @@ const LoadSketchDialog: React.FC<LoadSketchDialogProps> = ({
       // record from the list response cached in this dialog.
       const current = await fetchSketch(selectedSketch.id);
       if (generation !== requestGeneration.current) return;
-      onLoadSketch(current);
-      onOpenChange(false);
+      // A parent may require confirmation before replacing unfinished work.
+      // Keep My Plans open when that confirmation is declined.
+      if (onLoadSketch(current) !== false) onOpenChange(false);
     } catch (error) {
       if (generation === requestGeneration.current) showError(error);
     } finally {

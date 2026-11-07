@@ -111,6 +111,20 @@ export function mountAccounts(app: Express): IdentityResolver {
     if (req.get('X-MFP-Context') !== context.contextToken) throw new AccountStorageError('STALE_CONTEXT');
     return context;
   };
+  // Login and idempotent workspace creation must reach the storage lock even
+  // when another request has just rotated the context. Reconstruct only the
+  // server-session binding here; AccountStorage validates every field and
+  // either accepts the one exact receipt replay or rejects the stale request.
+  const requestBinding = (req: Request): SessionBinding => {
+    const browserId = req.session.browserId;
+    const contextToken = req.get('X-MFP-Context');
+    if (!contextToken) throw new AccountStorageError('SESSION_EXPIRED');
+    // A concurrent SID rotation can remove the old server-session row before
+    // this request reaches the middleware. It is a stale context, not a new
+    // authentication failure, and must never trigger another rotation.
+    if (!browserId) throw new AccountStorageError('STALE_CONTEXT');
+    return { browserId, contextToken, sessionIdHash: hash(req.sessionID) };
+  };
   const statusView = async (context: BrowserContext, statusOverride?: string) => {
     if (context.status !== 'authenticated') return emptyStatus(statusOverride ?? 'anonymous', context.contextToken);
     const workspaces = await accounts.listWorkspaces(identity(context));
@@ -158,13 +172,11 @@ export function mountAccounts(app: Express): IdentityResolver {
   }));
   app.post('/api/auth/login', handle(async (req, res) => {
     z.object({}).strict().parse(req.body);
-    const context = current(req);
-    if (context.status === 'authenticated') throw new AccountStorageError('STALE_CONTEXT');
     const token = bearerAccessToken(req.get('Authorization'));
     if (!token) throw new SupabaseVerificationError(401);
     const verified = await verifySupabaseAccessToken(settings, token);
     const browserId = req.session.browserId!;
-    const authenticated = await accounts.authenticate(binding(context), verified, async () => {
+    const authenticated = await accounts.authenticate(requestBinding(req), verified, async () => {
       await regenerate(req);
       req.session.browserId = browserId;
       return hash(req.sessionID);
@@ -192,9 +204,7 @@ export function mountAccounts(app: Express): IdentityResolver {
   }));
   app.post('/api/workspaces', handle(async (req, res) => {
     const input = z.object({ name: z.string().trim().min(1).max(200), idempotencyKey: z.string().uuid() }).strict().parse(req.body);
-    const context = current(req);
-    if (context.status !== 'authenticated') throw new AccountStorageError('SESSION_EXPIRED');
-    const created = await accounts.createWorkspaceAndSelect(binding(context), input, Date.now());
+    const created = await accounts.createWorkspaceAndSelect(requestBinding(req), input, Date.now());
     contexts.set(req, created.context);
     res.status(201).json(created.workspace);
   }, true));

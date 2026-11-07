@@ -37,15 +37,9 @@ async function seedAndLoad(page: Page, rooms: Room[], history = false) {
   await choosePlanCommand(page, 'My Plans');
   const dialog = page.getByRole('dialog', { name: 'My Plans', exact: true });
   await dialog.getByText(name, { exact: true }).click();
-  // Redirect recovery intentionally retains the prior sketch. A second fixture
-  // load must explicitly accept its existing replacement confirmation.
-  const replacement = await page.locator('.room-box').count() ? page.waitForEvent('dialog').then(async confirmation => {
-    expect(confirmation.type()).toBe('confirm');
-    expect(confirmation.message()).toBe('Replace the current plan? Save any changes you want to keep first.');
-    await confirmation.accept();
-  }) : Promise.resolve();
+  // A clean server-backed plan may be replaced directly. Dirty/local work is
+  // covered by the dedicated editor cancellation acceptance.
   await dialog.getByRole('button', { name: 'Open plan', exact: true }).click();
-  await replacement;
   await expect.poll(() => page.evaluate(() => {
     const raw = sessionStorage.getItem('modern-floor-planner:local-fields:v1:unassigned');
     return raw ? JSON.parse(raw).values['legacy:server-id'] : null;

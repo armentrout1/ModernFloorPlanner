@@ -1,6 +1,6 @@
 # Onboarding and saved-plans release results
 
-Date: 2026-11-06
+Date: 2026-11-07
 
 Repository: `armentrout1/ModernFloorPlanner`
 
@@ -37,7 +37,9 @@ The browser's recent-plan preference is a convenience pointer, not authority. Ev
 - Full browser regression suite: **213/213 PASS** in 15.8 minutes, including authentication, sign-out/refresh, workspace onboarding, save/open/duplicate behavior, geometry, calculations and responsive layouts.
 - Whitespace/diff check: PASS.
 
-The separate disposable PostgreSQL/HTTPS account suite did not start because `MFP_TEST_DATABASE_URL` and `MFP_TEST_DATA_DIRECTORY` were not configured. No live or unknown database was substituted, and this document does not claim that external fixture run.
+The previously unconfigured external fixture gate was completed on 2026-11-07 against a verified loopback-only disposable PostgreSQL cluster. Results: account protocol **14/14 PASS**, database account tests **18/18 PASS**, authorization tests **15/15 PASS**, provider/runtime privilege tests **13/13 PASS**, and native account browser acceptance **11/11 PASS**. The browser set covers first-workspace naming, saved-plan create/open/duplicate and honest save state, email and Google handoff, local-draft separation, private-record separation across two principals, workspace switching, cross-tab logout, wrong credentials, failed recovery, phone controls and fixture TLS pinning. No live or unknown database was used.
+
+The new [backup and recovery runbook](MFP_BACKUP_RECOVERY_RUNBOOK.md) is backed by a real custom-format dump and full restore into a second disposable database. The rehearsal restored and compared all 14 tables, all 14 forced-RLS states, row counts, indexes, constraints, policies, triggers, ownership and effective runtime privileges; it also verified a representative saved plan and immutable history enforcement. The first production logical export and encrypted off-site copy remain an explicit operator step because no production credential or backup file is stored in this repository.
 
 ## Production acceptance
 

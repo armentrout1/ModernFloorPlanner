@@ -142,7 +142,10 @@ export default function AccountPanel() {
   async function action(operation: () => Promise<void>, checkpoint = true) {
     if (busyRef.current) return;
     setError('');
-    if (checkpoint && !checkpointContext(account.editorContext)) { setError(checkpointMessage); return; }
+    // Read the current editor context at click time. Account refreshes can
+    // replace the rendered snapshot while a dialog is open, and a transition
+    // must never bypass recovery because its closure captured an older value.
+    if (checkpoint && !checkpointContext(accountStore.getSnapshot().editorContext)) { setError(checkpointMessage); return; }
     busyRef.current = true; setBusy(true);
     try { await operation(); } catch (failure) { setError(friendlyError(failure)); }
     finally { busyRef.current = false; setBusy(false); }
@@ -236,6 +239,10 @@ export default function AccountPanel() {
     workspaceBootstrap.current = null;
     setCreatingWorkspace(false);
     setAccountMessage('Workspace created. You can start planning.');
+    // Close the creation surface before switching editor context. This avoids
+    // a disappearing submit control leaving the dialog transition half-open.
+    setOpen(false);
+    setAuthGatewayOpen(false);
     await enterAuthenticatedSession(next);
   }
 
@@ -373,7 +380,7 @@ export default function AccountPanel() {
       <label className="grid gap-1 text-sm">Email address<Input type="email" autoComplete="email" value={email} onChange={event => setEmail(event.target.value)} required /></label>
       <Button type="submit" disabled={busy}>Email reset link</Button>
       <Button type="button" variant="ghost" disabled={busy} onClick={() => chooseView('sign-in')}>Back to sign in</Button>
-    </form> : <form className="grid gap-3" onSubmit={event => { event.preventDefault(); void action(authView === 'sign-up' ? submitSignUp : submitSignIn); }}>
+    </form> : <form noValidate className="grid gap-3" onSubmit={event => { event.preventDefault(); void action(authView === 'sign-up' ? submitSignUp : submitSignIn); }}>
       <h2 className="text-lg font-semibold">{authView === 'sign-up' ? 'Create an account' : 'Sign in'}</h2>
       <p className="text-sm text-slate-600">{session.status === 'unavailable' ? 'Sign-in is unavailable. Local guest work remains available.' : session.status === 'expired' ? 'Your sign-in expired. Previous private work is preserved separately.' : session.status === 'revoked' ? 'Account access was revoked. Previous private work is preserved separately.' : authView === 'sign-up' ? 'Create an account and start planning.' : 'Sign in and continue where you left off.'}</p>
       <GoogleButton disabled={busy || session.status === 'unavailable' || !session.contextToken} onClick={() => void action(submitGoogleSignIn)} />
@@ -388,7 +395,13 @@ export default function AccountPanel() {
       </div>
     </form>}
     <div className="flex items-center gap-3 py-1 text-xs uppercase tracking-wide text-slate-400" aria-hidden="true"><span className="h-px flex-1 bg-slate-200" /><span>or</span><span className="h-px flex-1 bg-slate-200" /></div>
-    <Button variant="outline" disabled={busy} onClick={() => void action(continueAsGuest)}>Continue as guest</Button>
+    <Button variant="outline" disabled={busy} onClick={() => void action(
+      continueAsGuest,
+      // Dismissing sign-in while already editing as a guest does not change
+      // identity or context. A real account/workspace transition still needs
+      // a verified recovery checkpoint.
+      accountStore.getSnapshot().editorContext !== UNASSIGNED_CONTEXT,
+    )}>Continue as guest</Button>
     <p className="flex items-center gap-2 text-xs text-slate-500"><LockKeyhole className="h-3.5 w-3.5" /> Guest drafts stay on this device until you explicitly save them to an account.</p>
   </>;
 
@@ -446,6 +459,7 @@ export default function AccountPanel() {
             })}>Continue planning</Button>}
             {workspace && <Button variant="outline" disabled={busy} onClick={() => { setName('New Workspace'); setRequestId(crypto.randomUUID()); setCreatingWorkspace(true); }}>New workspace</Button>}
           </>}
+          <Button variant="outline" disabled={busy} onClick={() => action(continueAsGuest)}>Continue as guest</Button>
           <Button variant="ghost" disabled={busy} onClick={() => action(signOut)}>Sign out</Button>
         </div>}
         {error && <p role="alert" className="text-sm text-red-700">{error}</p>}

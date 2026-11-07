@@ -17,6 +17,7 @@ let snapshot: AccountSnapshot = { session: empty, generation: 0, checking: false
 const listeners = new Set<() => void>();
 const controllers = new Set<AbortController>();
 let refreshPromise: Promise<AccountSession> | null = null;
+let accountMutation: Promise<unknown> | null = null;
 let refreshSequence = 0;
 let channel: BroadcastChannel | null = null;
 let suspended: { context: string; identity: string } | null = null;
@@ -74,6 +75,9 @@ function parseSession(value: unknown): AccountSession {
   return x;
 }
 export async function refreshAccount(): Promise<AccountSession> {
+  // Do not let this tab's focus/visibility refresh race a session-cookie
+  // rotation started by login, logout, or workspace selection.
+  if (accountMutation) try { await accountMutation; } catch { /* Refresh reports the resulting server state. */ }
   if (refreshPromise) return refreshPromise;
   const sequence = ++refreshSequence;
   const pending = (async () => {
@@ -141,11 +145,16 @@ export async function accountAction(path: string, data: unknown, extraHeaders?: 
   const intended = identity(snapshot.session);
   const context = await captureRequestContext();
   if (intended !== identity(snapshot.session)) throw new AccountContextChanged();
-  const response = await contextFetch('POST', path, data, context, extraHeaders);
-  if (!response.ok) throw new Error(response.status === 503 ? 'Sign-in services are unavailable. Your local work is unchanged.' :
-    path === '/api/auth/login' && response.status === 401 ? 'Sign-in could not be verified. Check your email and password, then try again.' :
-      'The account request was not accepted. Refresh account access and try again.');
-  return response.json();
+  const pending = (async () => {
+    const response = await contextFetch('POST', path, data, context, extraHeaders);
+    if (!response.ok) throw new Error(response.status === 503 ? 'Sign-in services are unavailable. Your local work is unchanged.' :
+      path === '/api/auth/login' && response.status === 401 ? 'Sign-in could not be verified. Check your email and password, then try again.' :
+        'The account request was not accepted. Refresh account access and try again.');
+    return response.json();
+  })();
+  accountMutation = pending;
+  try { return await pending; }
+  finally { if (accountMutation === pending) accountMutation = null; }
 }
 export function resumeLocalContext(context: string) {
   if (snapshot.checking) throw new AccountContextChanged();
